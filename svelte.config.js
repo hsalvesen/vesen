@@ -1,15 +1,14 @@
-import { defineConfig } from 'vite'
-import { svelte } from '@sveltejs/vite-plugin-svelte'
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte'
 
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [svelte({
-    preprocess: vitePreprocess({ script: true })
-  })],
-  base: '/',
-  build: {
-    outDir: 'dist', 
-    emptyOutDir: true 
-  }
-})
+export default {
+  preprocess: vitePreprocess({
+    script: ({ content, attributes }) => {
+      if (attributes.lang === 'ts') {
+        return {
+          code: content, // vitePreprocess handles TypeScript transpilation
+        };
+      }
+      return { code: content };
+    },
+  })
+}
