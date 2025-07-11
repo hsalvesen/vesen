@@ -5,17 +5,17 @@
   "type": "module",
   "license": "MIT",
   "author": {
-    "name": "Yassine Fathi",
-    "url": "https://fathi.me",
-    "email": "yassine@fathi.me"
+    "name": "Has Salvesen",
+    "url": "https://salvesen.app",
+    "email": "has@salvesen.app"
   },
   "funding": {
     "type": "Paypal",
-    "url": "https://paypal.me/yfthi"
+    "url": "https://paypal.me/"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/m4tt72/terminal"
+    "url": "https://github.com/hsavlesen/vesen"
   },
   "scripts": {
     "dev": "vite",
