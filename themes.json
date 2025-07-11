@@ -22,6 +22,28 @@
     "cursorColor": "#ffffff"
   },
   {
+  "name": "Dive",
+  "background": "#0A0F14",
+  "foreground": "#D8DEE9",
+  "cursorColor": "#FFFFFF",
+  "black": "#2E3440",
+  "red": "#BF616A",
+  "green": "#A3BE8C",
+  "yellow": "#EBCB8B",
+  "blue": "#5E81AC",
+  "purple": "#B48EAD",
+  "cyan": "#88C0D0",
+  "white": "#E5E9F0",
+  "brightBlack": "#4C566A",
+  "brightRed": "#BF616A",
+  "brightGreen": "#A3BE8C",
+  "brightYellow": "#EBCB8B",
+  "brightBlue": "#81A1C1",
+  "brightPurple": "#B48EAD",
+  "brightCyan": "#8FBCBB",
+  "brightWhite": "#ECEFF4"
+},
+  {
     "name": "Espresso",
     "black": "#353535",
     "red": "#d25252",
