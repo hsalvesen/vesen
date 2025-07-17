@@ -57,7 +57,7 @@ export const fileSystemCommands = {
   
   cat: async (args: string[]) => {
     if (args.length === 0) {
-      return 'Usage: cat [filename]\nExample: cat experience.txt\nTip: Use "ls" to see available files in the current directory';
+      return 'Usage: cat [filename]\nExamples:\n  cat experience.txt       - display experience file\n  cat documents/readme.md  - display readme from documents folder\nTip: Use "ls" to see available files in the current directory';
     }
     
     // Special handling for experience.txt - load from data folder

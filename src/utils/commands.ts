@@ -19,8 +19,8 @@ const terminalCommands = {
     
     // Group commands by category for better organization
     const categories: Record<string, string[]> = {
-      'File System': ['ls', 'pwd', 'cd', 'cat', 'touch', 'rm'],
       'System Info': ['neofetch', 'hostname', 'whoami', 'date'],
+      'File System': ['ls', 'pwd', 'cd', 'cat', 'touch', 'rm'],
       'Terminal': ['help', 'clear', 'reset', 'echo', 'exit'],
       'Network': ['weather', 'curl'],
       'Customisation': ['theme'],
@@ -34,8 +34,8 @@ const terminalCommands = {
     
     // Manually distribute categories for better balance across five columns
     const columnDistribution = [
-      ['File System'],              // Column 1
-      ['System Info'],              // Column 2
+      ['System Info'],              // Column 1
+      ['File System'],              // Column 2
       ['Terminal'],                 // Column 3
       ['Network', 'Customisation'], // Column 4
       ['Project']                   // Column 5

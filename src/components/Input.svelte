@@ -4,6 +4,7 @@
   import { theme } from '../stores/theme';
   import { commands, virtualFileSystem, currentPath } from '../utils/commands';
   import { track } from '../utils/tracking';
+  import themes from '../../themes.json';
 
   let command = '';
   let historyIndex = -1;
@@ -151,6 +152,32 @@
           });
           if (commonPrefix.length > commandName.length) {
             command = commonPrefix;
+          }
+        }
+      } else if (commandName === 'theme' && parts.length === 3 && parts[1] === 'set') {
+        // Complete theme names for 'theme set' command
+        const themeNames = themes.map(t => t.name.toLowerCase());
+        const matchingThemes = themeNames.filter(name => name.startsWith(currentArg.toLowerCase()));
+        
+        if (matchingThemes.length === 1) {
+          // Find the original case theme name
+          const originalTheme = themes.find(t => t.name.toLowerCase() === matchingThemes[0]);
+          if (originalTheme) {
+            parts[parts.length - 1] = originalTheme.name;
+            command = parts.join(' ');
+          }
+        } else if (matchingThemes.length > 1) {
+          // Find common prefix
+          const commonPrefix = matchingThemes.reduce((prefix, name) => {
+            let i = 0;
+            while (i < prefix.length && i < name.length && prefix[i] === name[i]) {
+              i++;
+            }
+            return prefix.substring(0, i);
+          });
+          if (commonPrefix.length > currentArg.length) {
+            parts[parts.length - 1] = commonPrefix;
+            command = parts.join(' ');
           }
         }
       } else if (fileCommands.includes(commandName)) {
