@@ -66,28 +66,6 @@
     "cursorColor": "#e5c7a9"
   },
   {
-    "name": "Ibis",
-    "black": "#2C2C2C",
-    "red": "#D32F2F",
-    "green": "#388E3C",
-    "yellow": "#F57C00",
-    "blue": "#1976D2",
-    "purple": "#7B1FA2",
-    "cyan": "#0097A7",
-    "white": "#F5F5F5",
-    "brightBlack": "#616161",
-    "brightRed": "#F44336",
-    "brightGreen": "#4CAF50",
-    "brightYellow": "#FF9800",
-    "brightBlue": "#2196F3",
-    "brightPurple": "#9C27B0",
-    "brightCyan": "#00BCD4",
-    "brightWhite": "#FFFFFF",
-    "foreground": "#ECEFF1",
-    "background": "#263238",
-    "cursorColor": "#FFFFFF"
-  },
-  {
     "name": "Kangaroo",
     "black": "#000000",
     "red": "#c13900",
