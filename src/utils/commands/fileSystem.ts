@@ -201,6 +201,44 @@ export const fileSystemCommands = {
     return `touch: created '${args[0]}'`;
   },
   
+  mkdir: (args: string[]) => {
+    if (args.length === 0) {
+      return 'Usage: mkdir [directory_name]\nExample: mkdir new_folder\nCreates a new directory in the current location';
+    }
+
+    const targetPath = resolvePath(args[0]);
+    const dirName = targetPath[targetPath.length - 1];
+    const parentPath = targetPath.slice(0, -1);
+
+    // Navigate to parent directory
+    let parent = virtualFileSystem;
+    for (const segment of parentPath) {
+      if (parent.children && parent.children[segment]) {
+        parent = parent.children[segment];
+      } else {
+        return `mkdir: cannot create directory '${args[0]}': No such file or directory`;
+      }
+    }
+
+    if (!parent.children) {
+      return `mkdir: cannot create directory '${args[0]}': Parent is not a directory`;
+    }
+
+    // Check if directory already exists
+    if (parent.children[dirName]) {
+      return `mkdir: cannot create directory '${args[0]}': File exists`;
+    }
+
+    // Create new directory
+    parent.children[dirName] = {
+      name: dirName,
+      type: 'directory',
+      children: {}
+    };
+
+    return `mkdir: created directory '${args[0]}'`;
+  },
+
   reset: () => {
     // Reset current path to default
     currentPath.length = 0;
