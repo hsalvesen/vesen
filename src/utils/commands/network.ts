@@ -107,18 +107,115 @@ export const networkCommands = {
   
   curl: async (args: string[]) => {
     if (args.length === 0) {
-      return 'curl: no URL provided';
+      return 'curl: no URL provided\nUsage: curl [URL]\nExample: curl https://httpbin.org/get';
     }
-
-    const url = args[0];
-
-    try {
-      const response = await fetch(url);
-      const data = await response.text();
-
-      return data;
-    } catch (error) {
-      return `curl: could not fetch URL ${url}. Details: ${error}`;
+  
+    let url = args[0];
+  
+    // Add protocol if missing
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
     }
+  
+    const currentTheme = get(theme);
+  
+    // Create loading animation
+    const loadingFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+    let frameIndex = 0;
+    
+    // Return the loading message immediately
+    const loadingMessage = `<span style="color: ${currentTheme.cyan};">Fetching ${url}... ${loadingFrames[0]}</span>`;
+    
+    // Helper function to escape HTML
+    const escapeHtml = (text: string): string => {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    };
+    
+    // Use setTimeout to update the loading animation and fetch data
+    setTimeout(async () => {
+      // Find the current output element
+      const historyElements = document.querySelectorAll('.whitespace-pre');
+      const currentElement = historyElements[historyElements.length - 1];
+      
+      if (currentElement) {
+        // Declare interval variable with correct browser type
+        let interval: number;
+        
+        // Animate the loading spinner
+        interval = setInterval(() => {
+          frameIndex = (frameIndex + 1) % loadingFrames.length;
+          currentElement.innerHTML = `<span style="color: ${currentTheme.cyan};">Fetching ${url}... ${loadingFrames[frameIndex]}</span>`;
+          
+          // Trigger scroll after each loading frame update
+          const input = document.getElementById('command-input');
+          if (input) {
+            input.scrollIntoView({ behavior: 'smooth', block: 'end' });
+          }
+        }, 100);
+        
+        try {
+          // Use a CORS proxy for better compatibility
+          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+          const response = await fetch(proxyUrl);
+          
+          // Clear the loading animation
+          clearInterval(interval);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const result = await response.json();
+          
+          if (result.status && result.status.http_code !== 200) {
+            currentElement.innerHTML = `<span style="color: ${currentTheme.red};">curl: HTTP ${result.status.http_code} - ${result.status.error || 'Request failed'}</span>`;
+            return;
+          }
+          
+          const data = result.contents;
+          
+          // Escape HTML to prevent it from breaking the terminal formatting
+          const escapedData = escapeHtml(data);
+          
+          // Limit output length to prevent overwhelming the terminal
+          let finalOutput;
+          if (escapedData.length > 5000) {
+            finalOutput = escapedData.substring(0, 5000) + `\n\n<span style="color: ${currentTheme.yellow};">... (output truncated, showing first 5000 characters)</span>`;
+          } else {
+            finalOutput = escapedData || `<span style="color: ${currentTheme.yellow};">curl: Empty response from ${url}</span>`;
+          }
+          
+          // Update the element with the final result
+          currentElement.innerHTML = `<pre style="white-space: pre-wrap; word-wrap: break-word;">${finalOutput}</pre>`;
+          
+          // Force scroll to bottom after content update
+          setTimeout(() => {
+            const input = document.getElementById('command-input');
+            if (input) {
+              input.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+          }, 50);
+          
+        } catch (error: unknown) {
+          // Clear the loading animation on error
+          clearInterval(interval);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          currentElement.innerHTML = `<span style="color: ${currentTheme.red};">curl: Failed to fetch ${url}\nError: ${errorMessage}</span>`;
+          
+          // Force scroll to bottom after error update
+          setTimeout(() => {
+            const input = document.getElementById('command-input');
+            if (input) {
+              input.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+          }, 50);
+        }
+      }
+    }, 100);
+  
+    // Return the initial loading message
+    return loadingMessage;
   }
 };

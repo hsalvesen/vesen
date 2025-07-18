@@ -1,6 +1,10 @@
 import { theme } from '../../stores/theme';
 import { get } from 'svelte/store';
 import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from '../virtualFileSystem';
+import { history } from '../../stores/history';
+import { systemCommands } from './system';
+import themes from '../../../themes.json';
+import packageJson from '../../../package.json';
 
 // Helper function to load real file content
 async function loadRealFile(filePath: string): Promise<string> {
@@ -239,7 +243,109 @@ export const fileSystemCommands = {
     return `mkdir: created directory '${args[0]}'`;
   },
 
+  clear: () => {
+    history.set([]);
+    return '';
+  },
+  
+  echo: (args: string[]) => {
+    if (args.length === 0) {
+      return 'Usage: echo [text] [> filename] [>> filename]\nExamples:\n  echo "Hello World"           - display text\n  echo "Content" > file.txt    - write text to file\n  echo "More" >> file.txt      - append text to file\n  echo > empty.txt             - create empty file\nTip: Use quotes for text with spaces';
+    }
+    
+    // Join args first, then parse for redirection operators
+    const fullCommand = args.join(' ');
+    
+    // Check for redirection operators
+    let isAppend = false;
+    let redirectIndex = -1;
+    
+    // Look for >> first (append)
+    if (fullCommand.includes('>>')) {
+      isAppend = true;
+      redirectIndex = fullCommand.indexOf('>>');
+    } else if (fullCommand.includes('>')) {
+      // Look for > (overwrite)
+      redirectIndex = fullCommand.indexOf('>');
+    }
+    
+    if (redirectIndex !== -1) {
+      // Handle file redirection
+      const beforeRedirect = fullCommand.substring(0, redirectIndex).trim();
+      const afterRedirect = fullCommand.substring(redirectIndex + (isAppend ? 2 : 1)).trim();
+      
+      if (!afterRedirect) {
+        return `echo: syntax error: missing filename after ${isAppend ? '>>' : '>'}`;
+      }
+      
+      // Extract filename (first word after redirection)
+      const filename = afterRedirect.split(' ')[0];
+      let content = beforeRedirect;
+      
+      // Remove surrounding quotes from content
+      if ((content.startsWith('"') && content.endsWith('"')) || 
+          (content.startsWith("'") && content.endsWith("'"))) {
+        content = content.slice(1, -1);
+      }
+      
+      // Resolve the target file path
+      const targetPath = resolvePath(filename);
+      const fileName = targetPath[targetPath.length - 1];
+      const parentPath = targetPath.slice(0, -1);
+  
+      // Navigate to parent directory
+      let parent = virtualFileSystem;
+      for (const segment of parentPath) {
+        if (parent.children && parent.children[segment]) {
+          parent = parent.children[segment];
+        } else {
+          return `echo: cannot create '${filename}': No such file or directory`;
+        }
+      }
+  
+      if (!parent.children) {
+        return `echo: cannot create '${filename}': Parent is not a directory`;
+      }
+  
+      // Check if target exists and is a directory
+      if (parent.children[fileName] && parent.children[fileName].type === 'directory') {
+        return `echo: cannot write to '${filename}': Is a directory`;
+      }
+  
+      // Create, overwrite, or append to the file
+      if (isAppend && parent.children[fileName] && parent.children[fileName].type === 'file') {
+        // Append to existing file
+        const existingContent = parent.children[fileName].content || '';
+        parent.children[fileName].content = existingContent + (existingContent ? '\n' : '') + content;
+      } else {
+        // Create or overwrite the file
+        parent.children[fileName] = {
+          name: fileName,
+          type: 'file',
+          content: content
+        };
+      }
+  
+      const currentTheme = get(theme);
+      const action = isAppend ? 'appended to' : 'written to';
+      return `<span style="color: ${currentTheme.green};">Content ${action} '${filename}'</span>`;
+    }
+  
+    // Regular echo behavior - remove surrounding quotes
+    let output = args.join(' ');
+    if ((output.startsWith('"') && output.endsWith('"')) || 
+        (output.startsWith("'") && output.endsWith("'"))) {
+      output = output.slice(1, -1);
+    }
+    
+    return output;
+  },
+
   reset: () => {
+    // Reset theme to default (wombat)
+    const defaultTheme = themes.find((t) => t.name.toLowerCase() === 'wombat')!;
+    theme.set(defaultTheme);
+    
     // Reset current path to default
     currentPath.length = 0;
     currentPath.push('home', 'user');
@@ -304,7 +410,24 @@ export const fileSystemCommands = {
       }
     };
     
-    const currentTheme = get(theme);
-    return `<span style="color: ${currentTheme.green}; font-weight: bold;">Virtual file system reset to default state</span>\n<span style="color: ${currentTheme.cyan};">Current directory: /home/user</span>\n<span style="color: ${currentTheme.yellow};">All created/modified files have been restored</span>`;
+    // Clear the terminal history and add the banner
+    const bannerOutput = systemCommands.banner();
+    history.set([{ command: 'banner', outputs: [bannerOutput] }]);
+    
+    // Return empty string since we're handling the output via history
+    return '';
+  },
+  
+  sudo: (args: string[]) => {
+    // Open YouTube rickroll regardless of the argument
+    window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
+    
+    return '';
+    
+  },
+  
+  exit: () => {
+    window.close();
+    return 'Goodbye!';
   }
 };

@@ -2,7 +2,7 @@
   import { afterUpdate, onMount } from 'svelte';
   import { history } from '../stores/history';
   import { theme } from '../stores/theme';
-  import { commands, virtualFileSystem, currentPath } from '../utils/commands';
+  import { commands, virtualFileSystem, currentPath, processCommand } from '../utils/commands';
   import { track } from '../utils/tracking';
   import themes from '../../themes.json';
 
@@ -94,17 +94,10 @@
         track(commandName, ...args);
       }
 
-      const commandFunction = commands[commandName];
+      // Use processCommand instead of calling commands directly
+      const output = await processCommand(command);
 
-      if (commandFunction) {
-        const output = await commandFunction(args);
-
-        if (commandName !== 'clear') {
-          $history = [...$history, { command, outputs: [output] }];
-        }
-      } else {
-        const output = `${commandName}: command not found`;
-
+      if (commandName !== 'clear' && commandName !== 'reset') {
         $history = [...$history, { command, outputs: [output] }];
       }
 

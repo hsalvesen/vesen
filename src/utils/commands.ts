@@ -6,148 +6,107 @@ import { fileSystemCommands } from './commands/fileSystem';
 import { networkCommands } from './commands/network';
 import { theme } from '../stores/theme';
 import { get } from 'svelte/store';
-// Add this import to fix the virtualFileSystem reference
 import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from './virtualFileSystem';
 
 const hostname = window.location.hostname;
 
 // Terminal-specific commands that don't fit in other modules
+
 const terminalCommands = {
   help: () => {
     const currentTheme = get(theme);
     const commandList = Object.keys(commands);
     
-    // Group commands by category for better organization
+    // Group commands by category for better organisation
     const categories: Record<string, string[]> = {
       'System Info': ['neofetch', 'hostname', 'whoami', 'date'],
-      'File System': ['ls', 'pwd', 'cd', 'cat', 'touch', 'rm'],
+      'File System': ['ls', 'pwd', 'cd', 'cat', 'touch', 'rm', 'mkdir'],
       'Terminal': ['help', 'clear', 'reset', 'echo', 'exit'],
       'Network': ['weather', 'curl'],
       'Customisation': ['theme'],
       'Project': ['repo', 'email', 'banner']
     };
     
-    let output = `<div style="color: ${currentTheme.cyan}; font-weight: bold; margin-bottom: 15px;">Available Commands:</div>`;
+    let output = `<span style="color: ${currentTheme.cyan}; font-weight: bold;">Available Commands:</span>\n\n`;
     
-    // Create five-column layout with manual distribution for better balance
-    output += `<div style="display: flex; gap: 15px;">`;
+    // Simple three-column layout using CSS columns
+    output += '<div style="column-count: 3; column-gap: 50px; column-fill: balance; break-inside: avoid;">';
     
-    // Manually distribute categories for better balance across five columns
-    const columnDistribution = [
-      ['System Info'],              // Column 1
-      ['File System'],              // Column 2
-      ['Terminal'],                 // Column 3
-      ['Network', 'Customisation'], // Column 4
-      ['Project']                   // Column 5
-    ];
-    
-    // Generate five columns with manual distribution
-    columnDistribution.forEach(columnCategories => {
-      output += `<div style="flex: 1; min-height: 100px;">`;
+    // Process each category
+    Object.entries(categories).forEach(([category, cmds]) => {
+      const availableCommands = cmds.filter(cmd => commandList.includes(cmd));
+      if (availableCommands.length === 0) return;
       
-      columnCategories.forEach(categoryName => {
-        if (categories[categoryName]) {
-          const availableCommands = categories[categoryName].filter(cmd => commandList.includes(cmd));
-          if (availableCommands.length > 0) {
-            output += `<div style="margin-bottom: 12px;">`;
-            output += `<span style="color: ${currentTheme.yellow}; font-weight: bold;">${categoryName}:</span><br>`;
-            
-            availableCommands.forEach(cmd => {
-              output += `  <span style="color: ${currentTheme.white};">${cmd}</span><br>`;
-            });
-            output += `</div>`;
-          }
-        }
-      });
-      output += `</div>`;
+      // Category section with break-inside avoid
+      output += `<div style="break-inside: avoid; margin-bottom: 20px;">`;
+      
+      // Category header
+      output += `<div style="color: ${currentTheme.yellow}; font-weight: bold; margin-bottom: 8px;">${category}:</div>`;
+      
+      // Commands in this category
+      for (const cmd of availableCommands) {
+        const description = getCommandDescription(cmd);
+        output += `<div style="margin: 3px 0; display: flex; align-items: flex-start;">`;
+        output += `<span style="color: ${currentTheme.green}; font-weight: bold; min-width: 80px; margin-right: 12px; flex-shrink: 0;">${cmd}</span>`;
+        output += `<span style="color: ${currentTheme.white}; flex: 1; word-break: break-word;">${description}</span>`;
+        output += '</div>';
+      }
+      
+      output += '</div>';
     });
     
-    output += `</div>`;
+    output += '</div>';
     
-    return output;
-  },
-  
-  clear: () => {
-    history.set([]);
-    return '';
-  },
-  
-  echo: (args: string[]) => {
-    if (args.length === 0) {
-      return 'Usage: echo [text] [> filename]\nExamples:\n  echo "Hello World"           - display text\n  echo "Content" > file.txt    - write text to file\n  echo "Line 1" > myfile.txt   - create/overwrite file\n  echo > empty.txt             - create empty file\nTip: Use quotes for text with spaces';
-    }
-    
-    // Check for redirection operator >
-    const redirectIndex = args.indexOf('>');
-    
-    if (redirectIndex !== -1) {
-      // Handle file redirection
-      if (redirectIndex === args.length - 1) {
-        return 'echo: syntax error: missing filename after >';
-      }
-      
-      let content = args.slice(0, redirectIndex).join(' ');
-      const filename = args[redirectIndex + 1];
-      
-      // Remove surrounding quotes from content
-      if ((content.startsWith('"') && content.endsWith('"')) || 
-          (content.startsWith("'") && content.endsWith("'"))) {
-        content = content.slice(1, -1);
-      }
-      
-      // Resolve the target file path
-      const targetPath = resolvePath(filename);
-      const fileName = targetPath[targetPath.length - 1];
-      const parentPath = targetPath.slice(0, -1);
-  
-      // Navigate to parent directory
-      let parent = virtualFileSystem;
-      for (const segment of parentPath) {
-        if (parent.children && parent.children[segment]) {
-          parent = parent.children[segment];
-        } else {
-          return `echo: cannot create '${filename}': No such file or directory`;
+    // Add responsive media query for smaller screens
+    output += `
+    <style>
+      @media (max-width: 1000px) {
+        div[style*="column-count: 3"] {
+          column-count: 2 !important;
+          column-gap: 40px !important;
         }
       }
-  
-      if (!parent.children) {
-        return `echo: cannot create '${filename}': Parent is not a directory`;
+      @media (max-width: 650px) {
+        div[style*="column-count: 3"] {
+          column-count: 1 !important;
+        }
       }
-  
-      // Check if target exists and is a directory
-      if (parent.children[fileName] && parent.children[fileName].type === 'directory') {
-        return `echo: cannot write to '${filename}': Is a directory`;
-      }
-  
-      // Create or overwrite the file
-      parent.children[fileName] = {
-        name: fileName,
-        type: 'file',
-        content: content
+    </style>
+    `;
+    
+    output += `\n<span style="color: ${currentTheme.cyan};">Type [command] --help for detailed usage information</span>`;
+    
+    function getCommandDescription(cmd: string): string {
+      const descriptions: Record<string, string> = {
+        'help': 'Show commands',
+        'clear': 'Clear screen',
+        'echo': 'Display text',
+        'exit': 'Close terminal',
+        'ls': 'List files',
+        'pwd': 'Current path',
+        'cd': 'Change dir',
+        'cat': 'Show file',
+        'touch': 'Create file',
+        'rm': 'Remove file',
+        'mkdir': 'Make dir',
+        'reset': 'Reset terminal',
+        'neofetch': 'System info',
+        'hostname': 'Show hostname',
+        'whoami': 'User info',
+        'date': 'Show date',
+        'weather': 'Get weather',
+        'curl': 'HTTP request',
+        'theme': 'Change theme',
+        'repo': 'Open repo',
+        'email': 'Open email',
+        'banner': 'Show banner'
       };
-  
-      const currentTheme = get(theme);
-      return `<span style="color: ${currentTheme.green};">Content written to '${filename}'</span>`;
-    }
-  
-    // Regular echo behavior - remove surrounding quotes
-    let output = args.join(' ');
-    if ((output.startsWith('"') && output.endsWith('"')) || 
-        (output.startsWith("'") && output.endsWith("'"))) {
-      output = output.slice(1, -1);
+      return descriptions[cmd] || '';
     }
     
     return output;
   },
-  
-  exit: () => {
-    window.close();
-    return 'Goodbye!';
-  },
-  
-  sudo: (args: string[]) => {
-    return `Permission denied: unable to run the command '${args[0]}' as root.`;
-  }
+
 };
 
 // Project-specific commands
@@ -207,6 +166,56 @@ const projectCommands = {
   }
 };
 
+// Add a separate function to handle --help flags
+export function processCommand(input: string): string | Promise<string> {
+  const args = input.trim().split(/\s+/);
+  const command = args[0];
+  const hasHelpFlag = args.includes('--help') || args.includes('-h');
+  
+  if (hasHelpFlag) {
+    return getCommandHelp(command);
+  }
+  
+  // Execute the actual command if it exists
+  if (commands[command]) {
+    return commands[command](args.slice(1)); // Pass string[] not string
+  }
+  
+  return `Command '${command}' not found. Type 'help' to see available commands.`;
+}
+
+// Re-export virtualFileSystem and currentPath from the dedicated module
+export { virtualFileSystem, currentPath } from './virtualFileSystem';
+
+// Helper function to provide detailed help for each command
+function getCommandHelp(command: string): string {
+  const currentTheme = get(theme);
+  
+  const helpTexts: Record<string, string> = {
+    'help': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">help</span> - Display available commands\n\nUsage: help\n\nShows a list of all available commands organised by category.`,
+    'clear': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">clear</span> - Clear the terminal screen\n\nUsage: clear\n\nClears all previous output from the terminal screen.`,
+    'echo': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">echo</span> - Display text or write to file\n\nUsage: \n  echo [text]\n  echo [text] > [filename]\n  echo [text] >> [filename]\n\nExamples:\n  echo "Hello World"\n  echo "Content" > file.txt\n  echo "More content" >> file.txt`,
+    'ls': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">ls</span> - List directory contents\n\nUsage: ls [directory]\n\nLists files and directories in the current or specified directory.`,
+    'pwd': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">pwd</span> - Print working directory\n\nUsage: pwd\n\nDisplays the current directory path.`,
+    'cd': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">cd</span> - Change directory\n\nUsage: cd [directory]\n\nChanges the current working directory.\n\nExamples:\n  cd /home\n  cd ..\n  cd ~`,
+    'cat': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">cat</span> - Display file contents\n\nUsage: cat [filename]\n\nDisplays the contents of the specified file.`,
+    'touch': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">touch</span> - Create new file\n\nUsage: touch [filename]\n\nCreates a new empty file with the specified name.`,
+    'rm': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">rm</span> - Remove files or directories\n\nUsage: rm [filename/directory]\n\nRemoves the specified file or directory.`,
+    'mkdir': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">mkdir</span> - Create directory\n\nUsage: mkdir [directory_name]\n\nCreates a new directory with the specified name.`,
+    'reset': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">reset</span> - Reset session\n\nUsage: reset\n\nResets the terminal to its initial state, clearing history and resetting theme.`,
+    'neofetch': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">neofetch</span> - Display system information\n\nUsage: neofetch\n\nShows detailed system information in a formatted display.`,
+    'weather': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">weather</span> - Get weather information\n\nUsage: weather [location]\n\nDisplays current weather information for the specified location.`,
+    'curl': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">curl</span> - Make HTTP requests\n\nUsage: curl [URL]\n\nMakes an HTTP request to the specified URL and displays the response.`,
+    'theme': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">theme</span> - Change terminal theme\n\nUsage: \n  theme\n  theme [theme_name]\n\nWithout arguments, shows available themes. With a theme name, changes to that theme.`,
+    'repo': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">repo</span> - Open project repository\n\nUsage: repo\n\nOpens the project's GitHub repository in a new tab.`,
+    'email': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">email</span> - Contact developer\n\nUsage: email\n\nOpens the default email client to send an email to the developer.`,
+    'banner': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">banner</span> - Display welcome banner\n\nUsage: banner\n\nShows the terminal welcome banner with ASCII art and version information.`,
+    'exit': `<span style="color: ${currentTheme.cyan}; font-weight: bold;">exit</span> - Close terminal\n\nUsage: exit\n\nCloses the terminal session.`
+  };
+  
+  return helpTexts[command] || `No help available for command '${command}'. Type 'help' to see available commands.`;
+}
+
 // Combine all commands
 export const commands: Record<string, (args: string[]) => Promise<string> | string> = {
   ...systemCommands,
@@ -215,6 +224,3 @@ export const commands: Record<string, (args: string[]) => Promise<string> | stri
   ...terminalCommands,
   ...projectCommands
 };
-
-// Re-export virtualFileSystem and currentPath from the dedicated module
-export { virtualFileSystem, currentPath } from './virtualFileSystem';
