@@ -1,7 +1,7 @@
 FROM node:lts-alpine AS dependencies
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 FROM node:lts-alpine AS builder
 WORKDIR /app

@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { afterUpdate, onMount } from 'svelte';
+  import { onMount } from 'svelte';
   import { history } from '../stores/history';
   import { theme } from '../stores/theme';
   import { commands, virtualFileSystem, currentPath, processCommand } from '../utils/commands';
   import { track } from '../utils/tracking';
   import themes from '../../themes.json';
 
-  let command = '';
-  let historyIndex = -1;
+  let command = $state('');
+  let historyIndex = $state(-1);
   let input: HTMLInputElement;
 
   // Helper function to resolve file paths for completion
@@ -82,8 +82,11 @@
     }
   });
 
-  afterUpdate(() => {
-    input.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+  $effect(() => {
+    if (input) {
+      input.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
   });
 
   const handleKeyDown = async (event: KeyboardEvent) => {
@@ -203,7 +206,7 @@
 </script>
 
 <svelte:window
-  on:click={(event) => {
+  onclick={(event) => {
     // Only focus if we're not selecting text and not clicking on selectable content
     if (!window.getSelection()?.toString() && event.target !== input) {
       input.focus();
@@ -211,19 +214,15 @@
   }}
 />
 
-<div class="flex w-full">
-  <p class="visible md:hidden">❯</p>
-
-  <input
-    id="command-input"
-    name="command-input"
-    aria-label="Command input"
-    class="w-full px-2 bg-transparent outline-none"
-    type="text"
-    autocomplete="off"
-    style={`color: ${$theme.foreground}`}
-    bind:value={command}
-    on:keydown={handleKeyDown}
-    bind:this={input}
-  />
-</div>
+<input
+  id="command-input"
+  name="command-input"
+  aria-label="Command input"
+  class="w-full px-2 bg-transparent outline-none"
+  type="text"
+  autocomplete="off"
+  style={`color: ${$theme.foreground}`}
+  bind:value={command}
+  onkeydown={handleKeyDown}
+  bind:this={input}
+/>

@@ -20,16 +20,16 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^3.1.2",
+    "@sveltejs/vite-plugin-svelte": "4.0.0",
     "@tailwindcss/postcss": "^4.1.11",
     "@tsconfig/svelte": "^5.0.4",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.4.41",
-    "svelte": "^5.36.7",
-    "svelte-check": "^4.3.0",
+    "svelte": "5.36.7",
+    "svelte-check": "4.3.0",
     "tailwindcss": "^4.1.11",
     "tslib": "^2.6.3",
-    "typescript": "^5.5.4",
+    "typescript": "5.5.4",
     "vite": "^5.4.19"
   },
   "engines": {
