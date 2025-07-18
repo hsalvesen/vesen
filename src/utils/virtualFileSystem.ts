@@ -25,10 +25,10 @@ export const virtualFileSystem: VirtualFile = {
               type: 'file',
               content: 'Hello! This is Has Salvesen\'s personal file.\n\nWelcome to my terminal!\n\nFeel free to explore the virtual file system.'
             },
-            'experience.txt': {
-              name: 'experience.txt',
+            'experience.md': {
+              name: 'experience.md',
               type: 'file',
-              filePath: '/src/data/experience.txt'
+              filePath: '/src/data/experience.md'
             },
             'documents': {
               name: 'documents',

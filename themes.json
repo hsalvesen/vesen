@@ -110,6 +110,28 @@
     "cursorColor": "#35b1d2"
   },
   {
+    "name": "PinkRobin",
+    "black": "#2A2A2E",
+    "red": "#B98EFF",
+    "green": "#FF7DE9",
+    "yellow": "#729FCF",
+    "blue": "#FF8C42",
+    "purple": "#75507B",
+    "cyan": "#E6A8E6",
+    "white": "#FFFFFF",
+    "brightBlack": "#A40000",
+    "brightRed": "#BF4040",
+    "brightGreen": "#66A05B",
+    "brightYellow": "#FFB86C",
+    "brightBlue": "#FF8C42",
+    "brightPurple": "#8F5902",
+    "brightCyan": "#FFB3E6",
+    "brightWhite": "#5C3566",
+    "foreground": "#D7D7DB",
+    "background": "#2A2A2E",
+    "cursorColor": "#D7D7DB"
+  },
+  {
     "name": "Swamphen",
     "black": "#3F3F54",
     "red": "#f60055",
@@ -196,27 +218,5 @@
     "foreground": "#ebdbb2",
     "background": "#282828",
     "cursorColor": "#ebdbb2"
-  },
-  {
-    "name": "PinkRobin",
-    "black": "#2A2A2E",
-    "red": "#B98EFF",
-    "green": "#FF7DE9",
-    "yellow": "#729FCF",
-    "blue": "#66A05B",
-    "purple": "#75507B",
-    "cyan": "#ACACAE",
-    "white": "#FFFFFF",
-    "brightBlack": "#A40000",
-    "brightRed": "#BF4040",
-    "brightGreen": "#66A05B",
-    "brightYellow": "#FFB86C",
-    "brightBlue": "#729FCF",
-    "brightPurple": "#8F5902",
-    "brightCyan": "#C4A000",
-    "brightWhite": "#5C3566",
-    "foreground": "#D7D7DB",
-    "background": "#2A2A2E",
-    "cursorColor": "#D7D7DB"
   }
 ]

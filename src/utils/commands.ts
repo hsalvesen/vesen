@@ -125,7 +125,17 @@ const projectCommands = {
 
     switch (args[0]) {
       case 'ls': {
-        let result = themes.map((t) => t.name.toLowerCase()).join(', ');
+        const currentTheme = get(theme);
+        const themeList = themes.map((t) => {
+          const themeName = t.name.toLowerCase();
+          if (t.name === currentTheme.name) {
+            // Highlight the current theme with bright cyan and bold
+            return `<span style="color: var(--theme-bright-cyan); font-weight: bold;">${themeName}</span>`;
+          }
+          return themeName;
+        }).join(', ');
+        
+        let result = themeList;
         result += `\nYou can preview all these themes here: ${packageJson.repository.url}/tree/main/docs/themes`;
 
         return result;

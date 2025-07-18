@@ -61,15 +61,14 @@ export const fileSystemCommands = {
   
   cat: async (args: string[]) => {
     if (args.length === 0) {
-      return 'Usage: cat [filename]\nExamples:\n  cat experience.txt       - display experience file\n  cat documents/readme.md  - display readme from documents folder\nTip: Use "ls" to see available files in the current directory';
+      return 'Usage: cat [filename]\nExamples:\n  cat experience.md        - display experience file (markdown)\n  cat experience.md       - display experience file (plain text)\n  cat documents/readme.md  - display readme from documents folder\nTip: Use "ls" to see available files in the current directory';
     }
     
-    // Special handling for experience.txt - load from data folder
-    if (args[0] === 'experience.txt') {
+    if (args[0] === 'experience.md') {
       try {
-        return await loadRealFile('/src/data/experience.txt');
+        return await loadRealFile('/src/data/experience.md');
       } catch (error) {
-        return `cat: experience.txt: Error reading file - ${error}`;
+        return `cat: experience.md: Error reading file - ${error}`;
       }
     }
     
@@ -364,6 +363,11 @@ export const fileSystemCommands = {
                 name: 'has.txt',
                 type: 'file',
                 content: 'Hello! This is Has Salvesen\'s personal file.\n\nWelcome to my terminal!\n\nFeel free to explore the virtual file system.'
+              },
+              'experience.md': {
+                name: 'experience.md',
+                type: 'file',
+                filePath: '/src/data/experience.md'
               },
               'documents': {
                 name: 'documents',
