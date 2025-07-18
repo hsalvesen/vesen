@@ -10,5 +10,10 @@ export default {
       }
       return { code: content };
     },
-  })
+  }),
+  compilerOptions: {
+    compatibility: {
+      componentApi: 4
+    }
+  }
 }
