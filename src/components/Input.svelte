@@ -86,7 +86,30 @@
   $effect(() => {
     if (input) {
       input.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      
+      // Scroll the main container to bottom after command execution
+      const mainContainer = document.querySelector('main');
+      if (mainContainer) {
+        mainContainer.scrollTop = mainContainer.scrollHeight;
+      }
     }
+  });
+
+  // Add effect to scroll to bottom when history changes
+  $effect(() => {
+    // This effect runs when $history changes
+    $history;
+    
+    // Use setTimeout to ensure DOM has updated
+    setTimeout(() => {
+      const mainContainer = document.querySelector('main');
+      if (mainContainer) {
+        mainContainer.scrollTo({
+          top: mainContainer.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+    }, 0);
   });
 
   const handleKeyDown = async (event: KeyboardEvent) => {
