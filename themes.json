@@ -40,7 +40,7 @@
     "brightCyan": "#989a9c",
     "brightWhite": "#d5ccba",
     "foreground": "#45373c",
-    "background": "#d5ccba",
+    "background": "#e8ddd0",
     "cursorColor": "#45373c"
   },
   {
@@ -196,5 +196,27 @@
     "foreground": "#ebdbb2",
     "background": "#282828",
     "cursorColor": "#ebdbb2"
+  },
+  {
+    "name": "PinkRobin",
+    "black": "#2A2A2E",
+    "red": "#B98EFF",
+    "green": "#FF7DE9",
+    "yellow": "#729FCF",
+    "blue": "#66A05B",
+    "purple": "#75507B",
+    "cyan": "#ACACAE",
+    "white": "#FFFFFF",
+    "brightBlack": "#A40000",
+    "brightRed": "#BF4040",
+    "brightGreen": "#66A05B",
+    "brightYellow": "#FFB86C",
+    "brightBlue": "#729FCF",
+    "brightPurple": "#8F5902",
+    "brightCyan": "#C4A000",
+    "brightWhite": "#5C3566",
+    "foreground": "#D7D7DB",
+    "background": "#2A2A2E",
+    "cursorColor": "#D7D7DB"
   }
 ]

@@ -342,8 +342,8 @@ export const fileSystemCommands = {
   },
 
   reset: () => {
-    // Reset theme to default (wombat)
-    const defaultTheme = themes.find((t) => t.name.toLowerCase() === 'wombat')!;
+    // Reset theme to default (pinkrobin)
+    const defaultTheme = themes.find((t) => t.name.toLowerCase() === 'pinkrobin')!;
     theme.set(defaultTheme);
     
     // Reset current path to default

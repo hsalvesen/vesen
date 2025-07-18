@@ -85,22 +85,25 @@
 
   $effect(() => {
     if (input) {
-      input.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      
-      // Scroll the main container to bottom after command execution
+      // Scroll the main container to bottom after any history changes
       const mainContainer = document.querySelector('main');
       if (mainContainer) {
-        mainContainer.scrollTop = mainContainer.scrollHeight;
+        setTimeout(() => {
+          mainContainer.scrollTop = mainContainer.scrollHeight;
+        }, 0);
       }
+      
+      // Also ensure input is visible
+      input.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
   });
 
-  // Add effect to scroll to bottom when history changes
+  // Add a new effect that triggers specifically on history changes
   $effect(() => {
-    // This effect runs when $history changes
+    // This effect runs whenever $history changes
     $history;
     
-    // Use setTimeout to ensure DOM has updated
+    // Scroll to bottom after DOM updates
     setTimeout(() => {
       const mainContainer = document.querySelector('main');
       if (mainContainer) {
@@ -109,7 +112,7 @@
           behavior: 'smooth'
         });
       }
-    }, 0);
+    }, 10);
   });
 
   const handleKeyDown = async (event: KeyboardEvent) => {

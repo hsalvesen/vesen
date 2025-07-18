@@ -148,15 +148,14 @@ export const systemCommands = {
     
     // Create HTML structure with CSS styling and fixed width for perfect alignment
     const logoHtml = logoLines.map(line => 
-      `<div style="color: ${currentTheme.yellow}; font-weight: bold; font-family: monospace;">${line}</div>`
+      `<div style="color: var(--theme-yellow); font-weight: bold; font-family: monospace;">${line}</div>`
     ).join('');
     
     const infoHtml = infoData.map(({ label, value }) => 
-      `<div style="display: flex; margin-bottom: 2px; font-family: monospace;"><span style="color: ${currentTheme.cyan}; font-weight: bold; width: 120px; display: inline-block;">${label}:</span><span>${value}</span></div>`
+      `<div style="display: flex; margin-bottom: 2px; font-family: monospace;"><span style="color: var(--theme-cyan); font-weight: bold; width: 120px; display: inline-block;">${label}:</span><span>${value}</span></div>`
     ).join('');
     
-    return `
-<div style="display: flex; gap: 30px; font-family: monospace; line-height: 1.2;">
+    return `<div style="display: flex; gap: 30px; font-family: monospace; line-height: 1.2;">
   <div style="flex-shrink: 0;">
     ${logoHtml}
   </div>

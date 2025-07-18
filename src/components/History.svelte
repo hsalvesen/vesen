@@ -11,7 +11,6 @@
 
       <div class="flex">
         <p class="visible md:hidden">❯</p>
-
         <p class="px-2">{command}</p>
       </div>
     </div>
