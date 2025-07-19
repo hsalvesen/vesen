@@ -9,12 +9,25 @@ import packageJson from '../../../package.json';
 // Helper function to load real file content
 async function loadRealFile(filePath: string): Promise<string> {
   try {
-    // For files in the data folder, construct the correct path
-    const response = await fetch(filePath);
-    if (!response.ok) {
-      throw new Error(`Failed to load file: ${response.statusText}`);
+    // Try multiple possible paths for different environments
+    const possiblePaths = [
+      filePath,
+      filePath.startsWith('/') ? '.' + filePath : filePath,
+      filePath.startsWith('/') ? filePath.substring(1) : filePath
+    ];
+    
+    for (const path of possiblePaths) {
+      try {
+        const response = await fetch(path);
+        if (response.ok) {
+          return await response.text();
+        }
+      } catch (e) {
+        // Continue to next path
+      }
     }
-    return await response.text();
+    
+    throw new Error(`Failed to load file from any path: ${possiblePaths.join(', ')}`);
   } catch (error) {
     return `Error loading file: ${error}`;
   }
