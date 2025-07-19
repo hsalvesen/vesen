@@ -77,25 +77,25 @@ const terminalCommands = {
       const descriptions: Record<string, string> = {
         'help': 'Show commands',
         'clear': 'Clear screen',
-        'echo': 'Display text',
+        'echo': 'Write text',
         'exit': 'Close terminal',
         'ls': 'List files',
-        'pwd': 'Current path',
-        'cd': 'Change dir',
-        'cat': 'Show file',
+        'pwd': 'Show current path',
+        'cd': 'Change directory',
+        'cat': 'Show file contents',
         'touch': 'Create file',
         'rm': 'Remove file',
-        'mkdir': 'Make dir',
+        'mkdir': 'Make directory',
         'reset': 'Reset terminal',
-        'neofetch': 'System info',
+        'neofetch': 'Fetch system info',
         'hostname': 'Show hostname',
-        'whoami': 'User info',
+        'whoami': 'Developer info',
         'date': 'Show date',
-        'weather': 'Get weather',
+        'weather': 'Get weather forecast',
         'curl': 'HTTP request',
         'theme': 'Change theme',
-        'repo': 'Open repo',
-        'email': 'Open email',
+        'repo': 'Open repository',
+        'email': 'Open mail client',
         'banner': 'Show banner'
       };
       return descriptions[cmd] || '';
@@ -109,15 +109,15 @@ const terminalCommands = {
 // Project-specific commands
 const projectCommands = {
   theme: (args: string[]) => {
-    const usage = `Usage: theme [args].
-    [args]:
-      ls: list all available themes
-      set: set theme to [theme]
+    const usage = `<span style="color: var(--theme-cyan); font-weight: bold;">theme</span> - Change terminal theme
+<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> theme <span style="color: var(--theme-green);">[args]</span>.
+  <span style="color: var(--theme-green);">args:</span>
+    ls: list all available themes
+    set: set theme to [theme]
 
-    [Examples]:
-      theme ls
-      theme set swamphen
-    `;
+<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
+  theme ls
+  theme set swampHen`;
     if (args.length === 0) {
       return usage;
     }
@@ -199,25 +199,28 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
 // Helper function to provide detailed help for each command
 function getCommandHelp(command: string): string {
   const helpTexts: Record<string, string> = {
-    'help': `<span style="color: var(--theme-cyan); font-weight: bold;">help</span> - Display available commands<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> help<br>Shows a list of all available commands organised by category.`,
-    'clear': `<span style="color: var(--theme-cyan); font-weight: bold;">clear</span> - Clear the terminal screen<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> clear<br>Clears all previous output from the terminal screen.`,
-    'echo': `<span style="color: var(--theme-cyan); font-weight: bold;">echo</span> - Display text or write to file<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span><br>&nbsp;&nbsp;echo [text]<br>&nbsp;&nbsp;echo [text] > [filename]<br>&nbsp;&nbsp;echo [text] >> [filename]<br><span style="color: var(--theme-green); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;echo "Hello World"<br>&nbsp;&nbsp;echo "Content" > file.txt<br>&nbsp;&nbsp;echo "More content" >> file.txt`,
-    'ls': `<span style="color: var(--theme-cyan); font-weight: bold;">ls</span> - List directory contents<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> ls [directory]<br>Lists files and directories in the current or specified directory.`,
-    'pwd': `<span style="color: var(--theme-cyan); font-weight: bold;">pwd</span> - Print working directory<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> pwd<br>Displays the current directory path.`,
-    'cd': `<span style="color: var(--theme-cyan); font-weight: bold;">cd</span> - Change directory<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> cd [directory]<br>Changes the current working directory.<br><span style="color: var(--theme-green); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;cd /home<br>&nbsp;&nbsp;cd ..<br>&nbsp;&nbsp;cd ~`,
-    'cat': `<span style="color: var(--theme-cyan); font-weight: bold;">cat</span> - Display file contents<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> cat [filename]<br>Displays the contents of the specified file.`,
-    'touch': `<span style="color: var(--theme-cyan); font-weight: bold;">touch</span> - Create new file<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> touch [filename]<br>Creates a new empty file with the specified name.`,
-    'rm': `<span style="color: var(--theme-cyan); font-weight: bold;">rm</span> - Remove files or directories<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> rm [filename/directory]<br>Removes the specified file or directory.`,
-    'mkdir': `<span style="color: var(--theme-cyan); font-weight: bold;">mkdir</span> - Create directory<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> mkdir [directory_name]<br>Creates a new directory with the specified name.`,
-    'reset': `<span style="color: var(--theme-cyan); font-weight: bold;">reset</span> - Reset session<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> reset<br>Resets the terminal to its initial state, clearing history and resetting theme.`,
-    'neofetch': `<span style="color: var(--theme-cyan); font-weight: bold;">neofetch</span> - Display system information<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> neofetch<br>Shows detailed system information in a formatted display.`,
-    'weather': `<span style="color: var(--theme-cyan); font-weight: bold;">weather</span> - Get weather information<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> weather [location]<br>Displays current weather information for the specified location.`,
-    'curl': `<span style="color: var(--theme-cyan); font-weight: bold;">curl</span> - Make HTTP requests<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> curl [URL]<br>Makes an HTTP request to the specified URL and displays the response.`,
-    'theme': `<span style="color: var(--theme-cyan); font-weight: bold;">theme</span> - Change terminal theme<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span><br>&nbsp;&nbsp;theme<br>&nbsp;&nbsp;theme [theme_name]<br>Without arguments, shows available themes. With a theme name, changes to that theme.`,
-    'repo': `<span style="color: var(--theme-cyan); font-weight: bold;">repo</span> - Open project repository<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> repo<br>Opens the project's GitHub repository in a new tab.`,
-    'email': `<span style="color: var(--theme-cyan); font-weight: bold;">email</span> - Contact developer<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> email<br>Opens the default email client to send an email to the developer.`,
-    'banner': `<span style="color: var(--theme-cyan); font-weight: bold;">banner</span> - Display welcome banner<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> banner<br>Shows the terminal welcome banner with ASCII art and version information.`,
-    'exit': `<span style="color: var(--theme-cyan); font-weight: bold;">exit</span> - Close terminal<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> exit<br>Closes the terminal session.`
+    'help': `<span style="color: var(--theme-cyan); font-weight: bold;">help</span> : Shows a list of all available commands organised by category.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> help`,
+    'clear': `<span style="color: var(--theme-cyan); font-weight: bold;">clear</span> : Clears all previous output from the terminal screen.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> clear`,
+    'echo': `<span style="color: var(--theme-cyan); font-weight: bold;">echo</span> : Display text or write to file<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span> > <span style="color: var(--theme-green);">[filename]</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span> >> <span style="color: var(--theme-green);">[filename]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;echo "Hello World"<br>&nbsp;&nbsp;echo "Content" > file.txt<br>&nbsp;&nbsp;echo "More content" >> file.txt`,
+    'ls': `<span style="color: var(--theme-cyan); font-weight: bold;">ls</span> : Lists files and directories in the current or specified directory.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> ls <span style="color: var(--theme-green);">[directory]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;ls<br>&nbsp;&nbsp;ls documents<br>&nbsp;&nbsp;ls /home/user`,
+    'pwd': `<span style="color: var(--theme-cyan); font-weight: bold;">pwd</span> : Displays the current directory path.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> pwd`,
+    'cd': `<span style="color: var(--theme-cyan); font-weight: bold;">cd</span> : Changes the current working directory.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> cd <span style="color: var(--theme-green);">[directory]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;cd documents<br>&nbsp;&nbsp;cd ..<br>&nbsp;&nbsp;cd ~<br>&nbsp;&nbsp;cd /home/user`,
+    'cat': `<span style="color: var(--theme-cyan); font-weight: bold;">cat</span> : Displays the contents of the specified file.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> cat <span style="color: var(--theme-green);">[filename]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;cat experience.md<br>&nbsp;&nbsp;cat documents/readme.md<br>&nbsp;&nbsp;cat has.txt`,
+    'touch': `<span style="color: var(--theme-cyan); font-weight: bold;">touch</span> : Creates a new empty file with the specified name.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> touch <span style="color: var(--theme-green);">[filename]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;touch newfile.txt<br>&nbsp;&nbsp;touch documents/notes.md<br>&nbsp;&nbsp;touch script.js`,
+    'rm': `<span style="color: var(--theme-cyan); font-weight: bold;">rm</span> : Removes the specified file or directory.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> rm <span style="color: var(--theme-green);">[options] [filename/directory]</span><br><span style="color: var(--theme-green); font-weight: bold;">Options:</span><br>&nbsp;&nbsp;-r, --recursive  remove directories and their contents recursively<br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;rm has.txt<br>&nbsp;&nbsp;rm -r documents<br>&nbsp;&nbsp;rm script.js`,
+    'mkdir': `<span style="color: var(--theme-cyan); font-weight: bold;">mkdir</span> : Creates a new directory with the specified name.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> mkdir <span style="color: var(--theme-green);">[directory_name]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;mkdir new_folder<br>&nbsp;&nbsp;mkdir projects/myapp<br>&nbsp;&nbsp;mkdir temp`,
+    'reset': `<span style="color: var(--theme-cyan); font-weight: bold;">reset</span> : Resets the terminal to its initial state, clearing history and resetting theme.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> reset`,
+    'hostname': `<span style="color: var(--theme-cyan); font-weight: bold;">hostname</span> : Shows the current hostname of the system.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> hostname`,
+    'whoami': `<span style="color: var(--theme-cyan); font-weight: bold;">whoami</span> : Displays developer.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> whoami`,
+    'date': `<span style="color: var(--theme-cyan); font-weight: bold;">date</span> : Shows the current date and time in local format.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> date`,
+    'neofetch': `<span style="color: var(--theme-cyan); font-weight: bold;">neofetch</span> : Shows detailed system information in a formatted display.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> neofetch`,
+    'weather': `<span style="color: var(--theme-cyan); font-weight: bold;">weather</span> : Displays current weather information for the specified location.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> weather <span style="color: var(--theme-green);">[location]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;weather Gadigal<br>&nbsp;&nbsp;weather Oslo<br>&nbsp;&nbsp;weather Aotearoa`,
+    'curl': `<span style="color: var(--theme-cyan); font-weight: bold;">curl</span> : Makes an HTTP request to the specified URL and displays the response.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> curl <span style="color: var(--theme-green);">[URL]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;curl https://httpbin.org/get<br>&nbsp;&nbsp;curl https://api.github.com/users/octocat<br>&nbsp;&nbsp;curl https://jsonplaceholder.typicode.com/posts/1`,
+    'theme': `<span style="color: var(--theme-cyan); font-weight: bold;">theme</span> : Change terminal theme<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> theme <span style="color: var(--theme-green);">[args]</span>.<br>&nbsp;&nbsp;<span style="color: var(--theme-green);">args:</span><br>&nbsp;&nbsp;&nbsp;&nbsp;ls: list all available themes<br>&nbsp;&nbsp;&nbsp;&nbsp;set: set theme to [theme]<br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;theme ls<br>&nbsp;&nbsp;theme set swampHen`,
+    'repo': `<span style="color: var(--theme-cyan); font-weight: bold;">repo</span> : Opens the project's GitHub repository in a new tab.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> repo`,
+    'email': `<span style="color: var(--theme-cyan); font-weight: bold;">email</span> : Opens the default email client to send an email to the developer.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> email`,
+    'banner': `<span style="color: var(--theme-cyan); font-weight: bold;">banner</span> : Shows the terminal welcome banner with ASCII art and version information.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> banner`,
+    'exit': `<span style="color: var(--theme-cyan); font-weight: bold;">exit</span> : Closes the terminal session.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> exit`
   };
   
   const helpText = helpTexts[command];

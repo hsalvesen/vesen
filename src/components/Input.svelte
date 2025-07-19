@@ -118,18 +118,22 @@
   const handleKeyDown = async (event: KeyboardEvent) => {
     if (event.key === 'Enter') {
       const [commandName, ...args] = command.split(' ');
-
+  
       if (import.meta.env.VITE_TRACKING_ENABLED === 'true') {
         track(commandName, ...args);
       }
-
+  
       // Use processCommand instead of calling commands directly
       const output = await processCommand(command);
-
-      if (commandName !== 'clear' && commandName !== 'reset') {
+  
+      // Only skip history for clear/reset when NOT showing help
+      const hasHelpFlag = args.includes('--help') || args.includes('-h');
+      const shouldSkipHistory = (commandName === 'clear' || commandName === 'reset') && !hasHelpFlag;
+      
+      if (!shouldSkipHistory) {
         $history = [...$history, { command, outputs: [output] }];
       }
-
+  
       command = '';
     } else if (event.key === 'ArrowUp') {
       if (historyIndex < $history.length - 1) {

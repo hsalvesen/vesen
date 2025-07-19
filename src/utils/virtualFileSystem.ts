@@ -94,7 +94,15 @@ export function getCurrentDirectory(): VirtualFile | null {
 
 // Helper function to resolve path
 export function resolvePath(path: string): string[] {
-  if (path.startsWith('/')) {
+  if (path === '~') {
+    // Home directory shortcut
+    return ['home', 'user'];
+  } else if (path.startsWith('~/')) {
+    // Home directory relative path
+    const relativePath = path.substring(2);
+    const segments = relativePath.split('/').filter(p => p !== '');
+    return ['home', 'user', ...segments];
+  } else if (path.startsWith('/')) {
     // Absolute path
     return path.split('/').filter(p => p !== '');
   } else {

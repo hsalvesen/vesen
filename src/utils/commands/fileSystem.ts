@@ -40,9 +40,11 @@ export const fileSystemCommands = {
   
   ls: (args: string[]) => {
     const currentTheme = get(theme);
-    let targetPath = currentPath;
+    let targetPath: string[];
     
-    if (args.length > 0) {
+    if (args.length === 0) {
+      targetPath = currentPath;
+    } else {
       targetPath = resolvePath(args[0]);
     }
     
@@ -51,12 +53,14 @@ export const fileSystemCommands = {
       if (current.children && current.children[segment]) {
         current = current.children[segment];
       } else {
-        return `ls: cannot access '${args[0] || '.'}': No such file or directory`;
+        const pathStr = args.length === 0 ? '.' : args[0];
+        return `ls: cannot access '${pathStr}': No such file or directory`;
       }
     }
     
     if (current.type !== 'directory') {
-      return `ls: cannot access '${args[0]}': Not a directory`;
+      const pathStr = args.length === 0 ? '.' : args[0];
+      return `ls: cannot access '${pathStr}': Not a directory`;
     }
     
     if (!current.children) {
@@ -74,7 +78,13 @@ export const fileSystemCommands = {
   
   cat: async (args: string[]) => {
     if (args.length === 0) {
-      return 'Usage: cat [filename]\nExamples:\n  cat experience.md        - display experience file (markdown)\n  cat experience.md       - display experience file (plain text)\n  cat documents/readme.md  - display readme from documents folder\nTip: Use "ls" to see available files in the current directory';
+      return `<span style="color: var(--theme-cyan); font-weight: bold;">cat</span> : Displays the contents of the specified file.
+<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> cat <span style="color: var(--theme-green);">[filename]</span>
+
+<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
+  cat experience.md
+  cat documents/readme.md
+  cat has.txt`;
     }
     
     if (args[0] === 'experience.md') {
@@ -105,7 +115,14 @@ export const fileSystemCommands = {
   
   cd: (args: string[]) => {
     if (args.length === 0) {
-      return 'Usage: cd [directory]\nExamples:\n  cd documents    - go to documents folder\n  cd ..          - go up one directory\n  cd /home/user  - go to absolute path\n  cd             - go to home directory\nTip: Use "ls" to see available directories';
+      return `<span style="color: var(--theme-cyan); font-weight: bold;">cd</span> : Changes the current working directory.
+<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> cd <span style="color: var(--theme-green);">[directory]</span>
+
+<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
+  cd documents
+  cd ..
+  cd ~
+  cd /home/user`;
     }
     
     const targetPath = resolvePath(args[0]);
@@ -131,7 +148,15 @@ export const fileSystemCommands = {
   
   rm: (args: string[]) => {
     if (args.length === 0) {
-      return 'Usage: rm [options] [filename/directory]\nOptions:\n  -r, --recursive  remove directories and their contents recursively\nExamples:\n  rm has.txt       - remove a file\n  rm -r documents  - remove directory and all contents\nWarning: This will permanently delete files/directories from this session';
+      return `<span style="color: var(--theme-cyan); font-weight: bold;">rm</span> : Removes the specified file or directory.
+<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> rm <span style="color: var(--theme-green);">[options] [filename/directory]</span>
+<span style="color: var(--theme-green); font-weight: bold;">Options:</span>
+  -r, --recursive  remove directories and their contents recursively
+
+<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
+  rm has.txt
+  rm -r documents
+  rm script.js`;
     }
     
     let recursive = false;
@@ -178,7 +203,13 @@ export const fileSystemCommands = {
   
   touch: (args: string[]) => {
     if (args.length === 0) {
-      return 'Usage: touch [filename]\nExample: touch newfile.txt\nCreates an empty file or updates timestamp if file exists';
+      return `<span style="color: var(--theme-cyan); font-weight: bold;">touch</span> : Creates a new empty file with the specified name.
+<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> touch <span style="color: var(--theme-green);">[filename]</span>
+
+<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
+  touch newfile.txt
+  touch documents/notes.md
+  touch script.js`;
     }
     
     const targetPath = resolvePath(args[0]);
@@ -219,7 +250,13 @@ export const fileSystemCommands = {
   
   mkdir: (args: string[]) => {
     if (args.length === 0) {
-      return 'Usage: mkdir [directory_name]\nExample: mkdir new_folder\nCreates a new directory in the current location';
+      return `<span style="color: var(--theme-cyan); font-weight: bold;">mkdir</span> : Creates a new directory with the specified name.
+<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> mkdir <span style="color: var(--theme-green);">[directory_name]</span>
+
+<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
+  mkdir new_folder
+  mkdir projects/myapp
+  mkdir temp`;
     }
 
     const targetPath = resolvePath(args[0]);
@@ -262,7 +299,7 @@ export const fileSystemCommands = {
   
   echo: (args: string[]) => {
     if (args.length === 0) {
-      return 'Usage: echo [text] [> filename] [>> filename]\nExamples:\n  echo "Hello World"           - display text\n  echo "Content" > file.txt    - write text to file\n  echo "More" >> file.txt      - append text to file\n  echo > empty.txt             - create empty file\nTip: Use quotes for text with spaces';
+      return `<span style="color: var(--theme-cyan); font-weight: bold;">echo</span> : Display text or write to file<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span> > <span style="color: var(--theme-green);">[filename]</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span> >> <span style="color: var(--theme-green);">[filename]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;echo "Hello World"<br>&nbsp;&nbsp;echo "Content" > file.txt<br>&nbsp;&nbsp;echo "More content" >> file.txt`;
     }
     
     // Join args first, then parse for redirection operators
