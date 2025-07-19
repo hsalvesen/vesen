@@ -1,18 +1,13 @@
 import { theme } from '../../stores/theme';
 import { get } from 'svelte/store';
+import { commandHelp } from '../helpTexts';
 
 export const networkCommands = {
   weather: async (args: string[]) => {
     const city = args.join('+');
 
     if (!city) {
-      return `<span style="color: var(--theme-cyan); font-weight: bold;">weather</span> - Get weather information
-<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> weather <span style="color: var(--theme-green);">[location]</span>
-Displays current weather information for the specified location.
-<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
-  weather Gadigal
-  weather Oslo
-  weather Aotearoa`;
+      return commandHelp.weather;
     }
 
     const currentTheme = get(theme);
@@ -119,14 +114,7 @@ Displays current weather information for the specified location.
   
   curl: async (args: string[]) => {
     if (args.length === 0) {
-      return `<span style="color: var(--theme-cyan); font-weight: bold;">curl</span> - Make HTTP requests
-<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> curl <span style="color: var(--theme-green);">[URL]</span>
-Makes an HTTP request to the specified URL and displays the response.
-
-<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
-  curl https://httpbin.org/get
-  curl https://api.github.com/users/octocat
-  curl https://jsonplaceholder.typicode.com/posts/1`;
+      return commandHelp.curl;
     }
   
     let url = args[0];

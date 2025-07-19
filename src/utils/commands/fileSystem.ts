@@ -5,6 +5,7 @@ import { history } from '../../stores/history';
 import { systemCommands } from './system';
 import themes from '../../../themes.json';
 import packageJson from '../../../package.json';
+import { commandHelp } from '../helpTexts';
 
 // Helper function to load real file content
 async function loadRealFile(filePath: string): Promise<string> {
@@ -78,13 +79,7 @@ export const fileSystemCommands = {
   
   cat: async (args: string[]) => {
     if (args.length === 0) {
-      return `<span style="color: var(--theme-cyan); font-weight: bold;">cat</span> : Displays the contents of the specified file.
-<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> cat <span style="color: var(--theme-green);">[filename]</span>
-
-<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
-  cat experience.md
-  cat documents/readme.md
-  cat has.txt`;
+      return commandHelp.cat;
     }
     
     if (args[0] === 'experience.md') {
@@ -115,14 +110,7 @@ export const fileSystemCommands = {
   
   cd: (args: string[]) => {
     if (args.length === 0) {
-      return `<span style="color: var(--theme-cyan); font-weight: bold;">cd</span> : Changes the current working directory.
-<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> cd <span style="color: var(--theme-green);">[directory]</span>
-
-<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
-  cd documents
-  cd ..
-  cd ~
-  cd /home/user`;
+      return commandHelp.cd;
     }
     
     const targetPath = resolvePath(args[0]);
@@ -148,15 +136,7 @@ export const fileSystemCommands = {
   
   rm: (args: string[]) => {
     if (args.length === 0) {
-      return `<span style="color: var(--theme-cyan); font-weight: bold;">rm</span> : Removes the specified file or directory.
-<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> rm <span style="color: var(--theme-green);">[options] [filename/directory]</span>
-<span style="color: var(--theme-green); font-weight: bold;">Options:</span>
-  -r, --recursive  remove directories and their contents recursively
-
-<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
-  rm has.txt
-  rm -r documents
-  rm script.js`;
+      return commandHelp.rm;
     }
     
     let recursive = false;
@@ -203,13 +183,7 @@ export const fileSystemCommands = {
   
   touch: (args: string[]) => {
     if (args.length === 0) {
-      return `<span style="color: var(--theme-cyan); font-weight: bold;">touch</span> : Creates a new empty file with the specified name.
-<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> touch <span style="color: var(--theme-green);">[filename]</span>
-
-<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
-  touch newfile.txt
-  touch documents/notes.md
-  touch script.js`;
+      return commandHelp.touch;
     }
     
     const targetPath = resolvePath(args[0]);
@@ -250,13 +224,7 @@ export const fileSystemCommands = {
   
   mkdir: (args: string[]) => {
     if (args.length === 0) {
-      return `<span style="color: var(--theme-cyan); font-weight: bold;">mkdir</span> : Creates a new directory with the specified name.
-<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> mkdir <span style="color: var(--theme-green);">[directory_name]</span>
-
-<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
-  mkdir new_folder
-  mkdir projects/myapp
-  mkdir temp`;
+      return commandHelp.mkdir;
     }
 
     const targetPath = resolvePath(args[0]);
@@ -299,7 +267,7 @@ export const fileSystemCommands = {
   
   echo: (args: string[]) => {
     if (args.length === 0) {
-      return `<span style="color: var(--theme-cyan); font-weight: bold;">echo</span> : Display text or write to file<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span> > <span style="color: var(--theme-green);">[filename]</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span> >> <span style="color: var(--theme-green);">[filename]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;echo "Hello World"<br>&nbsp;&nbsp;echo "Content" > file.txt<br>&nbsp;&nbsp;echo "More content" >> file.txt`;
+      return commandHelp.echo;
     }
     
     // Join args first, then parse for redirection operators
@@ -474,7 +442,7 @@ export const fileSystemCommands = {
   
   sudo: (args: string[]) => {
     if (args.length === 0) {
-      return `<span style="color: var(--theme-cyan); font-weight: bold;">sudo</span> : Execute commands as another user<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> sudo <span style="color: var(--theme-green);">[command]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;sudo ls<br>&nbsp;&nbsp;sudo rm important_file.txt<br>&nbsp;&nbsp;sudo mkdir /system`;
+      return commandHelp.sudo;
     }
     
     // This shouldn't be reached in normal flow since Input.svelte handles sudo specially
