@@ -1,6 +1,7 @@
 import packageJson from '../../../package.json';
 import { theme } from '../../stores/theme';
 import { get } from 'svelte/store';
+import { getAppleLogo, getAndroidLogo, getWindowsLogo, getLinuxLogo } from '../osLogos';
 
 const hostname = window.location.hostname;
 
@@ -31,99 +32,21 @@ export const systemCommands = {
     }
     
     // Detect OS and set logo
-    if (userAgent.includes('Mac')) {
+    if (userAgent.includes('iPhone') || userAgent.includes('iPad') || (userAgent.includes('Mac') && userAgent.includes('Mobile'))) {
+      osName = 'iOS';
+      logoLines = getAppleLogo();
+    } else if (userAgent.includes('Mac')) {
       osName = 'macOS';
-      logoLines = [
-        "                    'c.",
-        "                 ,xNMM.",
-        "               .OMMMMo",
-        "               OMMM0,",
-        "     .;loddo:' loolloddol;.",
-        "   cKMMMMMMMMMMNWMMMMMMMMMM0:",
-        " .KMMMMMMMMMMMMMMMMMMMMMMMWd.",
-        " XMMMMMMMMMMMMMMMMMMMMMMMX.",
-        ";MMMMMMMMMMMMMMMMMMMMMMMM:",
-        ":MMMMMMMMMMMMMMMMMMMMMMMM:",
-        ".MMMMMMMMMMMMMMMMMMMMMMMMX.",
-        " kMMMMMMMMMMMMMMMMMMMMMMMMWd.",
-        " .XMMMMMMMMMMMMMMMMMMMMMMMMMMk",
-        "  .XMMMMMMMMMMMMMMMMMMMMMMMMK.",
-        "    kMMMMMMMMMMMMMMMMMMMMMMd",
-        "     ;KMMMMMMMWXXWMMMMMMMk.",
-        "       .cooc,.    .,coo:."
-      ];
+      logoLines = getAppleLogo();
     } else if (userAgent.includes('Android')) {
       osName = 'Android';
-      logoLines = [
-        "           -o         o-",
-        "           +hydNNNNdyh+",
-        "         +mMMMMMMMMMMMMm+",
-        "       `dM{  }mMMMMm{  }Md`",
-        "       hMMMMMMMMMMMMMMMMMMh",
-        "   ..  yyyyyyyyyyyyyyyyyyyy  ..",
-        " .mMMm`MMMMMMMMMMMMMMMMMMMM`mMMm.",
-        " :MMMM-MMMMMMMMMMMMMMMMMMMM-MMMM:",
-        " :MMMM-MMMMMMMMMMMMMMMMMMMM-MMMM:",
-        " :MMMM-MMMMMMMMMMMMMMMMMMMM-MMMM:",
-        " :MMMM-MMMMMMMMMMMMMMMMMMMM-MMMM:",
-        " -MMMM-MMMMMMMMMMMMMMMMMMMM-MMMM-",
-        "  +yy+ MMMMMMMMMMMMMMMMMMMM +yy+",
-        "       mMMMMMMMMMMMMMMMMMMm",
-        "        `++MMMMh+++hMMMM++`",
-        "           MMMMo   oMMMM",
-        "           MMMMo   oMMMM",
-        "           oNMm-   -mMNo"
-      ];
+      logoLines = getAndroidLogo();
     } else if (userAgent.includes('Win')) {
       osName = 'Windows 11';
-      logoLines = [
-        "&nbsp;",
-        "###############   ###############",
-        "###############   ###############",
-        "###############   ###############",
-        "###############   ###############",
-        "###############   ###############",
-        "###############   ###############",
-        "###############   ###############",
-        "&nbsp;",
-        "###############   ###############",
-        "###############   ###############",
-        "###############   ###############",
-        "###############   ###############",
-        "###############   ###############",
-        "###############   ###############",
-        "###############   ###############"
-      ];
+      logoLines = getWindowsLogo();
     } else if (userAgent.includes('Linux') || userAgent.includes('X11')) {
       osName = 'Linux';
-      logoLines = [
-        "                 .88888888:.",
-        "                88888888.88888.",
-        "              .8888888888888888.",
-        "              888888888888888888",
-        "              88' _`88'_  `88888",
-        "              88 88 88 88  88888",
-        "              88_88_::_88_:88888",
-        "              88:::,::,:::::8888",
-        "              88`:::::::::'`8888",
-        "             .88  `::::'    8:88.",
-        "            8888            `8:888.",
-        "          .8888'             `888888.",
-        "         .8888:..  .::.  ...:'8888888:.",
-        "        .8888.'     :'     `'::`88:88888",
-        "       .8888        '         `.888:8888.",
-        "      888:8         .           888:88888",
-        "    .888:88        .:           888:88888:",
-        "    8888888.       ::           88:888888",
-        "    `.::.888.      ::          .88888888",
-        "   .::::::.888.    ::         :::`8888'.:.",
-        "  ::::::::::.888   '         .::::::::::::",
-        "  ::::::::::::.8    '      .:8::::::::::::",
-        " .::::::::::::::.        .:888:::::::::::",
-        " :::::::::::::::88:.__..:88888::::::::::",
-        "  `'.:::::::::::88888888888.88:::::::::",
-        "       `':::_:' -- '' -'-' `':_::::'`"
-      ];
+      logoLines = getLinuxLogo();
     }
     
     const resolution = `${screen.width}x${screen.height}`;

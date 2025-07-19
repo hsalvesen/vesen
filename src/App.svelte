@@ -3,6 +3,8 @@
   import Input from './components/Input.svelte';
   import History from './components/History.svelte';
   import { theme } from './stores/theme';
+  
+  let isPasswordMode = $state(false);
 </script>
 
 <svelte:head>
@@ -23,8 +25,8 @@
   <History />
 
   <div class="flex flex-col md:flex-row">
-    <Ps1 />
-
-    <Input />
+    <Ps1 {isPasswordMode} />
+    <span class="mr-2"></span>
+    <Input bind:isPasswordMode />
   </div>
 </main>

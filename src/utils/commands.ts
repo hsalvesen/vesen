@@ -220,6 +220,7 @@ function getCommandHelp(command: string): string {
     'repo': `<span style="color: var(--theme-cyan); font-weight: bold;">repo</span> : Opens the project's GitHub repository in a new tab.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> repo`,
     'email': `<span style="color: var(--theme-cyan); font-weight: bold;">email</span> : Opens the default email client to send an email to the developer.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> email`,
     'banner': `<span style="color: var(--theme-cyan); font-weight: bold;">banner</span> : Shows the terminal welcome banner with ASCII art and version information.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> banner`,
+    'sudo': `<span style="color: var(--theme-cyan); font-weight: bold;">sudo</span> : Execute commands as another user<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> sudo <span style="color: var(--theme-green);">[command]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;sudo ls<br>&nbsp;&nbsp;sudo rm important_file.txt<br>&nbsp;&nbsp;sudo mkdir /system`,
     'exit': `<span style="color: var(--theme-cyan); font-weight: bold;">exit</span> : Closes the terminal session.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> exit`
   };
   

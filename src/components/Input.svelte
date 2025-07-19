@@ -9,6 +9,9 @@
   let command = $state('');
   let historyIndex = $state(-1);
   let input: HTMLInputElement;
+  let { isPasswordMode = $bindable(false) } = $props();
+  let pendingSudoCommand = $state('');
+  let passwordInput = $state('');
 
   // Helper function to resolve file paths for completion
   const getCompletions = (input: string, isFilePath: boolean = false): string[] => {
@@ -117,10 +120,50 @@
 
   const handleKeyDown = async (event: KeyboardEvent) => {
     if (event.key === 'Enter') {
+      if (isPasswordMode) {
+        // Handle password submission
+        isPasswordMode = false;
+        passwordInput = '';
+        
+        // Add the password prompt to history
+        $history = [...$history, { 
+          command: `sudo ${pendingSudoCommand}`, 
+          outputs: ['Password:'] 
+        }];
+        
+        // Open rickroll
+        window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
+        
+        pendingSudoCommand = '';
+        command = '';
+        return;
+      }
+      
       const [commandName, ...args] = command.split(' ');
   
       if (import.meta.env.VITE_TRACKING_ENABLED === 'true') {
         track(commandName, ...args);
+      }
+  
+      // Special handling for sudo
+      if (commandName === 'sudo' && args.length > 0) {
+        // Check if it's a help request first
+        const hasHelpFlag = args.includes('--help') || args.includes('-h');
+        if (hasHelpFlag) {
+          // Let it fall through to normal command processing for help
+        } else {
+          pendingSudoCommand = args.join(' ');
+          isPasswordMode = true;
+          
+          $history = [...$history, { 
+            command, 
+            outputs: []
+          }];
+          
+          command = '';
+          passwordInput = '';
+          return;
+        }
       }
   
       // Use processCommand instead of calling commands directly
@@ -135,6 +178,14 @@
       }
   
       command = '';
+    } else if (isPasswordMode) {
+      // Handle password input (hide characters)
+      if (event.key === 'Backspace') {
+        passwordInput = passwordInput.slice(0, -1);
+      } else if (event.key.length === 1) {
+        passwordInput += event.key;
+      }
+      event.preventDefault();
     } else if (event.key === 'ArrowUp') {
       if (historyIndex < $history.length - 1) {
         historyIndex++;
@@ -245,14 +296,13 @@
 />
 
 <input
-  id="command-input"
-  name="command-input"
-  aria-label="Command input"
-  class="w-full px-2 bg-transparent outline-none"
-  type="text"
-  autocomplete="off"
-  style={`color: ${$theme.foreground}`}
+  bind:this={input}
   bind:value={command}
   onkeydown={handleKeyDown}
-  bind:this={input}
+  class="bg-transparent outline-none flex-1 font-mono"
+  style="color: var(--theme-white);"
+  type={isPasswordMode ? 'password' : 'text'}
+  placeholder={isPasswordMode ? '' : ''}
+  autocomplete="off"
+  spellcheck="false"
 />

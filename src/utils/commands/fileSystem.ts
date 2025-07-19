@@ -473,11 +473,14 @@ export const fileSystemCommands = {
   },
   
   sudo: (args: string[]) => {
-    // Open YouTube rickroll regardless of the argument
+    if (args.length === 0) {
+      return `<span style="color: var(--theme-cyan); font-weight: bold;">sudo</span> : Execute commands as another user<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> sudo <span style="color: var(--theme-green);">[command]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;sudo ls<br>&nbsp;&nbsp;sudo rm important_file.txt<br>&nbsp;&nbsp;sudo mkdir /system`;
+    }
+    
+    // This shouldn't be reached in normal flow since Input.svelte handles sudo specially
+    // But keeping as fallback
     window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
-    
     return '';
-    
   },
   
   exit: () => {
