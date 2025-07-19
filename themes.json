@@ -1,6 +1,6 @@
 [
 {
-    "name": "Cassowary",
+    "name": "cassowary",
     "black": "#1F1F20",
     "red": "#FB055A",
     "green": "#26FFD4",
@@ -22,7 +22,7 @@
     "cursorColor": "#F0F0F0"
   },
   {
-    "name": "Cockatoo",
+    "name": "cockatoo",
     "black": "#20111b",
     "red": "#be100e",
     "green": "#858162",
@@ -44,7 +44,7 @@
     "cursorColor": "#45373c"
   },
   {
-    "name": "Crocodile",
+    "name": "crocodile",
     "black": "#121418",
     "red": "#c94234",
     "green": "#85c54c",
@@ -66,7 +66,7 @@
     "cursorColor": "#e5c7a9"
   },
   {
-    "name": "Kangaroo",
+    "name": "kangaroo",
     "black": "#000000",
     "red": "#c13900",
     "green": "#a4a900",
@@ -88,7 +88,7 @@
     "cursorColor": "#ffcb83"
   },
   {
-    "name": "Kookaburra",
+    "name": "kookaburra",
     "black": "#222222",
     "red": "#e2a8bf",
     "green": "#81d778",
@@ -110,7 +110,7 @@
     "cursorColor": "#35b1d2"
   },
   {
-    "name": "PinkRobin",
+    "name": "pinkRobin",
     "black": "#2A2A2E",
     "red": "#B98EFF",
     "green": "#FF7DE9",
@@ -132,7 +132,7 @@
     "cursorColor": "#D7D7DB"
   },
   {
-    "name": "Swamphen",
+    "name": "swampHen",
     "black": "#3F3F54",
     "red": "#f60055",
     "green": "#06c993",
@@ -154,7 +154,7 @@
     "cursorColor": "#ffffff"
   },
   {
-    "name": "Treefrog",
+    "name": "treeFrog",
     "black": "#000000",
     "red": "#bb0000",
     "green": "#00bb00",
@@ -176,7 +176,7 @@
     "cursorColor": "#fff0a5"
   },
   {
-    "name": "Wallaby",
+    "name": "wallaby",
     "black": "#353535",
     "red": "#d25252",
     "green": "#a5c261",
@@ -198,7 +198,7 @@
     "cursorColor": "#ffffff"
   },
   {
-    "name": "Wombat",
+    "name": "wombat",
     "black": "#282828",
     "red": "#cc241d",
     "green": "#98971a",

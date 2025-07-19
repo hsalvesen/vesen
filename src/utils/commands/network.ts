@@ -44,6 +44,12 @@ export const networkCommands = {
           // Clear the loading animation
           clearInterval(interval);
           
+          // Check if the response indicates an unknown location
+          if (result.includes('404 UNKNOWN LOCATION') || result.includes('ERROR') || result.includes('Unknown location')) {
+            currentElement.innerHTML = `<span style="color: var(--theme-red); font-weight: bold;">Weather data not available for "${city.replace(/\+/g, ' ')}"</span>\n<span style="color: var(--theme-yellow);">Please check the city name and try again.</span>\n<span style="color: var(--theme-cyan);">Example: weather Oslo</span>`;
+            return;
+          }
+          
           // Remove the attribution line (last line with @igor_chubin)
           const lines = result.split('\n');
           const filteredLines = lines.filter(line => 
