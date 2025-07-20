@@ -94,7 +94,8 @@ services:
 ##  Development
 
 ### Project structure
-```src/
+```bash
+.src/
 ├── components/                # Svelte components
 │   ├── History.svelte         # Command history display
 │   ├── Input.svelte           # Command input handling
