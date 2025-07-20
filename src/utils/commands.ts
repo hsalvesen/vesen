@@ -22,7 +22,7 @@ const terminalCommands = {
       'System Info': ['neofetch', 'hostname', 'whoami', 'date'],
       'File System': ['ls', 'pwd', 'cd', 'cat', 'touch', 'rm', 'mkdir'],
       'Terminal': ['help', 'clear', 'reset', 'echo', 'exit'],
-      'Network': ['weather', 'curl'],
+      'Network': ['weather', 'curl', 'stock'],
       'Customisation': ['theme'],
       'Project': ['repo', 'email', 'banner']
     };
@@ -45,7 +45,7 @@ const terminalCommands = {
       
       // Commands in this category
       for (const cmd of availableCommands) {
-        const description = getCommandDescription(cmd);
+        const description = commandDescriptions[cmd] || '';
         output += `<div style="margin: 3px 0; display: flex; align-items: flex-start;">`;
         output += `<span style="color: var(--theme-green); font-weight: bold; min-width: 80px; margin-right: 12px; flex-shrink: 0;">${cmd}</span>`;
         output += `<span style="color: var(--theme-white); flex: 1; word-break: break-word;">${description}</span>`;
@@ -74,33 +74,6 @@ const terminalCommands = {
     
     output += `\n<span style="color: var(--theme-cyan);">Type [command] --help for detailed usage information</span>`;
     
-    function getCommandDescription(cmd: string): string {
-      const descriptions: Record<string, string> = {
-        'help': 'Show commands',
-        'clear': 'Clear screen',
-        'echo': 'Write text',
-        'exit': 'Close terminal',
-        'ls': 'List files',
-        'pwd': 'Show current path',
-        'cd': 'Change directory',
-        'cat': 'Show file contents',
-        'touch': 'Create file',
-        'rm': 'Remove file',
-        'mkdir': 'Make directory',
-        'reset': 'Reset terminal',
-        'neofetch': 'Fetch system info',
-        'hostname': 'Show hostname',
-        'whoami': 'Developer info',
-        'date': 'Show date',
-        'weather': 'Get weather forecast',
-        'curl': 'HTTP request',
-        'theme': 'Change theme',
-        'repo': 'Open repository',
-        'email': 'Open mail client',
-        'banner': 'Show banner'
-      };
-      return descriptions[cmd] || '';
-    }
     
     return output;
   },
