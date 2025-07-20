@@ -59,7 +59,7 @@ export const systemCommands = {
       { label: 'OS', value: osName },
       { label: 'Packages', value: packages },
       { label: 'Resolution', value: resolution },
-      { label: 'Shell', value: `VESEN Terminal v${packageJson.version}` },
+      { label: 'Shell', value: `Vesen Terminal v${packageJson.version}` },
       { label: 'Theme', value: currentTheme.name },
       { label: 'IP', value: userIP },
       { label: 'License', value: packageJson.license },

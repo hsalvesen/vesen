@@ -55,7 +55,7 @@ export const virtualFileSystem: VirtualFile = {
                     'info.txt': {
                       name: 'info.txt',
                       type: 'file',
-                      content: 'VESEN Terminal\n\nA web-based terminal built with Svelte and TypeScript.\n\nRepository: https://github.com/hsalvesen/vesen'
+                      content: 'Vesen Terminal\n\nA web-based terminal built with Svelte and TypeScript.\n\nRepository: https://github.com/hsalvesen/vesen'
                     }
                   }
                 }
