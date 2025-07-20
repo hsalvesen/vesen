@@ -1,4 +1,5 @@
 import { getCompanyLogo } from './companyLogos';
+import { experienceContent } from './experienceContent';
 
 interface ExperienceEntry {
   company: string;
@@ -40,4 +41,57 @@ export function formatExperienceWithLogo(entry: ExperienceEntry): string {
   }
   
   return result.join('\n');
+}
+
+// New function to format the existing experience.md content with logos
+export function formatExperienceContent(): string {
+  const content = experienceContent;
+  const sections = content.split('---').filter(section => section.trim());
+  const formattedSections: string[] = [];
+  
+  sections.forEach(section => {
+    const lines = section.trim().split('\n');
+    
+    // Extract company name from the section
+    let companyName = '';
+    for (const line of lines) {
+      if (line.includes('ByteDance')) {
+        companyName = 'TikTok'; // Use TikTok logo for ByteDance
+        break;
+      } else if (line.includes('Amazon')) {
+        companyName = 'Amazon';
+        break;
+      } else if (line.includes('Deloitte')) {
+        companyName = 'Deloitte';
+        break;
+      } else if (line.includes('Accenture')) {
+        companyName = 'Accenture';
+        break;
+      }
+    }
+    
+    if (companyName) {
+      const logo = getCompanyLogo(companyName);
+      const logoLines = logo.split('\n');
+      const contentLines = lines;
+      
+      // Combine logo and content side by side
+      const maxLines = Math.max(logoLines.length, contentLines.length);
+      const result: string[] = [];
+      
+      for (let i = 0; i < maxLines; i++) {
+        const logoLine = logoLines[i] || '';
+        const contentLine = contentLines[i] || '';
+        const paddedLogo = logoLine.padEnd(80); // Adjust padding as needed
+        result.push(`${paddedLogo} ${contentLine}`);
+      }
+      
+      formattedSections.push(result.join('\n'));
+    } else {
+      // If no company logo found, just add the section as-is
+      formattedSections.push(section.trim());
+    }
+  });
+  
+  return formattedSections.join('\n\n---\n\n');
 }

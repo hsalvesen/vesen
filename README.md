@@ -1,9 +1,8 @@
-# [Vesen Terminal](https://salvesen.app)
+# [Vesen Terminal](https://www.vesen.app)
 
 > A modern web-based terminal emulator built with SVELTE.
 
 ![banner](/docs/themes/banner.gif)
-
 ## Overview
 
 Vesen Terminal is a fully-featured web-based terminal emulator that replicates a Unix-like environment in your browser. It features a virtual file system, interactive commands, beautiful themes, and a responsive design that works across all devices.
@@ -59,8 +58,7 @@ Type `help` in the terminal to see all available commands, or explore the file s
 ## Themes
 
 ![themes](/docs/themes/themes.gif)
-
-View all themes: [Vesen Themes](/docs/themes)
+View all themes: [Vesen themes](/docs/themes)
 
 ##  Docker deployment
 
@@ -134,17 +132,11 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👨Author
+## Author
 
 **Has Salvesen**
-- Website: [salvesen.app](https://salvesen.app)
-- GitHub: [@hsalvesen](https://github.com/hsalvesen)
-- LinkedIn: [harrysalvesen](https://www.linkedin.com/in/harrysalvesen/)
+- [Website](https://www.vesen.app)
+- [Github](https://github.com/hsalvesen)
+- [LinkedIn](https://www.linkedin.com/in/harrysalvesen/)
 
 ---
-
-<p align="center">
-  <a href="https://salvesen.app">Visit Website</a> •
-  <a href="https://github.com/hsalvesen/vesen/issues">Report Bug</a> •
-  <a href="https://github.com/hsalvesen/vesen/issues">Request Feature</a>
-</p>

@@ -145,24 +145,23 @@ export const networkCommands = {
     
     // Use setTimeout to update the loading animation and fetch data
     setTimeout(async () => {
-      // Find the current output element
-      const historyElements = document.querySelectorAll('.whitespace-pre');
-      const currentElement = historyElements[historyElements.length - 1];
+      // Get current history to update the last entry
+      const currentHistory = get(history);
+      const lastEntry = currentHistory[currentHistory.length - 1];
       
-      if (currentElement) {
+      if (lastEntry) {
         // Declare interval variable with correct browser type
         let interval: number;
         
-        // Animate the loading spinner
+        // Animate the loading spinner by updating history
         interval = setInterval(() => {
           frameIndex = (frameIndex + 1) % loadingFrames.length;
-          currentElement.innerHTML = `<span style="color: ${currentTheme.cyan};">Fetching ${url}... ${loadingFrames[frameIndex]}</span>`;
-          
-          // Trigger scroll after each loading frame update
-          const input = document.getElementById('command-input');
-          if (input) {
-            input.scrollIntoView({ behavior: 'smooth', block: 'end' });
-          }
+          const updatedHistory = [...currentHistory];
+          updatedHistory[updatedHistory.length - 1] = {
+            ...lastEntry,
+            outputs: [`<span style="color: ${currentTheme.cyan};">Fetching ${url}... ${loadingFrames[frameIndex]}</span>`]
+          };
+          history.set(updatedHistory);
         }, 100);
         
         try {
@@ -180,7 +179,13 @@ export const networkCommands = {
           const result = await response.json();
           
           if (result.status && result.status.http_code !== 200) {
-            currentElement.innerHTML = `<span style="color: ${currentTheme.red};">curl: HTTP ${result.status.http_code} - ${result.status.error || 'Request failed'}</span>`;
+            const errorOutput = `<span style="color: ${currentTheme.red};">curl: HTTP ${result.status.http_code} - ${result.status.error || 'Request failed'}</span>`;
+            const updatedHistory = [...get(history)];
+            updatedHistory[updatedHistory.length - 1] = {
+              ...lastEntry,
+              outputs: [errorOutput]
+            };
+            history.set(updatedHistory);
             return;
           }
           
@@ -197,30 +202,26 @@ export const networkCommands = {
             finalOutput = escapedData || `<span style="color: ${currentTheme.yellow};">curl: Empty response from ${url}</span>`;
           }
           
-          // Update the element with the final result
-          currentElement.innerHTML = `<pre style="white-space: pre-wrap; word-wrap: break-word;">${finalOutput}</pre>`;
-          
-          // Force scroll to bottom after content update
-          setTimeout(() => {
-            const input = document.getElementById('command-input');
-            if (input) {
-              input.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            }
-          }, 50);
+          // Update the history with the final result
+          const updatedHistory = [...get(history)];
+          updatedHistory[updatedHistory.length - 1] = {
+            ...lastEntry,
+            outputs: [`<pre style="white-space: pre-wrap; word-wrap: break-word;">${finalOutput}</pre>`]
+          };
+          history.set(updatedHistory);
           
         } catch (error: unknown) {
           // Clear the loading animation on error
           clearInterval(interval);
           const errorMessage = error instanceof Error ? error.message : String(error);
-          currentElement.innerHTML = `<span style="color: ${currentTheme.red};">curl: Failed to fetch ${url}\nError: ${errorMessage}</span>`;
+          const errorOutput = `<span style="color: ${currentTheme.red};">curl: Failed to fetch ${url}\nError: ${errorMessage}</span>`;
           
-          // Force scroll to bottom after error update
-          setTimeout(() => {
-            const input = document.getElementById('command-input');
-            if (input) {
-              input.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            }
-          }, 50);
+          const updatedHistory = [...get(history)];
+          updatedHistory[updatedHistory.length - 1] = {
+            ...lastEntry,
+            outputs: [errorOutput]
+          };
+          history.set(updatedHistory);
         }
       }
     }, 100);

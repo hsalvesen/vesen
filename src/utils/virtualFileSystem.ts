@@ -72,7 +72,7 @@ export const virtualFileSystem: VirtualFile = {
         'config.conf': {
           name: 'config.conf',
           type: 'file',
-          content: '# Virtual System Configuration\nterminal_theme=dynamic\nuser=guest\nhostname=salvesen.app'
+          content: '# Virtual System Configuration\nterminal_theme=dynamic\nuser=guest\nhostname=www.vesen.app'
         }
       }
     }
