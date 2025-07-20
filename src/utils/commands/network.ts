@@ -1,5 +1,6 @@
 import { theme } from '../../stores/theme';
 import { get } from 'svelte/store';
+import { history } from '../../stores/history';
 import { commandHelp } from '../helpTexts';
 
 export const networkCommands = {
@@ -21,21 +22,24 @@ export const networkCommands = {
     
     // Use setTimeout to update the loading animation and fetch weather
     setTimeout(async () => {
-      // Find the current output element (the one that just displayed the loading message)
-      const historyElements = document.querySelectorAll('.whitespace-pre');
-      const currentElement = historyElements[historyElements.length - 1];
+      // Get current history to find the last entry (our loading message)
+      const currentHistory = get(history);
+      const lastEntryIndex = currentHistory.length - 1;
       
-      if (currentElement) {
-        // Animate the loading spinner
+      if (lastEntryIndex >= 0) {
+        // Animate the loading spinner by updating the history store
         const interval = setInterval(() => {
           frameIndex = (frameIndex + 1) % loadingFrames.length;
-          currentElement.innerHTML = `<span style="color: var(--theme-cyan);">Fetching weather data for ${city.replace(/\+/g, ' ')}... ${loadingFrames[frameIndex]}</span>`;
+          const updatedLoadingMessage = `<span style="color: var(--theme-cyan);">Fetching weather data for ${city.replace(/\+/g, ' ')}... ${loadingFrames[frameIndex]}</span>`;
           
-          // Trigger scroll after each loading frame update
-          const input = document.getElementById('command-input');
-          if (input) {
-            input.scrollIntoView({ behavior: 'smooth', block: 'end' });
-          }
+          // Update the history store - this will trigger the scroll effect
+          history.update(hist => {
+            const newHist = [...hist];
+            if (newHist[lastEntryIndex] && newHist[lastEntryIndex].outputs.length > 0) {
+              newHist[lastEntryIndex].outputs[newHist[lastEntryIndex].outputs.length - 1] = updatedLoadingMessage;
+            }
+            return newHist;
+          });
         }, 100);
         
         try {
@@ -47,7 +51,16 @@ export const networkCommands = {
           
           // Check if the response indicates an unknown location
           if (result.includes('404 UNKNOWN LOCATION') || result.includes('ERROR') || result.includes('Unknown location')) {
-            currentElement.innerHTML = `<span style="color: var(--theme-red); font-weight: bold;">Weather data not available for "${city.replace(/\+/g, ' ')}"</span>\n<span style="color: var(--theme-yellow);">Please check the city name and try again.</span>\n<span style="color: var(--theme-cyan);">Example: weather Oslo</span>`;
+            const errorMessage = `<span style="color: var(--theme-red); font-weight: bold;">Weather data not available for "${city.replace(/\+/g, ' ')}"</span>\n<span style="color: var(--theme-yellow);">Please check the city name and try again.</span>\n<span style="color: var(--theme-cyan);">Example: weather Oslo</span>`;
+            
+            // Update history store with error message
+            history.update(hist => {
+              const newHist = [...hist];
+              if (newHist[lastEntryIndex] && newHist[lastEntryIndex].outputs.length > 0) {
+                newHist[lastEntryIndex].outputs[newHist[lastEntryIndex].outputs.length - 1] = errorMessage;
+              }
+              return newHist;
+            });
             return;
           }
           
@@ -61,49 +74,39 @@ export const networkCommands = {
           
           // Apply theme colors to the weather output
           result = result
-            // Color temperature values (numbers followed by °)
             .replace(/(\d+°[CF]?)/g, `<span style="color: var(--theme-bright-red); font-weight: bold;">$1</span>`)
-            // Color wind speed values (numbers followed by km/h, mph, etc.)
             .replace(/(\d+\s*(?:km\/h|mph|m\/s|kts))/g, `<span style="color: var(--theme-bright-blue); font-weight: bold;">$1</span>`)
-            // Color humidity and pressure values (numbers followed by %)
             .replace(/(\d+%)/g, `<span style="color: var(--theme-cyan);">$1</span>`)
-            // Color precipitation values (numbers followed by mm)
             .replace(/(\d+(?:\.\d+)?\s*mm)/g, `<span style="color: var(--theme-bright-cyan);">$1</span>`)
-            // Color visibility values
             .replace(/(\d+(?:\.\d+)?\s*km)/g, `<span style="color: var(--theme-green);">$1</span>`)
-            // Color weather condition words (sunny, cloudy, etc.)
             .replace(/\b(sunny|clear|cloudy|overcast|rainy|snowy|foggy|misty|thunderstorm|drizzle|partly cloudy|mostly cloudy)\b/gi, 
               `<span style="color: var(--theme-yellow); font-weight: bold;">$1</span>`)
-            // Color direction indicators (N, S, E, W, NE, etc.)
             .replace(/\b([NSEW]{1,3})\b/g, `<span style="color: var(--theme-purple);">$1</span>`)
-            // Color the ASCII art weather symbols with bright colors
             .replace(/([☀☁⛅⛈🌧🌦🌩❄⛄🌫])/g, `<span style="color: var(--theme-bright-yellow);">$1</span>`)
-            // Color location names (first line typically contains the location)
             .replace(/^(.+)$/m, `<span style="color: var(--theme-bright-green); font-weight: bold;">$1</span>`);
           
-          // Update the element with the final weather result
-          currentElement.innerHTML = result;
-          
-          // Force scroll to bottom after content update
-          setTimeout(() => {
-            const input = document.getElementById('command-input');
-            if (input) {
-              input.scrollIntoView({ behavior: 'smooth', block: 'end' });
+          // Update the history store with final weather result
+          history.update(hist => {
+            const newHist = [...hist];
+            if (newHist[lastEntryIndex] && newHist[lastEntryIndex].outputs.length > 0) {
+              newHist[lastEntryIndex].outputs[newHist[lastEntryIndex].outputs.length - 1] = result;
             }
-          }, 50);
+            return newHist;
+          });
           
         } catch (error) {
           // Clear the loading animation on error
           clearInterval(interval);
-          currentElement.innerHTML = `<span style="color: var(--theme-red);">Error fetching weather data for ${city.replace(/\+/g, ' ')}: ${error}</span>`;
+          const errorMessage = `<span style="color: var(--theme-red);">Error fetching weather data for ${city.replace(/\+/g, ' ')}: ${error}</span>`;
           
-          // Force scroll to bottom after error update
-          setTimeout(() => {
-            const input = document.getElementById('command-input');
-            if (input) {
-              input.scrollIntoView({ behavior: 'smooth', block: 'end' });
+          // Update history store with error message
+          history.update(hist => {
+            const newHist = [...hist];
+            if (newHist[lastEntryIndex] && newHist[lastEntryIndex].outputs.length > 0) {
+              newHist[lastEntryIndex].outputs[newHist[lastEntryIndex].outputs.length - 1] = errorMessage;
             }
-          }, 50);
+            return newHist;
+          });
         }
       }
     }, 100);

@@ -88,7 +88,9 @@ export const systemCommands = {
 </div>`;
   },
   
-  banner: () => `
+  banner: () => {
+    const currentTheme = get(theme);
+    return `
 ██╗    ██╗███████╗██╗      ██████╗ ██████╗ ███╗   ███╗███████╗
 ██║    ██║██╔════╝██║     ██╔════╝██╔═══██╗████╗ ████║██╔════╝
 ██║ █╗ ██║█████╗  ██║     ██║     ██║   ██║██╔████╔██║█████╗  
@@ -96,6 +98,8 @@ export const systemCommands = {
 ╚███╔███╔╝███████╗███████╗╚██████╗╚██████╔╝██║ ╚═╝ ██║███████╗
  ╚══╝╚══╝ ╚══════╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝ v${packageJson.version}
 
-Type 'help' to see list of available commands.
-`
+Type <span style="color: var(--theme-cyan); ">help</span> to see list of available commands.
+Type <span style="color: var(--theme-cyan); ">cat README.md</span> to learn more about this terminal.
+`;
+  }
 };

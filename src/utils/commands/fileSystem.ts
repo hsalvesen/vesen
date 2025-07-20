@@ -34,6 +34,30 @@ async function loadRealFile(filePath: string): Promise<string> {
   }
 }
 
+// Helper function to find similar files/directories with case-insensitive matching
+function findSimilarFile(target: string, directory: VirtualFile): string | null {
+  if (!directory.children) return null;
+  
+  const targetLower = target.toLowerCase();
+  const children = Object.keys(directory.children);
+  
+  // First try exact case-insensitive match
+  for (const child of children) {
+    if (child.toLowerCase() === targetLower) {
+      return child;
+    }
+  }
+  
+  // If no exact match, try partial matches (starts with)
+  for (const child of children) {
+    if (child.toLowerCase().startsWith(targetLower)) {
+      return child;
+    }
+  }
+  
+  return null;
+}
+
 export const fileSystemCommands = {
   pwd: () => {
     return '/' + currentPath.join('/');
@@ -85,10 +109,19 @@ export const fileSystemCommands = {
     const targetPath = resolvePath(args[0]);
     
     let current = virtualFileSystem;
-    for (const segment of targetPath) {
+    for (let i = 0; i < targetPath.length; i++) {
+      const segment = targetPath[i];
       if (current.children && current.children[segment]) {
         current = current.children[segment];
       } else {
+        // Check for case sensitivity issue
+        if (current.children) {
+          const similarFile = findSimilarFile(segment, current);
+          if (similarFile) {
+            const currentTheme = get(theme);
+            return `cat: ${args[0]}: No such file or directory. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${similarFile}</span>?`;
+          }
+        }
         return `cat: ${args[0]}: No such file or directory`;
       }
     }
@@ -97,30 +130,51 @@ export const fileSystemCommands = {
       return `cat: ${args[0]}: Is a directory`;
     }
     
+    // Handle files with filePath property
+    if (current.filePath) {
+      try {
+        return await loadRealFile(current.filePath);
+      } catch (error) {
+        return `cat: ${args[0]}: Error reading file`;
+      }
+    }
+    
     return current.content || '';
   },
   
   cd: (args: string[]) => {
     if (args.length === 0) {
-      return commandHelp.cd;
+      // Go to home directory
+      currentPath.length = 0;
+      currentPath.push('home', 'user');
+      return '';
     }
     
     const targetPath = resolvePath(args[0]);
     
     let current = virtualFileSystem;
-    for (const segment of targetPath) {
+    for (let i = 0; i < targetPath.length; i++) {
+      const segment = targetPath[i];
       if (current.children && current.children[segment]) {
         current = current.children[segment];
       } else {
-        return `cd: no such file or directory: ${args[0]}`;
+        // Check for case sensitivity issue
+        if (current.children) {
+          const similarDir = findSimilarFile(segment, current);
+          if (similarDir && current.children[similarDir].type === 'directory') {
+            const currentTheme = get(theme);
+            return `cd: ${args[0]}: No such file or directory. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${similarDir}</span>?`;
+          }
+        }
+        return `cd: ${args[0]}: No such file or directory`;
       }
     }
     
     if (current.type !== 'directory') {
-      return `cd: not a directory: ${args[0]}`;
+      return `cd: ${args[0]}: Not a directory`;
     }
     
-    // Update the current path in the virtualFileSystem module
+    // Update current path
     currentPath.length = 0;
     currentPath.push(...targetPath);
     return '';
@@ -253,7 +307,8 @@ export const fileSystemCommands = {
   },
 
   clear: () => {
-    history.set([]);
+    history.set([]);  // Only clear display history
+    // commandHistory remains intact for navigation
     return '';
   },
   
@@ -359,6 +414,9 @@ export const fileSystemCommands = {
     currentPath.length = 0;
     currentPath.push('home', 'user');
     
+    // Clear display history but preserve command navigation history
+    history.set([])
+    
     // Restore virtual file system to original state
     virtualFileSystem.children = {
       'home': {
@@ -369,10 +427,10 @@ export const fileSystemCommands = {
             name: 'user',
             type: 'directory',
             children: {
-              'has.txt': {
-                name: 'has.txt',
+              'README.md': {
+                name: 'README.md',
                 type: 'file',
-                content: 'Hello! This is Has Salvesen\'s personal file.\n\nWelcome to my terminal!\n\nFeel free to explore the virtual file system.'
+                filePath: '/src/data/README.md'
               },
               'experience.md': {
                 name: 'experience.md',
@@ -383,8 +441,8 @@ export const fileSystemCommands = {
                 name: 'documents',
                 type: 'directory',
                 children: {
-                  'readme.md': {
-                    name: 'readme.md',
+                  'README.md': {
+                    name: 'README.md',
                     type: 'file',
                     content: '# Welcome to the Virtual File System\n\nThis is a simulated file system within the terminal.\n\nAvailable commands:\n- ls: list directory contents\n- pwd: show current directory\n- cd: change directory\n- cat: display file contents'
                   }

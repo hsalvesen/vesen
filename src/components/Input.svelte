@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { history } from '../stores/history';
+  import { history, commandHistory } from '../stores/history';
   import { theme } from '../stores/theme';
   import { commands, virtualFileSystem, currentPath, processCommand } from '../utils/commands';
   import { track } from '../utils/tracking';
@@ -169,14 +169,18 @@
       // Use processCommand instead of calling commands directly
       const output = await processCommand(command);
   
-      // Only skip history for clear/reset when NOT showing help
+      // Only skip display history for clear/reset when NOT showing help
       const hasHelpFlag = args.includes('--help') || args.includes('-h');
-      const shouldSkipHistory = (commandName === 'clear' || commandName === 'reset') && !hasHelpFlag;
+      const shouldSkipDisplayHistory = (commandName === 'clear' || commandName === 'reset') && !hasHelpFlag;
       
-      if (!shouldSkipHistory) {
+      // Always add to command navigation history (for arrow keys)
+      $commandHistory = [...$commandHistory, command];
+      
+      // Only add to display history if not a clear/reset command
+      if (!shouldSkipDisplayHistory) {
         $history = [...$history, { command, outputs: [output] }];
       }
-  
+
       command = '';
     } else if (isPasswordMode) {
       // Handle password input (hide characters)
@@ -186,23 +190,21 @@
         passwordInput += event.key;
       }
       event.preventDefault();
+    // Around line 190-200, find the arrow key handling and update:
     } else if (event.key === 'ArrowUp') {
-      if (historyIndex < $history.length - 1) {
-        historyIndex++;
-
-        command = $history[$history.length - 1 - historyIndex].command;
-      }
-
-      event.preventDefault();
+    if (historyIndex < $commandHistory.length - 1) {
+    historyIndex++;
+    command = $commandHistory[$commandHistory.length - 1 - historyIndex];
+    }
+    event.preventDefault();
     } else if (event.key === 'ArrowDown') {
-      if (historyIndex > -1) {
-        historyIndex--;
-        command =
-          historyIndex >= 0
-            ? $history[$history.length - 1 - historyIndex].command
-            : '';
-      }
-      event.preventDefault();
+    if (historyIndex > -1) {
+    historyIndex--;
+    command = historyIndex >= 0 
+      ? $commandHistory[$commandHistory.length - 1 - historyIndex] 
+      : '';
+    }
+    event.preventDefault();
     } else if (event.key === 'Tab') {
       event.preventDefault();
 
@@ -306,3 +308,4 @@
   autocomplete="off"
   spellcheck="false"
 />
+

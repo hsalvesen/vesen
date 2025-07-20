@@ -150,6 +150,25 @@ const projectCommands = {
 };
 
 // Add a separate function to handle --help flags
+// Helper function to find case-insensitive command matches
+function findSimilarCommand(inputCommand: string): string | null {
+  const commandList = Object.keys(commands);
+  
+  // First try exact case-insensitive match
+  const exactMatch = commandList.find(cmd => cmd.toLowerCase() === inputCommand.toLowerCase());
+  if (exactMatch) {
+    return exactMatch;
+  }
+  
+  // Then try partial matches (starts with)
+  const partialMatch = commandList.find(cmd => 
+    cmd.toLowerCase().startsWith(inputCommand.toLowerCase()) ||
+    inputCommand.toLowerCase().startsWith(cmd.toLowerCase())
+  );
+  
+  return partialMatch || null;
+}
+
 export function processCommand(input: string): string | Promise<string> {
   const args = input.trim().split(/\s+/);
   const command = args[0];
@@ -159,9 +178,16 @@ export function processCommand(input: string): string | Promise<string> {
     return getCommandHelp(command);
   }
   
-  // Execute the actual command if it exists
+  // Execute the actual command if it exists (exact match)
   if (commands[command]) {
-    return commands[command](args.slice(1)); // Pass string[] not string
+    return commands[command](args.slice(1));
+  }
+  
+  // Try to find a similar command with different case
+  const similarCommand = findSimilarCommand(command);
+  if (similarCommand) {
+    const currentTheme = get(theme);
+    return `Command '${command}' not found. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${similarCommand}</span>? Type 'help' to see available commands.`;
   }
   
   return `Command '${command}' not found. Type 'help' to see available commands.`;

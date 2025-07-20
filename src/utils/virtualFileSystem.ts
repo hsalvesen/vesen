@@ -1,4 +1,5 @@
 import { experienceContent } from './experienceContent';
+import { readmeContent } from './experienceContent';
 
 // Virtual file system interface
 export interface VirtualFile {
@@ -22,10 +23,10 @@ export const virtualFileSystem: VirtualFile = {
           name: 'user',
           type: 'directory',
           children: {
-            'has.txt': {
-              name: 'has.txt',
+            'README.md': {
+              name: 'README.md',
               type: 'file',
-              content: 'Hello! This is Has Salvesen\'s personal file.\n\nWelcome to my terminal!\n\nFeel free to explore the virtual file system.'
+              filePath: '/src/data/README.md'
             },
             'experience.md': {
               name: 'experience.md',
