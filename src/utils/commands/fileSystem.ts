@@ -82,14 +82,6 @@ export const fileSystemCommands = {
       return commandHelp.cat;
     }
     
-    if (args[0] === 'experience.md') {
-      try {
-        return await loadRealFile('/src/data/experience.md');
-      } catch (error) {
-        return `cat: experience.md: Error reading file - ${error}`;
-      }
-    }
-    
     const targetPath = resolvePath(args[0]);
     
     let current = virtualFileSystem;

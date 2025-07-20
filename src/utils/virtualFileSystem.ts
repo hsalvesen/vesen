@@ -1,3 +1,5 @@
+import { experienceContent } from './experienceContent';
+
 // Virtual file system interface
 export interface VirtualFile {
   name: string;
@@ -28,7 +30,7 @@ export const virtualFileSystem: VirtualFile = {
             'experience.md': {
               name: 'experience.md',
               type: 'file',
-              filePath: '/src/data/experience.md'
+              content: experienceContent
             },
             'documents': {
               name: 'documents',
