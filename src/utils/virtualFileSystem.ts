@@ -26,7 +26,7 @@ export const virtualFileSystem: VirtualFile = {
             'README.md': {
               name: 'README.md',
               type: 'file',
-              filePath: '/src/data/README.md'
+              content: readmeContent  
             },
             'experience.md': {
               name: 'experience.md',
