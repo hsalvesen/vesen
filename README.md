@@ -8,7 +8,6 @@
 
 Vesen Terminal is a fully-featured web-based terminal emulator that replicates a Unix-like environment in your browser. It features a virtual file system, interactive commands, beautiful themes, and a responsive design that works across all devices.
 
-## Features
 
 ## Stack
 
@@ -61,7 +60,7 @@ Type `help` in the terminal to see all available commands, or explore the file s
 
 ![themes](/docs/themes/themes.gif)
 
-View all themes: [Theme Gallery](/docs/themes)
+View all themes: [Vesen Themes](/docs/themes)
 
 ##  Docker deployment
 
