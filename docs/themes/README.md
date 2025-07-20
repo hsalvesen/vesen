@@ -1,33 +1,33 @@
 # Vesen Themes
 
-### 1. Cassowary
+## Cassowary
 ![cassowary](screenshots/cassowary.png)
 
-### 2. Cockatoo
+## Cockatoo
 ![cockatoo](screenshots/cockatoo.png)
 
-### 3. Crocodile
+## Crocodile
 ![crocodile](screenshots/crocodile.png)
 
-### 4. Kangaroo
+## Kangaroo
 ![kangaroo](screenshots/kangaroo.png)
 
-### 5. Kookaburra
+## Kookaburra
 ![kookaburra](screenshots/kookaburra.png)
 
-### 6. Pink Robin
+## Pink Robin
 ![pinkRobin](screenshots/pinkRobin.png)
 
-### 7. Swamp Hen
+## Swamp Hen
 ![swampHen](screenshots/swampHen.png)
 
-### 8. Tree Frog
+## Tree Frog
 ![treeFrog](screenshots/treeFrog.png)
 
-### 9. Wallaby
+## Wallaby
 ![wallaby](screenshots/wallaby.png)
 
-### 10. Wombat
+## Wombat
 ![wombat](screenshots/wombat.png)
 
 
