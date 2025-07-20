@@ -1,4 +1,4 @@
-# Vesen Themes
+# Vesen themes
 
 ## Cassowary
 ![cassowary](screenshots/cassowary.png)
