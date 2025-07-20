@@ -5,7 +5,7 @@
 ![banner](/docs/themes/banner.gif)
 ## Overview
 
-Vesen Terminal is a fully-featured web-based terminal emulator that replicates a Unix-like environment in your browser. It features a virtual file system, interactive commands, beautiful themes, and a responsive design that works across all devices.
+Vesen Terminal is a fully-featured web-based terminal emulator that replicates a Unix-like environment in your browser. It features a virtual file system, interactive commands, modifiable themes, and a responsive design that works across devices.
 
 
 ## Stack
@@ -93,18 +93,18 @@ services:
 
 ##  Development
 
-### Project Structure
+### Project structure
 ```src/
-├── components/          # Svelte components
-│   ├── History.svelte   # Command history display
-│   ├── Input.svelte     # Command input handling
-│   └── Ps1.svelte       # Terminal prompt
+├── components/                # Svelte components
+│   ├── History.svelte         # Command history display
+│   ├── Input.svelte           # Command input handling
+│   └── Ps1.svelte             # Terminal prompt
 ├── utils/
-│   ├── commands/        # Command implementations
+│   ├── commands/              # Command implementations
 │   ├── virtualFileSystem.ts
 │   └── commands.ts
-├── stores/              # Svelte stores
-└── interfaces/          # TypeScript interfaces
+├── stores/                    # Svelte stores
+└── interfaces/                # TypeScript interfaces
 ```
 
 ### Available scripts
