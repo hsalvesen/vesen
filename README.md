@@ -2,7 +2,7 @@
 
 > A modern web-based terminal emulator built with SVELTE.
 
-![banner](/docs/themes/banner.png)
+![banner](/docs/themes/banner.gif)
 
 ## Overview
 
@@ -96,7 +96,7 @@ services:
 ##  Development
 
 ### Project Structure
-src/
+```src/
 ├── components/          # Svelte components
 │   ├── History.svelte   # Command history display
 │   ├── Input.svelte     # Command input handling
@@ -107,7 +107,7 @@ src/
 │   └── commands.ts
 ├── stores/              # Svelte stores
 └── interfaces/          # TypeScript interfaces
-
+```
 
 ### Available scripts
 ```bash
