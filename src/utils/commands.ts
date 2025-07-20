@@ -203,8 +203,8 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
       return `No help available for command: ${command}`;
     }
     
-    // Add colored tip at the end
-    return helpText + `<br><span style="color: var(--theme-magenta);">Tip: Use 'help' to see all available commands</span>`;
+    // Add colour tip at the end
+    return helpText + `<br><span style="color: var(--theme-yellow);">Tip: Use 'help' to see all available commands</span>`;
   }
 
   // Combine all commands
