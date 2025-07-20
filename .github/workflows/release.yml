@@ -9,9 +9,18 @@ jobs:
   tagged-release:
     name: "Tagged Release"
     runs-on: "ubuntu-latest"
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: read
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
+          automatic_release_tag: "latest"
+          title: "Release ${{ github.ref_name }}"
