@@ -309,6 +309,5 @@
   spellcheck="false"
   autocapitalize="off"
   autocorrect="off"
-  inputmode="none"
 />
 

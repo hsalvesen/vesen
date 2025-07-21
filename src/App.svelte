@@ -24,7 +24,7 @@
 >
   <History />
 
-  <div class="flex flex-col sm:flex-row">
+  <div class="flex flex-row items-baseline">
     <Ps1 {isPasswordMode} />
     <span class="mr-2"></span>
     <Input bind:isPasswordMode />
