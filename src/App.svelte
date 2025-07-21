@@ -19,12 +19,12 @@
 </svelte:head>
 
 <main
-  class="h-full border-2 rounded-md p-4 overflow-auto text-xs sm:text-sm md:text-base"
+  class="h-full border-2 rounded-md p-2 sm:p-4 overflow-auto text-xs sm:text-sm md:text-base"
   style={`background-color: ${$theme.background}; color: ${$theme.foreground}; border-color: ${$theme.green};`}
 >
   <History />
 
-  <div class="flex flex-col md:flex-row">
+  <div class="flex flex-col sm:flex-row">
     <Ps1 {isPasswordMode} />
     <span class="mr-2"></span>
     <Input bind:isPasswordMode />

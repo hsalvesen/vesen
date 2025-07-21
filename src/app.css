@@ -23,3 +23,66 @@
 ::-webkit-scrollbar-thumb:hover {
   background-color: #a8bbbf;
 }
+
+/* Portrait mode - smaller text for better mobile experience */
+@media (orientation: portrait) and (max-width: 768px) {
+  body {
+    font-size: 12px;
+  }
+  
+  pre {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+  
+  /* Make input text smaller too */
+  input {
+    font-size: 12px;
+  }
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  body {
+    padding: 0;
+  }
+  
+  #app {
+    padding: 8px;
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile */
+  }
+  
+  /* Prevent zoom on input focus */
+  input {
+    font-size: 16px;
+  }
+  
+  /* Better scrolling on mobile */
+  main {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+}
+
+/* Landscape mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  #app {
+    height: 100vh;
+    height: 100dvh;
+  }
+  
+  /* Restore normal font size in landscape */
+  body {
+    font-size: 14px;
+  }
+  
+  pre {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  
+  input {
+    font-size: 14px;
+  }
+}

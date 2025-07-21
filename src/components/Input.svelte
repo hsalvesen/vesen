@@ -307,5 +307,8 @@
   placeholder={isPasswordMode ? '' : ''}
   autocomplete="off"
   spellcheck="false"
+  autocapitalize="off"
+  autocorrect="off"
+  inputmode="none"
 />
 
