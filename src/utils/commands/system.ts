@@ -90,6 +90,24 @@ export const systemCommands = {
   
   banner: () => {
     const currentTheme = get(theme);
+    const isMobile = window.innerWidth < 768; // Tailwind's md breakpoint
+    
+    if (isMobile) {
+      // Compact mobile version
+      return `
+██╗  ██╗███████╗██╗     ██╗      ██████╗ 
+██║  ██║██╔════╝██║     ██║     ██╔═══██╗
+███████║█████╗  ██║     ██║     ██║   ██║
+██╔══██║██╔══╝  ██║     ██║     ██║   ██║
+██║  ██║███████╗███████╗███████╗╚██████╔╝
+╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝ ╚═════╝ v${packageJson.version}
+
+Type <span style="color: var(--theme-cyan); ">help</span> for commands.
+Type <span style="color: var(--theme-cyan); ">cat README.md</span> to learn more.
+`;
+    }
+    
+    // Full desktop version
     return `
 ██╗    ██╗███████╗██╗      ██████╗ ██████╗ ███╗   ███╗███████╗
 ██║    ██║██╔════╝██║     ██╔════╝██╔═══██╗████╗ ████║██╔════╝
