@@ -25,7 +25,9 @@
   <History />
 
   <div class="flex flex-col">
-    <Ps1 {isPasswordMode} />
-    <Input bind:isPasswordMode />
+    <div class="flex flex-row items-center gap-1">
+      <Ps1 {isPasswordMode} />
+      <Input bind:isPasswordMode />
+    </div>
   </div>
 </main>

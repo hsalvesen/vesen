@@ -1,4 +1,4 @@
-import experienceContent from '../data/experience.md?raw';
+import histContent from '../data/hist.txt?raw';
 import readmeContent from '../data/README.md?raw';
 
-export { experienceContent, readmeContent };
+export { histContent, readmeContent };

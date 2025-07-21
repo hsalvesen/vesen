@@ -4,10 +4,7 @@ import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from '.
 import { history } from '../../stores/history';
 import { systemCommands } from './system';
 import themes from '../../../themes.json';
-import packageJson from '../../../package.json';
 import { commandHelp } from '../helpTexts';
-import { formatExperienceWithLogo } from '../experienceFormatter';
-import { formatExperienceContent } from '../experienceFormatter';
 
 // Helper function to load real file content
 async function loadRealFile(filePath: string): Promise<string> {
@@ -130,11 +127,6 @@ export const fileSystemCommands = {
     
     if (current.type !== 'file') {
       return `cat: ${args[0]}: Is a directory`;
-    }
-    
-    // Special handling for experience.md - format with company logos
-    if (current.name === 'experience.md') {
-      return formatExperienceContent();
     }
     
     // Handle files with filePath property
@@ -439,10 +431,10 @@ export const fileSystemCommands = {
                 type: 'file',
                 filePath: '/src/data/README.md'
               },
-              'experience.md': {
-                name: 'experience.md',
+              'hist.txt': {
+                name: 'hist.txt',
                 type: 'file',
-                filePath: '/src/data/experience.md'
+                filePath: '/src/data/hist.txt'
               },
               'documents': {
                 name: 'documents',

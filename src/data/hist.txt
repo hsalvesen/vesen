@@ -1,0 +1,31 @@
+<span style="color: var(--theme-bright-blue); font-size: 1em; font-weight: bold;">History of the Terminal</span>
+
+<span style="color: var(--theme-white);">The computer terminal has evolved from humble beginnings in the</span> <span style="color: var(--theme-yellow); font-weight: bold;">1960s</span><span style="color: var(--theme-white);">.</span>
+<span style="color: var(--theme-white);">Originally, terminals were physical devices -- teletypewriters that</span>
+<span style="color: var(--theme-white);">allowed users to interact with mainframe computers through typed commands.</span>
+
+<span style="color: var(--theme-white);">The first video terminals appeared in the</span> <span style="color: var(--theme-yellow); font-weight: bold;">1970s</span><span style="color: var(--theme-white);"> replacing paper printouts</span>
+<span style="color: var(--theme-white);">with cathode-ray tube displays. 
+
+<span style="color: var(--theme-white);">With the rise of personal computers in the</span> <span style="color: var(--theme-yellow); font-weight: bold;">1980s</span><span style="color: var(--theme-white);">, terminal emulators</span>
+<span style="color: var(--theme-white);">brought command-line interfaces to graphical environments.</span> <span style="color: var(--theme-bright-green); font-weight: bold;">Unix</span> <span style="color: var(--theme-white);">systems</span>
+<span style="color: var(--theme-white);">popularised shells like</span> <span style="color: var(--theme-bright-cyan); font-weight: bold;">sh</span><span style="color: var(--theme-white);">,</span> <span style="color: var(--theme-bright-cyan); font-weight: bold;">csh</span><span style="color: var(--theme-white);">, and later</span> <span style="color: var(--theme-bright-cyan); font-weight: bold;">bash</span><span style="color: var(--theme-white);">, making terminals</span>
+<span style="color: var(--theme-white);">powerful tools for system administration and development.</span>
+
+<span style="color: var(--theme-white);">Today's terminals blend classic functionality with modern features —</span>
+<span style="color: var(--theme-white);">syntax highlighting, tabs, themes, and web-based implementations like</span>
+<span style="color: var(--theme-white);">this one. </span>
+
+<span style="color: var(--theme-white);">Despite decades of GUI evolution, the terminal remains an essential tool</span>
+<span style="color: var(--theme-white);">for developers, system admins, and power users worldwide. The command
+<span style="color: var(--theme-white);">line endures because text is universal, scriptable, and efficient, proving</span>
+<span style="color: var(--theme-white);">that sometimes the oldest interfaces are the most</span> <span style="color: var(--theme-bright-green); font-weight: bold;">timeless</span><span style="color: var(--theme-white);">.</span>
+
+<span style="color: var(--theme-bright-blue); font-weight: bold;">╔══════════════════════════════════════╗</span>
+<span style="color: var(--theme-bright-blue); font-weight: bold;">║</span> <span style="color: var(--theme-yellow); font-weight: bold;">Terminal v1.0.0</span>                      <span style="color: var(--theme-bright-blue); font-weight: bold;">║</span>
+<span style="color: var(--theme-bright-blue); font-weight: bold;">╠══════════════════════════════════════╣</span>
+<span style="color: var(--theme-bright-blue); font-weight: bold;">║</span> <span style="color: var(--theme-white);">$</span> <span style="color: var(--theme-bright-cyan);">user@machine:~/project$</span>            <span style="color: var(--theme-bright-blue); font-weight: bold;">║</span>
+<span style="color: var(--theme-bright-blue); font-weight: bold;">║</span> <span style="color: var(--theme-green);">> npm start                        </span>  <span style="color: var(--theme-bright-blue); font-weight: bold;">║</span>
+<span style="color: var(--theme-bright-blue); font-weight: bold;">║</span> <span style="color: var(--theme-white);">✓ Ready on port 3000 </span>                <span style="color: var(--theme-bright-blue); font-weight: bold;">║</span>
+<span style="color: var(--theme-bright-blue); font-weight: bold;">║</span> <span style="color: var(--theme-white);">$</span> <span style="color: var(--theme-bright-green);">█</span>                                  <span style="color: var(--theme-bright-blue); font-weight: bold;">║</span>
+<span style="color: var(--theme-bright-blue); font-weight: bold;">╚══════════════════════════════════════╝</span>
