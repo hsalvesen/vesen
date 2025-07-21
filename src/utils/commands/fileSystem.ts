@@ -429,12 +429,12 @@ export const fileSystemCommands = {
               'README.md': {
                 name: 'README.md',
                 type: 'file',
-                filePath: '/src/data/README.md'
+                filePath: '/README.md' 
               },
               'hist.txt': {
                 name: 'hist.txt',
                 type: 'file',
-                filePath: '/src/data/hist.txt'
+                filePath: '/hist.txt'  
               },
               'documents': {
                 name: 'documents',
