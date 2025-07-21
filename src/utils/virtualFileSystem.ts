@@ -1,6 +1,3 @@
-import { histContent } from './experienceContent';
-import { readmeContent } from './experienceContent';
-
 // Virtual file system interface
 export interface VirtualFile {
   name: string;
@@ -26,12 +23,12 @@ export const virtualFileSystem: VirtualFile = {
             'README.md': {
               name: 'README.md',
               type: 'file',
-              content: readmeContent  
+              filePath: '/README.md' 
             },
             'hist.txt': {
               name: 'hist.txt',
               type: 'file',
-              content: histContent
+              filePath: '/hist.txt'   
             },
             'documents': {
               name: 'documents',
