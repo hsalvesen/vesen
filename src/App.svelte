@@ -24,9 +24,9 @@
 >
   <History />
 
-  <div class="flex flex-row items-baseline">
+  <div class="flex flex-col sm:flex-row mobile-prompt-stack">
     <Ps1 {isPasswordMode} />
-    <span class="mr-2"></span>
+    <span class="mr-2 hidden sm:inline"></span>
     <Input bind:isPasswordMode />
   </div>
 </main>

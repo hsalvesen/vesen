@@ -24,76 +24,50 @@
   background-color: #a8bbbf;
 }
 
-/* Portrait mode - smaller text and banner for better mobile experience */
-@media (orientation: portrait) and (max-width: 768px) {
-  body {
-    font-size: 11px;
-  }
-  
-  pre {
-    font-size: 8px;
-    line-height: 1.1;
-    overflow-x: auto;
-  }
-  
-  /* Make input text smaller but still readable */
-  input {
-    font-size: 12px;
-  }
-  
-  /* Ensure prompt and input stay on same line */
-  main {
-    padding: 4px;
-  }
-  
-  /* Better spacing for mobile */
-  .flex {
-    flex-wrap: nowrap;
-  }
-}
-
 /* Mobile optimizations */
 @media (max-width: 768px) {
   body {
     padding: 0;
-    margin: 0;
   }
   
   #app {
-    padding: 4px;
+    padding: 8px;
     height: 100vh;
     height: 100dvh; /* Dynamic viewport height for mobile */
-    /* Adjust height when virtual keyboard is visible */
-    height: calc(100vh - env(keyboard-inset-height, 0px));
-    height: calc(100dvh - env(keyboard-inset-height, 0px));
-  }
-  
-  /* Prevent zoom on input focus but keep keyboard functional */
-  input {
-    font-size: 16px;
-    transform-origin: left top;
-    transform: scale(0.75);
-    width: 133.33%; /* Compensate for scale */
   }
   
   /* Better scrolling on mobile */
   main {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    /* Ensure content is not hidden behind keyboard */
-    padding-bottom: env(keyboard-inset-height, 0px);
+  }
+}
+
+/* Portrait mode - smaller text for better mobile experience */
+@media (orientation: portrait) and (max-width: 768px) {
+  body {
+    font-size: 12px;
   }
   
-  /* Ensure input container doesn't break */
-  .flex {
-    min-width: 0;
+  /* Make banner and pre text much smaller */
+  pre {
+    font-size: 8px;
+    line-height: 1.1;
   }
   
-  /* Handle virtual keyboard overlay */
-  @supports (height: 100dvh) {
-    #app {
-      height: 100dvh;
-    }
+  /* Keep input readable but smaller */
+  input {
+    font-size: 14px;
+  }
+  
+  /* Stack prompt vertically on mobile portrait */
+  .mobile-prompt-stack {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  
+  .mobile-prompt-stack h1 {
+    margin-bottom: 4px;
   }
 }
 
@@ -102,31 +76,19 @@
   #app {
     height: 100vh;
     height: 100dvh;
-    height: calc(100vh - env(keyboard-inset-height, 0px));
-    height: calc(100dvh - env(keyboard-inset-height, 0px));
   }
   
-  /* Slightly larger font in landscape */
+  /* Slightly larger text in landscape */
   body {
-    font-size: 12px;
+    font-size: 13px;
   }
   
   pre {
-    font-size: 10px;
-    line-height: 1.2;
+    font-size: 11px;
+    line-height: 1.3;
   }
   
   input {
     font-size: 14px;
-    transform: scale(0.85);
-    width: 117.65%; /* Compensate for scale */
-  }
-}
-
-/* Desktop - normal behavior */
-@media (min-width: 769px) {
-  input {
-    transform: none;
-    width: auto;
   }
 }
