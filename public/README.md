@@ -7,10 +7,10 @@ virtual file system, various commands, and interactive features.
 A terminal (also called a command line, shell, or console) is a text-based 
 interface for interacting with a computer's operating system. Unlike graphical 
 user interfaces (GUIs) that use windows, icons, and menus, terminals rely on 
-typed commands.
+typed commands.  Try running `cat history.txt` to discover more.
 
 Terminals have been the primary way to interact with computers since the early 
-days of computing.
+days of computing. 
 
 <span style="color: var(--theme-green); font-weight: bold;">Tips for Getting Started</span>
 

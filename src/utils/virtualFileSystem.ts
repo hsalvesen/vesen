@@ -184,20 +184,20 @@ export function createInitialFileSystem(): VirtualFile {
                 type: 'file',
                 filePath: '/README.md' 
               },
-              'hist.txt': {
-                name: 'hist.txt',
+              'history.txt': {
+                name: 'history.txt',
                 type: 'file',
-                filePath: '/hist.txt'   
+                filePath: '/history.txt'   
               },
               // Essential User Directories
               'documents': {
                 name: 'documents',
                 type: 'directory',
                 children: {
-                  'notes.txt': {
-                    name: 'notes.txt',
+                  'linux.txt': {
+                    name: 'linux.txt',
                     type: 'file',
-                    filePath: '/notes.txt'
+                    filePath: '/linux.txt'
                   }
                 }
               }
