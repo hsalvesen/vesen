@@ -5,6 +5,7 @@ import { history } from '../../stores/history';
 import { systemCommands } from './system';
 import themes from '../../../themes.json';
 import { commandHelp } from '../helpTexts';
+import { createInitialFileSystem } from '../virtualFileSystem';
 
 // Helper function to load real file content
 async function loadRealFile(filePath: string): Promise<string> {
@@ -97,7 +98,36 @@ export const fileSystemCommands = {
       return `<span style="color: ${color}; font-weight: ${item.type === 'directory' ? 'bold' : 'normal'};">${item.name}${suffix}</span>`;
     });
     
-    return items.join('  ');
+    // Calculate approximate terminal width (assuming ~80-120 characters)
+    const terminalWidth = Math.min(120, Math.max(80, Math.floor(window.innerWidth / 8)));
+    
+    // Group items into lines based on estimated width
+    const lines: string[] = [];
+    let currentLine: string[] = [];
+    let currentLineLength = 0;
+    
+    for (const item of items) {
+      // Estimate item length (removing HTML tags for calculation)
+      const itemText = item.replace(/<[^>]*>/g, '');
+      const itemLength = itemText.length + 2; // +2 for spacing
+      
+      // If adding this item would exceed the line width, start a new line
+      if (currentLineLength + itemLength > terminalWidth && currentLine.length > 0) {
+        lines.push(currentLine.join('  '));
+        currentLine = [item];
+        currentLineLength = itemLength;
+      } else {
+        currentLine.push(item);
+        currentLineLength += itemLength;
+      }
+    }
+    
+    // Add the last line if it has items
+    if (currentLine.length > 0) {
+      lines.push(currentLine.join('  '));
+    }
+    
+    return lines.join('\n');
   },
   
   cat: async (args: string[]) => {
@@ -129,16 +159,21 @@ export const fileSystemCommands = {
       return `cat: ${args[0]}: Is a directory`;
     }
     
+    let content = '';
+    
     // Handle files with filePath property
     if (current.filePath) {
       try {
-        return await loadRealFile(current.filePath);
+        content = await loadRealFile(current.filePath);
       } catch (error) {
         return `cat: ${args[0]}: Error reading file`;
       }
+    } else {
+      content = current.content || '';
     }
     
-    return current.content || '';
+    // Convert newlines to HTML line breaks for proper display in web terminal
+    return content.replace(/\n/g, '<br>');
   },
   
   cd: (args: string[]) => {
@@ -351,6 +386,12 @@ export const fileSystemCommands = {
         content = content.slice(1, -1);
       }
       
+      // Process escape sequences
+      content = content.replace(/\\n/g, '\n')
+                    .replace(/\\t/g, '\t')
+                    .replace(/\\r/g, '\r')
+                    .replace(/\\\\/g, '\\');
+      
       // Resolve the target file path
       const targetPath = resolvePath(filename);
       const fileName = targetPath[targetPath.length - 1];
@@ -394,12 +435,18 @@ export const fileSystemCommands = {
       return `<span style="color: ${currentTheme.green};">Content ${action} '${filename}'</span>`;
     }
   
-    // Regular echo behavior - remove surrounding quotes
+    // Regular echo behavior - remove surrounding quotes and process escape sequences
     let output = args.join(' ');
     if ((output.startsWith('"') && output.endsWith('"')) || 
         (output.startsWith("'") && output.endsWith("'"))) {
       output = output.slice(1, -1);
     }
+    
+    // Process escape sequences for regular echo output
+    output = output.replace(/\\n/g, '<br>')
+                .replace(/\\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
+                .replace(/\\r/g, '')
+                .replace(/\\\\/g, '\\');
     
     return output;
   },
@@ -417,69 +464,8 @@ export const fileSystemCommands = {
     history.set([])
     
     // Restore virtual file system to original state
-    virtualFileSystem.children = {
-      'home': {
-        name: 'home',
-        type: 'directory',
-        children: {
-          'user': {
-            name: 'user',
-            type: 'directory',
-            children: {
-              'README.md': {
-                name: 'README.md',
-                type: 'file',
-                filePath: '/README.md' 
-              },
-              'hist.txt': {
-                name: 'hist.txt',
-                type: 'file',
-                filePath: '/hist.txt'  
-              },
-              'documents': {
-                name: 'documents',
-                type: 'directory',
-                children: {
-                  'README.md': {
-                    name: 'README.md',
-                    type: 'file',
-                    content: '# Welcome to the Virtual File System\n\nThis is a simulated file system within the terminal.\n\nAvailable commands:\n- ls: list directory contents\n- pwd: show current directory\n- cd: change directory\n- cat: display file contents'
-                  }
-                }
-              },
-              'projects': {
-                name: 'projects',
-                type: 'directory',
-                children: {
-                  'vesen': {
-                    name: 'vesen',
-                    type: 'directory',
-                    children: {
-                      'info.txt': {
-                        name: 'info.txt',
-                        type: 'file',
-                        content: 'Vesen Terminal\n\nA web-based terminal built with Svelte and TypeScript.\n\nRepository: https://github.com/hsalvesen/vesen'
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      'etc': {
-        name: 'etc',
-        type: 'directory',
-        children: {
-          'config.conf': {
-            name: 'config.conf',
-            type: 'file',
-            content: '# Virtual System Configuration\nterminal_theme=dynamic\nuser=guest\nhostname=www.vesen.app'
-          }
-        }
-      }
-    };
+    const initialFS = createInitialFileSystem();
+    virtualFileSystem.children = initialFS.children;
     
     // Clear the terminal history and add the banner
     const bannerOutput = systemCommands.banner();

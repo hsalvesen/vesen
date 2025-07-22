@@ -1,5 +1,14 @@
 <span style="color: var(--theme-bright-blue); font-size: 1em; font-weight: bold;">History of the Terminal</span>
 
+<span style="color: var(--theme-bright-blue); font-weight: bold;">╔══════════════════════════════════════╗</span>
+<span style="color: var(--theme-bright-blue); font-weight: bold;">║</span> <span style="color: var(--theme-yellow); font-weight: bold;">Terminal v1.0.0</span>                      <span style="color: var(--theme-bright-blue); font-weight: bold;">║</span>
+<span style="color: var(--theme-bright-blue); font-weight: bold;">╠══════════════════════════════════════╣</span>
+<span style="color: var(--theme-bright-blue); font-weight: bold;">║</span> <span style="color: var(--theme-white);">$</span> <span style="color: var(--theme-bright-cyan);">user@machine:~/project$</span>            <span style="color: var(--theme-bright-blue); font-weight: bold;">║</span>
+<span style="color: var(--theme-bright-blue); font-weight: bold;">║</span> <span style="color: var(--theme-green);">> npm start                        </span>  <span style="color: var(--theme-bright-blue); font-weight: bold;">║</span>
+<span style="color: var(--theme-bright-blue); font-weight: bold;">║</span> <span style="color: var(--theme-white);">✓ Ready on port 3000 </span>                <span style="color: var(--theme-bright-blue); font-weight: bold;">║</span>
+<span style="color: var(--theme-bright-blue); font-weight: bold;">║</span> <span style="color: var(--theme-white);">$</span> <span style="color: var(--theme-bright-green);">█</span>                                  <span style="color: var(--theme-bright-blue); font-weight: bold;">║</span>
+<span style="color: var(--theme-bright-blue); font-weight: bold;">╚══════════════════════════════════════╝</span>
+
 <span style="color: var(--theme-white);">The computer terminal has evolved from humble beginnings in the</span> <span style="color: var(--theme-yellow); font-weight: bold;">1960s</span><span style="color: var(--theme-white);">.</span>
 <span style="color: var(--theme-white);">Originally, terminals were physical devices -- teletypewriters that</span>
 <span style="color: var(--theme-white);">allowed users to interact with mainframe computers through typed commands.</span>
@@ -21,11 +30,3 @@
 <span style="color: var(--theme-white);">line endures because text is universal, scriptable, and efficient, proving</span>
 <span style="color: var(--theme-white);">that sometimes the oldest interfaces are the most</span> <span style="color: var(--theme-bright-green); font-weight: bold;">timeless</span><span style="color: var(--theme-white);">.</span>
 
-<span style="color: var(--theme-bright-blue); font-weight: bold;">╔══════════════════════════════════════╗</span>
-<span style="color: var(--theme-bright-blue); font-weight: bold;">║</span> <span style="color: var(--theme-yellow); font-weight: bold;">Terminal v1.0.0</span>                      <span style="color: var(--theme-bright-blue); font-weight: bold;">║</span>
-<span style="color: var(--theme-bright-blue); font-weight: bold;">╠══════════════════════════════════════╣</span>
-<span style="color: var(--theme-bright-blue); font-weight: bold;">║</span> <span style="color: var(--theme-white);">$</span> <span style="color: var(--theme-bright-cyan);">user@machine:~/project$</span>            <span style="color: var(--theme-bright-blue); font-weight: bold;">║</span>
-<span style="color: var(--theme-bright-blue); font-weight: bold;">║</span> <span style="color: var(--theme-green);">> npm start                        </span>  <span style="color: var(--theme-bright-blue); font-weight: bold;">║</span>
-<span style="color: var(--theme-bright-blue); font-weight: bold;">║</span> <span style="color: var(--theme-white);">✓ Ready on port 3000 </span>                <span style="color: var(--theme-bright-blue); font-weight: bold;">║</span>
-<span style="color: var(--theme-bright-blue); font-weight: bold;">║</span> <span style="color: var(--theme-white);">$</span> <span style="color: var(--theme-bright-green);">█</span>                                  <span style="color: var(--theme-bright-blue); font-weight: bold;">║</span>
-<span style="color: var(--theme-bright-blue); font-weight: bold;">╚══════════════════════════════════════╝</span>
