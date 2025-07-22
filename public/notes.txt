@@ -1,0 +1,74 @@
+<span style="color: var(--theme-bright-cyan); font-weight: bold; font-size: 1em;">Arch Linux Beginner Notes</span>
+<span style="color: var(--theme-cyan);">═══════════════════════════</span>
+
+<span style="color: var(--theme-bright-yellow); font-weight: bold;">Initial Setup & Customisation</span>
+<span style="color: var(--theme-yellow);">─────────────────────────────────</span>
+<span style="color: var(--theme-green);">□</span> Install yay (AUR helper): <span style="color: var(--theme-cyan);">git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si</span>
+<span style="color: var(--theme-green);">□</span> Update system: <span style="color: var(--theme-cyan);">sudo pacman -Syu</span>
+<span style="color: var(--theme-green);">□</span> Install essential packages: <span style="color: var(--theme-cyan);">sudo pacman -S vim git htop neofetch</span>
+<span style="color: var(--theme-green);">□</span> Configure .bashrc with aliases and PS1 customization
+<span style="color: var(--theme-green);">□</span> Install and configure zsh with oh-my-zsh
+<span style="color: var(--theme-green);">□</span> Set up dotfiles repository for configuration management
+
+<span style="color: var(--theme-bright-yellow); font-weight: bold;">Desktop Environment & Window Manager</span>
+<span style="color: var(--theme-yellow);">───────────────────────────────────────</span>
+<span style="color: var(--theme-green);">□</span> Install i3wm: <span style="color: var(--theme-cyan);">sudo pacman -S i3-wm i3status i3lock dmenu</span>
+<span style="color: var(--theme-green);">□</span> Configure i3 config file: <span style="color: var(--theme-blue);">~/.config/i3/config</span>
+<span style="color: var(--theme-green);">□</span> Install polybar for better status bar
+<span style="color: var(--theme-green);">□</span> Set up rofi as application launcher
+<span style="color: var(--theme-green);">□</span> Configure picom for transparency and effects
+<span style="color: var(--theme-green);">□</span> Install and configure nitrogen for wallpapers
+
+<span style="color: var(--theme-bright-yellow); font-weight: bold;">Cron Jobs & Automation</span>
+<span style="color: var(--theme-yellow);">─────────────────────────</span>
+<span style="color: var(--theme-green);">□</span> Edit crontab: <span style="color: var(--theme-cyan);">crontab -e</span>
+<span style="color: var(--theme-green);">□</span> System updates: <span style="color: var(--theme-purple);">0 2 * * 0</span> <span style="color: var(--theme-cyan);">yay -Syu --noconfirm</span>
+<span style="color: var(--theme-green);">□</span> Backup home directory: <span style="color: var(--theme-purple);">0 3 * * 1</span> <span style="color: var(--theme-cyan);">rsync -av /home/user/ /backup/</span>
+<span style="color: var(--theme-green);">□</span> Clean package cache: <span style="color: var(--theme-purple);">0 4 * * *</span> <span style="color: var(--theme-cyan);">paccache -r</span>
+<span style="color: var(--theme-green);">□</span> Check disk usage: <span style="color: var(--theme-purple);">0 9 * * *</span> <span style="color: var(--theme-cyan);">df -h | mail -s "Disk Usage" user@localhost</span>
+
+<span style="color: var(--theme-bright-red); font-weight: bold;">Common Errors & Solutions</span>
+<span style="color: var(--theme-red);">────────────────────────────</span>
+
+<span style="color: var(--theme-bright-white); font-weight: bold;">1.</span> <span style="color: var(--theme-red);">"error: failed to commit transaction (conflicting files)"</span>
+   <span style="color: var(--theme-green); font-weight: bold;">Solution:</span> <span style="color: var(--theme-cyan);">sudo pacman -S --overwrite '*' package-name</span>
+
+<span style="color: var(--theme-bright-white); font-weight: bold;">2.</span> <span style="color: var(--theme-red);">"error: could not lock database"</span>
+   <span style="color: var(--theme-green); font-weight: bold;">Solution:</span> <span style="color: var(--theme-cyan);">sudo rm /var/lib/pacman/db.lck</span>
+
+<span style="color: var(--theme-bright-white); font-weight: bold;">3.</span> <span style="color: var(--theme-red);">"error: target not found"</span>
+   <span style="color: var(--theme-green); font-weight: bold;">Solution:</span> <span style="color: var(--theme-cyan);">sudo pacman -Sy</span> then retry installation
+
+<span style="color: var(--theme-bright-white); font-weight: bold;">4.</span> <span style="color: var(--theme-red);">AUR package build fails</span>
+   <span style="color: var(--theme-green); font-weight: bold;">Solution:</span> Check dependencies, install base-devel group
+
+<span style="color: var(--theme-bright-white); font-weight: bold;">5.</span> <span style="color: var(--theme-red);">"No space left on device"</span>
+   <span style="color: var(--theme-green); font-weight: bold;">Solution:</span> Clean package cache with <span style="color: var(--theme-cyan);">paccache -r</span>, remove orphaned packages
+
+<span style="color: var(--theme-bright-white); font-weight: bold;">6.</span> <span style="color: var(--theme-red);">X11 won't start after update</span>
+   <span style="color: var(--theme-green); font-weight: bold;">Solution:</span> Check Xorg logs, reinstall graphics drivers
+
+<span style="color: var(--theme-bright-white); font-weight: bold;">7.</span> <span style="color: var(--theme-red);">Sound not working</span>
+   <span style="color: var(--theme-green); font-weight: bold;">Solution:</span> Install <span style="color: var(--theme-cyan);">alsa-utils</span>, run <span style="color: var(--theme-cyan);">alsamixer</span>, unmute channels
+
+<span style="color: var(--theme-bright-white); font-weight: bold;">8.</span> <span style="color: var(--theme-red);">Network issues after boot</span>
+   <span style="color: var(--theme-green); font-weight: bold;">Solution:</span> Enable NetworkManager: <span style="color: var(--theme-cyan);">sudo systemctl enable NetworkManager</span>
+
+<span style="color: var(--theme-bright-blue); font-weight: bold;">Useful Commands</span>
+<span style="color: var(--theme-blue);">──────────────────</span>
+<span style="color: var(--theme-white);">•</span> List installed packages: <span style="color: var(--theme-cyan);">pacman -Q</span>
+<span style="color: var(--theme-white);">•</span> Find package files: <span style="color: var(--theme-cyan);">pacman -Ql package-name</span>
+<span style="color: var(--theme-white);">•</span> Search for package: <span style="color: var(--theme-cyan);">pacman -Ss search-term</span>
+<span style="color: var(--theme-white);">•</span> Remove orphaned packages: <span style="color: var(--theme-cyan);">sudo pacman -Rns $(pacman -Qtdq)</span>
+<span style="color: var(--theme-white);">•</span> Check system logs: <span style="color: var(--theme-cyan);">journalctl -xe</span>
+<span style="color: var(--theme-white);">•</span> Monitor system resources: <span style="color: var(--theme-cyan);">htop</span>
+<span style="color: var(--theme-white);">•</span> Check running services: <span style="color: var(--theme-cyan);">systemctl list-units --type=service</span>
+
+<span style="color: var(--theme-bright-purple); font-weight: bold;">Tips for Beginners</span>
+<span style="color: var(--theme-purple);">─────────────────────</span>
+<span style="color: var(--theme-white);">•</span> Always read the <span style="color: var(--theme-bright-cyan);">Arch Wiki</span> before making changes
+<span style="color: var(--theme-white);">•</span> Keep a backup of working configurations
+<span style="color: var(--theme-white);">•</span> Test new configurations in a virtual machine first
+<span style="color: var(--theme-white);">•</span> Join the Arch Linux forums and IRC for help
+<span style="color: var(--theme-white);">•</span> Use <span style="color: var(--theme-cyan);">timeshift</span> for system snapshots
+<span style="color: var(--theme-white);">•</span> <span style="color: var(--theme-red); font-weight: bold;">Don't run random commands from the internet without understanding them</span>
