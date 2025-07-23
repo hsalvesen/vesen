@@ -67,10 +67,16 @@ export const fileSystemCommands = {
     const currentTheme = get(theme);
     let targetPath: string[];
     
-    if (args.length === 0) {
+    // Check for -a flag to show hidden files
+    const showHidden = args.includes('-a') || args.includes('--all');
+    
+    // Filter out flags to get the actual path argument
+    const pathArgs = args.filter(arg => !arg.startsWith('-'));
+    
+    if (pathArgs.length === 0) {
       targetPath = currentPath;
     } else {
-      targetPath = resolvePath(args[0]);
+      targetPath = resolvePath(pathArgs[0]);
     }
     
     let current = virtualFileSystem;
@@ -78,13 +84,13 @@ export const fileSystemCommands = {
       if (current.children && current.children[segment]) {
         current = current.children[segment];
       } else {
-        const pathStr = args.length === 0 ? '.' : args[0];
+        const pathStr = pathArgs.length === 0 ? '.' : pathArgs[0];
         return `ls: cannot access '${pathStr}': No such file or directory`;
       }
     }
     
     if (current.type !== 'directory') {
-      const pathStr = args.length === 0 ? '.' : args[0];
+      const pathStr = pathArgs.length === 0 ? '.' : pathArgs[0];
       return `ls: cannot access '${pathStr}': Not a directory`;
     }
     
@@ -92,11 +98,14 @@ export const fileSystemCommands = {
       return '';
     }
     
-    const items = Object.values(current.children).map((item: VirtualFile) => {
-      const color = item.type === 'directory' ? currentTheme.brightBlue : currentTheme.white;
-      const suffix = item.type === 'directory' ? '/' : '';
-      return `<span style="color: ${color}; font-weight: ${item.type === 'directory' ? 'bold' : 'normal'};">${item.name}${suffix}</span>`;
-    });
+    // Filter out hidden files unless -a flag is used
+    const items = Object.values(current.children)
+      .filter((item: VirtualFile) => showHidden || !item.name.startsWith('.'))
+      .map((item: VirtualFile) => {
+        const color = item.type === 'directory' ? currentTheme.brightBlue : currentTheme.white;
+        const suffix = item.type === 'directory' ? '/' : '';
+        return `<span style="color: ${color}; font-weight: ${item.type === 'directory' ? 'bold' : 'normal'};">${item.name}${suffix}</span>`;
+      });
     
     // Calculate approximate terminal width (assuming ~80-120 characters)
     const terminalWidth = Math.min(120, Math.max(80, Math.floor(window.innerWidth / 8)));
