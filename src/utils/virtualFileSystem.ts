@@ -412,7 +412,7 @@ export function createInitialFileSystem(): VirtualFile {
               'known_hosts': {
                 name: 'known_hosts',
                 type: 'file',
-                content: '# SSH known hosts\ngithub.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC7vbqajDjI+e\ntest-server.local ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4rT3vTt\ndev.localhost ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDGhlOTsIXO\nmyserver.net ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCvuydfeYbH'
+                content: '# SSH known hosts\ngithu.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC7vbqajDjI+e\ntest-server.local ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4rT3vTt\ndev.localhost ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDGhlOTsIXO\nmyserver.net ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCvuydfeYbH'
               }
             }
           },

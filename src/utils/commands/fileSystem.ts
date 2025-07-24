@@ -1,7 +1,7 @@
 import { theme } from '../../stores/theme';
 import { get } from 'svelte/store';
 import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from '../virtualFileSystem';
-import { history } from '../../stores/history';
+import { history, commandHistory } from '../../stores/history';
 import { systemCommands } from './system';
 import themes from '../../../themes.json';
 import { commandHelp } from '../helpTexts';
@@ -107,10 +107,16 @@ export const fileSystemCommands = {
         return `<span style="color: ${color}; font-weight: ${item.type === 'directory' ? 'bold' : 'normal'};">${item.name}${suffix}</span>`;
       });
     
-    // Calculate approximate terminal width (assuming ~80-120 characters)
-    const terminalWidth = Math.min(120, Math.max(80, Math.floor(window.innerWidth / 8)));
+    // Improved mobile-responsive terminal width calculation
+    const baseCharWidth = 8; // Approximate character width in pixels
+    const padding = 40; // Account for terminal padding
+    const availableWidth = Math.max(window.innerWidth - padding, 200); // Minimum 200px
+    const terminalWidth = Math.floor(availableWidth / baseCharWidth);
+    const minWidth = 20; // Minimum characters per line
+    const maxWidth = 120; // Maximum characters per line
+    const responsiveWidth = Math.min(maxWidth, Math.max(minWidth, terminalWidth));
     
-    // Group items into lines based on estimated width
+    // Group items into lines based on responsive width
     const lines: string[] = [];
     let currentLine: string[] = [];
     let currentLineLength = 0;
@@ -121,7 +127,7 @@ export const fileSystemCommands = {
       const itemLength = itemText.length + 2; // +2 for spacing
       
       // If adding this item would exceed the line width, start a new line
-      if (currentLineLength + itemLength > terminalWidth && currentLine.length > 0) {
+      if (currentLineLength + itemLength > responsiveWidth && currentLine.length > 0) {
         lines.push(currentLine.join('  '));
         currentLine = [item];
         currentLineLength = itemLength;
@@ -498,5 +504,58 @@ export const fileSystemCommands = {
   exit: () => {
     window.close();
     return 'Goodbye!';
+  },
+  
+  history: (args: string[]) => {
+    const currentTheme = get(theme);
+    const commandHistoryData: string[] = get(commandHistory);
+    
+    if (commandHistoryData.length === 0) {
+      return 'No commands in history.';
+    }
+    
+    // Calculate responsive width for history display
+    const baseCharWidth = 8;
+    const padding = 40;
+    const availableWidth = Math.max(window.innerWidth - padding, 200);
+    const terminalWidth = Math.floor(availableWidth / baseCharWidth);
+    const minWidth = 30; // Minimum width for history
+    const maxWidth = 100; // Maximum width for history
+    const responsiveWidth = Math.min(maxWidth, Math.max(minWidth, terminalWidth));
+    
+    // Format history with line numbers and handle overflow
+    const historyLines: string[] = [];
+    
+    commandHistoryData.forEach((cmd: string, index: number) => {
+      const lineNumber = (index + 1).toString().padStart(4, ' ');
+      const prefix = `<span style="color: ${currentTheme.brightBlack};">${lineNumber}</span>  `;
+      
+      // Check if the line is too long and needs wrapping
+      const totalLength = lineNumber.length + 2 + cmd.length; // +2 for spacing
+      
+      if (totalLength > responsiveWidth) {
+        // Split long commands across multiple lines
+        const commandMaxWidth = responsiveWidth - 6; // Account for line number and spacing
+        const chunks: string[] = [];
+        
+        for (let i = 0; i < cmd.length; i += commandMaxWidth) {
+          chunks.push(cmd.substring(i, i + commandMaxWidth));
+        }
+        
+        // First line with line number
+        historyLines.push(prefix + `<span style="color: ${currentTheme.white};">${chunks[0]}</span>`);
+        
+        // Continuation lines with proper indentation
+        for (let i = 1; i < chunks.length; i++) {
+          const indent = '      '; // 6 spaces to align with command text
+          historyLines.push(`<span style="color: ${currentTheme.brightBlack};">${indent}</span><span style="color: ${currentTheme.white};">${chunks[i]}</span>`);
+        }
+      } else {
+        // Command fits on one line
+        historyLines.push(prefix + `<span style="color: ${currentTheme.white};">${cmd}</span>`);
+      }
+    });
+    
+    return historyLines.join('\n');
   }
 };
