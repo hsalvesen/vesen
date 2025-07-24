@@ -33,13 +33,13 @@
 
 ## Usage
 
-Users can switch themes using the `theme` command in the terminal:
+Users can switch themes using the `theme set` command in the terminal:
 ```bash
-theme <theme-name>
+theme set <theme-name>
 ```
 
 For example:
 ```bash
-theme cassowary
-theme wombat
+theme set cassowary
+theme set wombat
 ```

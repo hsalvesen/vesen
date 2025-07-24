@@ -4,6 +4,7 @@ export const commandHelp = {
   clear: `<span style="color: var(--theme-cyan); font-weight: bold;">clear</span> : Clears all previous output from the terminal screen.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> clear`,
   echo: `<span style="color: var(--theme-cyan); font-weight: bold;">echo</span> : Display text or write to file<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span> > <span style="color: var(--theme-green);">[filename]</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span> >> <span style="color: var(--theme-green);">[filename]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;echo "Hello World"<br>&nbsp;&nbsp;echo "Content" > file.txt<br>&nbsp;&nbsp;echo "More content" >> file.txt`,
   exit: `<span style="color: var(--theme-cyan); font-weight: bold;">exit</span> : Closes the terminal session.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> exit`,
+  history: `<span style="color: var(--theme-cyan); font-weight: bold;">history</span> : Displays a numbered list of previously executed commands.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> history<br><span style="color: var(--theme-magenta); font-weight: bold;">Note:</span> Command history resets when the browser is reloaded or the session is restarted.`,
   
   // File system commands
   ls: `<span style="color: var(--theme-cyan); font-weight: bold;">ls</span> : Lists files and directories in the current or specified directory.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> ls <span style="color: var(--theme-green);">[directory]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;ls<br>&nbsp;&nbsp;ls documents<br>&nbsp;&nbsp;ls /home/user`,
@@ -68,6 +69,7 @@ export const commandDescriptions = {
   'clear': 'Clear screen',
   'echo': 'Write text',
   'exit': 'Close terminal',
+  'history': 'Show command history',
   'ls': 'List files',
   'pwd': 'Show current path',
   'cd': 'Change directory',
