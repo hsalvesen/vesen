@@ -13,54 +13,18 @@ export const networkCommands = {
 
     const currentTheme = get(theme);
 
-    // Create loading animation
-    const loadingFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-    let frameIndex = 0;
-    
-    // Return the loading message immediately
-    const loadingMessage = `<span style="color: var(--theme-cyan);">Fetching weather data for ${city.replace(/\+/g, ' ')}... ${loadingFrames[0]}</span>`;
-    
-    // Use setTimeout to update the loading animation and fetch weather
-    setTimeout(async () => {
-      // Get current history to find the last entry (our loading message)
-      const currentHistory = get(history);
-      const lastEntryIndex = currentHistory.length - 1;
-      
-      if (lastEntryIndex >= 0) {
-        // Animate the loading spinner by updating the history store
-        const interval = setInterval(() => {
-          frameIndex = (frameIndex + 1) % loadingFrames.length;
-          const updatedLoadingMessage = `<span style="color: var(--theme-cyan);">Fetching weather data for ${city.replace(/\+/g, ' ')}... ${loadingFrames[frameIndex]}</span>`;
-          
-          // Update the history store - this will trigger the scroll effect
-          history.update(hist => {
-            const newHist = [...hist];
-            if (newHist[lastEntryIndex] && newHist[lastEntryIndex].outputs.length > 0) {
-              newHist[lastEntryIndex].outputs[newHist[lastEntryIndex].outputs.length - 1] = updatedLoadingMessage;
-            }
-            return newHist;
-          });
-        }, 100);
-        
+    // Return a Promise that resolves only when the operation is complete
+    return new Promise<string>((resolve, reject) => {
+      // Perform the actual API call without any history manipulation
+      (async () => {
         try {
           const weather = await fetch(`https://wttr.in/${city}?ATm`);
           let result = await weather.text();
           
-          // Clear the loading animation
-          clearInterval(interval);
-          
           // Check if the response indicates an unknown location
           if (result.includes('404 UNKNOWN LOCATION') || result.includes('ERROR') || result.includes('Unknown location')) {
             const errorMessage = `<span style="color: var(--theme-red); font-weight: bold;">Weather data not available for "${city.replace(/\+/g, ' ')}"</span>\n<span style="color: var(--theme-yellow);">Please check the city name and try again.</span>\n<span style="color: var(--theme-cyan);">Example: weather Oslo</span>`;
-            
-            // Update history store with error message
-            history.update(hist => {
-              const newHist = [...hist];
-              if (newHist[lastEntryIndex] && newHist[lastEntryIndex].outputs.length > 0) {
-                newHist[lastEntryIndex].outputs[newHist[lastEntryIndex].outputs.length - 1] = errorMessage;
-              }
-              return newHist;
-            });
+            resolve(errorMessage);
             return;
           }
           
@@ -85,34 +49,14 @@ export const networkCommands = {
             .replace(/([☀☁⛅⛈🌧🌦🌩❄⛄🌫])/g, `<span style="color: var(--theme-bright-yellow);">$1</span>`)
             .replace(/^(.+)$/m, `<span style="color: var(--theme-bright-green); font-weight: bold;">$1</span>`);
           
-          // Update the history store with final weather result
-          history.update(hist => {
-            const newHist = [...hist];
-            if (newHist[lastEntryIndex] && newHist[lastEntryIndex].outputs.length > 0) {
-              newHist[lastEntryIndex].outputs[newHist[lastEntryIndex].outputs.length - 1] = result;
-            }
-            return newHist;
-          });
+          resolve(result);
           
         } catch (error) {
-          // Clear the loading animation on error
-          clearInterval(interval);
           const errorMessage = `<span style="color: var(--theme-red);">Error fetching weather data for ${city.replace(/\+/g, ' ')}: ${error}</span>`;
-          
-          // Update history store with error message
-          history.update(hist => {
-            const newHist = [...hist];
-            if (newHist[lastEntryIndex] && newHist[lastEntryIndex].outputs.length > 0) {
-              newHist[lastEntryIndex].outputs[newHist[lastEntryIndex].outputs.length - 1] = errorMessage;
-            }
-            return newHist;
-          });
+          resolve(errorMessage);
         }
-      }
-    }, 100);
-
-    // Return the initial loading message
-    return loadingMessage;
+      })();
+    });
   },
   
   curl: async (args: string[]) => {
@@ -129,48 +73,21 @@ export const networkCommands = {
   
     const currentTheme = get(theme);
   
-    // Create loading animation
-    const loadingFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-    let frameIndex = 0;
-    
-    // Return the loading message immediately
-    const loadingMessage = `<span style="color: ${currentTheme.cyan};">Fetching ${url}... ${loadingFrames[0]}</span>`;
-    
     // Helper function to escape HTML
     const escapeHtml = (text: string): string => {
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
     };
-    
-    // Use setTimeout to update the loading animation and fetch data
-    setTimeout(async () => {
-      // Get current history to update the last entry
-      const currentHistory = get(history);
-      const lastEntry = currentHistory[currentHistory.length - 1];
-      
-      if (lastEntry) {
-        // Declare interval variable with correct browser type
-        let interval: number;
-        
-        // Animate the loading spinner by updating history
-        interval = setInterval(() => {
-          frameIndex = (frameIndex + 1) % loadingFrames.length;
-          const updatedHistory = [...currentHistory];
-          updatedHistory[updatedHistory.length - 1] = {
-            ...lastEntry,
-            outputs: [`<span style="color: ${currentTheme.cyan};">Fetching ${url}... ${loadingFrames[frameIndex]}</span>`]
-          };
-          history.set(updatedHistory);
-        }, 100);
-        
+  
+    // Return a Promise that resolves only when the operation is complete
+    return new Promise<string>((resolve, reject) => {
+      // Perform the actual API call without any history manipulation
+      (async () => {
         try {
           // Use a CORS proxy for better compatibility
           const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
           const response = await fetch(proxyUrl);
-          
-          // Clear the loading animation
-          clearInterval(interval);
           
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -180,54 +97,29 @@ export const networkCommands = {
           
           if (result.status && result.status.http_code !== 200) {
             const errorOutput = `<span style="color: ${currentTheme.red};">curl: HTTP ${result.status.http_code} - ${result.status.error || 'Request failed'}</span>`;
-            const updatedHistory = [...get(history)];
-            updatedHistory[updatedHistory.length - 1] = {
-              ...lastEntry,
-              outputs: [errorOutput]
-            };
-            history.set(updatedHistory);
+            resolve(errorOutput);
             return;
           }
           
-          const data = result.contents;
+          let data = result.contents || '';
           
-          // Escape HTML to prevent it from breaking the terminal formatting
-          const escapedData = escapeHtml(data);
-          
-          // Limit output length to prevent overwhelming the terminal
-          let finalOutput;
-          if (escapedData.length > 5000) {
-            finalOutput = escapedData.substring(0, 5000) + `\n\n<span style="color: ${currentTheme.yellow};">... (output truncated, showing first 5000 characters)</span>`;
-          } else {
-            finalOutput = escapedData || `<span style="color: ${currentTheme.yellow};">curl: Empty response from ${url}</span>`;
+          // Truncate if too long (more than 10000 characters)
+          if (data.length > 10000) {
+            data = data.substring(0, 10000) + '\n\n[Output truncated - content too long]';
           }
           
-          // Update the history with the final result
-          const updatedHistory = [...get(history)];
-          updatedHistory[updatedHistory.length - 1] = {
-            ...lastEntry,
-            outputs: [`<pre style="white-space: pre-wrap; word-wrap: break-word;">${finalOutput}</pre>`]
-          };
-          history.set(updatedHistory);
+          // Escape HTML to prevent XSS
+          data = escapeHtml(data);
           
-        } catch (error: unknown) {
-          // Clear the loading animation on error
-          clearInterval(interval);
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          const errorOutput = `<span style="color: ${currentTheme.red};">curl: Failed to fetch ${url}\nError: ${errorMessage}</span>`;
+          const output = `<pre style="color: ${currentTheme.foreground}; white-space: pre-wrap; word-wrap: break-word;">${data}</pre>`;
+          resolve(output);
           
-          const updatedHistory = [...get(history)];
-          updatedHistory[updatedHistory.length - 1] = {
-            ...lastEntry,
-            outputs: [errorOutput]
-          };
-          history.set(updatedHistory);
+        } catch (error) {
+          const errorOutput = `<span style="color: ${currentTheme.red};">curl: ${error}</span>`;
+          resolve(errorOutput);
         }
-      }
-    }, 100);
-  
-    // Return the initial loading message
-    return loadingMessage;
+      })();
+    });
   },
   
   stock: async (args: string[]) => {
@@ -238,51 +130,22 @@ export const networkCommands = {
     const ticker = args[0].toUpperCase();
     const currentTheme = get(theme);
 
-    // Create loading animation
-    const loadingFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-    let frameIndex = 0;
-    
-    // Return the loading message immediately
-    const loadingMessage = `<span style="color: var(--theme-cyan);">Fetching stock data for ${ticker}... ${loadingFrames[0]}</span>`;
-    
-    // Use setTimeout to update the loading animation and fetch stock data
-    setTimeout(async () => {
-      // Find the current output element
-      const historyElements = document.querySelectorAll('.whitespace-pre');
-      const currentElement = historyElements[historyElements.length - 1];
-      
-      if (currentElement) {
-        // Animate the loading spinner
-        const interval = setInterval(() => {
-          frameIndex = (frameIndex + 1) % loadingFrames.length;
-          currentElement.innerHTML = `<span style="color: var(--theme-cyan);">Fetching stock data for ${ticker}... ${loadingFrames[frameIndex]}</span>`;
-          
-          // Trigger scroll after each loading frame update - FIXED
-          setTimeout(() => {
-            const mainContainer = document.querySelector('main');
-            if (mainContainer) {
-              mainContainer.scrollTo({
-                top: mainContainer.scrollHeight,
-                behavior: 'smooth'
-              });
-            }
-          }, 10);
-        }, 100);
-        
+    // Return a Promise that resolves only when the operation is complete
+    return new Promise<string>((resolve, reject) => {
+      // Perform the actual API call without any history manipulation
+      (async () => {
         try {
           // Using Yahoo Finance API via proxy
           const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}`)}`;
           const response = await fetch(proxyUrl);
           const data = await response.json();
           
-          // Clear the loading animation
-          clearInterval(interval);
-          
           // Parse Yahoo Finance response
           const yahooData = JSON.parse(data.contents);
           
           if (yahooData.chart.error || !yahooData.chart.result || yahooData.chart.result.length === 0) {
-            currentElement.innerHTML = `<span style="color: var(--theme-red); font-weight: bold;">No data found for ticker: ${ticker}</span>\n<span style="color: var(--theme-yellow);">Please verify the ticker symbol is correct.</span>`;
+            const errorMessage = `<span style="color: var(--theme-red); font-weight: bold;">No data found for ticker: ${ticker}</span>\n<span style="color: var(--theme-yellow);">Please verify the ticker symbol is correct.</span>`;
+            resolve(errorMessage);
             return;
           }
           
@@ -292,7 +155,7 @@ export const networkCommands = {
           
           // Extract stock data with proper null checks
           const symbol = meta.symbol;
-          const companyName = meta.longName || meta.shortName || symbol; // Get company name
+          const companyName = meta.longName || meta.shortName || symbol;
           const price = meta.regularMarketPrice || 0;
           const previousClose = meta.previousClose || 0;
           const change = price - previousClose;
@@ -302,9 +165,10 @@ export const networkCommands = {
           const low = meta.regularMarketDayLow || price;
           const open = meta.regularMarketOpen || price;
           
-          // Ensure we have valid numbers (fix NaN issue)
+          // Ensure we have valid numbers
           if (isNaN(price) || isNaN(low) || isNaN(high)) {
-            currentElement.innerHTML = `<span style="color: var(--theme-red); font-weight: bold;">Invalid data received for ticker: ${ticker}</span>\n<span style="color: var(--theme-yellow);">Please try again later.</span>`;
+            const errorMessage = `<span style="color: var(--theme-red); font-weight: bold;">Invalid data received for ticker: ${ticker}</span>\n<span style="color: var(--theme-yellow);">Please try again later.</span>`;
+            resolve(errorMessage);
             return;
           }
           
@@ -340,13 +204,11 @@ export const networkCommands = {
             const range = high - low;
             if (range === 0 || isNaN(range)) return 'No range data available';
             
-            // Helper function to format price labels with consistent width
             const formatPriceLabel = (label: string, price: number): string => {
               const priceStr = price.toFixed(2);
-              return `${label}─${priceStr.padStart(8, ' ')}`; // Fixed width of 8 characters for price
+              return `${label}─${priceStr.padStart(8, ' ')}`;
             };
             
-            // Normalize values to 0-20 scale for chart height
             const chartHeight = 8;
             const normalize = (value: number) => Math.round(((value - low) / range) * chartHeight);
             
@@ -357,7 +219,6 @@ export const networkCommands = {
             
             let chart = '';
             
-            // Build chart from top to bottom
             for (let row = chartHeight; row >= 0; row--) {
               let line = '';
               
@@ -374,7 +235,6 @@ export const networkCommands = {
               } else if (row === lowPos) {
                 line = `<span style="color: var(--theme-bright-red);">${formatPriceLabel('L', low)}</span>`;
               } else if (row > lowPos && row < highPos) {
-                // Show vertical line for the trading range
                 if ((row > Math.min(openPos, closePos) && row < Math.max(openPos, closePos)) || 
                     (openPos === closePos && Math.abs(row - openPos) <= 1)) {
                   const color = close >= open ? 'var(--theme-green)' : 'var(--theme-red)';
@@ -394,7 +254,7 @@ export const networkCommands = {
           
           const ohlcChart = createOHLCChart(open, high, low, price);
           
-          // Format the output with side-by-side layout
+          // Format the output
           let output = `<span style="color: var(--theme-bright-cyan); font-weight: bold; font-size: 1em;">${symbol}</span>`;
           if (companyName && companyName !== symbol) {
             output += ` <span style="color: var(--theme-white); font-size: 1em;">- ${companyName}</span>`;
@@ -403,10 +263,8 @@ export const networkCommands = {
           output += `<span style="color: var(--theme-white); font-size: 1.1em;">$${price.toFixed(2)}</span> `;
           output += `<span style="color: ${changeColor}; font-weight: bold;">${arrow} ${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n\n`;
           
-          // Create a side-by-side layout using CSS flexbox
           output += `<div style="display: flex; gap: 15px; align-items: flex-start;">\n`;
           
-          // Left column: Price details and trends
           output += `<div style="flex: 0 0 380px;">`;
           output += `<span style="color: var(--theme-yellow);">Day Range:</span> `;
           output += `<span style="color: var(--theme-green);">$${low.toFixed(2)}</span> `;
@@ -417,7 +275,6 @@ export const networkCommands = {
           output += `<span style="color: var(--theme-cyan);">Previous Close:</span> <span style="color: var(--theme-white);">$${previousClose.toFixed(2)}</span>\n`;
           output += `<span style="color: var(--theme-cyan);">Volume:</span> <span style="color: var(--theme-white);">${volume.toLocaleString()}</span>\n\n`;
           
-          // Trend indicators
           const trendFromOpen = price - open;
           const trendFromPrevious = change;
           
@@ -426,7 +283,6 @@ export const networkCommands = {
           output += `From Previous: <span style="color: ${trendFromPrevious >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromPrevious.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n`;
           output += `</div>\n`;
           
-          // Right column: OHLC Chart
           output += `<div style="flex: 1; padding-left: 10%;">`;
           output += `<span style="color: var(--theme-purple); font-weight: bold;">OHLC Chart:</span>\n`;
           output += `<pre style="font-family: monospace; line-height: 1.2; margin: 0;">${ohlcChart}</pre>`;
@@ -434,40 +290,13 @@ export const networkCommands = {
           
           output += `</div>\n`;
           
-          // Update the element with the final result
-          currentElement.innerHTML = output;
-          
-          // Force scroll to bottom after content update - FIXED
-          setTimeout(() => {
-            const mainContainer = document.querySelector('main');
-            if (mainContainer) {
-              mainContainer.scrollTo({
-                top: mainContainer.scrollHeight,
-                behavior: 'smooth'
-              });
-            }
-          }, 50);
+          resolve(output);
           
         } catch (error) {
-          // Clear the loading animation on error
-          clearInterval(interval);
-          currentElement.innerHTML = `<span style="color: var(--theme-red);">Error fetching stock data for ${ticker}: ${error}</span>`;
-          
-          // Force scroll to bottom after error update - FIXED
-          setTimeout(() => {
-            const mainContainer = document.querySelector('main');
-            if (mainContainer) {
-              mainContainer.scrollTo({
-                top: mainContainer.scrollHeight,
-                behavior: 'smooth'
-              });
-            }
-          }, 50);
+          const errorMessage = `<span style="color: var(--theme-red);">Error fetching stock data for ${ticker}: ${error}</span>`;
+          resolve(errorMessage);
         }
-      }
-    }, 100);
-
-    // Return the initial loading message
-    return loadingMessage;
+      })();
+    });
   }
 };

@@ -5,6 +5,18 @@
   import { theme } from './stores/theme';
   
   let isPasswordMode = $state(false);
+  let isProcessing = $state(false);
+  let loadingText = $state('');
+  let mainElement: HTMLElement;
+
+  // Auto-scroll to bottom when loading text appears
+  $effect(() => {
+    if (isProcessing && loadingText && mainElement) {
+      setTimeout(() => {
+        mainElement.scrollTop = mainElement.scrollHeight;
+      }, 0);
+    }
+  });
 </script>
 
 <svelte:head>
@@ -19,6 +31,7 @@
 </svelte:head>
 
 <main
+  bind:this={mainElement}
   class="h-full border-2 rounded-md p-2 sm:p-4 overflow-auto text-xs sm:text-sm md:text-base"
   style={`background-color: ${$theme.background}; color: ${$theme.foreground}; border-color: ${$theme.green};`}
 >
@@ -27,7 +40,12 @@
   <div class="flex flex-col">
     <div class="flex flex-row items-center gap-1">
       <Ps1 {isPasswordMode} />
-      <Input bind:isPasswordMode />
+      <Input bind:isPasswordMode bind:isProcessing bind:loadingText />
     </div>
+    {#if isProcessing && loadingText}
+      <div class="flex flex-row items-center gap-1 mt-1">
+        <span class="font-mono" style="color: var(--theme-cyan);">{loadingText}</span>
+      </div>
+    {/if}
   </div>
 </main>

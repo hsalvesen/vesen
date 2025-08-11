@@ -2,17 +2,40 @@
   import { onMount } from 'svelte';
   import { history, commandHistory } from '../stores/history';
   import { theme } from '../stores/theme';
-  import { commands, virtualFileSystem, currentPath, processCommand } from '../utils/commands';
+  import { commands } from '../utils/commands';
+  import { virtualFileSystem, currentPath } from '../utils/virtualFileSystem';
+  import { processCommand } from '../utils/commands';
   import { track } from '../utils/tracking';
   import themes from '../../themes.json';
+
+  // Use $props() to declare props with $bindable()
+  let { isPasswordMode = $bindable(), isProcessing = $bindable(false), loadingText = $bindable('') } = $props();
 
   let command = $state('');
   let historyIndex = $state(-1);
   let input: HTMLInputElement;
-  let { isPasswordMode = $bindable(false) } = $props();
   let pendingSudoCommand = $state('');
   let passwordInput = $state('');
+  
+  // Loading animation state - remove local loadingText since it's now a prop
+  let loadingInterval: number | null = null;
+  
+  // Loading animation frames
+  const loadingFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  let frameIndex = 0;
 
+  // Getter/setter for input binding
+  let displayValue = {
+    get value() {
+      return isProcessing && !isPasswordMode ? loadingText : command;
+    },
+    set value(newValue: string) {
+      if (!isProcessing || isPasswordMode) {
+        command = newValue;
+      }
+    }
+  };
+  
   // Helper function to resolve file paths for completion
   const getCompletions = (input: string, isFilePath: boolean = false): string[] => {
     if (!isFilePath) {
@@ -84,7 +107,6 @@
       }
     }
   });
-
 
   $effect(() => {
     if (input) {
@@ -165,23 +187,49 @@
           return;
         }
       }
-  
-      // Use processCommand instead of calling commands directly
-      const output = await processCommand(command);
-  
-      // Only skip display history for clear/reset when NOT showing help
-      const hasHelpFlag = args.includes('--help') || args.includes('-h');
-      const shouldSkipDisplayHistory = (commandName === 'clear' || commandName === 'reset') && !hasHelpFlag;
+
+      // Store the current command before processing
+      const currentCommand = command;
       
-      // Always add to command navigation history (for arrow keys)
-      $commandHistory = [...$commandHistory, command];
+      // Set processing state to true but DON'T clear the command yet
+      isProcessing = true;
       
-      // Only add to display history if not a clear/reset command
-      if (!shouldSkipDisplayHistory) {
-        $history = [...$history, { command, outputs: [output] }];
+      // Disable the input during async operations
+      if (input) {
+        input.disabled = true;
       }
 
-      command = '';
+      try {
+        // Use processCommand and wait for completion
+        const output = await processCommand(currentCommand);
+  
+        // Only skip display history for clear/reset when NOT showing help
+        const hasHelpFlag = args.includes('--help') || args.includes('-h');
+        const shouldSkipDisplayHistory = (commandName === 'clear' || commandName === 'reset') && !hasHelpFlag;
+        
+        // Always add to command navigation history (for arrow keys)
+        $commandHistory = [...$commandHistory, currentCommand];
+        
+        // Only add to display history if not a clear/reset command
+        if (!shouldSkipDisplayHistory) {
+          $history = [...$history, { command: currentCommand, outputs: [output] }];
+        }
+      } catch (error) {
+        // Handle any errors
+        $history = [...$history, { command: currentCommand, outputs: [`Error: ${error}`] }];
+      } finally {
+        // Clear the command input only after processing is complete
+        command = '';
+        
+        // Set processing state to false to show the prompt again
+        isProcessing = false;
+        
+        // Re-enable the input after command completion
+        if (input) {
+          input.disabled = false;
+          input.focus();
+        }
+      }
     } else if (isPasswordMode) {
       // Handle password input (hide characters)
       if (event.key === 'Backspace') {
@@ -190,21 +238,20 @@
         passwordInput += event.key;
       }
       event.preventDefault();
-    // Around line 190-200, find the arrow key handling and update:
     } else if (event.key === 'ArrowUp') {
-    if (historyIndex < $commandHistory.length - 1) {
-    historyIndex++;
-    command = $commandHistory[$commandHistory.length - 1 - historyIndex];
-    }
-    event.preventDefault();
+      if (historyIndex < $commandHistory.length - 1) {
+        historyIndex++;
+        command = $commandHistory[$commandHistory.length - 1 - historyIndex];
+      }
+      event.preventDefault();
     } else if (event.key === 'ArrowDown') {
-    if (historyIndex > -1) {
-    historyIndex--;
-    command = historyIndex >= 0 
-      ? $commandHistory[$commandHistory.length - 1 - historyIndex] 
-      : '';
-    }
-    event.preventDefault();
+      if (historyIndex > -1) {
+        historyIndex--;
+        command = historyIndex >= 0 
+          ? $commandHistory[$commandHistory.length - 1 - historyIndex] 
+          : '';
+      }
+      event.preventDefault();
     } else if (event.key === 'Tab') {
       event.preventDefault();
 
@@ -231,6 +278,26 @@
           });
           if (commonPrefix.length > commandName.length) {
             command = commonPrefix;
+          }
+        }
+      } else if (commandName === 'theme' && parts.length === 2) {
+        // Complete theme subcommands (ls, set)
+        const themeSubcommands = ['ls', 'set'];
+        const matchingSubcommands = themeSubcommands.filter(sub => sub.startsWith(currentArg.toLowerCase()));
+        
+        if (matchingSubcommands.length === 1) {
+          command = `theme ${matchingSubcommands[0]} `;
+        } else if (matchingSubcommands.length > 1) {
+          // Find common prefix
+          const commonPrefix = matchingSubcommands.reduce((prefix, sub) => {
+            let i = 0;
+            while (i < prefix.length && i < sub.length && prefix[i] === sub[i]) {
+              i++;
+            }
+            return prefix.substring(0, i);
+          });
+          if (commonPrefix.length > currentArg.length) {
+            command = `theme ${commonPrefix}`;
           }
         }
       } else if (commandName === 'theme' && parts.length === 3 && parts[1] === 'set') {
@@ -282,10 +349,33 @@
       }
     } else if (event.ctrlKey && event.key === 'l') {
       event.preventDefault();
-
       $history = [];
     }
   };
+
+  // Effect to handle loading animation
+  // Loading animation effect
+  $effect(() => {
+    if (isProcessing) {
+      frameIndex = 0;
+      loadingInterval = setInterval(() => {
+        frameIndex = (frameIndex + 1) % loadingFrames.length;
+        loadingText = `${loadingFrames[frameIndex]} Processing...`;
+      }, 100);
+    } else {
+      if (loadingInterval) {
+        clearInterval(loadingInterval);
+        loadingInterval = null;
+      }
+      loadingText = '';
+    }
+
+    return () => {
+      if (loadingInterval) {
+        clearInterval(loadingInterval);
+      }
+    };
+  });
 </script>
 
 <svelte:window
@@ -302,7 +392,7 @@
   bind:value={command}
   onkeydown={handleKeyDown}
   class="bg-transparent outline-none flex-1 font-mono"
-  style="color: var(--theme-white);"
+  style="color: var(--theme-white); opacity: 1;"
   type={isPasswordMode ? 'password' : 'text'}
   placeholder={isPasswordMode ? '' : ''}
   autocomplete="off"
@@ -310,5 +400,20 @@
   autocapitalize="off"
   autocorrect="off"
   inputmode="text"
+  disabled={isProcessing}
+  readonly={isProcessing}
 />
+
+<style>
+  input:disabled {
+    color: var(--theme-white) !important;
+    opacity: 1 !important;
+    -webkit-text-fill-color: var(--theme-white) !important;
+  }
+  
+  input:readonly {
+    color: var(--theme-cyan) !important;
+    -webkit-text-fill-color: var(--theme-cyan) !important;
+  }
+</style>
 
