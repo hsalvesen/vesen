@@ -391,7 +391,7 @@
   bind:this={input}
   bind:value={command}
   onkeydown={handleKeyDown}
-  class="bg-transparent outline-none flex-1 font-mono"
+  class="bg-transparent outline-none flex-1 command-input"
   style="color: var(--theme-white); opacity: 1;"
   type={isPasswordMode ? 'password' : 'text'}
   placeholder={isPasswordMode ? '' : ''}
@@ -405,6 +405,29 @@
 />
 
 <style>
+  .command-input {
+    font-family: 'Cascadia Code', monospace;
+    font-size: 0.75rem; /* text-xs */
+    letter-spacing: 0;
+    font-feature-settings: normal;
+    font-variant-ligatures: none;
+    text-rendering: optimizeSpeed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  @media (min-width: 640px) {
+    .command-input {
+      font-size: 0.875rem; /* sm:text-sm */
+    }
+  }
+
+  @media (min-width: 768px) {
+    .command-input {
+      font-size: 1rem; /* md:text-base */
+    }
+  }
+
   input:disabled {
     color: var(--theme-white) !important;
     opacity: 1 !important;
