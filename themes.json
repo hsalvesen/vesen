@@ -162,7 +162,7 @@
     "blue": "#D4B5A0",
     "purple": "#950062",
     "cyan": "#00bbbb",
-    "white": "#bbbbbb",
+    "white": "#00bbbb",
     "brightBlack": "#555555",
     "brightRed": "#bb0000",
     "brightGreen": "#00bb00",
@@ -170,10 +170,10 @@
     "brightBlue": "#E8CDB8",
     "brightPurple": "#ff55ff",
     "brightCyan": "#55ffff",
-    "brightWhite": "#ffffff",
-    "foreground": "#fff0a5",
-    "background": "#13773d",
-    "cursorColor": "#fff0a5"
+    "brightWhite": "#fff0a5",
+    "foreground": "#00bbbb",
+    "background": "#0a4020",
+    "cursorColor": "#00bbbb"
   },
   {
     "name": "wallaby",
