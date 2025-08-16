@@ -161,6 +161,14 @@
         return;
       }
       
+      // Check if command is empty or only whitespace
+      if (!command.trim()) {
+        // Just add an empty entry to history to show a new prompt line
+        $history = [...$history, { command: '', outputs: [''] }];
+        command = '';
+        return;
+      }
+      
       const [commandName, ...args] = command.split(' ');
   
       if (import.meta.env.VITE_TRACKING_ENABLED === 'true') {
