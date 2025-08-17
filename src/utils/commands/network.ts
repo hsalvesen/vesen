@@ -82,48 +82,82 @@ export const networkCommands = {
       div.textContent = text;
       return div.innerHTML;
     };
+
+    // List of CORS proxy services to try in order
+    const proxies = [
+      `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+      `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      `https://cors-anywhere.herokuapp.com/${url}`,
+      `https://thingproxy.freeboard.io/fetch/${url}`
+    ];
+
+    // Helper function to try a single proxy
+    const tryProxy = async (proxyUrl: string, isThingProxy: boolean = false): Promise<string> => {
+      const response = await fetch(proxyUrl);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      let data: string;
+      
+      if (isThingProxy) {
+        // ThingProxy returns raw content
+        data = await response.text();
+      } else if (proxyUrl.includes('corsproxy.io')) {
+        // CorsProxy.io returns raw content
+        data = await response.text();
+      } else {
+        // AllOrigins returns JSON with contents field
+        const result = await response.json();
+        
+        if (result.status && result.status.http_code !== 200) {
+          throw new Error(`HTTP ${result.status.http_code} - ${result.status.error || 'Request failed'}`);
+        }
+        
+        data = result.contents || '';
+      }
+      
+      return data;
+    };
   
     // Return a Promise that resolves only when the operation is complete
     return new Promise<string>((resolve, reject) => {
       // Perform the actual API call without any history manipulation
       (async () => {
-        try {
-          // Use a CORS proxy for better compatibility
-          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-          const response = await fetch(proxyUrl);
-          
-          if (!response.ok) {
-            playBeep();
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-          
-          const result = await response.json();
-          
-          if (result.status && result.status.http_code !== 200) {
-            playBeep();
-            const errorOutput = `<span style="color: ${currentTheme.red};">curl: HTTP ${result.status.http_code} - ${result.status.error || 'Request failed'}</span>`;
-            resolve(errorOutput);
+        let lastError: any = null;
+        
+        // Try each proxy in sequence
+        for (let i = 0; i < proxies.length; i++) {
+          try {
+            const proxyUrl = proxies[i];
+            const isThingProxy = proxyUrl.includes('thingproxy.freeboard.io');
+            
+            let data = await tryProxy(proxyUrl, isThingProxy);
+            
+            // Truncate if too long (more than 10000 characters)
+            if (data.length > 10000) {
+              data = data.substring(0, 10000) + '\n\n[Output truncated - content too long]';
+            }
+            
+            // Escape HTML to prevent XSS
+            data = escapeHtml(data);
+            
+            const output = `<pre style="color: ${currentTheme.foreground}; white-space: pre-wrap; word-wrap: break-word;">${data}</pre>`;
+            resolve(output);
             return;
+            
+          } catch (error) {
+            lastError = error;
+            // Continue to next proxy if this one fails
+            continue;
           }
-          
-          let data = result.contents || '';
-          
-          // Truncate if too long (more than 10000 characters)
-          if (data.length > 10000) {
-            data = data.substring(0, 10000) + '\n\n[Output truncated - content too long]';
-          }
-          
-          // Escape HTML to prevent XSS
-          data = escapeHtml(data);
-          
-          const output = `<pre style="color: ${currentTheme.foreground}; white-space: pre-wrap; word-wrap: break-word;">${data}</pre>`;
-          resolve(output);
-          
-        } catch (error) {
-          playBeep();
-          const errorOutput = `<span style="color: ${currentTheme.red};">curl: ${error}</span>`;
-          resolve(errorOutput);
         }
+        
+        // All proxies failed
+        playBeep();
+        const errorOutput = `<span style="color: ${currentTheme.red};">curl: All proxy services failed. Last error: ${lastError}</span><br><span style="color: ${currentTheme.yellow};">Try again later or check if the URL is accessible.</span>`;
+        resolve(errorOutput);
       })();
     });
   },
