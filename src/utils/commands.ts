@@ -112,7 +112,7 @@ const projectCommands = {
         }).join(', ');
         
         let result = themeList;
-        result += `\nYou can preview all these themes here: ${packageJson.repository.url}/tree/main/docs/themes`;
+        result += `\n<span style="color: var(--theme-cyan);">You can preview all these themes here: ${packageJson.repository.url}/tree/main/docs/themes</span>`;
         
         return result;
       }
