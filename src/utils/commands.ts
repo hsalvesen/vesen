@@ -140,8 +140,9 @@ const projectCommands = {
     }
   },
   repo: () => {
+    const currentTheme = get(theme);
     window.open('https://github.com/hsalvesen/vesen');
-    return 'Opening repository...';
+    return `<span style="color: ${currentTheme.cyan};">Opening Vesen repository...</span>`;
   },
   
   email: () => {
