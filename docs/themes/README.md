@@ -15,14 +15,14 @@
 ## Kookaburra
 ![kookaburra](screenshots/kookaburra.png)
 
-## Pink Robin
-![pinkRobin](screenshots/pinkRobin.png)
+## Pelodryas
+![pelodryas](screenshots/pelodryas.png)
 
-## Swamp Hen
-![swampHen](screenshots/swampHen.png)
+## Petroica
+![petroica](screenshots/petroica.png)
 
-## Tree Frog
-![treeFrog](screenshots/treeFrog.png)
+## Swamphen
+![swamphen](screenshots/swamphen.png)
 
 ## Wallaby
 ![wallaby](screenshots/wallaby.png)

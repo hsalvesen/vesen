@@ -1,11 +1,11 @@
 # [Vesen Terminal](https://www.vesen.app)
 
-> A modern web-based terminal emulator built with SVELTE.
+> A modern, web-based terminal emulator built with SVELTE.
 
 ![banner](/docs/themes/banner.gif)
 ## Overview
 
-Vesen Terminal is a fully-featured web-based terminal emulator that replicates a Unix-like environment in your browser. It features a virtual file system, interactive commands, modifiable themes, and a responsive design that works across devices.
+Vesen Terminal is a fully-featured web-based terminal emulator that replicates a Unix-like environment in the browser. It features a virtual file system, interactive commands, modifiable themes, and a responsive design that works across devices.
 
 
 ## Stack

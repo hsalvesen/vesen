@@ -92,7 +92,7 @@ const projectCommands = {
 
 <span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
   theme ls
-  theme set swampHen`;
+  theme set swamphen`;
     if (args.length === 0) {
       return usage;
     }

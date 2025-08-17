@@ -477,8 +477,8 @@ export const fileSystemCommands = {
   },
 
   reset: () => {
-    // Reset theme to default (pinkrobin)
-    const defaultTheme = themes.find((t) => t.name.toLowerCase() === 'pinkrobin')!;
+    // Reset theme to default (petroica)
+    const defaultTheme = themes.find((t) => t.name.toLowerCase() === 'petroica')!;
     theme.set(defaultTheme);
     
     // Reset current path to default
