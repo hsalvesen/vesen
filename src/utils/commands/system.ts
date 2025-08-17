@@ -9,9 +9,8 @@ export const systemCommands = {
   hostname: () => hostname,
   
   whoami: () => {
-    const currentTheme = get(theme);
     window.open('https://www.linkedin.com/in/harrysalvesen/');
-    return `<span style="color: ${currentTheme.cyan};">Opening developer's LinkedIn profile...</span>`;
+    return 'Opening developer\'s LinkedIn profile...';
   },
   
   date: () => new Date().toString(),

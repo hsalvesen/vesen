@@ -159,9 +159,10 @@ const projectCommands = {
     
     const subject = `Terminal Contact - ${timestamp}`;
     const encodedSubject = encodeURIComponent(subject);
+    const currentTheme = get(theme);
     
     window.open(`mailto:has@salvesen.app?subject=${encodedSubject}`);
-    return 'Opening email client...';
+    return `<span style="color: ${currentTheme.cyan};">Opening email client...</span>`;;
   }
 };
 
