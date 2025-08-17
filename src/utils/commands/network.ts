@@ -5,7 +5,7 @@ import { commandHelp } from '../helpTexts';
 import { playBeep } from '../beep';
 
 export const networkCommands = {
-  weather: async (args: string[]) => {
+  weather: async (args: string[], abortController?: AbortController) => {
     const city = args.join('+');
 
     if (!city) {
@@ -19,7 +19,9 @@ export const networkCommands = {
       // Perform the actual API call without any history manipulation
       (async () => {
         try {
-          const weather = await fetch(`https://wttr.in/${city}?ATm`);
+          const weather = await fetch(`https://wttr.in/${city}?ATm`, {
+            signal: abortController?.signal
+          });
           let result = await weather.text();
           
           // Check if the response indicates an unknown location
@@ -54,6 +56,10 @@ export const networkCommands = {
           resolve(result);
           
         } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') {
+            resolve(`<span style="color: ${currentTheme.yellow};">Weather request cancelled</span>`);
+            return;
+          }
           playBeep();
           const errorMessage = `<span style="color: var(--theme-red);">Error fetching weather data for ${city.replace(/\+/g, ' ')}: ${error}</span>`;
           resolve(errorMessage);
@@ -62,7 +68,7 @@ export const networkCommands = {
     });
   },
   
-  curl: async (args: string[]) => {
+  curl: async (args: string[], abortController?: AbortController) => {
     if (args.length === 0) {
       return commandHelp.curl;
     }
@@ -93,7 +99,9 @@ export const networkCommands = {
 
     // Helper function to try a single proxy
     const tryProxy = async (proxyUrl: string, isThingProxy: boolean = false): Promise<string> => {
-      const response = await fetch(proxyUrl);
+      const response = await fetch(proxyUrl, {
+        signal: abortController?.signal
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -148,6 +156,10 @@ export const networkCommands = {
             return;
             
           } catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') {
+              resolve(`<span style="color: ${currentTheme.yellow};">Request cancelled</span>`);
+              return;
+            }
             lastError = error;
             // Continue to next proxy if this one fails
             continue;
@@ -162,7 +174,7 @@ export const networkCommands = {
     });
   },
   
-  stock: async (args: string[]) => {
+  stock: async (args: string[], abortController?: AbortController) => {
     if (args.length === 0) {
       return commandHelp.stock;
     }
@@ -177,7 +189,9 @@ export const networkCommands = {
         try {
           // Using Yahoo Finance API via proxy
           const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}`)}`;
-          const response = await fetch(proxyUrl);
+          const response = await fetch(proxyUrl, {
+            signal: abortController?.signal
+          });
           const data = await response.json();
           
           // Parse Yahoo Finance response
@@ -335,6 +349,10 @@ export const networkCommands = {
           resolve(output);
           
         } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') {
+            resolve(`<span style="color: ${currentTheme.yellow};">Stock request cancelled</span>`);
+            return;
+          }
           playBeep();
           const errorMessage = `<span style="color: var(--theme-red);">Error fetching stock data for ${ticker}: ${error}</span>`;
           resolve(errorMessage);

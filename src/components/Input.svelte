@@ -6,6 +6,7 @@
   import { virtualFileSystem, currentPath } from '../utils/virtualFileSystem';
   import { processCommand } from '../utils/commands';
   import { track } from '../utils/tracking';
+  import { get } from 'svelte/store';
   import themes from '../../themes.json';
 
   // Use $props() to declare props with $bindable()
@@ -16,6 +17,10 @@
   let input: HTMLInputElement;
   let pendingSudoCommand = $state('');
   let passwordInput = $state('');
+  
+  // Abort controller for cancelling long-running commands
+  let currentAbortController: AbortController | null = null;
+  let currentCommandName = $state('');
   
   // Loading animation state - remove local loadingText since it's now a prop
   let loadingInterval: number | null = null;
@@ -131,7 +136,36 @@
   });
 
   const handleKeyDown = async (event: KeyboardEvent) => {
-    if (event.key === 'Enter') {
+    // Handle Ctrl+C globally (even when input is disabled)
+    if (event.ctrlKey && event.key === 'c') {
+      event.preventDefault();
+      
+      // Only interrupt if we're processing a command and it's one of the interruptible commands
+       if (isProcessing && currentAbortController && ['curl', 'weather', 'stock'].includes(currentCommandName)) {
+         // Cancel the current operation
+         currentAbortController.abort();
+         
+         // Don't add history entry here - let the command's AbortError handler do it
+         // Just reset the state and let the command complete with its cancellation message
+         currentAbortController = null;
+         currentCommandName = '';
+       }
+      return;
+    }
+    
+    // Handle Ctrl+L globally
+    if (event.ctrlKey && event.key === 'l') {
+      event.preventDefault();
+      $history = [];
+      return;
+    }
+    
+    // For all other keys, only handle if input is not disabled/processing
+    if (isProcessing && !isPasswordMode) {
+      return;
+    }
+    
+    if (event.key === 'Enter' && !isProcessing) {
       if (isPasswordMode) {
         // Handle password submission
         isPasswordMode = false;
@@ -192,6 +226,12 @@
       // Set processing state to true but DON'T clear the command yet
       isProcessing = true;
       
+      // Set up abort controller for interruptible commands
+      if (['curl', 'weather', 'stock'].includes(commandName)) {
+        currentAbortController = new AbortController();
+        currentCommandName = commandName;
+      }
+      
       // Disable the input during async operations
       if (input) {
         input.disabled = true;
@@ -199,7 +239,7 @@
 
       try {
         // Use processCommand and wait for completion
-        const output = await processCommand(currentCommand);
+        const output = await processCommand(currentCommand, currentAbortController);
   
         // Only skip display history for clear/reset when NOT showing help
         const hasHelpFlag = args.includes('--help') || args.includes('-h');
@@ -221,6 +261,10 @@
         
         // Reset history index to start from the most recent command
         historyIndex = -1;
+        
+        // Clean up abort controller
+        currentAbortController = null;
+        currentCommandName = '';
         
         // Set processing state to false to show the prompt again
         isProcessing = false;
@@ -348,9 +392,6 @@
           }
         }
       }
-    } else if (event.ctrlKey && event.key === 'l') {
-      event.preventDefault();
-      $history = [];
     }
   };
 
@@ -386,12 +427,12 @@
       input.focus();
     }
   }}
+  onkeydown={handleKeyDown}
 />
 
 <input
   bind:this={input}
   bind:value={command}
-  onkeydown={handleKeyDown}
   class="bg-transparent outline-none flex-1 command-input"
   style="color: var(--theme-white); opacity: 1;"
   type={isPasswordMode ? 'password' : 'text'}

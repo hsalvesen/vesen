@@ -185,7 +185,7 @@ function findSimilarCommand(inputCommand: string): string | null {
   return partialMatch || null;
 }
 
-export function processCommand(input: string): string | Promise<string> {
+export function processCommand(input: string, abortController?: AbortController | null): string | Promise<string> {
   const args = input.trim().split(/\s+/);
   const command = args[0];
   const hasHelpFlag = args.includes('--help') || args.includes('-h');
@@ -196,6 +196,10 @@ export function processCommand(input: string): string | Promise<string> {
   
   // Execute the actual command if it exists (exact match)
   if (commands[command]) {
+    // Pass abort controller to network commands
+    if (['curl', 'weather', 'stock'].includes(command) && abortController) {
+      return commands[command](args.slice(1), abortController);
+    }
     return commands[command](args.slice(1));
   }
   
@@ -228,7 +232,7 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
   }
 
   // Combine all commands
-  export const commands: Record<string, (args: string[]) => Promise<string> | string> = {
+  export const commands: Record<string, (args: string[], abortController?: AbortController) => Promise<string> | string> = {
     ...systemCommands,
     ...fileSystemCommands,
     ...networkCommands,
