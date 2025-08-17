@@ -219,6 +219,9 @@
         // Clear the command input only after processing is complete
         command = '';
         
+        // Reset history index to start from the most recent command
+        historyIndex = -1;
+        
         // Set processing state to false to show the prompt again
         isProcessing = false;
         
