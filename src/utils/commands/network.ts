@@ -2,6 +2,7 @@ import { theme } from '../../stores/theme';
 import { get } from 'svelte/store';
 import { history } from '../../stores/history';
 import { commandHelp } from '../helpTexts';
+import { playBeep } from '../beep';
 
 export const networkCommands = {
   weather: async (args: string[]) => {
@@ -23,6 +24,7 @@ export const networkCommands = {
           
           // Check if the response indicates an unknown location
           if (result.includes('404 UNKNOWN LOCATION') || result.includes('ERROR') || result.includes('Unknown location')) {
+            playBeep();
             const errorMessage = `<span style="color: var(--theme-red); font-weight: bold;">Weather data not available for "${city.replace(/\+/g, ' ')}"</span>\n<span style="color: var(--theme-yellow);">Please check the city name and try again.</span>\n<span style="color: var(--theme-cyan);">Example: weather Oslo</span>`;
             resolve(errorMessage);
             return;
@@ -52,6 +54,7 @@ export const networkCommands = {
           resolve(result);
           
         } catch (error) {
+          playBeep();
           const errorMessage = `<span style="color: var(--theme-red);">Error fetching weather data for ${city.replace(/\+/g, ' ')}: ${error}</span>`;
           resolve(errorMessage);
         }
@@ -90,12 +93,14 @@ export const networkCommands = {
           const response = await fetch(proxyUrl);
           
           if (!response.ok) {
+            playBeep();
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
           
           const result = await response.json();
           
           if (result.status && result.status.http_code !== 200) {
+            playBeep();
             const errorOutput = `<span style="color: ${currentTheme.red};">curl: HTTP ${result.status.http_code} - ${result.status.error || 'Request failed'}</span>`;
             resolve(errorOutput);
             return;
@@ -115,6 +120,7 @@ export const networkCommands = {
           resolve(output);
           
         } catch (error) {
+          playBeep();
           const errorOutput = `<span style="color: ${currentTheme.red};">curl: ${error}</span>`;
           resolve(errorOutput);
         }
@@ -144,6 +150,7 @@ export const networkCommands = {
           const yahooData = JSON.parse(data.contents);
           
           if (yahooData.chart.error || !yahooData.chart.result || yahooData.chart.result.length === 0) {
+            playBeep();
             const errorMessage = `<span style="color: var(--theme-red); font-weight: bold;">No data found for ticker: ${ticker}</span>\n<span style="color: var(--theme-yellow);">Please verify the ticker symbol is correct.</span>`;
             resolve(errorMessage);
             return;
@@ -167,6 +174,7 @@ export const networkCommands = {
           
           // Ensure we have valid numbers
           if (isNaN(price) || isNaN(low) || isNaN(high)) {
+            playBeep();
             const errorMessage = `<span style="color: var(--theme-red); font-weight: bold;">Invalid data received for ticker: ${ticker}</span>\n<span style="color: var(--theme-yellow);">Please try again later.</span>`;
             resolve(errorMessage);
             return;
@@ -293,6 +301,7 @@ export const networkCommands = {
           resolve(output);
           
         } catch (error) {
+          playBeep();
           const errorMessage = `<span style="color: var(--theme-red);">Error fetching stock data for ${ticker}: ${error}</span>`;
           resolve(errorMessage);
         }

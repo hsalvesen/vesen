@@ -8,6 +8,7 @@ import { theme } from '../stores/theme';
 import { get } from 'svelte/store';
 import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from './virtualFileSystem';
 import { commandHelp, commandDescriptions } from './helpTexts';
+import { playBeep } from './beep';
 
 const hostname = window.location.hostname;
 
@@ -200,10 +201,14 @@ export function processCommand(input: string): string | Promise<string> {
   // Try to find a similar command with different case
   const similarCommand = findSimilarCommand(command);
   if (similarCommand) {
+    // Play beep sound for unrecognized command
+    playBeep();
     const currentTheme = get(theme);
     return `Command '${command}' not found. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${similarCommand}</span>? Type 'help' to see available commands.`;
   }
   
+  // Play beep sound for unrecognized command
+  playBeep();
   return `Command '${command}' not found. Type 'help' to see available commands.`;
 }
 

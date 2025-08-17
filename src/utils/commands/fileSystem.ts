@@ -6,6 +6,7 @@ import { systemCommands } from './system';
 import themes from '../../../themes.json';
 import { commandHelp } from '../helpTexts';
 import { createInitialFileSystem } from '../virtualFileSystem';
+import { playBeep } from '../beep';
 
 // Helper function to load real file content
 async function loadRealFile(filePath: string): Promise<string> {
@@ -84,6 +85,7 @@ export const fileSystemCommands = {
       if (current.children && current.children[segment]) {
         current = current.children[segment];
       } else {
+        playBeep();
         const pathStr = pathArgs.length === 0 ? '.' : pathArgs[0];
         return `ls: cannot access '${pathStr}': No such file or directory`;
       }
@@ -162,10 +164,12 @@ export const fileSystemCommands = {
         if (current.children) {
           const similarFile = findSimilarFile(segment, current);
           if (similarFile) {
+            playBeep();
             const currentTheme = get(theme);
             return `cat: ${args[0]}: No such file or directory. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${similarFile}</span>?`;
           }
         }
+        playBeep();
         return `cat: ${args[0]}: No such file or directory`;
       }
     }
@@ -211,10 +215,12 @@ export const fileSystemCommands = {
         if (current.children) {
           const similarDir = findSimilarFile(segment, current);
           if (similarDir && current.children[similarDir].type === 'directory') {
+            playBeep();
             const currentTheme = get(theme);
             return `cd: ${args[0]}: No such file or directory. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${similarDir}</span>?`;
           }
         }
+        playBeep();
         return `cd: ${args[0]}: No such file or directory`;
       }
     }
@@ -256,11 +262,13 @@ export const fileSystemCommands = {
       if (parent.children && parent.children[segment]) {
         parent = parent.children[segment];
       } else {
+        playBeep();
         return `rm: cannot remove '${targetFile}': No such file or directory`;
       }
     }
     
     if (!parent.children || !parent.children[fileName]) {
+      playBeep();
       return `rm: cannot remove '${targetFile}': No such file or directory`;
     }
     
@@ -291,6 +299,7 @@ export const fileSystemCommands = {
       if (parent.children && parent.children[segment]) {
         parent = parent.children[segment];
       } else {
+        playBeep();
         return `touch: cannot touch '${args[0]}': No such file or directory`;
       }
     }
@@ -332,6 +341,7 @@ export const fileSystemCommands = {
       if (parent.children && parent.children[segment]) {
         parent = parent.children[segment];
       } else {
+        playBeep();
         return `mkdir: cannot create directory '${args[0]}': No such file or directory`;
       }
     }
