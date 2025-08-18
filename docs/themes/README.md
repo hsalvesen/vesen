@@ -15,8 +15,8 @@
 ## Kookaburra
 ![kookaburra](screenshots/kookaburra.png)
 
-## Pelodryas
-![pelodryas](screenshots/pelodryas.png)
+## Treefrog
+![treefrog](screenshots/treefrog.png)
 
 ## Petroica
 ![petroica](screenshots/petroica.png)

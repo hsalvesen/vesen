@@ -2,7 +2,7 @@ import { writable } from 'svelte/store';
 import themes from '../../themes.json';
 import type { Theme } from '../interfaces/theme';
 
-const defaultColorscheme: Theme = themes.find((t) => t.name.toLowerCase() === 'pinkrobin')!;
+const defaultColorscheme: Theme = themes.find((t) => t.name.toLowerCase() === 'petroica')!;
 
 // Function to update CSS variables
 function updateCSSVariables(theme: Theme) {
@@ -29,19 +29,17 @@ function updateCSSVariables(theme: Theme) {
   }
 }
 
-export const theme = writable<Theme>(
-  JSON.parse(
-    localStorage.getItem('colorscheme') || JSON.stringify(defaultColorscheme),
-  ),
-);
+// Get initial theme and set CSS variables immediately
+const initialTheme = typeof document !== 'undefined' 
+  ? JSON.parse(localStorage.getItem('colorscheme') || JSON.stringify(defaultColorscheme))
+  : defaultColorscheme;
 
-// Initialize CSS variables on first load
+// Initialise CSS variables immediately on first load
 if (typeof document !== 'undefined') {
-  const currentTheme = JSON.parse(
-    localStorage.getItem('colorscheme') || JSON.stringify(defaultColorscheme),
-  );
-  updateCSSVariables(currentTheme);
+  updateCSSVariables(initialTheme);
 }
+
+export const theme = writable<Theme>(initialTheme);
 
 theme.subscribe((value) => {
   localStorage.setItem('colorscheme', JSON.stringify(value));
