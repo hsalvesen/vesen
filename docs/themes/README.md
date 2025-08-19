@@ -15,14 +15,14 @@
 ## Kookaburra
 ![kookaburra](screenshots/kookaburra.png)
 
-## Treefrog
-![treefrog](screenshots/treefrog.png)
-
 ## Petroica
 ![petroica](screenshots/petroica.png)
 
 ## Swamphen
 ![swamphen](screenshots/swamphen.png)
+
+## Treefrog
+![treefrog](screenshots/treefrog.png)
 
 ## Wallaby
 ![wallaby](screenshots/wallaby.png)
