@@ -141,7 +141,7 @@
       event.preventDefault();
       
       // Only interrupt if we're processing a command and it's one of the interruptible commands
-       if (isProcessing && currentAbortController && ['curl', 'weather', 'stock'].includes(currentCommandName)) {
+      if (isProcessing && currentAbortController && ['curl', 'weather', 'stock', 'neofetch'].includes(currentCommandName)) {
          // Cancel the current operation
          currentAbortController.abort();
          
@@ -149,6 +149,18 @@
          // Just reset the state and let the command complete with its cancellation message
          currentAbortController = null;
          currentCommandName = '';
+       } else if (!isProcessing) {
+         // If not processing a command, navigate to next line
+         if (command.trim()) {
+           // Add current command to history without executing it
+           $history = [...$history, { command, outputs: [''] }];
+         } else {
+           // Add empty line to history
+           $history = [...$history, { command: '', outputs: [''] }];
+         }
+         // Clear the command and reset history index
+         command = '';
+         historyIndex = -1;
        }
       return;
     }
@@ -227,7 +239,7 @@
       isProcessing = true;
       
       // Set up abort controller for interruptible commands
-      if (['curl', 'weather', 'stock'].includes(commandName)) {
+      if (['curl', 'weather', 'stock', 'neofetch'].includes(commandName)) {
         currentAbortController = new AbortController();
         currentCommandName = commandName;
       }

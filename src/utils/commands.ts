@@ -196,8 +196,8 @@ export function processCommand(input: string, abortController?: AbortController 
   
   // Execute the actual command if it exists (exact match)
   if (commands[command]) {
-    // Pass abort controller to network commands
-    if (['curl', 'weather', 'stock'].includes(command) && abortController) {
+    // Pass abort controller to network commands and neofetch
+    if (['curl', 'weather', 'stock', 'neofetch'].includes(command) && abortController) {
       return commands[command](args.slice(1), abortController);
     }
     return commands[command](args.slice(1));
