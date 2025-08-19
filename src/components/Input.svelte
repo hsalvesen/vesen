@@ -100,7 +100,12 @@
   };
 
   onMount(() => {
-    input.focus();
+    // Ensure focus works on mobile devices
+    setTimeout(() => {
+      if (input) {
+        input.focus();
+      }
+    }, 100);
   });
 
   $effect(() => {
@@ -133,6 +138,18 @@
         });
       }
     }, 10);
+  });
+
+  // Effect to restore focus when processing state changes
+  $effect(() => {
+    // When processing becomes false, ensure input is focused
+    if (!isProcessing && input && !input.disabled) {
+      setTimeout(() => {
+        if (input && !input.disabled && !isProcessing) {
+          input.focus();
+        }
+      }, 50);
+    }
   });
 
   const handleKeyDown = async (event: KeyboardEvent) => {
@@ -284,7 +301,13 @@
         // Re-enable the input after command completion
         if (input) {
           input.disabled = false;
-          input.focus();
+          // Use setTimeout to ensure focus happens after DOM updates
+          // This is especially important for mobile devices
+          setTimeout(() => {
+            if (input && !input.disabled) {
+              input.focus();
+            }
+          }, 10);
         }
       }
     } else if (isPasswordMode) {
