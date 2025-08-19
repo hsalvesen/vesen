@@ -460,7 +460,7 @@
 
 <style>
   .command-input {
-    font-family: 'Cascadia Code', monospace;
+    font-family: monospace;
     font-size: 0.75rem; /* text-xs */
     letter-spacing: 0;
     font-feature-settings: normal;

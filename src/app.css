@@ -1,10 +1,6 @@
 @import "tailwindcss";
 
-@font-face {
-  font-family: 'Cascadia Code';
-  src: url('/fonts/CascadiaCode.ttf') format('truetype');
-  font-display: swap;
-}
+
 
 ::-webkit-scrollbar {
   width: 20px;

@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        'cascadia': ['Cascadia Code', 'monospace'],
+        'cascadia': ['monospace'],
       },
     },
   },
