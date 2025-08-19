@@ -6,11 +6,10 @@
 
 {#each $history as { command, outputs }}
   <div style={`color: ${$theme.foreground}`}>
-    <div class="flex flex-col md:flex-row">
+    <div class="flex flex-row">
       <Ps1 />
 
       <div class="flex">
-        <p class="visible md:hidden command-text">❯</p>
         <span class="command-text" style="margin-left: 0.25rem;">{command}</span>
       </div>
     </div>
