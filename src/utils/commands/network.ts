@@ -19,11 +19,7 @@ export const networkCommands = {
       // Perform the actual API call without any history manipulation
       (async () => {
         try {
-          // Detect mobile for responsive weather format
-          const isMobile = window.innerWidth < 768;
-          const weatherFormat = isMobile ? '?format=3' : '?ATm';
-          
-          const weather = await fetch(`https://wttr.in/${city}${weatherFormat}`, {
+          const weather = await fetch(`https://wttr.in/${city}?ATm`, {
             signal: abortController?.signal
           });
           let result = await weather.text();
@@ -36,40 +32,28 @@ export const networkCommands = {
             return;
           }
           
-          if (isMobile) {
-            // Mobile: use compact format with enhanced styling
-            result = result
-              .replace(/(\d+°[CF]?)/g, `<span style="color: var(--theme-bright-red); font-weight: bold;">$1</span>`)
-              .replace(/(\d+\s*(?:km\/h|mph|m\/s|kts))/g, `<span style="color: var(--theme-bright-blue); font-weight: bold;">$1</span>`)
-              .replace(/([☀☁⛅⛈🌧🌦🌩❄⛄🌫])/g, `<span style="color: var(--theme-bright-yellow);">$1</span>`)
-              .replace(/^(.+)$/m, `<span style="color: var(--theme-bright-green); font-weight: bold;">$1</span>`);
-            
-            resolve(`<pre style="font-size: 0.9em; line-height: 1.3; word-wrap: break-word;">${result}</pre>`);
-          } else {
-            // Desktop: use full ASCII art format
-            // Remove the attribution line (last line with @igor_chubin)
-            const lines = result.split('\n');
-            const filteredLines = lines.filter(line => 
-              !line.includes('Follow @igor_chubin') && 
-              !line.includes('wttr.in updates')
-            );
-            result = filteredLines.join('\n');
-            
-            // Apply theme colors to the weather output
-            result = result
-              .replace(/(\d+°[CF]?)/g, `<span style="color: var(--theme-bright-red); font-weight: bold;">$1</span>`)
-              .replace(/(\d+\s*(?:km\/h|mph|m\/s|kts))/g, `<span style="color: var(--theme-bright-blue); font-weight: bold;">$1</span>`)
-              .replace(/(\d+%)/g, `<span style="color: var(--theme-cyan);">$1</span>`)
-              .replace(/(\d+(?:\.\d+)?\s*mm)/g, `<span style="color: var(--theme-bright-cyan);">$1</span>`)
-              .replace(/(\d+(?:\.\d+)?\s*km)/g, `<span style="color: var(--theme-green);">$1</span>`)
-              .replace(/\b(sunny|clear|cloudy|overcast|rainy|snowy|foggy|misty|thunderstorm|drizzle|partly cloudy|mostly cloudy)\b/gi, 
-                `<span style="color: var(--theme-yellow); font-weight: bold;">$1</span>`)
-              .replace(/\b([NSEW]{1,3})\b/g, `<span style="color: var(--theme-purple);">$1</span>`)
-              .replace(/([☀☁⛅⛈🌧🌦🌩❄⛄🌫])/g, `<span style="color: var(--theme-bright-yellow);">$1</span>`)
-              .replace(/^(.+)$/m, `<span style="color: var(--theme-bright-green); font-weight: bold;">$1</span>`);
-            
-            resolve(result);
-          }
+          // Remove the attribution line (last line with @igor_chubin)
+          const lines = result.split('\n');
+          const filteredLines = lines.filter(line => 
+            !line.includes('Follow @igor_chubin') && 
+            !line.includes('wttr.in updates')
+          );
+          result = filteredLines.join('\n');
+          
+          // Apply theme colors to the weather output
+          result = result
+            .replace(/(\d+°[CF]?)/g, `<span style="color: var(--theme-bright-red); font-weight: bold;">$1</span>`)
+            .replace(/(\d+\s*(?:km\/h|mph|m\/s|kts))/g, `<span style="color: var(--theme-bright-blue); font-weight: bold;">$1</span>`)
+            .replace(/(\d+%)/g, `<span style="color: var(--theme-cyan);">$1</span>`)
+            .replace(/(\d+(?:\.\d+)?\s*mm)/g, `<span style="color: var(--theme-bright-cyan);">$1</span>`)
+            .replace(/(\d+(?:\.\d+)?\s*km)/g, `<span style="color: var(--theme-green);">$1</span>`)
+            .replace(/\b(sunny|clear|cloudy|overcast|rainy|snowy|foggy|misty|thunderstorm|drizzle|partly cloudy|mostly cloudy)\b/gi, 
+              `<span style="color: var(--theme-yellow); font-weight: bold;">$1</span>`)
+            .replace(/\b([NSEW]{1,3})\b/g, `<span style="color: var(--theme-purple);">$1</span>`)
+            .replace(/([☀☁⛅⛈🌧🌦🌩❄⛄🌫])/g, `<span style="color: var(--theme-bright-yellow);">$1</span>`)
+            .replace(/^(.+)$/m, `<span style="color: var(--theme-bright-green); font-weight: bold;">$1</span>`);
+          
+          resolve(result);
           
         } catch (error) {
           if (error instanceof Error && error.name === 'AbortError') {
@@ -159,20 +143,15 @@ export const networkCommands = {
             
             let data = await tryProxy(proxyUrl, isThingProxy);
             
-            // Detect mobile for responsive truncation
-            const isMobile = window.innerWidth < 768;
-            const maxLength = isMobile ? 2000 : 10000;
-            
-            // Truncate if too long
-            if (data.length > maxLength) {
-              data = data.substring(0, maxLength) + '\n\n[Output truncated - content too long]';
+            // Truncate if too long (more than 10000 characters)
+            if (data.length > 10000) {
+              data = data.substring(0, 10000) + '\n\n[Output truncated - content too long]';
             }
             
             // Escape HTML to prevent XSS
             data = escapeHtml(data);
             
-            const mobileStyles = isMobile ? 'font-size: 0.8em; max-width: 100%; overflow-wrap: break-word;' : '';
-            const output = `<pre style="color: ${currentTheme.foreground}; white-space: pre-wrap; word-wrap: break-word; ${mobileStyles}">${data}</pre>`;
+            const output = `<pre style="color: ${currentTheme.foreground}; white-space: pre-wrap; word-wrap: break-word;">${data}</pre>`;
             resolve(output);
             return;
             
@@ -331,9 +310,6 @@ export const networkCommands = {
           
           const ohlcChart = createOHLCChart(open, high, low, price);
           
-          // Detect mobile for responsive layout
-          const isMobile = window.innerWidth < 768;
-          
           // Format the output
           let output = `<span style="color: var(--theme-bright-cyan); font-weight: bold; font-size: 1em;">${symbol}</span>`;
           if (companyName && companyName !== symbol) {
@@ -343,64 +319,32 @@ export const networkCommands = {
           output += `<span style="color: var(--theme-white); font-size: 1.1em;">$${price.toFixed(2)}</span> `;
           output += `<span style="color: ${changeColor}; font-weight: bold;">${arrow} ${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n\n`;
           
-          if (isMobile) {
-            // Mobile layout: stack everything vertically
-            output += `<div style="display: flex; flex-direction: column; gap: 15px;">\n`;
-            
-            // Day range with smaller chart
-            output += `<div>`;
-            output += `<span style="color: var(--theme-yellow);">Day Range:</span>\n`;
-            output += `<span style="color: var(--theme-green);">Low: $${low.toFixed(2)}</span> | `;
-            output += `<span style="color: var(--theme-red);">High: $${high.toFixed(2)}</span>\n`;
-            output += `<span style="color: var(--theme-white); font-size: 0.8em;">${miniChart}</span>\n`;
-            output += `</div>\n`;
-            
-            // Basic info
-            output += `<div>`;
-            output += `<span style="color: var(--theme-cyan);">Open:</span> <span style="color: var(--theme-white);">$${open.toFixed(2)}</span>\n`;
-            output += `<span style="color: var(--theme-cyan);">Previous:</span> <span style="color: var(--theme-white);">$${previousClose.toFixed(2)}</span>\n`;
-            output += `<span style="color: var(--theme-cyan);">Volume:</span> <span style="color: var(--theme-white);">${volume.toLocaleString()}</span>\n`;
-            output += `</div>\n`;
-            
-            // Trends
-            const trendFromOpen = price - open;
-            const trendFromPrevious = change;
-            output += `<div>`;
-            output += `<span style="color: var(--theme-purple);">Trends:</span>\n`;
-            output += `Open: <span style="color: ${trendFromOpen >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromOpen.toFixed(2)} (${open > 0 ? ((trendFromOpen/open)*100).toFixed(2) : '0.00'}%)</span>\n`;
-            output += `Prev: <span style="color: ${trendFromPrevious >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromPrevious.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n`;
-            output += `</div>\n`;
-            
-            output += `</div>\n`;
-          } else {
-            // Desktop layout: side by side
-            output += `<div style="display: flex; gap: 15px; align-items: flex-start;">\n`;
-            
-            output += `<div style="flex: 0 0 380px;">`;
-            output += `<span style="color: var(--theme-yellow);">Day Range:</span> `;
-            output += `<span style="color: var(--theme-green);">$${low.toFixed(2)}</span> `;
-            output += `<span style="color: var(--theme-white);">${miniChart}</span> `;
-            output += `<span style="color: var(--theme-red);">$${high.toFixed(2)}</span>\n\n`;
-            
-            output += `<span style="color: var(--theme-cyan);">Open:</span> <span style="color: var(--theme-white);">$${open.toFixed(2)}</span>\n`;
-            output += `<span style="color: var(--theme-cyan);">Previous Close:</span> <span style="color: var(--theme-white);">$${previousClose.toFixed(2)}</span>\n`;
-            output += `<span style="color: var(--theme-cyan);">Volume:</span> <span style="color: var(--theme-white);">${volume.toLocaleString()}</span>\n\n`;
-            
-            const trendFromOpen = price - open;
-            const trendFromPrevious = change;
-            
-            output += `<span style="color: var(--theme-purple);">Trends:</span>\n`;
-            output += `From Open: <span style="color: ${trendFromOpen >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromOpen.toFixed(2)} (${open > 0 ? ((trendFromOpen/open)*100).toFixed(2) : '0.00'}%)</span>\n`;
-            output += `From Previous: <span style="color: ${trendFromPrevious >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromPrevious.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n`;
-            output += `</div>\n`;
-            
-            output += `<div style="flex: 1; padding-left: 10%;">`;
-            output += `<span style="color: var(--theme-purple); font-weight: bold;">OHLC Chart:</span>\n`;
-            output += `<pre style="font-family: monospace; line-height: 1.2; margin: 0;">${ohlcChart}</pre>`;
-            output += `</div>\n`;
-            
-            output += `</div>\n`;
-          }
+          output += `<div style="display: flex; gap: 15px; align-items: flex-start;">\n`;
+          
+          output += `<div style="flex: 0 0 380px;">`;
+          output += `<span style="color: var(--theme-yellow);">Day Range:</span> `;
+          output += `<span style="color: var(--theme-green);">$${low.toFixed(2)}</span> `;
+          output += `<span style="color: var(--theme-white);">${miniChart}</span> `;
+          output += `<span style="color: var(--theme-red);">$${high.toFixed(2)}</span>\n\n`;
+          
+          output += `<span style="color: var(--theme-cyan);">Open:</span> <span style="color: var(--theme-white);">$${open.toFixed(2)}</span>\n`;
+          output += `<span style="color: var(--theme-cyan);">Previous Close:</span> <span style="color: var(--theme-white);">$${previousClose.toFixed(2)}</span>\n`;
+          output += `<span style="color: var(--theme-cyan);">Volume:</span> <span style="color: var(--theme-white);">${volume.toLocaleString()}</span>\n\n`;
+          
+          const trendFromOpen = price - open;
+          const trendFromPrevious = change;
+          
+          output += `<span style="color: var(--theme-purple);">Trends:</span>\n`;
+          output += `From Open: <span style="color: ${trendFromOpen >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromOpen.toFixed(2)} (${open > 0 ? ((trendFromOpen/open)*100).toFixed(2) : '0.00'}%)</span>\n`;
+          output += `From Previous: <span style="color: ${trendFromPrevious >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromPrevious.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n`;
+          output += `</div>\n`;
+          
+          output += `<div style="flex: 1; padding-left: 10%;">`;
+          output += `<span style="color: var(--theme-purple); font-weight: bold;">OHLC Chart:</span>\n`;
+          output += `<pre style="font-family: monospace; line-height: 1.2; margin: 0;">${ohlcChart}</pre>`;
+          output += `</div>\n`;
+          
+          output += `</div>\n`;
           
           resolve(output);
           

@@ -115,20 +115,17 @@ export const systemCommands = {
              { label: 'Author', value: `Has Salvesen (${packageJson.author.email})` }
            ];
            
-           // Detect mobile for responsive layout
-           const isMobile = window.innerWidth < 768;
-           
-           // Create HTML structure with responsive CSS styling
+           // Create HTML structure with CSS styling and fixed width for perfect alignment
            const logoHtml = logoLines.map(line => 
-             `<div style="color: var(--theme-yellow); font-weight: bold; font-family: monospace; ${isMobile ? 'font-size: 0.7em; line-height: 1;' : ''}">${line}</div>`
+             `<div style="color: var(--theme-yellow); font-weight: bold; font-family: monospace;">${line}</div>`
            ).join('');
            
            const infoHtml = infoData.map(({ label, value }) => 
-             `<div style="display: flex; margin-bottom: 2px; font-family: monospace; ${isMobile ? 'flex-direction: column;' : ''}"><span style="color: var(--theme-cyan); font-weight: bold; ${isMobile ? 'margin-bottom: 1px;' : 'width: 120px; display: inline-block;'}">${label}:</span><span style="${isMobile ? 'margin-left: 8px; word-break: break-all;' : ''}">${value}</span></div>`
+             `<div style="display: flex; margin-bottom: 2px; font-family: monospace;"><span style="color: var(--theme-cyan); font-weight: bold; width: 120px; display: inline-block;">${label}:</span><span>${value}</span></div>`
            ).join('');
            
-           const result = `<div style="display: flex; ${isMobile ? 'flex-direction: column; gap: 15px;' : 'gap: 30px;'} font-family: monospace; line-height: 1.2;">
-     <div style="${isMobile ? 'align-self: center;' : 'flex-shrink: 0;'}">
+           const result = `<div style="display: flex; gap: 30px; font-family: monospace; line-height: 1.2;">
+     <div style="flex-shrink: 0;">
        ${logoHtml}
      </div>
      <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
