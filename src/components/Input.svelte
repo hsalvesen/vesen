@@ -284,20 +284,7 @@
         // Re-enable the input after command completion
         if (input) {
           input.disabled = false;
-          
-          // Enhanced focus handling for mobile devices
-          // Use setTimeout to ensure focus happens after DOM updates
-          setTimeout(() => {
-            if (input && !input.disabled) {
-              input.focus();
-              
-              // Additional mobile-specific focus handling
-              // Trigger a click event to ensure mobile browsers register the focus
-              if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                input.click();
-              }
-            }
-          }, 50);
+          input.focus();
         }
       }
     } else if (isPasswordMode) {
@@ -448,31 +435,8 @@
 <svelte:window
   onclick={(event) => {
     // Only focus if we're not selecting text and not clicking on selectable content
-    if (!window.getSelection()?.toString() && event.target !== input && !isProcessing) {
-      // Enhanced focus for mobile devices
-      if (input && !input.disabled) {
-        input.focus();
-        
-        // Additional mobile-specific focus handling
-        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-          setTimeout(() => {
-            if (input && !input.disabled) {
-              input.click();
-            }
-          }, 10);
-        }
-      }
-    }
-  }}
-  ontouchend={(event) => {
-    // Handle touch events for mobile devices
-    if (!window.getSelection()?.toString() && event.target !== input && !isProcessing) {
-      if (input && !input.disabled) {
-        setTimeout(() => {
-          input.focus();
-          input.click();
-        }, 10);
-      }
+    if (!window.getSelection()?.toString() && event.target !== input) {
+      input.focus();
     }
   }}
   onkeydown={handleKeyDown}
