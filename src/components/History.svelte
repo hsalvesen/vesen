@@ -10,8 +10,8 @@
     <div class="flex flex-row">
       <Ps1 />
 
-      <div class="flex">
-        <span class="command-text" style="margin-left: 0.25rem;">{command}</span>
+      <div class="flex flex-1 min-w-0">
+        <span class="command-text command-input-display" style="margin-left: 0.25rem;">{command}</span>
       </div>
     </div>
 
@@ -33,6 +33,14 @@
     text-rendering: optimizeSpeed;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  .command-input-display {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    word-break: break-all;
   }
 
   .command-output {
@@ -75,6 +83,10 @@
       max-width: calc(100vw - 64px);
       overflow-x: hidden;
     }
+    
+    .command-input-display {
+      max-width: calc(100vw - 140px); /* Account for prompt width */
+    }
   }
 
   @media (max-width: 480px) {
@@ -88,6 +100,10 @@
     .command-output {
       max-width: calc(100vw - 32px);
       overflow-x: hidden;
+    }
+    
+    .command-input-display {
+      max-width: calc(100vw - 120px); /* Account for prompt width */
     }
   }
 </style>
