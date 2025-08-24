@@ -3,6 +3,7 @@ import { get } from 'svelte/store';
 import { history } from '../../stores/history';
 import { commandHelp } from '../helpTexts';
 import { playBeep } from '../beep';
+import { shouldUseStackedLayout, getAvailableWidth, isMobileDevice } from '../mobile';
 
 export const networkCommands = {
   weather: async (args: string[], abortController?: AbortController) => {
@@ -38,7 +39,22 @@ export const networkCommands = {
             !line.includes('Follow @igor_chubin') && 
             !line.includes('wttr.in updates')
           );
-          result = filteredLines.join('\n');
+          
+          // On mobile, show only the current weather header (first section) plus location
+          if (isMobileDevice()) {
+            // Find the location line (contains coordinates in brackets)
+            const locationLine = filteredLines.find(line => 
+              line.includes('Location:') && line.includes('[') && line.includes(']')
+            );
+            
+            let mobileResult = filteredLines.slice(0, 7).join('\n');
+            if (locationLine) {
+              mobileResult += '\n\n' + locationLine;
+            }
+            result = mobileResult + '\n\n';
+          } else {
+            result = filteredLines.join('\n');
+          }
           
           // Apply theme colors to the weather output
           result = result
@@ -151,7 +167,11 @@ export const networkCommands = {
             // Escape HTML to prevent XSS
             data = escapeHtml(data);
             
-            const output = `<pre style="color: ${currentTheme.foreground}; white-space: pre-wrap; word-wrap: break-word;">${data}</pre>`;
+            // Use mobile-responsive styling
+            const isMobileLayout = shouldUseStackedLayout(600);
+            const maxWidth = isMobileLayout ? getAvailableWidth() : 'none';
+            
+            const output = `<pre style="color: ${currentTheme.foreground}; white-space: pre-wrap; word-wrap: break-word; word-break: break-word; max-width: ${maxWidth}px; overflow-wrap: break-word;">${data}</pre>`;
             resolve(output);
             return;
             
@@ -255,17 +275,25 @@ export const networkCommands = {
           
           const miniChart = createMiniChart(price, low, high);
           
-          // Create OHLC ASCII chart
-          const createOHLCChart = (open: number, high: number, low: number, close: number): string => {
+          // Determine layout type for responsive design
+          const useStackedLayout = shouldUseStackedLayout(600);
+          const availableWidth = getAvailableWidth();
+          
+          // Create OHLC ASCII chart with mobile responsiveness
+          const createOHLCChart = (open: number, high: number, low: number, close: number, isMobile: boolean = false): string => {
             const range = high - low;
             if (range === 0 || isNaN(range)) return 'No range data available';
             
             const formatPriceLabel = (label: string, price: number): string => {
               const priceStr = price.toFixed(2);
+              if (isMobile) {
+                // Shorter format for mobile to prevent overflow
+                return `${label}${priceStr.padStart(6, ' ')}`;
+              }
               return `${label}─${priceStr.padStart(8, ' ')}`;
             };
             
-            const chartHeight = 8;
+            const chartHeight = isMobile ? 6 : 8; // Shorter chart on mobile
             const normalize = (value: number) => Math.round(((value - low) / range) * chartHeight);
             
             const openPos = normalize(open);
@@ -308,7 +336,7 @@ export const networkCommands = {
             return chart;
           };
           
-          const ohlcChart = createOHLCChart(open, high, low, price);
+          const ohlcChart = createOHLCChart(open, high, low, price, useStackedLayout);
           
           // Format the output
           let output = `<span style="color: var(--theme-bright-cyan); font-weight: bold; font-size: 1em;">${symbol}</span>`;
@@ -319,30 +347,64 @@ export const networkCommands = {
           output += `<span style="color: var(--theme-white); font-size: 1.1em;">$${price.toFixed(2)}</span> `;
           output += `<span style="color: ${changeColor}; font-weight: bold;">${arrow} ${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n\n`;
           
-          output += `<div style="display: flex; gap: 15px; align-items: flex-start;">\n`;
+          // Use responsive layout based on screen size
           
-          output += `<div style="flex: 0 0 380px;">`;
-          output += `<span style="color: var(--theme-yellow);">Day Range:</span> `;
-          output += `<span style="color: var(--theme-green);">$${low.toFixed(2)}</span> `;
-          output += `<span style="color: var(--theme-white);">${miniChart}</span> `;
-          output += `<span style="color: var(--theme-red);">$${high.toFixed(2)}</span>\n\n`;
-          
-          output += `<span style="color: var(--theme-cyan);">Open:</span> <span style="color: var(--theme-white);">$${open.toFixed(2)}</span>\n`;
-          output += `<span style="color: var(--theme-cyan);">Previous Close:</span> <span style="color: var(--theme-white);">$${previousClose.toFixed(2)}</span>\n`;
-          output += `<span style="color: var(--theme-cyan);">Volume:</span> <span style="color: var(--theme-white);">${volume.toLocaleString()}</span>\n\n`;
-          
-          const trendFromOpen = price - open;
-          const trendFromPrevious = change;
-          
-          output += `<span style="color: var(--theme-purple);">Trends:</span>\n`;
-          output += `From Open: <span style="color: ${trendFromOpen >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromOpen.toFixed(2)} (${open > 0 ? ((trendFromOpen/open)*100).toFixed(2) : '0.00'}%)</span>\n`;
-          output += `From Previous: <span style="color: ${trendFromPrevious >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromPrevious.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n`;
-          output += `</div>\n`;
-          
-          output += `<div style="flex: 1; padding-left: 10%;">`;
-          output += `<span style="color: var(--theme-purple); font-weight: bold;">OHLC Chart:</span>\n`;
-          output += `<pre style="font-family: monospace; line-height: 1.2; margin: 0;">${ohlcChart}</pre>`;
-          output += `</div>\n`;
+          if (useStackedLayout) {
+            // Mobile/narrow screen layout - stack vertically
+            output += `<div style="display: flex; flex-direction: column; gap: 15px;">\n`;
+            
+            // Stock info section
+            output += `<div style="width: 100%; max-width: ${availableWidth}px;">`;
+            output += `<span style="color: var(--theme-yellow);">Day Range:</span> `;
+            output += `<span style="color: var(--theme-green);">$${low.toFixed(2)}</span> `;
+            output += `<span style="color: var(--theme-white);">${miniChart}</span> `;
+            output += `<span style="color: var(--theme-red);">$${high.toFixed(2)}</span>\n\n`;
+            
+            output += `<span style="color: var(--theme-cyan);">Open:</span> <span style="color: var(--theme-white);">$${open.toFixed(2)}</span>\n`;
+            output += `<span style="color: var(--theme-cyan);">Previous Close:</span> <span style="color: var(--theme-white);">$${previousClose.toFixed(2)}</span>\n`;
+            output += `<span style="color: var(--theme-cyan);">Volume:</span> <span style="color: var(--theme-white);">${volume.toLocaleString()}</span>\n\n`;
+            
+            const trendFromOpen = price - open;
+            const trendFromPrevious = change;
+            
+            output += `<span style="color: var(--theme-purple);">Trends:</span>\n`;
+            output += `From Open: <span style="color: ${trendFromOpen >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromOpen.toFixed(2)} (${open > 0 ? ((trendFromOpen/open)*100).toFixed(2) : '0.00'}%)</span>\n`;
+            output += `From Previous: <span style="color: ${trendFromPrevious >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromPrevious.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n`;
+            output += `</div>\n`;
+            
+            // OHLC Chart section - stacked below on mobile
+            output += `<div style="width: 100%; max-width: ${availableWidth}px; overflow-x: auto;">`;
+            output += `<span style="color: var(--theme-purple); font-weight: bold;">OHLC Chart:</span>\n`;
+            output += `<pre style="font-family: monospace; line-height: 1.2; margin: 0; white-space: pre; overflow-x: auto;">${ohlcChart}</pre>`;
+            output += `</div>\n`;
+            
+          } else {
+            // Desktop/wide screen layout - side by side
+            output += `<div style="display: flex; gap: 15px; align-items: flex-start;">\n`;
+            
+            output += `<div style="flex: 0 0 380px;">`;
+            output += `<span style="color: var(--theme-yellow);">Day Range:</span> `;
+            output += `<span style="color: var(--theme-green);">$${low.toFixed(2)}</span> `;
+            output += `<span style="color: var(--theme-white);">${miniChart}</span> `;
+            output += `<span style="color: var(--theme-red);">$${high.toFixed(2)}</span>\n\n`;
+            
+            output += `<span style="color: var(--theme-cyan);">Open:</span> <span style="color: var(--theme-white);">$${open.toFixed(2)}</span>\n`;
+            output += `<span style="color: var(--theme-cyan);">Previous Close:</span> <span style="color: var(--theme-white);">$${previousClose.toFixed(2)}</span>\n`;
+            output += `<span style="color: var(--theme-cyan);">Volume:</span> <span style="color: var(--theme-white);">${volume.toLocaleString()}</span>\n\n`;
+            
+            const trendFromOpen = price - open;
+            const trendFromPrevious = change;
+            
+            output += `<span style="color: var(--theme-purple);">Trends:</span>\n`;
+            output += `From Open: <span style="color: ${trendFromOpen >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromOpen.toFixed(2)} (${open > 0 ? ((trendFromOpen/open)*100).toFixed(2) : '0.00'}%)</span>\n`;
+            output += `From Previous: <span style="color: ${trendFromPrevious >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromPrevious.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n`;
+            output += `</div>\n`;
+            
+            output += `<div style="flex: 1; padding-left: 10%;">`;
+            output += `<span style="color: var(--theme-purple); font-weight: bold;">OHLC Chart:</span>\n`;
+            output += `<pre style="font-family: monospace; line-height: 1.2; margin: 0;">${ohlcChart}</pre>`;
+            output += `</div>\n`;
+          }
           
           output += `</div>\n`;
           

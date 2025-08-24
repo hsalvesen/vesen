@@ -73,7 +73,7 @@ const terminalCommands = {
       }
     </style>`;
     
-    output += `\n<span style="color: var(--theme-cyan);">Type [command] --help for detailed usage information</span>`;
+    output += `\n<span style="color: var(--theme-cyan); word-wrap: break-word; overflow-wrap: break-word;">Type [command] --help for detailed usage information</span>`;
     
     
     return output;

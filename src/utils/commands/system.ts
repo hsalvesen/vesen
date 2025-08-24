@@ -2,6 +2,7 @@ import packageJson from '../../../package.json';
 import { theme } from '../../stores/theme';
 import { get } from 'svelte/store';
 import { getAppleLogo, getAndroidLogo, getWindowsLogo, getLinuxLogo } from '../osLogos';
+import { isMobileDevice } from '../mobile';
 
 const hostname = window.location.hostname;
 
@@ -100,6 +101,9 @@ export const systemCommands = {
            const packages = '23 (npm)';
            
            // System information with labels and values
+           const isMobile = isMobileDevice();
+           const repoUrl = isMobile ? 'github.com/hsalvesen/vesen' : packageJson.repository.url;
+           
            const infoData = [
              { label: 'Host', value: hostname },
              { label: 'OS', value: osName },
@@ -110,7 +114,7 @@ export const systemCommands = {
              { label: 'IP', value: userIP },
              { label: 'License', value: packageJson.license },
              { label: 'Version', value: packageJson.version },
-             { label: 'Repo', value: packageJson.repository.url },
+             { label: 'Repo', value: repoUrl },
              { label: 'Uptime', value: uptime < 60 ? 'less than a minute' : Math.floor(uptime / 60) + ' hours' },
              { label: 'Author', value: `Has Salvesen (${packageJson.author.email})` }
            ];
@@ -124,14 +128,7 @@ export const systemCommands = {
              `<div style="display: flex; margin-bottom: 2px; font-family: monospace;"><span style="color: var(--theme-cyan); font-weight: bold; width: 120px; display: inline-block;">${label}:</span><span>${value}</span></div>`
            ).join('');
            
-           const result = `<div style="display: flex; gap: 30px; font-family: monospace; line-height: 1.2;">
-     <div style="flex-shrink: 0;">
-       ${logoHtml}
-     </div>
-     <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
-       ${infoHtml}
-     </div>
-   </div>`;
+           const result = `<br><div style="display: flex; ${isMobile ? 'flex-direction: column;' : 'gap: 30px;'} font-family: monospace; line-height: 1.2;"><div style="${isMobile ? 'margin-bottom: 8px;' : 'flex-shrink: 0;'}">${logoHtml}</div><div style="${isMobile ? '' : 'flex: 1; display: flex; flex-direction: column; justify-content: center;'}">${infoHtml}</div></div><br>`;
            
            resolve(result);
          } catch (error) {

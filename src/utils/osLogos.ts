@@ -19,7 +19,7 @@ export const getAppleLogo = (): string[] => [
 ];
 
 export const getAndroidLogo = (): string[] => [
-  "           -o         o-",
+  "           -o        o-",
   "           +hydNNNNdyh+",
   "         +mMMMMMMMMMMMMm+",
   "       `dM{  }mMMMMm{  }Md`",
