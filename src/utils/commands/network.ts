@@ -7,10 +7,34 @@ import { shouldUseStackedLayout, getAvailableWidth, isMobileDevice } from '../mo
 
 export const networkCommands = {
   weather: async (args: string[], abortController?: AbortController) => {
-    const city = args.join('+');
+    let city = args.join('+');
 
     if (!city) {
       return commandHelp.weather;
+    }
+
+    // Location mapping for better accuracy and accessibility
+    const locationMappings: Record<string, string> = {
+      'palestine': 'occupied+palestinian+territories',
+      'gaza': 'gaza+palestine',
+      'west+bank': 'west+bank+palestine',
+      'westbank': 'west+bank+palestine',
+      'ramallah': 'ramallah+palestine',
+      'bethlehem': 'bethlehem+palestine',
+      'hebron': 'hebron+palestine',
+      'nablus': 'nablus+palestine',
+      'jenin': 'jenin+palestine',
+      'tulkarm': 'tulkarm+palestine',
+      'qalqilya': 'qalqilya+palestine',
+      'jericho': 'jericho+palestine',
+      'khan+younis': 'khan+younis+gaza+palestine',
+      'rafah': 'rafah+gaza+palestine'
+    };
+
+    // Check if the query matches any location mapping
+    const normalisedCity = city.toLowerCase();
+    if (locationMappings[normalisedCity]) {
+      city = locationMappings[normalisedCity];
     }
 
     const currentTheme = get(theme);

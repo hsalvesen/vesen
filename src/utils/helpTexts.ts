@@ -18,9 +18,7 @@ export const commandHelp = {
   
   // System info commands
   reset: `<span style="color: var(--theme-cyan); font-weight: bold;">reset</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Resets the terminal to its initial state, clearing history and resetting theme.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> reset`,
-  hostname: `<span style="color: var(--theme-cyan); font-weight: bold;">hostname</span> : Shows the current hostname of the system.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> hostname`,
   whoami: `<span style="color: var(--theme-cyan); font-weight: bold;">whoami</span> : Displays developer.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> whoami`,
-  date: `<span style="color: var(--theme-cyan); font-weight: bold;">date</span> : Shows the current date and time in local format.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> date`,
   neofetch: `<span style="color: var(--theme-cyan); font-weight: bold;">neofetch</span> : Shows detailed system information in a formatted display.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> neofetch`,
   
   // Network commands
@@ -79,9 +77,7 @@ export const commandDescriptions = {
   'mkdir': 'Make directory',
   'reset': 'Reset terminal',
   'neofetch': 'System info',
-  'hostname': 'Show hostname',
   'whoami': 'Developer info',
-  'date': 'Show date',
   'weather': 'Weather forecast',
   'curl': 'HTTP request',
   'stock': 'Stock data',

@@ -10,8 +10,6 @@ import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from '.
 import { commandHelp, commandDescriptions } from './helpTexts';
 import { playBeep } from './beep';
 
-const hostname = window.location.hostname;
-
 // Terminal-specific commands that don't fit in other modules
 const terminalCommands = {
   help: () => {
@@ -20,7 +18,7 @@ const terminalCommands = {
     
     // Group commands by category for better organisation
     const categories: Record<string, string[]> = {
-      'System Info': ['neofetch', 'hostname', 'whoami', 'date'],
+      'Info': ['neofetch', 'whoami'],
       'File System': ['ls', 'pwd', 'cd', 'cat', 'touch', 'rm', 'mkdir'],
       'Terminal': ['help', 'clear', 'reset', 'echo', 'exit'],
       'Network': ['weather', 'curl', 'stock'],

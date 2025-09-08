@@ -4,18 +4,12 @@ import { get } from 'svelte/store';
 import { getAppleLogo, getAndroidLogo, getWindowsLogo, getLinuxLogo } from '../osLogos';
 import { isMobileDevice } from '../mobile';
 
-const hostname = window.location.hostname;
-
 export const systemCommands = {
-  hostname: () => hostname,
-  
   whoami: () => {
     const currentTheme = get(theme);
     window.open('https://www.linkedin.com/in/harrysalvesen/');
     return `<span style="color: ${currentTheme.cyan};">Opening developer's LinkedIn profile...</span>`;
   },
-  
-  date: () => new Date().toString(),
   
   // Add the new commands:
   uname: (args: string[]) => {
@@ -105,7 +99,7 @@ export const systemCommands = {
            const repoUrl = isMobile ? 'github.com/hsalvesen/vesen' : packageJson.repository.url;
            
            const infoData = [
-             { label: 'Host', value: hostname },
+             { label: 'Host', value: window.location.hostname },
              { label: 'OS', value: osName },
              { label: 'Packages', value: packages },
              { label: 'Resolution', value: resolution },
