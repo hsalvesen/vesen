@@ -12,67 +12,80 @@ import { playBeep } from './beep';
 
 // Terminal-specific commands that don't fit in other modules
 const terminalCommands = {
-  help: () => {
+  help: (args: string[]) => {
     const currentTheme = get(theme);
     const commandList = Object.keys(commands);
     
-    // Group commands by category for better organisation
-    const categories: Record<string, string[]> = {
-      'Info': ['neofetch', 'whoami'],
-      'File System': ['ls', 'pwd', 'cd', 'cat', 'touch', 'rm', 'mkdir'],
-      'Terminal': ['help', 'clear', 'reset', 'echo', 'exit'],
-      'Network': ['weather', 'curl', 'stock'],
-      'Customisation': ['theme'],
-      'Project': ['repo', 'email', 'banner']
-    };
-    
-    let output = `<span style="color: var(--theme-cyan); font-weight: bold;">Available Commands:</span>\n\n`;
-    
-    // Simple three-column layout using CSS columns
-    output += '<div style="column-count: 3; column-gap: 50px; column-fill: balance; break-inside: avoid;">';
-    
-    // Process each category
-    Object.entries(categories).forEach(([category, cmds]) => {
-      const availableCommands = cmds.filter(cmd => commandList.includes(cmd));
-      if (availableCommands.length === 0) return;
+    // If specific category requested
+    if (args.length > 0) {
+      const requestedCategory = args[0].toLowerCase();
+      const categoryMap: Record<string, string[]> = {
+        'info': ['neofetch', 'whoami'],
+        'fs': ['ls', 'pwd', 'cd', 'cat', 'echo'],
+        'file': ['touch', 'rm', 'mkdir'],
+        'terminal': ['help', 'clear', 'reset', 'exit', 'history', 'sudo'],
+        'net': ['weather', 'curl', 'stock'],
+        'theme': ['theme'],
+        'project': ['repo', 'email', 'banner']
+      };
       
-      // Category section with break-inside avoid
-      output += `<div style="break-inside: avoid; margin-bottom: 20px;">`;
+      const categoryNames: Record<string, string> = {
+        'info': 'System Information',
+        'fs': 'File System Navigation',
+        'file': 'File Operations',
+        'terminal': 'Terminal Control',
+        'net': 'Network Commands',
+        'theme': 'Customisation',
+        'project': 'Project Commands'
+      };
       
-      // Category header
-      output += `<div style="color: var(--theme-yellow); font-weight: bold; margin-bottom: 8px;">${category}:</div>`;
-      
-      // Commands in this category
-      for (const cmd of availableCommands) {
-        const description = commandDescriptions[cmd] || '';
-        output += `<div style="margin: 3px 0; display: flex; align-items: flex-start;">`;
-        output += `<span style="color: var(--theme-green); font-weight: bold; min-width: 80px; margin-right: 12px; flex-shrink: 0;">${cmd}</span>`;
-        output += `<span style="color: var(--theme-white); flex: 1; word-break: break-word;">${description}</span>`;
-        output += '</div>';
+      if (categoryMap[requestedCategory]) {
+        const cmds = categoryMap[requestedCategory];
+        const categoryName = categoryNames[requestedCategory];
+        
+        let output = `<span style="color: var(--theme-cyan); font-weight: bold;">${categoryName} Commands:</span>\n\n`;
+        
+        for (const cmd of cmds) {
+          if (commandList.includes(cmd)) {
+            const description = commandDescriptions[cmd] || '';
+            output += `<div style="margin: 8px 0;">`;
+            output += `<span style="color: var(--theme-green); font-weight: bold;">${cmd}</span> - `;
+            output += `<span style="color: var(--theme-white);">${description}</span>`;
+            output += '</div>';
+          }
+        }
+        
+        output += `\n<span style="color: var(--theme-yellow);">Use 'help' to see all categories or '[command] --help' for detailed usage</span>`;
+        return output;
+      } else {
+        return `<span style="color: var(--theme-red);">Unknown category: ${requestedCategory}</span>\n<span style="color: var(--theme-yellow);">Available categories: info, fs, file, terminal, net, theme, project</span>`;
       }
-      
+    }
+    
+    // Default help - show categories overview
+    let output = `<span style="color: var(--theme-cyan); font-weight: bold;">Vesen Terminal - Command Categories</span>\n\n`;
+    
+    const categoryOverview = [
+      { name: 'info', desc: 'System information (neofetch, whoami)', color: 'var(--theme-bright-green)' },
+      { name: 'fs', desc: 'Navigate files and directories', color: 'var(--theme-bright-blue)' },
+      { name: 'file', desc: 'Create, modify, and delete files', color: 'var(--theme-bright-yellow)' },
+      { name: 'terminal', desc: 'Terminal control and utilities', color: 'var(--theme-bright-purple)' },
+      { name: 'net', desc: 'Network requests and data', color: 'var(--theme-bright-cyan)' },
+      { name: 'theme', desc: 'Customise terminal appearance', color: 'var(--theme-bright-red)' },
+      { name: 'project', desc: 'Project links and information', color: 'var(--theme-green)' }
+    ];
+    
+    categoryOverview.forEach(cat => {
+      output += `<div style="margin: 10px 0;">`;
+      output += `<span style="color: ${cat.color}; font-weight: bold;">help ${cat.name}</span> - `;
+      output += `<span style="color: var(--theme-white);">${cat.desc}</span>`;
       output += '</div>';
     });
     
-    output += '</div>';
-    
-    // Add responsive media query for smaller screens
-    output += `<style>
-      @media (max-width: 1000px) {
-        div[style*="column-count: 3"] {
-          column-count: 2 !important;
-          column-gap: 40px !important;
-        }
-      }
-      @media (max-width: 650px) {
-        div[style*="column-count: 3"] {
-          column-count: 1 !important;
-        }
-      }
-    </style>`;
-    
-    output += `\n<span style="color: var(--theme-cyan); word-wrap: break-word; overflow-wrap: break-word;">Type [command] --help for detailed usage information</span>`;
-    
+    output += `\n<span style="color: var(--theme-cyan);">Examples:</span>`;
+    output += `\n<span style="color: var(--theme-yellow);">  help fs</span> - Show file system commands`;
+    output += `\n<span style="color: var(--theme-yellow);">  help net</span> - Show network commands`;
+    output += `\n<span style="color: var(--theme-yellow);">  ls --help</span> - Detailed help for specific command`;
     
     return output;
   },
