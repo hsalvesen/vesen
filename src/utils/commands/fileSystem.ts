@@ -500,17 +500,6 @@ export const fileSystemCommands = {
     return '';
   },
   
-  sudo: (args: string[]) => {
-    if (args.length === 0) {
-      return commandHelp.sudo;
-    }
-    
-    // This shouldn't be reached in normal flow since Input.svelte handles sudo specially
-    // But keeping as fallback
-    window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
-    return '';
-  },
-  
   exit: (args: string[]) => {
     const currentTheme = get(theme);
     
@@ -586,58 +575,6 @@ export const fileSystemCommands = {
     
     // Return immediate feedback
     return `<span style="color: ${currentTheme.yellow};">Terminating session...</span>`;
-  },
-  
-  history: (args: string[]) => {
-    const currentTheme = get(theme);
-    const commandHistoryData: string[] = get(commandHistory);
-    
-    if (commandHistoryData.length === 0) {
-      return 'No commands in history.';
-    }
-    
-    // Calculate responsive width for history display
-    const baseCharWidth = 8;
-    const padding = 40;
-    const availableWidth = Math.max(window.innerWidth - padding, 200);
-    const terminalWidth = Math.floor(availableWidth / baseCharWidth);
-    const minWidth = 30; // Minimum width for history
-    const maxWidth = 100; // Maximum width for history
-    const responsiveWidth = Math.min(maxWidth, Math.max(minWidth, terminalWidth));
-    
-    // Format history with line numbers and handle overflow
-    const historyLines: string[] = [];
-    
-    commandHistoryData.forEach((cmd: string, index: number) => {
-      const lineNumber = (index + 1).toString().padStart(4, ' ');
-      const prefix = `<span style="color: ${currentTheme.brightBlack};">${lineNumber}</span>  `;
-      
-      // Check if the line is too long and needs wrapping
-      const totalLength = lineNumber.length + 2 + cmd.length; // +2 for spacing
-      
-      if (totalLength > responsiveWidth) {
-        // Split long commands across multiple lines
-        const commandMaxWidth = responsiveWidth - 6; // Account for line number and spacing
-        const chunks: string[] = [];
-        
-        for (let i = 0; i < cmd.length; i += commandMaxWidth) {
-          chunks.push(cmd.substring(i, i + commandMaxWidth));
-        }
-        
-        // First line with line number
-        historyLines.push(prefix + `<span style="color: ${currentTheme.white};">${chunks[0]}</span>`);
-        
-        // Continuation lines with proper indentation
-        for (let i = 1; i < chunks.length; i++) {
-          const indent = '      '; // 6 spaces to align with command text
-          historyLines.push(`<span style="color: ${currentTheme.brightBlack};">${indent}</span><span style="color: ${currentTheme.white};">${chunks[i]}</span>`);
-        }
-      } else {
-        // Command fits on one line
-        historyLines.push(prefix + `<span style="color: ${currentTheme.white};">${cmd}</span>`);
-      }
-    });
-    
-    return historyLines.join('\n');
   }
+  
 };

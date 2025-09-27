@@ -257,8 +257,10 @@
         const hasHelpFlag = args.includes('--help') || args.includes('-h');
         const shouldSkipDisplayHistory = (commandName === 'clear' || commandName === 'reset') && !hasHelpFlag;
         
-        // Always add to command navigation history (for arrow keys)
+        // Always add to command navigation history (for arrow keys), except for reset
+        if (commandName !== 'reset') {
         $commandHistory = [...$commandHistory, currentCommand];
+        }
         
         // Only add to display history if not a clear/reset command
         if (!shouldSkipDisplayHistory) {
@@ -323,7 +325,7 @@
         // Complete command name
         const completions = getCompletions(commandName, false);
         if (completions.length === 1) {
-          command = completions[0] + ' ';
+          command = completions[0];
         } else if (completions.length > 1) {
           // Find common prefix
           const commonPrefix = completions.reduce((prefix, cmd) => {
@@ -343,7 +345,7 @@
         const matchingSubcommands = themeSubcommands.filter(sub => sub.startsWith(currentArg.toLowerCase()));
         
         if (matchingSubcommands.length === 1) {
-          command = `theme ${matchingSubcommands[0]} `;
+          command = `theme ${matchingSubcommands[0]}`;
         } else if (matchingSubcommands.length > 1) {
           // Find common prefix
           const commonPrefix = matchingSubcommands.reduce((prefix, sub) => {
