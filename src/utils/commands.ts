@@ -48,7 +48,7 @@ const terminalCommands = {
       for (const cmd of availableCommands) {
         const description = commandDescriptions[cmd] || '';
         output += `<div style="margin: 3px 0; display: flex; align-items: flex-start;">`;
-        output += `<span style="color: var(--theme-green); font-weight: bold; min-width: 80px; margin-right: 12px; flex-shrink: 0;">${cmd}</span>`;
+        output += `<span style="color: var(--theme-green); font-weight: bold; min-width: 100px; margin-right: 12px; flex-shrink: 0;">${cmd}</span>`;
         output += `<span style="color: var(--theme-white); flex: 1; word-break: break-word;">${description}</span>`;
         output += '</div>';
       }
