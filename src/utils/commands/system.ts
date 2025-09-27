@@ -11,39 +11,6 @@ export const systemCommands = {
     return `<span style="color: ${currentTheme.cyan};">Opening developer's LinkedIn profile...</span>`;
   },
   
-  // Add the new commands:
-  uname: (args: string[]) => {
-    const sysInfo = getSystemInfo();
-    const flags = args.join(' ');
-    
-    if (flags.includes('-a') || flags.includes('--all')) {
-      return `Linux ${window.location.hostname} 5.15.0-vesen #1 SMP PREEMPT ${new Date().toDateString()} ${sysInfo.platform} GNU/Linux`;
-    } else if (flags.includes('-s') || flags.includes('--kernel-name')) {
-      return 'Linux';
-    } else if (flags.includes('-n') || flags.includes('--nodename')) {
-      return window.location.hostname;
-    } else if (flags.includes('-r') || flags.includes('--kernel-release')) {
-      return '5.15.0-vesen';
-    } else if (flags.includes('-m') || flags.includes('--machine')) {
-      return sysInfo.platform;
-    } else {
-      return 'Linux';
-    }
-  },
-  
-  uptime: () => {
-    const uptime = Math.floor((Date.now() - performance.timeOrigin) / 1000);
-    const hours = Math.floor(uptime / 3600);
-    const minutes = Math.floor((uptime % 3600) / 60);
-    const seconds = uptime % 60;
-    
-    const loadAvg1 = (Math.random() * 2).toFixed(2);
-    const loadAvg5 = (Math.random() * 2).toFixed(2);
-    const loadAvg15 = (Math.random() * 2).toFixed(2);
-    
-    return `up ${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}, 1 user, load average: ${loadAvg1}, ${loadAvg5}, ${loadAvg15}`;
-  },
-  
   fastfetch: async (args: string[], abortController?: AbortController) => {
     const currentTheme = get(theme);
     
@@ -594,7 +561,7 @@ export const systemCommands = {
           const userHostHtml = `<div style="color: var(--theme-green); font-weight: bold; font-family: monospace; margin-bottom: 8px;">${userHost}</div>`;
           
           const infoHtml = infoData.map(({ label, value }) => 
-            `<div style="display: flex; margin-bottom: 1px; font-family: monospace; font-size: 14px;"><span style="color: var(--theme-cyan); font-weight: bold; width: 140px; display: inline-block;">${label}:</span><span style="color: var(--theme-white);">${value}</span></div>`
+            `<div style="display: flex; margin-bottom: 1px; font-family: monospace;"><span style="color: var(--theme-cyan); font-weight: bold; width: 140px; display: inline-block;">${label}:</span><span style="color: var(--theme-white);">${value}</span></div>`
           ).join('');
           
           const isMobile = isMobileDevice();

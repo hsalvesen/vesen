@@ -23,7 +23,7 @@ const terminalCommands = {
       'File System': ['ls', 'pwd', 'cd', 'cat', 'echo'], 
       'File Operations': ['touch', 'rm', 'mkdir'], 
       'Terminal': ['help', 'clear', 'reset', 'exit', 'history', 'sudo'],
-      'Network': ['weather', 'curl', 'stock'],
+      'Network': ['weather', 'curl', 'stock', 'speedtest'],
       'Customisation': ['theme'],
       'Project': ['repo', 'email', 'banner']
     };
@@ -287,7 +287,7 @@ export function processCommand(input: string, abortController?: AbortController 
   // Execute the actual command if it exists (exact match)
   if (commands[command]) {
     // Pass abort controller to network commands and fastfetch
-    if (['curl', 'weather', 'stock', 'fastfetch'].includes(command) && abortController) {
+    if (['curl', 'weather', 'stock', 'fastfetch', 'speedtest'].includes(command) && abortController) {
       return commands[command](args.slice(1), abortController);
     }
     return commands[command](args.slice(1));

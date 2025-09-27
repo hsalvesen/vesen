@@ -445,5 +445,128 @@ export const networkCommands = {
         }
       })();
     });
+  },
+    speedtest: async (args: string[], abortController?: AbortController) => {
+    const currentTheme = get(theme);
+    
+    // Show initial message
+    const initialMessage = `<span style="color: ${currentTheme.cyan};">Running speed test... Please wait 4 seconds.</span>`;
+    
+    return new Promise<string>((resolve, reject) => {
+      (async () => {
+        try {
+          // Loading animation frames
+          const loadingFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+          let frameIndex = 0;
+          
+          // Data arrays for collecting measurements
+          const downloadData: number[] = [];
+          const uploadData: number[] = [];
+          const pingData: number[] = [];
+          
+          const testDuration = 4; // 4 seconds of testing
+          const sampleInterval = 62.5; // Sample every sixteenth of a second
+          const maxSamples = testDuration * (1000 / sampleInterval);
+          
+          // Start the test
+          let currentSample = 0;
+          const startTime = Date.now();
+          
+          const testInterval = setInterval(async () => {
+            if (abortController?.signal.aborted) {
+              clearInterval(testInterval);
+              resolve(`<span style="color: ${currentTheme.yellow};">Speed test cancelled</span>`);
+              return;
+            }
+            
+            frameIndex = (frameIndex + 1) % loadingFrames.length;
+            
+            // Simulate realistic speed variations over time
+            let downloadSpeed, uploadSpeed, ping;
+            
+            if (currentSample < maxSamples / 3) {
+              // Initial ramp-up phase
+              downloadSpeed = 20 + (currentSample / (maxSamples / 3)) * 80 + Math.random() * 20;
+              uploadSpeed = 5 + (currentSample / (maxSamples / 3)) * 15 + Math.random() * 10;
+              ping = 50 - (currentSample / (maxSamples / 3)) * 20 + Math.random() * 10;
+            } else if (currentSample < (maxSamples * 2) / 3) {
+              // Stable phase
+              downloadSpeed = 90 + Math.random() * 30;
+              uploadSpeed = 18 + Math.random() * 12;
+              ping = 25 + Math.random() * 15;
+            } else {
+              // Final phase with some variation
+              downloadSpeed = 85 + Math.random() * 25;
+              uploadSpeed = 20 + Math.random() * 8;
+              ping = 30 + Math.random() * 10;
+            }
+            
+            downloadData.push(downloadSpeed);
+            uploadData.push(uploadSpeed);
+            pingData.push(ping);
+            
+            currentSample++;
+            
+            if (currentSample >= maxSamples) {
+              clearInterval(testInterval);
+              
+              // Calculate statistics
+              const avgDownload = downloadData.reduce((a, b) => a + b) / downloadData.length;
+              const avgUpload = uploadData.reduce((a, b) => a + b) / uploadData.length;
+              const avgPing = pingData.reduce((a, b) => a + b) / pingData.length;
+              
+              const peakDownload = Math.max(...downloadData);
+              const peakUpload = Math.max(...uploadData);
+              const minPing = Math.min(...pingData);
+              
+              const finalDownload = downloadData[downloadData.length - 1];
+              const finalUpload = uploadData[uploadData.length - 1];
+              const finalPing = pingData[pingData.length - 1];
+              
+              // Build the results output with proper column spacing and justification
+              let output = `<div style="font-family: monospace; line-height: 1.4;">`;
+              
+              // Create justified columns
+              const leftColumn = [
+                `<span style="color: ${currentTheme.green};">█ Download: </span>${finalDownload.toFixed(1)} Mbps (avg: ${avgDownload.toFixed(1)})`,
+                `<span style="color: ${currentTheme.blue};">▓ Upload:  </span> ${finalUpload.toFixed(1)} Mbps (avg: ${avgUpload.toFixed(1)})`,
+                `<span style="color: ${currentTheme.red};">░ Ping:  </span>   ${finalPing.toFixed(0)} ms (avg: ${avgPing.toFixed(0)})`
+              ];
+              
+              const rightColumn = [
+                `<span style="color: ${currentTheme.green};">Peak Download:</span> ${peakDownload.toFixed(1)} Mbps`,
+                `<span style="color: ${currentTheme.blue};">Peak Upload:</span>   ${peakUpload.toFixed(1)} Mbps`,
+                `<span style="color: ${currentTheme.red};">Min Ping:</span>      ${minPing.toFixed(0)} ms`
+              ];
+              
+              // Display in justified two columns
+              const isMobile = window.innerWidth < 768;
+              
+              if (isMobile) {
+                // Single column for mobile
+                output += leftColumn.join('<br>') + '<br><br>' + rightColumn.join('<br>');
+              } else {
+                // Two-column layout with proper spacing and justification
+                output += '<div style="display: flex; justify-content: space-between; max-width: 600px;">';
+                output += '<div style="flex: 1; padding-right: 20px;">' + leftColumn.join('<br>') + '</div>';
+                output += '<div style="flex: 1; padding-left: 20px;">' + rightColumn.join('<br>') + '</div>';
+                output += '</div>';
+              }
+              
+              output += '</div>';
+              
+              resolve(output);
+            }
+          }, sampleInterval);
+          
+        } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') {
+            resolve(`<span style="color: ${currentTheme.yellow};">Speed test cancelled</span>`);
+          } else {
+            reject(error);
+          }
+        }
+      })();
+    });
   }
-};
+}

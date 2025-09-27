@@ -141,7 +141,7 @@
       event.preventDefault();
       
       // Only interrupt if we're processing a command and it's one of the interruptible commands
-      if (isProcessing && currentAbortController && ['curl', 'weather', 'stock', 'fastfetch'].includes(currentCommandName)) {
+      if (isProcessing && currentAbortController && ['curl', 'weather', 'stock', 'fastfetch', 'speedtest'].includes(currentCommandName)) {
          // Cancel the current operation
          currentAbortController.abort();
          
@@ -239,7 +239,7 @@
       isProcessing = true;
       
       // Set up abort controller for interruptible commands
-      if (['curl', 'weather', 'stock', 'fastfetch'].includes(commandName)) {
+      if (['curl', 'weather', 'stock', 'fastfetch', 'speedtest'].includes(commandName)) {
         currentAbortController = new AbortController();
         currentCommandName = commandName;
       }
