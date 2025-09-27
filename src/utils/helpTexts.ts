@@ -20,6 +20,7 @@ export const commandHelp = {
   reset: `<span style="color: var(--theme-cyan); font-weight: bold;">reset</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Resets the terminal to its initial state, clearing history and resetting theme.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> reset`,
   whoami: `<span style="color: var(--theme-cyan); font-weight: bold;">whoami</span> : Displays developer.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> whoami`,
   neofetch: `<span style="color: var(--theme-cyan); font-weight: bold;">neofetch</span> : Shows detailed system information in a formatted display.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> neofetch`,
+  fastfetch: `<span style="color: var(--theme-cyan); font-weight: bold;">fastfetch</span> : Shows comprehensive system information with runtime detection.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> fastfetch`,
   
   // Network commands
   weather: `<span style="color: var(--theme-cyan); font-weight: bold;">weather</span> - Get weather information
@@ -76,7 +77,7 @@ export const commandDescriptions = {
   'rm': 'Remove file',
   'mkdir': 'Make directory',
   'reset': 'Reset terminal',
-  'neofetch': 'System info',
+  'fastfetch': 'Detailed system info',
   'whoami': 'Developer info',
   'weather': 'Weather forecast',
   'curl': 'HTTP request',
