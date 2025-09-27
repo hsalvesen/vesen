@@ -19,7 +19,7 @@ const terminalCommands = {
     
     // Group commands by category for better organisation
     const categories: Record<string, string[]> = {
-      'Info': ['neofetch', 'whoami'],
+      'Info': ['fastfetch', 'whoami'],
       'File System': ['ls', 'pwd', 'cd', 'cat', 'echo'], 
       'File Operations': ['touch', 'rm', 'mkdir'], 
       'Terminal': ['help', 'clear', 'reset', 'exit', 'history', 'sudo'],
@@ -286,7 +286,7 @@ export function processCommand(input: string, abortController?: AbortController 
   
   // Execute the actual command if it exists (exact match)
   if (commands[command]) {
-    // Pass abort controller to network commands and neofetch
+    // Pass abort controller to network commands and fastfetch
     if (['curl', 'weather', 'stock', 'fastfetch'].includes(command) && abortController) {
       return commands[command](args.slice(1), abortController);
     }

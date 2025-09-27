@@ -168,7 +168,7 @@ export const systemCommands = {
                     };
                     
                     detectedName = macOSNames[majorVersion] || `macOS ${majorVersion}`;
-                    detectedVersion = `${majorVersion}.0.0`;
+                    detectedVersion = `${majorVersion}.0+`; // Always show + since we don't get patch versions
                     
                     // Validate that Apple Silicon requirements are met
                     if (isAppleSilicon && majorVersion < 11) {

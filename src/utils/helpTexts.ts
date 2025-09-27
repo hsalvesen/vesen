@@ -14,13 +14,12 @@ export const commandHelp = {
   touch: `<span style="color: var(--theme-cyan); font-weight: bold;">touch</span> : Creates a new empty file with the specified name.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> touch <span style="color: var(--theme-green);">[filename]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;touch newfile.txt<br>&nbsp;&nbsp;touch documents/notes.md<br>&nbsp;&nbsp;touch script.js`,
   rm: `<span style="color: var(--theme-cyan); font-weight: bold;">rm</span> : Removes the specified file or directory.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> rm <span style="color: var(--theme-green);">[options] [filename/directory]</span><br><span style="color: var(--theme-green); font-weight: bold;">Options:</span><br>&nbsp;&nbsp;-r, --recursive  remove directories and their contents recursively<br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;rm has.txt<br>&nbsp;&nbsp;rm -r documents<br>&nbsp;&nbsp;rm script.js`,
   mkdir: `<span style="color: var(--theme-cyan); font-weight: bold;">mkdir</span> : Creates a new directory with the specified name.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> mkdir <span style="color: var(--theme-green);">[directory_name]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;mkdir new_folder<br>&nbsp;&nbsp;mkdir projects/myapp<br>&nbsp;&nbsp;mkdir temp`,
-  sudo: `<span style="color: var(--theme-cyan); font-weight: bold;">sudo</span> : Execute commands as another user<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> sudo <span style="color: var(--theme-green);">[command]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;sudo ls<br>&nbsp;&nbsp;sudo rm documents recursively<br>&nbsp;&nbsp;sudo mkdir /system`,
-  
+
   // System info commands
   reset: `<span style="color: var(--theme-cyan); font-weight: bold;">reset</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Resets the terminal to its initial state, clearing history and resetting theme.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> reset`,
   whoami: `<span style="color: var(--theme-cyan); font-weight: bold;">whoami</span> : Displays developer.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> whoami`,
-  neofetch: `<span style="color: var(--theme-cyan); font-weight: bold;">neofetch</span> : Shows detailed system information in a formatted display.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> neofetch`,
-  fastfetch: `<span style="color: var(--theme-cyan); font-weight: bold;">fastfetch</span> : Shows comprehensive system information with runtime detection.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> fastfetch`,
+  fastfetch: `<span style="color: var(--theme-cyan); font-weight: bold;">fastfetch</span> : Shows comprehensive system information with modern detection methods.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> fastfetch<br><span style="color: var(--theme-green); font-weight: bold;">Features:</span> Uses User-Agent Client Hints for accurate macOS version detection, Apple Silicon chip identification, and real-time system metrics.`,
+  sudo: `<span style="color: var(--theme-cyan); font-weight: bold;">sudo</span> : Executes commands with elevated privileges (simulated).<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> sudo <span style="color: var(--theme-green);">[command]</span><br><span style="color: var(--theme-red); font-weight: bold;">Note:</span> In this web terminal, sudo is simulated and provides educational content.`,
   
   // Network commands
   weather: `<span style="color: var(--theme-cyan); font-weight: bold;">weather</span> - Get weather information
@@ -77,8 +76,9 @@ export const commandDescriptions = {
   'rm': 'Remove file',
   'mkdir': 'Make directory',
   'reset': 'Reset terminal',
-  'fastfetch': 'Detailed system info',
+  'fastfetch': 'System info',
   'whoami': 'Developer info',
+  'sudo': 'Elevate privileges',
   'weather': 'Weather forecast',
   'curl': 'HTTP request',
   'stock': 'Stock data',
