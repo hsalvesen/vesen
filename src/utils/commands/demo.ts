@@ -198,62 +198,68 @@ function getCurrentStepDisplay(): string {
   const step = demoSteps[demoState.currentStep];
   const stepNumber = demoState.currentStep + 1;
   const totalSteps = demoSteps.length;
-  
-  // Highlight all step boxes like the welcome box
-  let output = `<div style="background: linear-gradient(135deg, ${currentTheme.cyan}30, ${currentTheme.purple}30); border: 2px solid ${currentTheme.cyan}; padding: 20px; margin: 10px 0; border-radius: 8px;">`;
-  
-  // Integrate welcome text ABOVE the progress bar (step 1 only)
+
+  // Main step container with dynamic theme colors
+  let output = `<div style="position: relative; border: 2px solid var(--theme-cyan); padding: 20px; margin: 10px 0; border-radius: 8px;">`;
+  output += `<div style="position: absolute; inset: 0; background: linear-gradient(135deg, var(--theme-cyan), var(--theme-purple)); opacity: 0.18; border-radius: 8px;"></div>`;
+  output += `<div style="position: relative;">`;
+
+  // Welcome text (step 1 only), above progress
   if (stepNumber === 1) {
     output += `<div style="margin-bottom: 12px;">`;
-    output += `<span style="color: ${currentTheme.cyan}; font-weight: bold;">Welcome to Terminal Demo</span><br>`;
-    output += `<span style="color: ${currentTheme.white};">This interactive guide will teach you how to use the command line.</span><br>`;
-    output += `<span style="color: ${currentTheme.yellow};">Follow the instructions step by step, and don't worry about making mistakes!</span>`;
+    output += `<span style="color: var(--theme-cyan); font-weight: bold;">Welcome to Terminal Demo</span><br>`;
+    output += `<span style="color: var(--theme-white);">This interactive guide will teach you how to use the command line.</span><br>`;
+    output += `<span style="color: var(--theme-yellow);">Follow the instructions step by step, and don't worry about making mistakes!</span>`;
     output += `</div>`;
   }
-  
+
   // Progress bar
   const progress = Math.round((stepNumber / totalSteps) * 100);
   const progressBar = '█'.repeat(Math.floor(progress / 5)) + '░'.repeat(20 - Math.floor(progress / 5));
   output += `<div style="margin-bottom: 12px;">`;
-  output += `<span style="color: ${currentTheme.cyan}; font-weight: bold;">Step ${stepNumber}/${totalSteps}</span> `;
-  output += `<span style="color: ${currentTheme.green};">[${progressBar}]</span> `;
-  output += `<span style="color: ${currentTheme.yellow};">${progress}%</span>`;
+  output += `<span style="color: var(--theme-cyan); font-weight: bold;">Step ${stepNumber}/${totalSteps}</span> `;
+  output += `<span style="color: var(--theme-green);">[${progressBar}]</span> `;
+  output += `<span style="color: var(--theme-yellow);">${progress}%</span>`;
   output += `</div>`;
-  
-  // Integrate success message at the top of the next step box (if present)
+
+  // Success message carried into the next step box
   if (demoState.pendingSuccessExplanation) {
-    output += `<div style="background: linear-gradient(135deg, ${currentTheme.green}20, ${currentTheme.cyan}20); border-left: 4px solid ${currentTheme.green}; padding: 6px 10px; margin: 6px 0 12px 0; border-radius: 4px;"><span style="color: ${currentTheme.green}; font-weight: bold;">Success!</span><span style="color: ${currentTheme.white};"> ${demoState.pendingSuccessExplanation}</span></div>`;
+    output += `<div style="position: relative; padding: 6px 10px; margin: 6px 0 12px 0; border-radius: 4px; border-left: 4px solid var(--theme-green);">`;
+    output += `<div style="position: absolute; inset: 0; background: linear-gradient(135deg, var(--theme-green), var(--theme-cyan)); opacity: 0.12; border-radius: 4px;"></div>`;
+    output += `<div style="position: relative;"><span style="color: var(--theme-green); font-weight: bold;">Success!</span> <span style="color: var(--theme-white);">${demoState.pendingSuccessExplanation}</span></div>`;
+    output += `</div>`;
     demoState.pendingSuccessExplanation = '';
   }
-  
-  // Step content (remove title/description for step 1 as redundant)
+
+  // Step content (skip title/description for step 1)
   if (stepNumber !== 1) {
     output += `<div style="margin-bottom: 12px;">`;
-    output += `<span style="color: ${currentTheme.purple}; font-weight: bold; font-size: 1.05em;">${step.title}</span><br>`;
-    output += `<span style="color: ${currentTheme.white};">${step.description}</span>`;
+    output += `<span style="color: var(--theme-purple); font-weight: bold; font-size: 1.05em;">${step.title}</span><br>`;
+    output += `<span style="color: var(--theme-white);">${step.description}</span>`;
     output += `</div>`;
   }
-  
-  // Instruction
-  output += `<div style="background: ${currentTheme.cyan}20; padding: 8px; border-radius: 4px; margin: 8px 0;">`;
-  output += `<span style="color: ${currentTheme.cyan}; font-weight: bold;">Your task:</span> `;
-  output += `<span style="color: ${currentTheme.white};">${step.instruction}</span>`;
+
+  // Instruction block (dynamic color via overlay)
+  output += `<div style="position: relative; padding: 8px; border-radius: 4px; margin: 8px 0;">`;
+  output += `<div style="position: absolute; inset: 0; background: var(--theme-cyan); opacity: 0.12; border-radius: 4px;"></div>`;
+  output += `<div style="position: relative;"><span style="color: var(--theme-cyan); font-weight: bold;">Your task:</span> <span style="color: var(--theme-white);">${step.instruction}</span></div>`;
   output += `</div>`;
-  
-  // Hint
-  output += `<div style="background: ${currentTheme.yellow}20; padding: 6px; border-radius: 4px;">`;
-  output += `<span style="color: ${currentTheme.yellow}; font-weight: bold;">Hint:</span> `;
-  output += `<span style="color: ${currentTheme.white}; font-family: monospace;">${step.hint}</span>`;
+
+  // Hint block (dynamic color via overlay)
+  output += `<div style="position: relative; padding: 6px; border-radius: 4px;">`;
+  output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.12; border-radius: 4px;"></div>`;
+  output += `<div style="position: relative;"><span style="color: var(--theme-yellow); font-weight: bold;">Hint:</span> <span style="color: var(--theme-white); font-family: monospace;">${step.hint}</span></div>`;
   output += `</div>`;
-  
+
+  // Close inner and outer containers
+  output += `</div></div>`;
+
+  // Ctrl+C tip with theme variables
+  output += `<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin-top: 8px; margin-bottom: 8px;">`;
+  output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div>`;
+  output += `<div style="position: relative;"><span style="color: var(--theme-cyan); font-weight: bold;">Tip</span> <span style="color: var(--theme-white);">Press</span>: <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span><span style="color: var(--theme-white);">+</span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span><span style="color: var(--theme-white);"> to stop the demo at any time.</span></div>`;
   output += `</div>`;
-  
-  // Quote-style Ctrl+C tip in its own themed division
-  output += `<div style="background: ${currentTheme.purple}15; border-left: 4px solid ${currentTheme.purple}; padding: 8px 10px; border-radius: 4px; margin-top: 8px;">`;
-  output += `<span style="color: ${currentTheme.purple}; font-weight: bold;">Tip</span> `;
-  output += `<span style="color: ${currentTheme.white};">Press Ctrl+C to stop the demo at any time.</span>`;
-  output += `</div>`;
-  
+
   return output;
 }
 
@@ -306,24 +312,33 @@ function skipStep(): string {
 export function stopDemoViaInterrupt(): string {
   const currentTheme = get(theme);
   demoState.isActive = false;
-  return `<div style="background: ${currentTheme.red}20; border-left: 4px solid ${currentTheme.red}; padding: 8px 10px; margin: 6px 0; border-radius: 4px;">
-    <span style="color: ${currentTheme.red}; font-weight: bold;">Demo interrupted (Ctrl+C).</span>
-    <span style="color: ${currentTheme.white};"> You can restart anytime with </span>
-    <span style="color: ${currentTheme.cyan}; font-weight: bold;">demo</span>
+  return `<div style="position: relative; border-left: 4px solid var(--theme-red); padding: 8px 10px; margin: 6px 0; border-radius: 4px;">
+    <div style="position: absolute; inset: 0; background: var(--theme-red); opacity: 0.12; border-radius: 4px;"></div>
+    <div style="position: relative; white-space: nowrap;">
+      <span style="color: var(--theme-red); font-weight: bold;">Demo interrupted</span>
+      <span style="color: var(--theme-white);"> (</span>
+      <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span>
+      <span style="color: var(--theme-white);">+</span>
+      <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span>
+      <span style="color: var(--theme-white);">). Restart with </span>
+      <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">demo</span>
+    </div>
   </div>`;
 }
 
 function completeDemo(): string {
   const currentTheme = get(theme);
   demoState.isActive = false;
-  
-  let output = `<div style="background: linear-gradient(135deg, ${currentTheme.green}30, ${currentTheme.cyan}30); border: 2px solid ${currentTheme.green}; padding: 20px; margin: 10px 0; border-radius: 8px; text-align: center;">`;
-  output += `<span style="color: ${currentTheme.green}; font-size: 1.3em; font-weight: bold;">🎉 Congratulations!</span><br><br>`;
-  output += `<span style="color: ${currentTheme.white};">You've completed the terminal demo!</span><br>`;
-  output += `<span style="color: ${currentTheme.cyan};">You're now ready to explore the terminal on your own.</span><br><br>`;
-  output += `<span style="color: ${currentTheme.yellow};">Remember: Use 'help' to see all commands, or '[command] --help' for detailed help.</span>`;
-  output += `</div>`;
-  
+
+  let output = `<div style="position: relative; border: 2px solid var(--theme-green); padding: 20px; margin: 10px 0; border-radius: 8px; text-align: center;">`;
+  output += `<div style="position: absolute; inset: 0; background: linear-gradient(135deg, var(--theme-green), var(--theme-cyan)); opacity: 0.18; border-radius: 8px;"></div>`;
+  output += `<div style="position: relative;">`;
+  output += `<span style="color: var(--theme-green); font-size: 1.3em; font-weight: bold;">🎉 Congratulations!</span><br><br>`;
+  output += `<span style="color: var(--theme-white);">You've completed the terminal demo!</span><br>`;
+  output += `<span style="color: var(--theme-cyan);">You're now ready to explore the terminal on your own.</span><br><br>`;
+  output += `<span style="color: var(--theme-yellow);">Remember: Use 'help' to see all commands, or '[command] --help' for detailed help.</span>`;
+  output += `</div></div>`;
+
   return output;
 }
 
@@ -348,20 +363,18 @@ function getDemoStatus(): string {
 
 function getDemoHelp(): string {
   const currentTheme = get(theme);
-  
-  let output = `<span style="color: ${currentTheme.yellow}; font-weight: bold;">Usage:</span> demo\n`;
-  output += `<span style="color: ${currentTheme.purple}; font-weight: bold;">Tip:</span> <span style="color: ${currentTheme.white};">Press Ctrl+C to stop the demo at any time.</span>\n\n`;
-  
-  output += `<span style="color: ${currentTheme.purple}; font-weight: bold;">What you'll learn:</span>\n`;
+
+  let output = `<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> demo\n`;
+  output += `<span style="color: var(--theme-cyan); font-weight: bold;">Tip:</span> <span style="color: var(--theme-white);">Press</span>: <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span><span style="color: var(--theme-white);">+</span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span><span style="color: var(--theme-white);"> to stop the demo at any time.</span>\n\n`;
+  output += `<span style="color: var(--theme-purple); font-weight: bold;">What you'll learn:</span>\n`;
   output += `  • Basic terminal navigation and commands\n`;
   output += `  • File system operations (ls, cd, pwd, cat)\n`;
   output += `  • Creating and editing files (touch, echo)\n`;
   output += `  • Network commands (weather, curl)\n`;
   output += `  • System information (fastfetch, whoami)\n`;
   output += `  • Customisation and help systems\n\n`;
-  
-  output += `<span style="color: ${currentTheme.cyan};">Perfect for beginners who are new to command-line interfaces!</span>`;
-  
+  output += `<span style="color: var(--theme-cyan);">Perfect for beginners who are new to command-line interfaces!</span>`;
+
   return output;
 }
 
@@ -377,7 +390,8 @@ export function processDemoCommand(command: string): string {
 
 function renderCountdownHtml(seconds: number): string {
   const currentTheme = get(theme);
-  return `<div style="background: ${currentTheme.cyan}20; border-left: 4px solid ${currentTheme.cyan}; padding: 10px; margin: 8px 0; border-radius: 4px;">
-    <span style="color: ${currentTheme.cyan}; font-weight: bold;">Next step in ${seconds}s...</span>
+  return `<div style="position: relative; border-left: 4px solid var(--theme-cyan); padding: 10px; margin: 8px 0; border-radius: 4px;">
+    <div style="position: absolute; inset: 0; background: var(--theme-cyan); opacity: 0.12; border-radius: 4px;"></div>
+    <div style="position: relative;"><span style="color: var(--theme-cyan); font-weight: bold;">Next step in ${seconds}s...</span></div>
   </div>`;
 }
