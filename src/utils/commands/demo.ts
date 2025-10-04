@@ -201,8 +201,8 @@ function getCurrentStepDisplay(): string {
 
   // Main step container with dynamic theme colors
   let output = `<div style="position: relative; border: 2px solid var(--theme-cyan); padding: 20px; margin: 10px 0; border-radius: 8px;">`;
-  output += `<div style="position: absolute; inset: 0; background: linear-gradient(135deg, var(--theme-cyan), var(--theme-purple)); opacity: 0.18; border-radius: 8px;"></div>`;
-  output += `<div style="position: relative;">`;
+  output += `<div style="position: absolute; inset: 0; background: linear-gradient(135deg, var(--theme-cyan), var(--theme-purple)); opacity: 0.08; border-radius: 8px;"></div>`;
+  output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;">`;
 
   // Welcome text (step 1 only), above progress
   if (stepNumber === 1) {
@@ -216,17 +216,18 @@ function getCurrentStepDisplay(): string {
   // Progress bar
   const progress = Math.round((stepNumber / totalSteps) * 100);
   const progressBar = '█'.repeat(Math.floor(progress / 5)) + '░'.repeat(20 - Math.floor(progress / 5));
-  output += `<div style="margin-bottom: 12px;">`;
-  output += `<span style="color: var(--theme-cyan); font-weight: bold;">Step ${stepNumber}/${totalSteps}</span> `;
-  output += `<span style="color: var(--theme-green);">[${progressBar}]</span> `;
-  output += `<span style="color: var(--theme-yellow);">${progress}%</span>`;
-  output += `</div>`;
+  // REMOVE old top progress bar
+  // output += `<div style="margin-bottom: 12px;">`;
+  // output += `<span style="color: var(--theme-cyan); font-weight: bold;">Step ${stepNumber}/${totalSteps}</span> `;
+  // output += `<span style="color: var(--theme-green);">[${progressBar}]</span> `;
+  // output += `<span style="color: var(--theme-yellow);">${progress}%</span>`;
+  // output += `</div>`;
 
   // Success message carried into the next step box
   if (demoState.pendingSuccessExplanation) {
     output += `<div style="position: relative; padding: 6px 10px; margin: 6px 0 12px 0; border-radius: 4px; border-left: 4px solid var(--theme-green);">`;
-    output += `<div style="position: absolute; inset: 0; background: linear-gradient(135deg, var(--theme-green), var(--theme-cyan)); opacity: 0.12; border-radius: 4px;"></div>`;
-    output += `<div style="position: relative;"><span style="color: var(--theme-green); font-weight: bold;">Success!</span> <span style="color: var(--theme-white);">${demoState.pendingSuccessExplanation}</span></div>`;
+    output += `<div style="position: absolute; inset: 0; background: linear-gradient(135deg, var(--theme-green), var(--theme-cyan)); opacity: 0.08; border-radius: 4px;"></div>`;
+    output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-green); font-weight: bold;">Success!</span> <span style="color: var(--theme-white);">${demoState.pendingSuccessExplanation}</span></div>`;
     output += `</div>`;
     demoState.pendingSuccessExplanation = '';
   }
@@ -239,25 +240,34 @@ function getCurrentStepDisplay(): string {
     output += `</div>`;
   }
 
-  // Instruction block (dynamic color via overlay)
+  // Instruction block
   output += `<div style="position: relative; padding: 8px; border-radius: 4px; margin: 8px 0;">`;
-  output += `<div style="position: absolute; inset: 0; background: var(--theme-cyan); opacity: 0.12; border-radius: 4px;"></div>`;
-  output += `<div style="position: relative;"><span style="color: var(--theme-cyan); font-weight: bold;">Your task:</span> <span style="color: var(--theme-white);">${step.instruction}</span></div>`;
+  output += `<div style="position: absolute; inset: 0; background: var(--theme-cyan); opacity: 0.08; border-radius: 4px;"></div>`;
+  output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-cyan); font-weight: bold;">Your task:</span> <span style="color: var(--theme-white);">${step.instruction}</span></div>`;
   output += `</div>`;
 
-  // Hint block (dynamic color via overlay)
+  // Hint block
   output += `<div style="position: relative; padding: 6px; border-radius: 4px;">`;
-  output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.12; border-radius: 4px;"></div>`;
-  output += `<div style="position: relative;"><span style="color: var(--theme-yellow); font-weight: bold;">Hint:</span> <span style="color: var(--theme-white); font-family: monospace;">${step.hint}</span></div>`;
+  output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div>`;
+  output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-yellow); font-weight: bold;">Hint:</span> <span style="color: var(--theme-white); font-family: monospace;">${step.hint}</span></div>`;
+  output += `</div>`;
+
+  // Clean progress bar at the bottom (after Hint)
+  output += `<div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">`;
+  output += `<span style="color: var(--theme-cyan); font-weight: bold;">Step ${stepNumber}/${totalSteps}</span>`;
+  output += `<div style="flex: 1; height: 6px; background: var(--theme-brightBlack); border-radius: 4px; overflow: hidden;">`;
+  output += `<div style="width: ${progress}%; height: 100%; background: var(--theme-green);"></div>`;
+  output += `</div>`;
+  output += `<span style="color: var(--theme-yellow);">${progress}%</span>`;
   output += `</div>`;
 
   // Close inner and outer containers
   output += `</div></div>`;
 
   // Ctrl+C tip with theme variables
-  output += `<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin-top: 8px; margin-bottom: 8px;">`;
+  output += `<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin-top: 8px;">`;
   output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div>`;
-  output += `<div style="position: relative;"><span style="color: var(--theme-cyan); font-weight: bold;">Tip</span> <span style="color: var(--theme-white);">Press</span>: <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span><span style="color: var(--theme-white);">+</span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span><span style="color: var(--theme-white);"> to stop the demo at any time.</span></div>`;
+  output += `<div style="position: relative;"><span style="color: var(--theme-cyan); font-weight: bold;">Tip</span> <span style="color: var(--theme-white);">Press </span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span><span style="color: var(--theme-white);">+</span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span><span style="color: var(--theme-white);"> to stop the demo at any time.</span></div>`;
   output += `</div>`;
 
   return output;
