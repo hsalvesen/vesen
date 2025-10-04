@@ -628,8 +628,8 @@ export const systemCommands = {
 ███████║█████╗  ██║     ██║     ██║   ██║
 ██╔══██║██╔══╝  ██║     ██║     ██║   ██║
 ██║  ██║███████╗███████╗███████╗╚██████╔╝
-╚═╝  ╚═╝╚═══════╝╚══════╝╚═══════╝ ╚═════╝ v${packageJson.version}
-<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 6px 10px; border-radius: 4px; margin-top: 2px; margin-bottom: 8px;"><div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div><div style="position: relative; white-space: nowrap;"><span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-family: monospace; font-weight: bold;">demo</span><span style="color: var(--theme-white);"> to begin an interactive walkthrough of the Vesen terminal.</span></div></div>`;
+╚═╝  ╚═╝╚═══════╝╚══════╝╚═════╝ ╚═════╝ v${packageJson.version}
+<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 6px 10px; border-radius: 4px; margin-top: 2px; margin-bottom: 8px;"><div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div><div style="position: relative;"><span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-family: monospace; font-weight: bold;">demo</span><span style="color: var(--theme-white);"> to begin an interactive walkthrough of the Vesen terminal.</span></div></div>`;
     }
 
     return `██╗    ██╗███████╗██╗      ██████╗ ██████╗ ███╗   ███╗███████╗
