@@ -619,26 +619,13 @@ export const systemCommands = {
 
   banner: () => {
     const currentTheme = get(theme);
-    const isMobile = window.innerWidth < 768; // Tailwind's md breakpoint
-
-    if (isMobile) {
-      // Compact mobile version
-      return `██╗  ██╗███████╗██╗     ██╗      ██████╗ 
-██║  ██║██╔════╝██║     ██║     ██╔═══██╗
-███████║█████╗  ██║     ██║     ██║   ██║
-██╔══██║██╔══╝  ██║     ██║     ██║   ██║
-██║  ██║███████╗███████╗███████╗╚██████╔╝
-╚═╝  ╚═╝╚═══════╝╚══════╝╚═════╝ ╚═════╝ v${packageJson.version}
-<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 6px 10px; border-radius: 4px; margin-top: 2px; margin-bottom: 8px;"><div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div><div style="position: relative;"><span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-family: monospace; font-weight: bold;">demo</span><span style="color: var(--theme-white);"> to begin an interactive walkthrough of the Vesen terminal.</span></div></div>`;
-    }
-
-    return `██╗    ██╗███████╗██╗      ██████╗ ██████╗ ███╗   ███╗███████╗
-██║    ██║██╔════╝██║     ██╔════╝██╔═══██╗████╗ ████║██╔════╝
-██║ █╗ ██║█████╗  ██║     ██║     ██║   ██║██╔████╔██║█████╗  
-██║███╗██║██╔══╝  ██║     ██║     ██║   ██║██║╚██╔╝██║██╔══╝  
-╚███╔███╔╝███████╗███████╗╚██████╗╚██████╔╝██║ ╚═╝ ██║███████╗
- ╚══╝╚══╝ ╚══════╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝ v${packageJson.version}
-<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 6px 10px; border-radius: 4px; margin-top: 2px; margin-bottom: 8px;"><div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div><div style="position: relative;"><span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-family: monospace; font-weight: bold;">demo</span><span style="color: var(--theme-white);"> to begin an interactive walkthrough of the Vesen terminal.</span></div></div>`;
+    return `██╗   ██╗███████╗███████╗███████╗███╗   ██╗ 
+██║   ██║██╔════╝██╔════╝██╔════╝████╗  ██║ 
+██║   ██║█████╗  ███████╗█████╗  ██╔██╗ ██║ 
+╚██╗ ██╔╝██╔══╝  ╚════██║██╔══╝  ██║╚██╗██║ 
+ ╚████╔╝ ███████╗███████║███████╗██║ ╚████║ 
+  ╚═══╝  ╚══════╝╚══════╝╚══════╝╚═╝  ╚═══╝ v${packageJson.version}
+<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 6px 10px; border-radius: 4px; margin-top: 2px; margin-bottom: 8px;"><div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div><div style="position: relative;"><span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-family: monospace; font-weight: bold;">demo</span><span style="color: var(--theme-white);"> to begin an interactive walkthrough of the terminal.</span></div></div>`;
   },
   // ... existing code ...
 };

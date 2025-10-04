@@ -131,13 +131,6 @@ const demoSteps = [
 export const demoCommands = {
   demo: (args: string[]) => {
     const currentTheme = get(theme);
-    
-    if (args.length > 0) {
-      // No subcommands anymore; show simplified help
-      return getDemoHelp();
-    }
-    
-    // Start demo immediately when running `demo` without args
     return startDemo();
   },
 
@@ -216,12 +209,6 @@ function getCurrentStepDisplay(): string {
   // Progress bar
   const progress = Math.round((stepNumber / totalSteps) * 100);
   const progressBar = '█'.repeat(Math.floor(progress / 5)) + '░'.repeat(20 - Math.floor(progress / 5));
-  // REMOVE old top progress bar
-  // output += `<div style="margin-bottom: 12px;">`;
-  // output += `<span style="color: var(--theme-cyan); font-weight: bold;">Step ${stepNumber}/${totalSteps}</span> `;
-  // output += `<span style="color: var(--theme-green);">[${progressBar}]</span> `;
-  // output += `<span style="color: var(--theme-yellow);">${progress}%</span>`;
-  // output += `</div>`;
 
   // Success message carried into the next step box
   if (demoState.pendingSuccessExplanation) {
@@ -267,55 +254,9 @@ function getCurrentStepDisplay(): string {
   // Ctrl+C tip with theme variables
   output += `<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin-top: 8px;">`;
   output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div>`;
-  output += `<div style="position: relative;"><span style="color: var(--theme-cyan); font-weight: bold;">Tip</span> <span style="color: var(--theme-white);">Press </span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span><span style="color: var(--theme-white);">+</span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span><span style="color: var(--theme-white);"> to stop the demo at any time.</span></div>`;
+  output += `<div style="position: relative;"><span style="color: var(--theme-white);">Press </span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span><span style="color: var(--theme-white);">+</span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span><span style="color: var(--theme-white);"> to stop the demo at any time.</span></div>`;
   output += `</div>`;
 
-  return output;
-}
-
-function nextStep(): string {
-  if (!demoState.isActive) {
-    return "No demo is currently active. Use 'demo' to begin.";
-  }
-  
-  if (demoState.currentStep < demoSteps.length - 1) {
-    demoState.currentStep++;
-    return getCurrentStepDisplay();
-  } else {
-    return completeDemo();
-  }
-}
-
-function previousStep(): string {
-  if (!demoState.isActive) {
-    return "No demo is currently active. Use 'demo' to begin.";
-  }
-  
-  if (demoState.currentStep > 0) {
-    demoState.currentStep--;
-    return getCurrentStepDisplay();
-  } else {
-    return "You're already at the first step!";
-  }
-}
-
-function skipStep(): string {
-  if (!demoState.isActive) {
-    return "No demo is currently active. Use 'demo' to begin.";
-  }
-  
-  const currentTheme = get(theme);
-  demoState.completedSteps.add(demoState.currentStep);
-  
-  let output = `<span style="color: ${currentTheme.yellow};">⏭️ Step skipped!</span>\n\n`;
-  
-  if (demoState.currentStep < demoSteps.length - 1) {
-    demoState.currentStep++;
-    output += getCurrentStepDisplay();
-  } else {
-    output += completeDemo();
-  }
-  
   return output;
 }
 
@@ -355,10 +296,6 @@ function completeDemo(): string {
 function getDemoStatus(): string {
   const currentTheme = get(theme);
   
-  if (!demoState.isActive) {
-    return `<span style="color: ${currentTheme.red};">No demo is currently active.</span> Use <span style="color: ${currentTheme.cyan}; font-weight: bold;">demo</span> to begin.`;
-  }
-  
   const completedCount = demoState.completedSteps.size;
   const totalSteps = demoSteps.length;
   const currentStep = demoState.currentStep + 1;
@@ -375,7 +312,7 @@ function getDemoHelp(): string {
   const currentTheme = get(theme);
 
   let output = `<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> demo\n`;
-  output += `<span style="color: var(--theme-cyan); font-weight: bold;">Tip:</span> <span style="color: var(--theme-white);">Press</span>: <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span><span style="color: var(--theme-white);">+</span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span><span style="color: var(--theme-white);"> to stop the demo at any time.</span>\n\n`;
+  output += `<span style="color: var(--theme-white);">Press</span>: <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span><span style="color: var(--theme-white);">+</span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span><span style="color: var(--theme-white);"> to stop the demo at any time.</span>\n\n`;
   output += `<span style="color: var(--theme-purple); font-weight: bold;">What you'll learn:</span>\n`;
   output += `  • Basic terminal navigation and commands\n`;
   output += `  • File system operations (ls, cd, pwd, cat)\n`;
