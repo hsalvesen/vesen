@@ -4,6 +4,7 @@ import { history, commandHistory } from '../stores/history';
 import { systemCommands } from './commands/system';
 import { fileSystemCommands } from './commands/fileSystem';
 import { networkCommands } from './commands/network';
+import { demoCommands, isDemoActive, processDemoCommand } from './commands/demo';
 import { theme } from '../stores/theme';
 import { get } from 'svelte/store';
 import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from './virtualFileSystem';
@@ -19,6 +20,7 @@ const terminalCommands = {
     
     // Group commands by category for better organisation
     const categories: Record<string, string[]> = {
+      'Getting Started': ['demo'],
       'Info': ['fastfetch', 'whoami'],
       'File System': ['ls', 'pwd', 'cd', 'cat', 'echo'], 
       'File Operations': ['touch', 'rm', 'mkdir'], 
@@ -41,19 +43,18 @@ const terminalCommands = {
       // Category section with break-inside avoid
       output += `<div style="break-inside: avoid; margin-bottom: 20px;">`;
       
-      // Category header
-      output += `<div style="color: var(--theme-yellow); font-weight: bold; margin-bottom: 8px;">${category}:</div>`;
+      // Category Header
+      output += `<div style="display: block; width: 100%; box-sizing: border-box; background: ${currentTheme.yellow}20; color: var(--theme-yellow); font-weight: bold; padding: 6px 10px; border-radius: 4px; margin-bottom: 8px;">${category}</div>`;
       
       // Commands in this category
       for (const cmd of availableCommands) {
         const description = commandDescriptions[cmd] || '';
-        output += `<div style="margin: 3px 0; display: flex; align-items: flex-start;">`;
-        output += `<span style="color: var(--theme-green); font-weight: bold; min-width: 100px; margin-right: 12px; flex-shrink: 0;">${cmd}</span>`;
-        output += `<span style="color: var(--theme-white); flex: 1; word-break: break-word;">${description}</span>`;
-        output += '</div>';
+        output += `<div style="break-inside: avoid; margin: 6px 0; padding: 8px 10px; border: 1px solid var(--theme-cyan); border-radius: 6px; display: flex; align-items: flex-start; gap: 12px;">`;
+        output += `<span style="color: var(--theme-green); font-weight: bold; min-width: 100px; flex-shrink: 0;">${cmd}</span>`;
+        output += `<span style="word-wrap: break-word; overflow-wrap: break-word;">${description}</span>`;
+        output += `</div>`;
       }
-      
-      output += '</div>';
+      output += `</div>`;
     });
     
     output += '</div>';
@@ -280,6 +281,25 @@ export function processCommand(input: string, abortController?: AbortController 
   const command = args[0];
   const hasHelpFlag = args.includes('--help') || args.includes('-h');
   
+  // Check if demo is active and process demo-specific logic
+  if (isDemoActive() && !hasHelpFlag) {
+    const demoResponse = processDemoCommand(input.trim());
+    if (demoResponse) {
+      // If demo processed the command, also execute the actual command
+      if (commands[command]) {
+        const actualOutput = typeof commands[command] === 'function' 
+          ? commands[command](args.slice(1), abortController)
+          : commands[command];
+        
+        // Return both demo feedback and command output
+        return Promise.resolve(actualOutput).then(output => {
+          return demoResponse + '\n\n' + output;
+        });
+      }
+      return demoResponse;
+    }
+  }
+  
   if (hasHelpFlag) {
     return getCommandHelp(command);
   }
@@ -327,5 +347,6 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
     ...fileSystemCommands,
     ...networkCommands,
     ...terminalCommands,
+    ...demoCommands,
     ...projectCommands
   };
