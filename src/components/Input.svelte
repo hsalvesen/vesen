@@ -177,261 +177,248 @@
       return;
     }
     
+    // Enter key handler in Input.svelte
     if (event.key === 'Enter' && !isProcessing) {
-      if (isPasswordMode) {
-        // Handle password submission
-        isPasswordMode = false;
-        passwordInput = '';
-        
-        // Add the password prompt to history
+    if (isPasswordMode) {
+    isPasswordMode = false;
+    passwordInput = '';
+    
+    window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
+    pendingSudoCommand = '';
+    command = '';
+    return;
+    }
+    
+    // Check if command is empty or only whitespace
+    if (!command.trim()) {
+      // Just add an empty entry to history to show a new prompt line
+      $history = [...$history, { command: '', outputs: [''] }];
+      command = '';
+      return;
+    }
+    
+    const [commandName, ...args] = command.split(' ');
+  
+    if (import.meta.env.VITE_TRACKING_ENABLED === 'true') {
+      track(commandName, ...args);
+    }
+  
+    // Special handling for sudo
+    if (commandName === 'sudo' && args.length > 0) {
+      const hasHelpFlag = args.includes('--help') || args.includes('-h');
+      // Check if help flag is present
+      if (!hasHelpFlag) {
+        pendingSudoCommand = args.join(' ');
+        isPasswordMode = true;
         $history = [...$history, { 
-          command: `sudo ${pendingSudoCommand}`, 
-          outputs: ['Password:'] 
+          command, 
+          outputs: []
         }];
-        
-        // Open rickroll
-        window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
-        
-        pendingSudoCommand = '';
         command = '';
         return;
       }
-      
-      // Check if command is empty or only whitespace
-      if (!command.trim()) {
-        // Just add an empty entry to history to show a new prompt line
-        $history = [...$history, { command: '', outputs: [''] }];
-        command = '';
-        return;
-      }
-      
-      const [commandName, ...args] = command.split(' ');
-  
-      if (import.meta.env.VITE_TRACKING_ENABLED === 'true') {
-        track(commandName, ...args);
-      }
-  
-      // Special handling for sudo
-      if (commandName === 'sudo' && args.length > 0) {
-        // Check if it's a help request first
-        const hasHelpFlag = args.includes('--help') || args.includes('-h');
-        if (hasHelpFlag) {
-          // Let it fall through to normal command processing for help
-        } else {
-          pendingSudoCommand = args.join(' ');
-          isPasswordMode = true;
-          
-          $history = [...$history, { 
-            command, 
-            outputs: []
-          }];
-          
-          command = '';
-          passwordInput = '';
-          return;
-        }
-      }
+    }
 
-      // Store the current command before processing
-      const currentCommand = command;
+    // Store the current command before processing
+    const currentCommand = command;
+    
+    // Set processing state to true but DON'T clear the command yet
+    isProcessing = true;
+    
+    // Set up abort controller for interruptible commands
+    if (['curl', 'weather', 'stock', 'fastfetch', 'speedtest'].includes(commandName)) {
+      currentAbortController = new AbortController();
+      currentCommandName = commandName;
+    }
+    
+    // Disable the input during async operations
+    if (input) {
+      input.disabled = true;
+    }
+
+    try {
+      // Use processCommand and wait for completion
+      const output = await processCommand(currentCommand, currentAbortController);
+  
+      // Only skip display history for clear/reset when NOT showing help
+      const hasHelpFlag = args.includes('--help') || args.includes('-h');
+      const shouldSkipDisplayHistory = (commandName === 'clear' || commandName === 'reset') && !hasHelpFlag;
       
-      // Set processing state to true but DON'T clear the command yet
-      isProcessing = true;
-      
-      // Set up abort controller for interruptible commands
-      if (['curl', 'weather', 'stock', 'fastfetch', 'speedtest'].includes(commandName)) {
-        currentAbortController = new AbortController();
-        currentCommandName = commandName;
+      // Always add to command navigation history (for arrow keys), except for reset
+      if (commandName !== 'reset') {
+      $commandHistory = [...$commandHistory, currentCommand];
       }
       
-      // Disable the input during async operations
+      // Only add to display history if not a clear/reset command
+      if (!shouldSkipDisplayHistory) {
+        $history = [...$history, { command: currentCommand, outputs: [output] }];
+      }
+    } catch (error) {
+      // Handle any errors
+      $history = [...$history, { command: currentCommand, outputs: [`Error: ${error}`] }];
+    } finally {
+      // Clear the command input only after processing is complete
+      command = '';
+      
+      // Reset history index to start from the most recent command
+      historyIndex = -1;
+      
+      // Clean up abort controller
+      currentAbortController = null;
+      currentCommandName = '';
+      
+      // Set processing state to false to show the prompt again
+      isProcessing = false;
+      
+      // Re-enable the input after command completion
       if (input) {
-        input.disabled = true;
+        input.disabled = false;
+        input.focus();
       }
+    }
+  } else if (isPasswordMode) {
+    // Handle password input (hide characters)
+    if (event.key === 'Backspace') {
+      passwordInput = passwordInput.slice(0, -1);
+    } else if (event.key.length === 1) {
+      passwordInput += event.key;
+    }
+    event.preventDefault();
+  } else if (event.key === 'ArrowUp') {
+    if (historyIndex < $commandHistory.length - 1) {
+      historyIndex++;
+      command = $commandHistory[$commandHistory.length - 1 - historyIndex];
+    }
+    event.preventDefault();
+  } else if (event.key === 'ArrowDown') {
+    if (historyIndex > -1) {
+      historyIndex--;
+      command = historyIndex >= 0 
+        ? $commandHistory[$commandHistory.length - 1 - historyIndex] 
+        : '';
+    }
+    event.preventDefault();
+  } else if (event.key === 'Tab') {
+    event.preventDefault();
 
-      try {
-        // Use processCommand and wait for completion
-        const output = await processCommand(currentCommand, currentAbortController);
-  
-        // Only skip display history for clear/reset when NOT showing help
-        const hasHelpFlag = args.includes('--help') || args.includes('-h');
-        const shouldSkipDisplayHistory = (commandName === 'clear' || commandName === 'reset') && !hasHelpFlag;
-        
-        // Always add to command navigation history (for arrow keys), except for reset
-        if (commandName !== 'reset') {
-        $commandHistory = [...$commandHistory, currentCommand];
-        }
-        
-        // Only add to display history if not a clear/reset command
-        if (!shouldSkipDisplayHistory) {
-          $history = [...$history, { command: currentCommand, outputs: [output] }];
-        }
-      } catch (error) {
-        // Handle any errors
-        $history = [...$history, { command: currentCommand, outputs: [`Error: ${error}`] }];
-      } finally {
-        // Clear the command input only after processing is complete
-        command = '';
-        
-        // Reset history index to start from the most recent command
-        historyIndex = -1;
-        
-        // Clean up abort controller
-        currentAbortController = null;
-        currentCommandName = '';
-        
-        // Set processing state to false to show the prompt again
-        isProcessing = false;
-        
-        // Re-enable the input after command completion
-        if (input) {
-          input.disabled = false;
-          input.focus();
+    const parts = command.split(' ');
+    const commandName = parts[0];
+    const currentArg = parts[parts.length - 1] || '';
+    
+    // Commands that expect file paths as arguments
+    const fileCommands = ['cd', 'cat', 'rm', 'touch', 'nano'];
+    
+    if (parts.length === 1) {
+      // Complete command name
+      const completions = getCompletions(commandName, false);
+      if (completions.length === 1) {
+        command = completions[0];
+      } else if (completions.length > 1) {
+        // Find common prefix
+        const commonPrefix = completions.reduce((prefix, cmd) => {
+          let i = 0;
+          while (i < prefix.length && i < cmd.length && prefix[i] === cmd[i]) {
+            i++;
+          }
+          return prefix.substring(0, i);
+        });
+        if (commonPrefix.length > commandName.length) {
+          command = commonPrefix;
         }
       }
-    } else if (isPasswordMode) {
-      // Handle password input (hide characters)
-      if (event.key === 'Backspace') {
-        passwordInput = passwordInput.slice(0, -1);
-      } else if (event.key.length === 1) {
-        passwordInput += event.key;
-      }
-      event.preventDefault();
-    } else if (event.key === 'ArrowUp') {
-      if (historyIndex < $commandHistory.length - 1) {
-        historyIndex++;
-        command = $commandHistory[$commandHistory.length - 1 - historyIndex];
-      }
-      event.preventDefault();
-    } else if (event.key === 'ArrowDown') {
-      if (historyIndex > -1) {
-        historyIndex--;
-        command = historyIndex >= 0 
-          ? $commandHistory[$commandHistory.length - 1 - historyIndex] 
-          : '';
-      }
-      event.preventDefault();
-    } else if (event.key === 'Tab') {
-      event.preventDefault();
-
-      const parts = command.split(' ');
-      const commandName = parts[0];
-      const currentArg = parts[parts.length - 1] || '';
+    } else if (commandName === 'theme' && parts.length === 2) {
+      // Complete theme subcommands (ls, set)
+      const themeSubcommands = ['ls', 'set'];
+      const matchingSubcommands = themeSubcommands.filter(sub => sub.startsWith(currentArg.toLowerCase()));
       
-      // Commands that expect file paths as arguments
-      const fileCommands = ['cd', 'cat', 'rm', 'touch', 'nano'];
+      if (matchingSubcommands.length === 1) {
+        command = `theme ${matchingSubcommands[0]}`;
+      } else if (matchingSubcommands.length > 1) {
+        // Find common prefix
+        const commonPrefix = matchingSubcommands.reduce((prefix, sub) => {
+          let i = 0;
+          while (i < prefix.length && i < sub.length && prefix[i] === sub[i]) {
+            i++;
+          }
+          return prefix.substring(0, i);
+        });
+        if (commonPrefix.length > currentArg.length) {
+          command = `theme ${commonPrefix}`;
+        }
+      }
+    } else if (commandName === 'theme' && parts.length === 3 && parts[1] === 'set') {
+      // Complete theme names for 'theme set' command
+      const themeNames = themes.map(t => t.name.toLowerCase());
+      const matchingThemes = themeNames.filter(name => name.startsWith(currentArg.toLowerCase()));
       
-      if (parts.length === 1) {
-        // Complete command name
-        const completions = getCompletions(commandName, false);
-        if (completions.length === 1) {
-          command = completions[0];
-        } else if (completions.length > 1) {
-          // Find common prefix
-          const commonPrefix = completions.reduce((prefix, cmd) => {
-            let i = 0;
-            while (i < prefix.length && i < cmd.length && prefix[i] === cmd[i]) {
-              i++;
-            }
-            return prefix.substring(0, i);
-          });
-          if (commonPrefix.length > commandName.length) {
-            command = commonPrefix;
-          }
-        }
-      } else if (commandName === 'theme' && parts.length === 2) {
-        // Complete theme subcommands (ls, set)
-        const themeSubcommands = ['ls', 'set'];
-        const matchingSubcommands = themeSubcommands.filter(sub => sub.startsWith(currentArg.toLowerCase()));
-        
-        if (matchingSubcommands.length === 1) {
-          command = `theme ${matchingSubcommands[0]}`;
-        } else if (matchingSubcommands.length > 1) {
-          // Find common prefix
-          const commonPrefix = matchingSubcommands.reduce((prefix, sub) => {
-            let i = 0;
-            while (i < prefix.length && i < sub.length && prefix[i] === sub[i]) {
-              i++;
-            }
-            return prefix.substring(0, i);
-          });
-          if (commonPrefix.length > currentArg.length) {
-            command = `theme ${commonPrefix}`;
-          }
-        }
-      } else if (commandName === 'theme' && parts.length === 3 && parts[1] === 'set') {
-        // Complete theme names for 'theme set' command
-        const themeNames = themes.map(t => t.name.toLowerCase());
-        const matchingThemes = themeNames.filter(name => name.startsWith(currentArg.toLowerCase()));
-        
-        if (matchingThemes.length === 1) {
-          // Find the original case theme name
-          const originalTheme = themes.find(t => t.name.toLowerCase() === matchingThemes[0]);
-          if (originalTheme) {
-            parts[parts.length - 1] = originalTheme.name;
-            command = parts.join(' ');
-          }
-        } else if (matchingThemes.length > 1) {
-          // Find common prefix
-          const commonPrefix = matchingThemes.reduce((prefix, name) => {
-            let i = 0;
-            while (i < prefix.length && i < name.length && prefix[i] === name[i]) {
-              i++;
-            }
-            return prefix.substring(0, i);
-          });
-          if (commonPrefix.length > currentArg.length) {
-            parts[parts.length - 1] = commonPrefix;
-            command = parts.join(' ');
-          }
-        }
-      } else if (fileCommands.includes(commandName)) {
-        // Complete file path
-        const completions = getCompletions(currentArg, true);
-        if (completions.length === 1) {
-          parts[parts.length - 1] = completions[0];
+      if (matchingThemes.length === 1) {
+        // Find the original case theme name
+        const originalTheme = themes.find(t => t.name.toLowerCase() === matchingThemes[0]);
+        if (originalTheme) {
+          parts[parts.length - 1] = originalTheme.name;
           command = parts.join(' ');
-        } else if (completions.length > 1) {
-          // Find common prefix for file paths
-          const commonPrefix = completions.reduce((prefix, path) => {
-            let i = 0;
-            while (i < prefix.length && i < path.length && prefix[i] === path[i]) {
-              i++;
-            }
-            return prefix.substring(0, i);
-          });
-          if (commonPrefix.length > currentArg.length) {
-            parts[parts.length - 1] = commonPrefix;
-            command = parts.join(' ');
+        }
+      } else if (matchingThemes.length > 1) {
+        // Find common prefix
+        const commonPrefix = matchingThemes.reduce((prefix, name) => {
+          let i = 0;
+          while (i < prefix.length && i < name.length && prefix[i] === name[i]) {
+            i++;
           }
+          return prefix.substring(0, i);
+        });
+        if (commonPrefix.length > currentArg.length) {
+          parts[parts.length - 1] = commonPrefix;
+          command = parts.join(' ');
         }
       }
+    } else if (fileCommands.includes(commandName)) {
+      // Complete file path
+      const completions = getCompletions(currentArg, true);
+      if (completions.length === 1) {
+        parts[parts.length - 1] = completions[0];
+        command = parts.join(' ');
+      } else if (completions.length > 1) {
+        // Find common prefix for file paths
+        const commonPrefix = completions.reduce((prefix, path) => {
+          let i = 0;
+          while (i < prefix.length && i < path.length && prefix[i] === path[i]) {
+            i++;
+          }
+          return prefix.substring(0, i);
+        });
+        if (commonPrefix.length > currentArg.length) {
+          parts[parts.length - 1] = commonPrefix;
+          command = parts.join(' ');
+        }
+      }
+    }
+  }
+};
+
+// Effect to handle loading animation
+// Loading animation effect
+$effect(() => {
+  if (isProcessing) {
+    frameIndex = 0;
+    loadingInterval = setInterval(() => {
+      frameIndex = (frameIndex + 1) % loadingFrames.length;
+      loadingText = `${loadingFrames[frameIndex]} Processing...`;
+    }, 100);
+  } else {
+    if (loadingInterval) {
+      clearInterval(loadingInterval);
+      loadingInterval = null;
+    }
+    loadingText = '';
+  }
+
+  return () => {
+    if (loadingInterval) {
+      clearInterval(loadingInterval);
     }
   };
-
-  // Effect to handle loading animation
-  // Loading animation effect
-  $effect(() => {
-    if (isProcessing) {
-      frameIndex = 0;
-      loadingInterval = setInterval(() => {
-        frameIndex = (frameIndex + 1) % loadingFrames.length;
-        loadingText = `${loadingFrames[frameIndex]} Processing...`;
-      }, 100);
-    } else {
-      if (loadingInterval) {
-        clearInterval(loadingInterval);
-        loadingInterval = null;
-      }
-      loadingText = '';
-    }
-
-    return () => {
-      if (loadingInterval) {
-        clearInterval(loadingInterval);
-      }
-    };
-  });
+});
 </script>
 
 <svelte:window
