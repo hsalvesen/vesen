@@ -1,6 +1,6 @@
 export const commandHelp = {
   // Demo command
-  demo: `<span style="color: var(--theme-cyan); font-weight: bold;">demo</span> : Interactive walkthrough for learning terminal commands<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span><br>&nbsp;&nbsp;demo<br>&nbsp;&nbsp;demo next<br>&nbsp;&nbsp;demo prev<br>&nbsp;&nbsp;demo skip<br>&nbsp;&nbsp;demo reset<br>&nbsp;&nbsp;demo status<br>&nbsp;&nbsp;demo stop`,
+  demo: `<span style="color: var(--theme-cyan); font-weight: bold;">demo</span> : Interactive walkthrough for learning terminal commands<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> demo<br><span style="color: var(--theme-magenta); font-weight: bold;">Tip:</span> Press Ctrl+C to stop the demo at any time.`,
   
   // System commands
   help: `<span style="color: var(--theme-cyan); font-weight: bold;">help</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Shows a list of all available commands organised by category.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> help`,

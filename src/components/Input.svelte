@@ -8,6 +8,7 @@
   import { track } from '../utils/tracking';
   import { get } from 'svelte/store';
   import themes from '../../themes.json';
+  import { isDemoActive, stopDemoViaInterrupt } from '../utils/commands/demo';
 
   // Use $props() to declare props with $bindable()
   let { isPasswordMode = $bindable(), isProcessing = $bindable(false), loadingText = $bindable('') } = $props();
@@ -140,28 +141,34 @@
     if (event.ctrlKey && event.key === 'c') {
       event.preventDefault();
       
-      // Only interrupt if we're processing a command and it's one of the interruptible commands
+      let didAbort = false;
       if (isProcessing && currentAbortController && ['curl', 'weather', 'stock', 'fastfetch', 'speedtest'].includes(currentCommandName)) {
-         // Cancel the current operation
-         currentAbortController.abort();
-         
-         // Don't add history entry here - let the command's AbortError handler do it
-         // Just reset the state and let the command complete with its cancellation message
-         currentAbortController = null;
-         currentCommandName = '';
-       } else if (!isProcessing) {
-         // If not processing a command, navigate to next line
-         if (command.trim()) {
-           // Add current command to history without executing it
-           $history = [...$history, { command, outputs: [''] }];
-         } else {
-           // Add empty line to history
-           $history = [...$history, { command: '', outputs: [''] }];
-         }
-         // Clear the command and reset history index
-         command = '';
-         historyIndex = -1;
-       }
+        currentAbortController.abort();
+        currentAbortController = null;
+        currentCommandName = '';
+        didAbort = true;
+      }
+      
+      // Stop demo if active and append interrupt message to the last history entry
+      if (isDemoActive()) {
+        const msg = stopDemoViaInterrupt();
+        history.update(h => {
+          if (h.length === 0) return [{ command: '', outputs: [msg] }];
+          const last = { ...h[h.length - 1] };
+          const outputs = [...last.outputs, msg];
+          const newLast = { ...last, outputs };
+          return [...h.slice(0, -1), newLast];
+        });
+      } else if (!isProcessing && !didAbort) {
+        // If not processing a command and no demo to stop, add a new prompt line
+        if (command.trim()) {
+          $history = [...$history, { command, outputs: [''] }];
+        } else {
+          $history = [...$history, { command: '', outputs: [''] }];
+        }
+        command = '';
+        historyIndex = -1;
+      }
       return;
     }
     
