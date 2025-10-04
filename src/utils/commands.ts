@@ -4,6 +4,7 @@ import { history, commandHistory } from '../stores/history';
 import { systemCommands } from './commands/system';
 import { fileSystemCommands } from './commands/fileSystem';
 import { networkCommands } from './commands/network';
+import { demoCommands, isDemoActive, processDemoCommand } from './commands/demo';
 import { theme } from '../stores/theme';
 import { get } from 'svelte/store';
 import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from './virtualFileSystem';
@@ -19,6 +20,7 @@ const terminalCommands = {
     
     // Group commands by category for better organisation
     const categories: Record<string, string[]> = {
+      'Getting Started': ['demo'],
       'Info': ['fastfetch', 'whoami'],
       'File System': ['ls', 'pwd', 'cd', 'cat', 'echo'], 
       'File Operations': ['touch', 'rm', 'mkdir'], 
@@ -28,32 +30,30 @@ const terminalCommands = {
       'Project': ['repo', 'email', 'banner']
     };
     
-    let output = `<span style="color: var(--theme-cyan); font-weight: bold;">Available Commands:</span>\n\n`;
-    
     // Simple three-column layout using CSS columns
-    output += '<div style="column-count: 3; column-gap: 50px; column-fill: balance; break-inside: avoid;">';
+    let output = '\n<div style="column-count: 3; column-gap: 50px; column-fill: balance; break-inside: avoid;">';
     
     // Process each category
     Object.entries(categories).forEach(([category, cmds]) => {
       const availableCommands = cmds.filter(cmd => commandList.includes(cmd));
       if (availableCommands.length === 0) return;
       
-      // Category section with break-inside avoid
       output += `<div style="break-inside: avoid; margin-bottom: 20px;">`;
       
-      // Category header
-      output += `<div style="color: var(--theme-yellow); font-weight: bold; margin-bottom: 8px;">${category}:</div>`;
+      // Use theme variables for dynamic subtitle highlight and text color
+      output += `<div style="position: relative; display: block; width: 100%; box-sizing: border-box; border-radius: 4px; margin-bottom: 8px; overflow: hidden;">`;
+      output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.12;"></div>`;
+      output += `<div style="position: relative; color: var(--theme-yellow); font-weight: bold; padding: 6px 10px;">${category}</div>`;
+      output += `</div>`;
       
-      // Commands in this category
       for (const cmd of availableCommands) {
         const description = commandDescriptions[cmd] || '';
-        output += `<div style="margin: 3px 0; display: flex; align-items: flex-start;">`;
-        output += `<span style="color: var(--theme-green); font-weight: bold; min-width: 100px; margin-right: 12px; flex-shrink: 0;">${cmd}</span>`;
-        output += `<span style="color: var(--theme-white); flex: 1; word-break: break-word;">${description}</span>`;
-        output += '</div>';
+        output += `<div style="break-inside: avoid; margin: 6px 0; padding: 8px 10px; border: 1px solid var(--theme-cyan); border-radius: 6px; display: flex; align-items: flex-start; gap: 12px;">`;
+        output += `<span style="color: var(--theme-green); font-weight: bold; min-width: 100px; flex-shrink: 0;">${cmd}</span>`;
+        output += `<span style="word-wrap: break-word; overflow-wrap: break-word;">${description}</span>`;
+        output += `</div>`;
       }
-      
-      output += '</div>';
+      output += `</div>`;
     });
     
     output += '</div>';
@@ -73,7 +73,7 @@ const terminalCommands = {
       }
     </style>`;
     
-    output += `\n<span style="color: var(--theme-cyan); word-wrap: break-word; overflow-wrap: break-word;">Type [command] --help for detailed usage information</span>`;
+    output += `<span style="color: var(--theme-cyan); word-wrap: break-word; overflow-wrap: break-word;">Type [command] --help for detailed usage information</span>`;
     
     return output;
   },
@@ -280,6 +280,25 @@ export function processCommand(input: string, abortController?: AbortController 
   const command = args[0];
   const hasHelpFlag = args.includes('--help') || args.includes('-h');
   
+  // Check if demo is active and process demo-specific logic
+  if (isDemoActive() && !hasHelpFlag) {
+    const demoResponse = processDemoCommand(input.trim());
+    if (demoResponse) {
+      // If demo processed the command, also execute the actual command
+      if (commands[command]) {
+        const actualOutput = typeof commands[command] === 'function' 
+          ? commands[command](args.slice(1), abortController)
+          : commands[command];
+        
+        // Show actual command output first, then any demo feedback
+        return Promise.resolve(actualOutput).then(output => {
+          return output + '\n\n' + demoResponse;
+        });
+      }
+      return demoResponse;
+    }
+  }
+  
   if (hasHelpFlag) {
     return getCommandHelp(command);
   }
@@ -327,5 +346,6 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
     ...fileSystemCommands,
     ...networkCommands,
     ...terminalCommands,
+    ...demoCommands,
     ...projectCommands
   };

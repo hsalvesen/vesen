@@ -10,6 +10,44 @@ export const systemCommands = {
     window.open('https://www.linkedin.com/in/harrysalvesen/');
     return `<span style="color: ${currentTheme.cyan};">Opening developer's LinkedIn profile...</span>`;
   },
+
+    welcome: () => {
+    const currentTheme = get(theme);
+    
+    let output = `<div style="background: linear-gradient(135deg, ${currentTheme.cyan}20, ${currentTheme.purple}20); border: 2px solid ${currentTheme.cyan}; padding: 20px; margin: 10px 0; border-radius: 8px;">`;
+    output += `<div style="text-align: center; margin-bottom: 16px;">`;
+    output += `<span style="color: ${currentTheme.cyan}; font-size: 1.4em; font-weight: bold;">Welcome to Vesen Terminal</span>`;
+    output += `</div>`;
+    
+    output += `<div style="margin-bottom: 12px;">`;
+    output += `<span style="color: ${currentTheme.white};">This is a web-based terminal that simulates a real command-line interface.</span><br>`;
+    output += `<span style="color: ${currentTheme.yellow};">Whether you're a beginner or experienced user, there's something here for you!</span>`;
+    output += `</div>`;
+    
+    output += `<div style="background: ${currentTheme.green}20; padding: 12px; border-radius: 4px; margin: 12px 0;">`;
+    output += `<span style="color: ${currentTheme.green}; font-weight: bold;">New to terminals?</span><br>`;
+    output += `<span style="color: ${currentTheme.white};">Start with our interactive tutorial: </span>`;
+    output += `<span style="color: ${currentTheme.cyan}; font-weight: bold; font-family: monospace;">tutorial start</span>`;
+    output += `</div>`;
+    
+    output += `<div style="background: ${currentTheme.blue}20; padding: 12px; border-radius: 4px; margin: 12px 0;">`;
+    output += `<span style="color: ${currentTheme.blue}; font-weight: bold;">Experienced user?</span><br>`;
+    output += `<span style="color: ${currentTheme.white};">Explore all commands: </span>`;
+    output += `<span style="color: ${currentTheme.cyan}; font-weight: bold; font-family: monospace;">help</span>`;
+    output += `</div>`;
+    
+    output += `<div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid ${currentTheme.brightBlack};">`;
+    output += `<span style="color: ${currentTheme.purple}; font-weight: bold;">Quick Start Commands:</span><br>`;
+    output += `<span style="color: ${currentTheme.white};">• </span><span style="color: ${currentTheme.cyan};">fastfetch</span><span style="color: ${currentTheme.white};"> - System information</span><br>`;
+    output += `<span style="color: ${currentTheme.white};">• </span><span style="color: ${currentTheme.cyan};">weather Sydney</span><span style="color: ${currentTheme.white};"> - Check weather</span><br>`;
+    output += `<span style="color: ${currentTheme.white};">• </span><span style="color: ${currentTheme.cyan};">theme ls</span><span style="color: ${currentTheme.white};"> - Browse themes</span><br>`;
+    output += `<span style="color: ${currentTheme.white};">• </span><span style="color: ${currentTheme.cyan};">speedtest</span><span style="color: ${currentTheme.white};"> - Test internet speed</span>`;
+    output += `</div>`;
+    
+    output += `</div>`;
+    
+    return output;
+  },
   
   fastfetch: async (args: string[], abortController?: AbortController) => {
     const currentTheme = get(theme);
@@ -582,35 +620,27 @@ export const systemCommands = {
   banner: () => {
     const currentTheme = get(theme);
     const isMobile = window.innerWidth < 768; // Tailwind's md breakpoint
-    
+
     if (isMobile) {
       // Compact mobile version
-      return `
-██╗  ██╗███████╗██╗     ██╗      ██████╗ 
+      return `██╗  ██╗███████╗██╗     ██╗      ██████╗ 
 ██║  ██║██╔════╝██║     ██║     ██╔═══██╗
 ███████║█████╗  ██║     ██║     ██║   ██║
 ██╔══██║██╔══╝  ██║     ██║     ██║   ██║
 ██║  ██║███████╗███████╗███████╗╚██████╔╝
-╚═╝  ╚═╝╚═══════╝╚══════╝╚══════╝ ╚═════╝ v${packageJson.version}
-
-Type <span style="color: var(--theme-cyan); ">help</span> for commands.
-Type <span style="color: var(--theme-cyan); ">cat README.md</span> to learn more.
-`;
+╚═╝  ╚═╝╚═══════╝╚══════╝╚═══════╝ ╚═════╝ v${packageJson.version}
+<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 6px 10px; border-radius: 4px; margin-top: 2px; margin-bottom: 8px;"><div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div><div style="position: relative; white-space: nowrap;"><span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-family: monospace; font-weight: bold;">demo</span><span style="color: var(--theme-white);"> to begin an interactive walkthrough of the Vesen terminal.</span></div></div>`;
     }
-    
-    // Full desktop version
-    return `
-██╗    ██╗███████╗██╗      ██████╗ ██████╗ ███╗   ███╗███████╗
+
+    return `██╗    ██╗███████╗██╗      ██████╗ ██████╗ ███╗   ███╗███████╗
 ██║    ██║██╔════╝██║     ██╔════╝██╔═══██╗████╗ ████║██╔════╝
 ██║ █╗ ██║█████╗  ██║     ██║     ██║   ██║██╔████╔██║█████╗  
 ██║███╗██║██╔══╝  ██║     ██║     ██║   ██║██║╚██╔╝██║██╔══╝  
 ╚███╔███╔╝███████╗███████╗╚██████╗╚██████╔╝██║ ╚═╝ ██║███████╗
  ╚══╝╚══╝ ╚══════╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝ v${packageJson.version}
-
-Type <span style="color: var(--theme-cyan); ">help</span> to see list of available commands.
-Type <span style="color: var(--theme-cyan); ">cat README.md</span> to learn more about this terminal.
-`;
-  }
+<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 6px 10px; border-radius: 4px; margin-top: 2px; margin-bottom: 8px;"><div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div><div style="position: relative; white-space: nowrap;"><span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-family: monospace; font-weight: bold;">demo</span><span style="color: var(--theme-white);"> to begin an interactive walkthrough of the Vesen terminal.</span></div></div>`;
+  },
+  // ... existing code ...
 };
 
 // Add this helper function at the top of the file if not already present:
