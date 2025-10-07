@@ -15,7 +15,6 @@ import { createInitialFileSystem } from './virtualFileSystem';
 // Terminal-specific commands that don't fit in other modules
 const terminalCommands = {
   help: () => {
-    const currentTheme = get(theme);
     const commandList = Object.keys(commands);
     
     // Group commands by category for better organisation
@@ -46,11 +45,13 @@ const terminalCommands = {
       output += `<div style="position: relative; color: var(--theme-yellow); font-weight: bold; padding: 6px 10px;">${category}</div>`;
       output += `</div>`;
       
+      // Render commands as simple rows without borders/boxes
       for (const cmd of availableCommands) {
         const description = commandDescriptions[cmd] || '';
-        output += `<div style="break-inside: avoid; margin: 6px 0; padding: 8px 10px; border: 1px solid var(--theme-cyan); border-radius: 6px; display: flex; align-items: flex-start; gap: 12px;">`;
-        output += `<span style="color: var(--theme-green); font-weight: bold; min-width: 100px; flex-shrink: 0;">${cmd}</span>`;
-        output += `<span style="word-wrap: break-word; overflow-wrap: break-word;">${description}</span>`;
+        output += `<div style="break-inside: avoid; margin: 4px 0; display: flex; align-items: baseline; gap: 12px;">`;
+        output += `<span style="color: var(--theme-brightBlack); font-family: monospace; font-weight: bold;">❯</span>`;
+        output += `<span style="color: var(--theme-green); font-weight: bold; min-width: 120px; flex-shrink: 0; font-family: monospace;">${cmd}</span>`;
+        output += `<span style="color: var(--theme-white); word-wrap: break-word; overflow-wrap: break-word;">${description}</span>`;
         output += `</div>`;
       }
       output += `</div>`;
