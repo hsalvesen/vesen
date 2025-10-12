@@ -1,6 +1,7 @@
 import { get } from 'svelte/store';
 import { theme } from '../../stores/theme';
 import { history } from '../../stores/history';
+import { commandDescriptions } from '../helpTexts';
 
 // Demo state management
 // Top-level state object for demo
@@ -13,18 +14,35 @@ let demoState = {
   pendingSuccessExplanation: '' // ensure property exists in initial type
 };
 
+// const demoSteps = [...]
 const demoSteps = [
   {
-    title: "Welcome to the Terminal!",
-    description: "This is a command-line interface where you type commands to interact with the system.",
+    title: "Welcome to the Vesen Terminal",
+    description: (likelyShell: string) =>
+      `This demo will teach you how to interface with the command line using ${likelyShell}.
+A terminal is a minimal, low-level, text-based interface. Typically, all input is handled via the keyboard.`,
     instruction: "Type 'help' to see all available commands",
     expectedCommand: "help",
-    hint: "Just type: help",
+    hint: "Commands are case-sensitive (lowercase).",
     explanation: "The 'help' command shows you all available commands organised by category."
   },
   {
+    title: "Using Help Flags",
+    description: "Pick any command from 'help' and run it with '--help' or '-h' to see usage and options.",
+    instruction: "Try '[command] --help' or '[command] -h' on any command",
+    expectedCommand: (cmd: string) => {
+      const tokens = cmd.trim().split(/\s+/);
+      if (tokens.length < 2) return false;
+      const commandName = tokens[0];
+      const hasHelpFlag = tokens.slice(1).some(t => t === '--help' || t === '-h');
+      return !!(commandDescriptions as Record<string, string>)[commandName] && hasHelpFlag;
+    },
+    hint: "Format: '[command] --help' or '[command] -h'. Use exact command names from 'help'.",
+    explanation: "Help flags print usage, arguments, and examples; read them before running a command."
+  },
+  {
     title: "System Information",
-    description: "Let's learn about your system! The 'fastfetch' command shows detailed system information.",
+    description: "Let's learn about your system! The 'fastfetch' command shows detailed system information. Most commands support a '--help' flag to show usage and options — try 'fastfetch --help' now, then run 'fastfetch' to view your system.",
     instruction: "Type 'fastfetch' to see system details",
     expectedCommand: "fastfetch",
     hint: "Type: fastfetch",
@@ -128,6 +146,7 @@ const demoSteps = [
   }
 ];
 
+// demoCommands._demoCheck
 export const demoCommands = {
   demo: (args: string[]) => {
     const currentTheme = get(theme);
@@ -141,7 +160,10 @@ export const demoCommands = {
     const userCommand = args.join(' ').trim();
     const currentStep = demoSteps[demoState.currentStep];
     
-    if (userCommand === currentStep.expectedCommand) {
+    const expected = currentStep.expectedCommand as string | ((c: string) => boolean);
+    const isMatch = typeof expected === 'function' ? expected(userCommand) : userCommand === expected;
+
+    if (isMatch) {
       demoState.completedSteps.add(demoState.currentStep);
       
       // Carry success explanation into next step box (no standalone success box)
@@ -182,6 +204,16 @@ function startDemo(): string {
   return getCurrentStepDisplay();
 }
 
+// Demo step type to support dynamic or static descriptions
+interface DemoStep {
+  title: string;
+  description: string | ((likelyShell: string) => string);
+  instruction: string;
+  expectedCommand: string | ((cmd: string) => boolean);
+  hint: string;
+  explanation: string;
+}
+
 function getCurrentStepDisplay(): string {
   if (!demoState.isActive || demoState.currentStep >= demoSteps.length) {
     return '';
@@ -197,14 +229,7 @@ function getCurrentStepDisplay(): string {
   output += `<div style="position: absolute; inset: 0; background: linear-gradient(135deg, var(--theme-cyan), var(--theme-purple)); opacity: 0.08; border-radius: 8px;"></div>`;
   output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;">`;
 
-  // Welcome text (step 1 only), above progress
-  if (stepNumber === 1) {
-    output += `<div style="margin-bottom: 12px;">`;
-    output += `<span style="color: var(--theme-cyan); font-weight: bold;">Welcome to Terminal Demo</span><br>`;
-    output += `<span style="color: var(--theme-white);">This interactive guide will teach you how to use the command line.</span><br>`;
-    output += `<span style="color: var(--theme-yellow);">Follow the instructions step by step, and don't worry about making mistakes!</span>`;
-    output += `</div>`;
-  }
+
 
   // Progress bar
   const progress = Math.round((stepNumber / totalSteps) * 100);
@@ -219,11 +244,20 @@ function getCurrentStepDisplay(): string {
     demoState.pendingSuccessExplanation = '';
   }
 
+  // Compute likely shell for dynamic descriptions
+  const platform = typeof navigator !== 'undefined'
+    ? (navigator.platform || navigator.userAgent || '')
+    : '';
+  const likelyShell = /Mac|iPhone|iPad|iPod/i.test(platform) ? 'zsh' : 'bash';
+
   // Step content (skip title/description for step 1)
-  if (stepNumber !== 1) {
+  if (stepNumber) {
     output += `<div style="margin-bottom: 12px;">`;
-    output += `<span style="color: var(--theme-purple); font-weight: bold; font-size: 1.05em;">${step.title}</span><br>`;
-    output += `<span style="color: var(--theme-white);">${step.description}</span>`;
+    output += `<span style="color: var(--theme-cyan); font-weight: bold; font-size: 1.05em;">${step.title}</span><br>`;
+    const descriptionText = typeof step.description === 'function'
+      ? step.description(likelyShell)
+      : step.description;
+    output += `<span style="color: var(--theme-white);">${descriptionText}</span>`;
     output += `</div>`;
   }
 
@@ -251,8 +285,8 @@ function getCurrentStepDisplay(): string {
   // Close inner and outer containers
   output += `</div></div>`;
 
-  // Ctrl+C tip with theme variables
-  output += `<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin-top: 8px;">`;
+  // Ctrl+C tip with theme variables and extra bottom spacing
+  output += `<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin-top: 12px; margin-bottom: 20px;">`;
   output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div>`;
   output += `<div style="position: relative;"><span style="color: var(--theme-white);">Press </span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span><span style="color: var(--theme-white);">+</span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span><span style="color: var(--theme-white);"> to stop the demo at any time.</span></div>`;
   output += `</div>`;
@@ -305,23 +339,6 @@ function getDemoStatus(): string {
   output += `<span style="color: ${currentTheme.green};">Completed Steps: ${completedCount}</span>\n`;
   output += `<span style="color: ${currentTheme.yellow};">Progress: ${Math.round((completedCount / totalSteps) * 100)}%</span>`;
   
-  return output;
-}
-
-function getDemoHelp(): string {
-  const currentTheme = get(theme);
-
-  let output = `<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> demo\n`;
-  output += `<span style="color: var(--theme-white);">Press</span>: <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span><span style="color: var(--theme-white);">+</span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span><span style="color: var(--theme-white);"> to stop the demo at any time.</span>\n\n`;
-  output += `<span style="color: var(--theme-purple); font-weight: bold;">What you'll learn:</span>\n`;
-  output += `  • Basic terminal navigation and commands\n`;
-  output += `  • File system operations (ls, cd, pwd, cat)\n`;
-  output += `  • Creating and editing files (touch, echo)\n`;
-  output += `  • Network commands (weather, curl)\n`;
-  output += `  • System information (fastfetch, whoami)\n`;
-  output += `  • Customisation and help systems\n\n`;
-  output += `<span style="color: var(--theme-cyan);">Perfect for beginners who are new to command-line interfaces!</span>`;
-
   return output;
 }
 

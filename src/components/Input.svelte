@@ -9,6 +9,7 @@
   import { get } from 'svelte/store';
   import themes from '../../themes.json';
   import { isDemoActive, stopDemoViaInterrupt } from '../utils/commands/demo';
+  import { processDemoCommand } from '../utils/commands/demo';
 
   // Use $props() to declare props with $bindable()
   let { isPasswordMode = $bindable(), isProcessing = $bindable(false), loadingText = $bindable('') } = $props();
@@ -136,6 +137,7 @@
     }, 10);
   });
 
+  // handleKeyDown() function
   const handleKeyDown = async (event: KeyboardEvent) => {
     // Handle Ctrl+C globally (even when input is disabled)
     if (event.ctrlKey && event.key === 'c') {
@@ -259,6 +261,11 @@
       // Only add to display history if not a clear/reset command
       if (!shouldSkipDisplayHistory) {
         $history = [...$history, { command: currentCommand, outputs: [output] }];
+      }
+
+      // Notify demo when user runs any command with --help or -h
+      if (isDemoActive() && hasHelpFlag) {
+        processDemoCommand(currentCommand);
       }
     } catch (error) {
       // Handle any errors
