@@ -297,18 +297,7 @@ function getCurrentStepDisplay(): string {
 export function stopDemoViaInterrupt(): string {
   const currentTheme = get(theme);
   demoState.isActive = false;
-  return `<div style="position: relative; border-left: 4px solid var(--theme-red); padding: 8px 10px; margin: 6px 0; border-radius: 4px;">
-    <div style="position: absolute; inset: 0; background: var(--theme-red); opacity: 0.12; border-radius: 4px;"></div>
-    <div style="position: relative; white-space: nowrap;">
-      <span style="color: var(--theme-red); font-weight: bold;">Demo interrupted</span>
-      <span style="color: var(--theme-white);"> (</span>
-      <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span>
-      <span style="color: var(--theme-white);">+</span>
-      <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span>
-      <span style="color: var(--theme-white);">). Restart with </span>
-      <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">demo</span>
-    </div>
-  </div>`;
+  return `<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 6px 0; margin-bottom: 20px;"><div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div><div style="position: relative;"><span style="color: var(--theme-white);">Demo interrupted. Restart with </span><span style="color: var(--theme-yellow); font-weight: bold; font-family: monospace;">demo</span></div></div>`;
 }
 
 function completeDemo(): string {
@@ -318,7 +307,7 @@ function completeDemo(): string {
   let output = `<div style="position: relative; border: 2px solid var(--theme-green); padding: 20px; margin: 10px 0; border-radius: 8px; text-align: center;">`;
   output += `<div style="position: absolute; inset: 0; background: linear-gradient(135deg, var(--theme-green), var(--theme-cyan)); opacity: 0.18; border-radius: 8px;"></div>`;
   output += `<div style="position: relative;">`;
-  output += `<span style="color: var(--theme-green); font-size: 1.3em; font-weight: bold;">🎉 Congratulations!</span><br><br>`;
+  output += `<span style="color: var(--theme-green); font-size: 1.3em; font-weight: bold;">Congratulations!</span><br><br>`;
   output += `<span style="color: var(--theme-white);">You've completed the terminal demo!</span><br>`;
   output += `<span style="color: var(--theme-cyan);">You're now ready to explore the terminal on your own.</span><br><br>`;
   output += `<span style="color: var(--theme-yellow);">Remember: Use 'help' to see all commands, or '[command] --help' for detailed help.</span>`;
