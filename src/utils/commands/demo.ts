@@ -19,17 +19,17 @@ const demoSteps = [
   {
     title: "Welcome to the Vesen Terminal",
     description: (likelyShell: string) =>
-      `This demo will teach you how to interface with the command line using ${likelyShell}.
-A terminal is a minimal, low-level, text-based interface. Typically, all input is handled via the keyboard.`,
-    instruction: "Type 'help' to see all available commands",
+      `A terminal is a minimal, low-level, text-based interface. Typically, all input is handled via the keyboard.
+    This demo will teach you how to interface with the command line using ${likelyShell}.`,
+    instruction: "Type <span style=\"color: var(--theme-green); font-weight: bold; font-family: monospace;\">help</span> to see all available commands",
     expectedCommand: "help",
-    hint: "Commands are case-sensitive (lowercase).",
-    explanation: "The 'help' command shows you all available commands organised by category."
+    hint: "All commands are case-sensitive (lowercase).",
+    explanation: "The <span style=\"color: var(--theme-green); font-weight: bold; font-family: monospace;\">help</span> command shows you all available commands, organised by category."
   },
   {
-    title: "Using Help Flags",
-    description: "Pick any command from 'help' and run it with '--help' or '-h' to see usage and options.",
-    instruction: "Try '[command] --help' or '[command] -h' on any command",
+    title: "Applying Help Flags",
+    description: "Each command has inbuilt documentation accessible through help flags. These provide information on syntax, usage, and available arguments.",
+    instruction: "Pick any command from <span style=\"color: var(--theme-green); font-weight: bold; font-family: monospace;\">help</span> and add the suffix <span style=\"color: var(--theme-green); font-weight: bold; font-family: monospace;\">--help</span> or <span style=\"color: var(--theme-green); font-weight: bold; font-family: monospace;\">-h</span>, separated by a space, to see usage and options.",
     expectedCommand: (cmd: string) => {
       const tokens = cmd.trim().split(/\s+/);
       if (tokens.length < 2) return false;
@@ -37,7 +37,7 @@ A terminal is a minimal, low-level, text-based interface. Typically, all input i
       const hasHelpFlag = tokens.slice(1).some(t => t === '--help' || t === '-h');
       return !!(commandDescriptions as Record<string, string>)[commandName] && hasHelpFlag;
     },
-    hint: "Format: '[command] --help' or '[command] -h'. Use exact command names from 'help'.",
+    hint: "Try append <span style=\"color: var(--theme-yellow); font-weight: bold; font-family: monospace;\">--help</span> or <span style=\"color: var(--theme-yellow); font-weight: bold; font-family: monospace;\">-h</span> to any command listed above",
     explanation: "Help flags print usage, arguments, and examples; read them before running a command."
   },
   {
@@ -264,7 +264,7 @@ function getCurrentStepDisplay(): string {
   // Instruction block
   output += `<div style="position: relative; padding: 8px; border-radius: 4px; margin: 8px 0;">`;
   output += `<div style="position: absolute; inset: 0; background: var(--theme-cyan); opacity: 0.08; border-radius: 4px;"></div>`;
-  output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-cyan); font-weight: bold;">Your task:</span> <span style="color: var(--theme-white);">${step.instruction}</span></div>`;
+  output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-cyan); font-weight: bold;">Task:</span> <span style="color: var(--theme-white);">${step.instruction}</span></div>`;
   output += `</div>`;
 
   // Hint block
@@ -285,10 +285,10 @@ function getCurrentStepDisplay(): string {
   // Close inner and outer containers
   output += `</div></div>`;
 
-  // Ctrl+C tip with theme variables and extra bottom spacing
+  // Ctrl + C tip with theme variables and extra bottom spacing
   output += `<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin-top: 12px; margin-bottom: 20px;">`;
   output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div>`;
-  output += `<div style="position: relative;"><span style="color: var(--theme-white);">Press </span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span><span style="color: var(--theme-white);">+</span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span><span style="color: var(--theme-white);"> to stop the demo at any time.</span></div>`;
+  output += `<div style="position: relative;"><span style="color: var(--theme-white);">Press </span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span><span style="color: var(--theme-white);"> + </span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span><span style="color: var(--theme-white);"> to stop the demo at any time.</span></div>`;
   output += `</div>`;
 
   return output;

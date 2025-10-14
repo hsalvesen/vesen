@@ -74,7 +74,11 @@ const terminalCommands = {
       }
     </style>`;
     
-    output += `<span style="color: var(--theme-cyan); word-wrap: break-word; overflow-wrap: break-word;">Type [command] --help for detailed usage information</span>`;
+    // Replace inline span with a full-width cyan-highlighted banner
+    output += `<div style="position: relative; display: block; width: 100%; box-sizing: border-box; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin-top: 8px;">`;
+    output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.08; border-radius: 4px;"></div>`;
+    output += `<div style="position: relative; color: var(--theme-white);">Type <span style="color: var(--theme-cyan); font-family: monospace; font-weight: bold;">--help</span> after a command for detailed usage information</div>`;
+    output += `</div>`;
     
     return output;
   },
@@ -280,28 +284,41 @@ export function processCommand(input: string, abortController?: AbortController 
   const args = input.trim().split(/\s+/);
   const command = args[0];
   const hasHelpFlag = args.includes('--help') || args.includes('-h');
-  
+
   // Check if demo is active and process demo-specific logic
   if (isDemoActive() && !hasHelpFlag) {
-    const demoResponse = processDemoCommand(input.trim());
-    if (demoResponse) {
-      // If demo processed the command, also execute the actual command
-      if (commands[command]) {
-        const actualOutput = typeof commands[command] === 'function' 
-          ? commands[command](args.slice(1), abortController)
-          : commands[command];
-        
-        // Show actual command output first, then any demo feedback
-        return Promise.resolve(actualOutput).then(output => {
-          return output + '\n\n' + demoResponse;
-        });
+      const demoResponse = processDemoCommand(input.trim());
+      if (demoResponse) {
+          // If demo processed the command, also execute the actual command
+          if (commands[command]) {
+              const actualOutput = typeof commands[command] === 'function' 
+                  ? commands[command](args.slice(1), abortController)
+                  : commands[command];
+              
+              // Show actual command output first, then any demo feedback
+              return Promise.resolve(actualOutput).then(output => {
+                  return output + '\n\n' + demoResponse;
+              });
+          }
+          return demoResponse;
       }
-      return demoResponse;
-    }
   }
   
+  // Detect incorrectly concatenated help flags (e.g., 'pwd--help', 'help-h')
+  const concatenatedHelp = command.match(/^([A-Za-z0-9]+)(--help|-h)$/i);
+  if (concatenatedHelp) {
+      const base = concatenatedHelp[1];
+  
+      // Try to suggest the closest valid command name
+      const suggestedBase = commands[base] ? base : (findSimilarCommand(base) || base);
+  
+      // Beep and return only a suggestion, do NOT execute or print help
+      playBeep();
+      return `Did you mean <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">${suggestedBase} --help</span>?`;
+  }
+
   if (hasHelpFlag) {
-    return getCommandHelp(command);
+      return getCommandHelp(command);
   }
   
   // Execute the actual command if it exists (exact match)
