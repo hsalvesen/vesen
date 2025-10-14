@@ -17,19 +17,19 @@ let demoState = {
 // const demoSteps = [...]
 const demoSteps = [
   {
-    title: "Welcome to the Vesen Terminal",
+    title: "Getting started with the command line",
     description: (likelyShell: string) =>
-      `A terminal is a minimal, low-level, text-based interface. Typically, all input is handled via the keyboard.
-    This demo will teach you how to interface with the command line using ${likelyShell}.`,
+      `The terminal provides access to the command line, where you can control your computer by typing commands instead of using a mouse or menus.
+      This demo will guide you through the basics of using the command line. The command interpreter language of your system is <span style=\"color: var(--theme-cyan); font-weight: bold; font-family: monospace;\">${likelyShell}</span>.`,
     instruction: "Type <span style=\"color: var(--theme-green); font-weight: bold; font-family: monospace;\">help</span> to see all available commands",
     expectedCommand: "help",
-    hint: "All commands are case-sensitive (lowercase).",
+    note: "All commands are case-sensitive (lowercase).",
     explanation: "The <span style=\"color: var(--theme-green); font-weight: bold; font-family: monospace;\">help</span> command shows you all available commands, organised by category."
   },
   {
-    title: "Applying Help Flags",
+    title: "Applying help flags",
     description: "Each command has inbuilt documentation accessible through help flags. These provide information on syntax, usage, and available arguments.",
-    instruction: "Pick any command from <span style=\"color: var(--theme-green); font-weight: bold; font-family: monospace;\">help</span> and add the suffix <span style=\"color: var(--theme-green); font-weight: bold; font-family: monospace;\">--help</span> or <span style=\"color: var(--theme-green); font-weight: bold; font-family: monospace;\">-h</span>, separated by a space, to see usage and options.",
+    instruction: "Pick any command from <span style=\"color: var(--theme-green); font-weight: bold; font-family: monospace;\">help</span> and add the suffix <span style=\"color: var(--theme-green); font-weight: bold; font-family: monospace;\">--help</span> to see usage and options.",
     expectedCommand: (cmd: string) => {
       const tokens = cmd.trim().split(/\s+/);
       if (tokens.length < 2) return false;
@@ -37,79 +37,79 @@ const demoSteps = [
       const hasHelpFlag = tokens.slice(1).some(t => t === '--help' || t === '-h');
       return !!(commandDescriptions as Record<string, string>)[commandName] && hasHelpFlag;
     },
-    hint: "Try append <span style=\"color: var(--theme-yellow); font-weight: bold; font-family: monospace;\">--help</span> or <span style=\"color: var(--theme-yellow); font-weight: bold; font-family: monospace;\">-h</span> to any command listed above",
+    note: "Programmers are lazy; the shorthand <span style=\"color: var(--theme-yellow); font-weight: bold; font-family: monospace;\">-h</span> will work just as well.",
     explanation: "Help flags print usage, arguments, and examples; read them before running a command."
   },
   {
-    title: "System Information",
+    title: "System information",
     description: "Let's learn about your system! The 'fastfetch' command shows detailed system information. Most commands support a '--help' flag to show usage and options — try 'fastfetch --help' now, then run 'fastfetch' to view your system.",
     instruction: "Type 'fastfetch' to see system details",
     expectedCommand: "fastfetch",
-    hint: "Type: fastfetch",
+    note: "Type: fastfetch",
     explanation: "This command displays your operating system, hardware, and browser information in a neat format."
   },
   {
-    title: "File System Navigation",
+    title: "File system navigation",
     description: "Terminals use directories (folders) to organise files. Let's explore!",
     instruction: "Type 'ls' to list files and directories",
     expectedCommand: "ls",
-    hint: "Type: ls",
+    note: "Type: ls",
     explanation: "'ls' stands for 'list' and shows you what's in your current directory."
   },
   {
-    title: "Current Location",
+    title: "Current location",
     description: "It's important to know where you are in the file system.",
     instruction: "Type 'pwd' to see your current directory path",
     expectedCommand: "pwd",
-    hint: "Type: pwd",
+    note: "Type: pwd",
     explanation: "'pwd' means 'print working directory' - it shows your current location."
   },
   {
-    title: "Reading Files",
+    title: "Reading files",
     description: "Let's read the contents of a file to learn more about this terminal.",
     instruction: "Type 'cat README.md' to read the README file",
     expectedCommand: "cat README.md",
-    hint: "Type: cat README.md",
+    note: "Type: cat README.md",
     explanation: "'cat' displays the contents of a file. README.md contains information about this terminal."
   },
   {
-    title: "Changing Directories",
+    title: "Changing directories",
     description: "You can navigate between directories using the 'cd' command.",
     instruction: "Type 'cd documents' to enter the documents folder",
     expectedCommand: "cd documents",
-    hint: "Type: cd documents",
+    note: "Type: cd documents",
     explanation: "'cd' means 'change directory'. Use it to move between folders."
   },
   {
-    title: "Going Back",
+    title: "Going back",
     description: "Use '..' to go back to the parent directory.",
     instruction: "Type 'cd ..' to go back to the previous directory",
     expectedCommand: "cd ..",
-    hint: "Type: cd ..",
+    note: "Type: cd ..",
     explanation: "'..' is a special symbol that means 'parent directory' - one level up."
   },
   {
-    title: "Creating Files",
+    title: "Creating files",
     description: "You can create new files using the 'touch' command.",
     instruction: "Type 'touch my-first-file.txt' to create a new file",
     expectedCommand: "touch my-first-file.txt",
-    hint: "Type: touch my-first-file.txt",
+    note: "Type: touch my-first-file.txt",
     explanation: "'touch' creates an empty file with the name you specify."
   },
   {
-    title: "Writing to Files",
+    title: "Writing to files",
     description: "Use 'echo' to write text to files or display messages.",
     instruction: "Type 'echo \"Hello Terminal!\" > my-first-file.txt' to write to your file",
     expectedCommand: "echo \"Hello Terminal!\" > my-first-file.txt",
-    hint: "Type: echo \"Hello Terminal!\" > my-first-file.txt",
+    note: "Type: echo \"Hello Terminal!\" > my-first-file.txt",
     explanation: "'echo' outputs text, and '>' redirects that text into a file."
   },
   {
-    title: "Network Commands",
+    title: "Network commands",
     description: "This terminal can interact with the internet! Let's check the weather.",
     instruction: "Type 'weather Sydney' to get weather information",
     expectedCommand: "weather Sydney",
-    hint: "Type: weather Sydney",
+    note: "Type: weather Sydney",
     explanation: "The weather command fetches real-time weather data from online services."
   },
   {
@@ -117,31 +117,23 @@ const demoSteps = [
     description: "You can customise the terminal's appearance with different themes.",
     instruction: "Type 'theme ls' to see available themes",
     expectedCommand: "theme ls",
-    hint: "Type: theme ls",
+    note: "Type: theme ls",
     explanation: "Themes change the colours and appearance of your terminal interface."
   },
   {
-    title: "Command History",
+    title: "Command history",
     description: "The terminal remembers your commands! You can view them anytime.",
     instruction: "Type 'history' to see all commands you've used",
     expectedCommand: "history",
-    hint: "Type: history",
+    note: "Type: history",
     explanation: "History shows a numbered list of all commands you've executed in this session."
-  },
-  {
-    title: "Getting Help",
-    description: "Any command can show detailed help information.",
-    instruction: "Type 'ls --help' to see detailed help for the ls command",
-    expectedCommand: "ls --help",
-    hint: "Type: ls --help",
-    explanation: "Adding '--help' to any command shows detailed usage information and examples."
   },
   {
     title: "Congratulations!",
     description: "You've completed the terminal demo! You now know the basics of command-line interaction.",
     instruction: "Type 'clear' to clear the screen and start exploring on your own",
     expectedCommand: "clear",
-    hint: "Type: clear",
+    note: "Type: clear",
     explanation: "You're now ready to explore the terminal independently. Remember, you can always use 'help' or '[command] --help' for assistance!"
   }
 ];
@@ -210,7 +202,7 @@ interface DemoStep {
   description: string | ((likelyShell: string) => string);
   instruction: string;
   expectedCommand: string | ((cmd: string) => boolean);
-  hint: string;
+  note: string;
   explanation: string;
 }
 
@@ -267,13 +259,13 @@ function getCurrentStepDisplay(): string {
   output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-cyan); font-weight: bold;">Task:</span> <span style="color: var(--theme-white);">${step.instruction}</span></div>`;
   output += `</div>`;
 
-  // Hint block
+  // note block
   output += `<div style="position: relative; padding: 6px; border-radius: 4px;">`;
   output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div>`;
-  output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-yellow); font-weight: bold;">Hint:</span> <span style="color: var(--theme-white); font-family: monospace;">${step.hint}</span></div>`;
+  output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-yellow); font-weight: bold;">Note:</span> <span style="color: var(--theme-white); font-family: monospace;">${step.note}</span></div>`;
   output += `</div>`;
 
-  // Clean progress bar at the bottom (after Hint)
+  // Clean progress bar at the bottom (after note)
   output += `<div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">`;
   output += `<span style="color: var(--theme-cyan); font-weight: bold;">Step ${stepNumber}/${totalSteps}</span>`;
   output += `<div style="flex: 1; height: 6px; background: var(--theme-brightBlack); border-radius: 4px; overflow: hidden;">`;

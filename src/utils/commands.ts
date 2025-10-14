@@ -30,7 +30,7 @@ const terminalCommands = {
     };
     
     // Simple three-column layout using CSS columns
-    let output = '\n<div style="column-count: 3; column-gap: 50px; column-fill: balance; break-inside: avoid;">';
+    let output = '<div style="column-count: 3; column-gap: 50px; column-fill: balance; break-inside: avoid;">';
     
     // Process each category
     Object.entries(categories).forEach(([category, cmds]) => {
