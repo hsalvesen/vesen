@@ -75,7 +75,7 @@ const terminalCommands = {
     </style>`;
     
     // Replace inline span with a full-width cyan-highlighted banner
-    output += `<div style="position: relative; display: block; width: 100%; box-sizing: border-box; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin-top: 8px;">`;
+    output += `<div style="position: relative; display: block; width: 100%; box-sizing: border-box; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin-top: 8px; margin-bottom: 8px;">`;
     output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.08; border-radius: 4px;"></div>`;
     output += `<div style="position: relative; color: var(--theme-white);">Type <span style="color: var(--theme-cyan); font-family: monospace; font-weight: bold;">--help</span> after a command for detailed usage information</div>`;
     output += `</div>`;
@@ -349,13 +349,94 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
 
   // Helper function to provide detailed help for each command
   function getCommandHelp(command: string): string {
-    const helpText = commandHelp[command];
-    if (!helpText) {
+    const raw = commandHelp[command];
+    if (!raw) {
       return `No help available for command: ${command}`;
     }
-    
-    // Add colour tip at the end
-    return helpText + `<br><span style="color: var(--theme-yellow);">Tip: Use 'help' to see all available commands</span>`;
+  
+    // Normalize and split into lines
+    const normalized = raw.replace(/\n/g, '<br>');
+    const lines = normalized.split('<br>');
+  
+    // Locate section indices
+    const usageIdx = lines.findIndex(l => /Usage:/i.test(l));
+    const examplesIdx = lines.findIndex(l => /Examples:/i.test(l));
+    const tipIdx = lines.findIndex(l => /Tip:/i.test(l));
+  
+    // Cyan: explanation (everything before Usage:)
+    const explanationLines =
+      usageIdx > 0 ? lines.slice(0, usageIdx) : (usageIdx === 0 ? [] : lines);
+  
+    // Purple: usage (from Usage: to just before Examples:/Tip:)
+    const yellowStartIdx = Math.min(
+      examplesIdx >= 0 ? examplesIdx : lines.length,
+      tipIdx >= 0 ? tipIdx : lines.length
+    );
+    const usageLines =
+      usageIdx >= 0 ? lines.slice(usageIdx, yellowStartIdx) : [];
+  
+    // Yellow: examples and/or tips (from Examples:/Tip: onward)
+    const examplesLines =
+      examplesIdx >= 0
+        ? lines.slice(examplesIdx + 1, tipIdx >= 0 ? tipIdx : lines.length)
+        : [];
+    const tipsLines =
+      tipIdx >= 0 ? lines.slice(tipIdx + 1) : [];
+  
+    // Helpers to strip label text from first line when needed
+    const stripLabel = (line: string, label: 'Usage' | 'Examples' | 'Tip') =>
+      line
+        .replace(new RegExp(`<span[^>]*>${label}:<\\/span>\\s*`, 'i'), '')
+        .replace(new RegExp(`${label}:\\s*`, 'i'), '');
+  
+    // Build usage content: remove the leading "Usage:" label and keep the rest
+    let usageContent = '';
+    if (usageLines.length) {
+      const first = stripLabel(usageLines[0], 'Usage');
+      const rest = usageLines.slice(1).join('<br>');
+      usageContent = [first, rest].filter(Boolean).join('<br>');
+    }
+  
+    // Build yellow content with standardized headings
+    let yellowContent = '';
+    if (examplesIdx >= 0) {
+      yellowContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-bottom: 4px;">Examples:</div>`;
+      yellowContent += `<div style="color: var(--theme-white);">${examplesLines.join('<br>') || ''}</div>`;
+    }
+    if (tipIdx >= 0) {
+      yellowContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-top: 8px; margin-bottom: 4px;">Tip:</div>`;
+      yellowContent += `<div style="color: var(--theme-white);">${tipsLines.join('<br>') || ''}</div>`;
+    }
+  
+    // Compose standardized blocks (uniform overlay opacity and spacing)
+    let output = '';
+  
+    // Cyan: explanation block
+    if (explanationLines.length) {
+      output += `<div style="position: relative; border-left: 4px solid var(--theme-cyan); padding: 8px 10px; border-radius: 4px; margin: 8px 0;">`;
+      output += `<div style="position: absolute; inset: 0; background: var(--theme-cyan); opacity: 0.12; border-radius: 4px;"></div>`;
+      output += `<div style="position: relative; color: var(--theme-white);">${explanationLines.join('<br>')}</div>`;
+      output += `</div>`;
+    }
+  
+    // Purple: usage block
+    if (usageContent) {
+      output += `<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin: 8px 0;">`;
+      output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div>`;
+      output += `<div style="position: relative; color: var(--theme-purple); font-weight: bold; margin-bottom: 4px;">Usage:</div>`;
+      output += `<div style="position: relative; color: var(--theme-white);">${usageContent}</div>`;
+      output += `</div>`;
+    }
+  
+    // Yellow: examples/tips block
+    if (yellowContent) {
+      output += `<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 8px 0;">`;
+      output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.12; border-radius: 4px;"></div>`;
+      output += `<div style="position: relative;">${yellowContent}</div>`;
+      output += `</div>`;
+    }
+  
+    return output;
   }
 
   // Combine all commands
