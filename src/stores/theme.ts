@@ -33,19 +33,24 @@ function updateCSSVariables(theme: Theme) {
 function updateFavicon(theme: Theme) {
   if (typeof document === 'undefined') return;
 
-  const href = `/dist/favicons/vesenFavicon${theme.name}.ico`;
+  // Map theme "wallaby" -> "Wallaby" to match file naming
+  const fileNameTheme = theme.name.charAt(0).toUpperCase() + theme.name.slice(1);
+  const file = `/favicons/vesenFavicon${fileNameTheme}.ico`;
+  const href = `${file}?v=${encodeURIComponent(fileNameTheme)}`;
 
-  // Update existing favicon links if present, otherwise create one
   const links = document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="shortcut icon"]');
   if (links.length > 0) {
     links.forEach((link) => {
+      link.rel = 'icon';
       link.type = 'image/x-icon';
+      link.sizes = 'any';
       link.href = href;
     });
   } else {
     const link = document.createElement('link');
     link.rel = 'icon';
     link.type = 'image/x-icon';
+    link.sizes = 'any';
     link.href = href;
     document.head.appendChild(link);
   }
