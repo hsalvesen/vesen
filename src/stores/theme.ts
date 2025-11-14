@@ -33,22 +33,27 @@ function updateCSSVariables(theme: Theme) {
 function updateFavicon(theme: Theme) {
   if (typeof document === 'undefined') return;
 
-  const href = `/dist/favicons/vesenFavicon${theme.name}.ico`;
+  // Serve icons from public/favicons so they deploy at /favicons/...
+  const baseHref = `/favicons/vesenFavicon${theme.name}.ico`;
 
-  // Update existing favicon links if present, otherwise create one
-  const links = document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="shortcut icon"]');
-  if (links.length > 0) {
-    links.forEach((link) => {
-      link.type = 'image/x-icon';
-      link.href = href;
-    });
-  } else {
-    const link = document.createElement('link');
-    link.rel = 'icon';
-    link.type = 'image/x-icon';
-    link.href = href;
-    document.head.appendChild(link);
-  }
+  // Add a tiny cache-buster to force reload in browsers that cache favicons aggressively
+  const href = `${baseHref}?v=${encodeURIComponent(theme.name)}`;
+
+  // Remove existing icon tags to avoid browsers sticking to the first one
+  document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach((link) => link.remove());
+
+  const link = document.createElement('link');
+  link.rel = 'icon';
+  link.type = 'image/x-icon';
+  link.href = href;
+  document.head.appendChild(link);
+
+  // Optional: also add shortcut icon for older Windows/IE behaviours
+  const shortcut = document.createElement('link');
+  shortcut.rel = 'shortcut icon';
+  shortcut.type = 'image/x-icon';
+  shortcut.href = href;
+  document.head.appendChild(shortcut);
 }
 
 // Get initial theme and set CSS variables immediately
