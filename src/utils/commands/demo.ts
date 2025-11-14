@@ -20,7 +20,7 @@ const demoSteps = [
     title: "Getting started with the command line",
     description: (likelyShell: string) =>
       `The terminal provides access to the command line, where you can control your computer by typing commands instead of using a mouse or menus.
-      This demo will guide you through the basics of using the command line. The command interpreter language of your system is <span style=\"color: var(--theme-cyan); font-weight: bold; font-family: monospace;\">${likelyShell}</span>.`,
+      This demo will guide you through the basics of using the command line. The command interpreter language of your system is <span style=\"color: var(--theme-cyan); font-weight: bold; font-family: monospace;">BASH</span>.`,
     instruction: "Type <span style=\"color: var(--theme-green); font-weight: bold; font-family: monospace;\">help</span> to see all available commands",
     expectedCommand: "help",
     note: "All commands are case-sensitive (lowercase).",
@@ -217,8 +217,8 @@ function getCurrentStepDisplay(): string {
   const totalSteps = demoSteps.length;
 
   // Main step container with dynamic theme colors
-  let output = `<div style="position: relative; border: 2px solid var(--theme-cyan); padding: 20px; margin: 10px 0; border-radius: 8px;">`;
-  output += `<div style="position: absolute; inset: 0; background: linear-gradient(135deg, var(--theme-cyan), var(--theme-purple)); opacity: 0.08; border-radius: 8px;"></div>`;
+  let output = `<div style="position: relative; border: 2px solid var(--theme-cyan); padding: 16px; margin: 8px 0; border-radius: 8px;">`;
+  output += `<div style="position: absolute; inset: 0; background: linear-gradient(135deg, var(--theme-cyan), var(--theme-purple)); opacity: 0.06; border-radius: 8px;"></div>`;
   output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;">`;
 
 
@@ -244,29 +244,33 @@ function getCurrentStepDisplay(): string {
 
   // Step content (skip title/description for step 1)
   if (stepNumber) {
-    output += `<div style="margin-bottom: 12px;">`;
-    output += `<span style="color: var(--theme-cyan); font-weight: bold; font-size: 1.05em;">${step.title}</span><br>`;
-    const descriptionText = typeof step.description === 'function'
-      ? step.description(likelyShell)
-      : step.description;
-    output += `<span style="color: var(--theme-white);">${descriptionText}</span>`;
+    output += `<div style="margin-bottom: 8px;">`;
+    output += `<span style="color: var(--theme-cyan); font-weight: bold; font-size: 1.05em;">${step.title}</span>`;
     output += `</div>`;
+    const descriptionText = typeof step.description === 'function' ? step.description(likelyShell) : step.description;
+    output += `<details style="margin: 6px 0;">`;
+    output += `<summary style="color: var(--theme-cyan); font-weight: bold; cursor: pointer;">Details</summary>`;
+    output += `<div style="color: var(--theme-white); margin-top: 4px;">${descriptionText}</div>`;
+    output += `</details>`;
   }
 
   // Instruction block
-  output += `<div style="position: relative; padding: 8px; border-radius: 4px; margin: 8px 0;">`;
+  output += `<div style="position: relative; padding: 8px; border-radius: 4px; margin: 6px 0;">`;
   output += `<div style="position: absolute; inset: 0; background: var(--theme-cyan); opacity: 0.08; border-radius: 4px;"></div>`;
-  output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-cyan); font-weight: bold;">Task:</span> <span style="color: var(--theme-white);">${step.instruction}</span></div>`;
+  output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-cyan); font-weight: bold;">Next:</span> <span style="color: var(--theme-white);">${step.instruction}</span></div>`;
   output += `</div>`;
 
   // note block
-  output += `<div style="position: relative; padding: 6px; border-radius: 4px;">`;
+  output += `<details style="margin: 6px 0;">`;
+  output += `<summary style="color: var(--theme-yellow); font-weight: bold; cursor: pointer;">Hint</summary>`;
+  output += `<div style="position: relative; padding: 6px; border-radius: 4px; margin-top: 4px;">`;
   output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div>`;
-  output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-yellow); font-weight: bold;">Note:</span> <span style="color: var(--theme-white); font-family: monospace;">${step.note}</span></div>`;
+  output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-white); font-family: monospace;">${step.note}</span></div>`;
   output += `</div>`;
+  output += `</details>`;
 
   // Clean progress bar at the bottom (after note)
-  output += `<div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">`;
+  output += `<div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">`;
   output += `<span style="color: var(--theme-cyan); font-weight: bold;">Step ${stepNumber}/${totalSteps}</span>`;
   output += `<div style="flex: 1; height: 6px; background: var(--theme-brightBlack); border-radius: 4px; overflow: hidden;">`;
   output += `<div style="width: ${progress}%; height: 100%; background: var(--theme-green);"></div>`;

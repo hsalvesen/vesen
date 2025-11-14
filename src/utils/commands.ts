@@ -4,7 +4,7 @@ import { history, commandHistory } from '../stores/history';
 import { systemCommands } from './commands/system';
 import { fileSystemCommands } from './commands/fileSystem';
 import { networkCommands } from './commands/network';
-import { demoCommands, isDemoActive, processDemoCommand } from './commands/demo';
+import { demoCommands, isDemoActive, processDemoCommand, stopDemoViaInterrupt } from './commands/demo';
 import { theme } from '../stores/theme';
 import { get } from 'svelte/store';
 import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from './virtualFileSystem';
@@ -14,72 +14,39 @@ import { createInitialFileSystem } from './virtualFileSystem';
 
 // Terminal-specific commands that don't fit in other modules
 const terminalCommands = {
-  help: () => {
+  help: (args: string[] = []) => {
     const commandList = Object.keys(commands);
-    
-    // Group commands by category for better organisation
+    const target = args[0];
+    if (target && commandList.includes(target)) {
+      return getCommandHelp(target);
+    }
     const categories: Record<string, string[]> = {
       'Getting Started': ['demo'],
       'Info': ['fastfetch', 'whoami'],
-      'File System': ['ls', 'pwd', 'cd', 'cat', 'echo'], 
-      'File Operations': ['touch', 'rm', 'mkdir'], 
-      'Terminal': ['help', 'clear', 'reset', 'exit', 'history', 'sudo'],
+      'File System': ['ls', 'pwd', 'cd', 'cat', 'echo'],
+      'File Operations': ['touch', 'rm', 'mkdir'],
+      'Terminal': ['help', 'clear', 'reset', 'poweroff', 'history', 'sudo'],
       'Network': ['weather', 'curl', 'stock', 'speedtest'],
       'Customisation': ['theme'],
       'Project': ['repo', 'email', 'banner']
     };
-    
-    // Simple three-column layout using CSS columns
-    let output = '<div style="column-count: 3; column-gap: 50px; column-fill: balance; break-inside: avoid;">';
-    
-    // Process each category
+    let output = '';
+    output += `<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin: 6px 0;">`;
+    output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.08; border-radius: 4px;"></div>`;
+    output += `<div style="position: relative; color: var(--theme-white);"><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">help &lt;command&gt;</span> or <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">&lt;command&gt; --help</span> for details</div>`;
+    output += `</div>`;
     Object.entries(categories).forEach(([category, cmds]) => {
-      const availableCommands = cmds.filter(cmd => commandList.includes(cmd));
-      if (availableCommands.length === 0) return;
-      
-      output += `<div style="break-inside: avoid; margin-bottom: 20px;">`;
-      
-      // Use theme variables for dynamic subtitle highlight and text color
-      output += `<div style="position: relative; display: block; width: 100%; box-sizing: border-box; border-radius: 4px; margin-bottom: 8px; overflow: hidden;">`;
-      output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.12;"></div>`;
-      output += `<div style="position: relative; color: var(--theme-yellow); font-weight: bold; padding: 6px 10px;">${category}</div>`;
-      output += `</div>`;
-      
-      // Render commands as simple rows without borders/boxes
-      for (const cmd of availableCommands) {
-        const description = commandDescriptions[cmd] || '';
-        output += `<div style="break-inside: avoid; margin: 4px 0; display: flex; align-items: baseline; gap: 12px;">`;
-        output += `<span style="color: var(--theme-brightBlack); font-family: monospace; font-weight: bold;">❯</span>`;
-        output += `<span style="color: var(--theme-green); font-weight: bold; min-width: 120px; flex-shrink: 0; font-family: monospace;">${cmd}</span>`;
-        output += `<span style="color: var(--theme-white); word-wrap: break-word; overflow-wrap: break-word;">${description}</span>`;
-        output += `</div>`;
-      }
+      const availableCommands = cmds.filter((cmd) => commandList.includes(cmd));
+      if (!availableCommands.length) return;
+      const line = availableCommands
+        .map((cmd) => `<span style="color: var(--theme-green); font-weight: bold; font-family: monospace;">${cmd}</span>`)
+        .join(`<span style="color: var(--theme-brightBlack);">, </span>`);
+      output += `<div style="position: relative; padding: 6px 10px; border-radius: 4px; margin: 6px 0;">`;
+      output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div>`;
+      output += `<div style="position: relative; color: var(--theme-yellow); font-weight: bold; display: inline-block; min-width: 160px;">${category}</div>`;
+      output += `<div style="position: relative; display: inline; color: var(--theme-white);">${line}</div>`;
       output += `</div>`;
     });
-    
-    output += '</div>';
-    
-    // Add responsive media query for smaller screens
-    output += `<style>
-      @media (max-width: 1000px) {
-        div[style*="column-count: 3"] {
-          column-count: 2 !important;
-          column-gap: 40px !important;
-        }
-      }
-      @media (max-width: 650px) {
-        div[style*="column-count: 3"] {
-          column-count: 1 !important;
-        }
-      }
-    </style>`;
-    
-    // Replace inline span with a full-width cyan-highlighted banner
-    output += `<div style="position: relative; display: block; width: 100%; box-sizing: border-box; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin-top: 8px; margin-bottom: 8px;">`;
-    output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.08; border-radius: 4px;"></div>`;
-    output += `<div style="position: relative; color: var(--theme-white);">Type <span style="color: var(--theme-cyan); font-family: monospace; font-weight: bold;">--help</span> after a command for detailed usage information</div>`;
-    output += `</div>`;
-    
     return output;
   },
 
@@ -285,6 +252,11 @@ export function processCommand(input: string, abortController?: AbortController 
   const command = args[0];
   const hasHelpFlag = args.includes('--help') || args.includes('-h');
 
+  // Allow typing `exit` to cancel the demo without shutting down terminal
+  if (isDemoActive() && command === 'exit') {
+    return stopDemoViaInterrupt();
+  }
+
   // Check if demo is active and process demo-specific logic
   if (isDemoActive() && !hasHelpFlag) {
       const demoResponse = processDemoCommand(input.trim());
@@ -397,15 +369,15 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
       usageContent = [first, rest].filter(Boolean).join('<br>');
     }
   
-    // Build yellow content with standardized headings
-    let yellowContent = '';
+    let examplesContent = '';
     if (examplesIdx >= 0) {
-      yellowContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-bottom: 4px;">Examples:</div>`;
-      yellowContent += `<div style="color: var(--theme-white);">${examplesLines.join('<br>') || ''}</div>`;
+      examplesContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-bottom: 4px;">Examples:</div>`;
+      examplesContent += `<div style="color: var(--theme-white);">${examplesLines.join('<br>') || ''}</div>`;
     }
+    let tipsContent = '';
     if (tipIdx >= 0) {
-      yellowContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-top: 8px; margin-bottom: 4px;">Tip:</div>`;
-      yellowContent += `<div style="color: var(--theme-white);">${tipsLines.join('<br>') || ''}</div>`;
+      tipsContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-top: 8px; margin-bottom: 4px;">Tip:</div>`;
+      tipsContent += `<div style="color: var(--theme-white);">${tipsLines.join('<br>') || ''}</div>`;
     }
   
     // Compose standardized blocks (uniform overlay opacity and spacing)
@@ -428,11 +400,10 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
       output += `</div>`;
     }
   
-    // Yellow: examples/tips block
-    if (yellowContent) {
+    if (examplesContent || tipsContent) {
       output += `<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 8px 0;">`;
       output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.12; border-radius: 4px;"></div>`;
-      output += `<div style="position: relative;">${yellowContent}</div>`;
+      output += `<div style="position: relative;">${examplesContent}${tipsContent}</div>`;
       output += `</div>`;
     }
   
