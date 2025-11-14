@@ -253,7 +253,6 @@ export function processCommand(input: string, abortController?: AbortController 
   const hasHelpFlag = args.includes('--help') || args.includes('-h');
 
   // Allow typing `exit` to cancel the demo
-  // Allow typing `exit` to cancel the demo
   if (isDemoActive() && command === 'exit') {
     return stopDemoViaInterrupt();
   }
@@ -321,72 +320,67 @@ export function processCommand(input: string, abortController?: AbortController 
 export { virtualFileSystem, currentPath } from './virtualFileSystem';
 
   // Helper function to provide detailed help for each command
-  // function getCommandHelp(command: string): string
   function getCommandHelp(command: string): string {
     const raw = commandHelp[command];
     if (!raw) {
       return `No help available for command: ${command}`;
     }
   
+    // Normalize and split into lines
     const normalized = raw.replace(/\n/g, '<br>');
     const lines = normalized.split('<br>');
   
+    // Locate section indices
     const usageIdx = lines.findIndex(l => /Usage:/i.test(l));
     const examplesIdx = lines.findIndex(l => /Examples:/i.test(l));
     const tipIdx = lines.findIndex(l => /Tip:/i.test(l));
   
+    // Cyan: explanation (everything before Usage:)
     const explanationLines =
       usageIdx > 0 ? lines.slice(0, usageIdx) : (usageIdx === 0 ? [] : lines);
   
+    // Purple: usage (from Usage: to just before Examples:/Tip:)
     const yellowStartIdx = Math.min(
       examplesIdx >= 0 ? examplesIdx : lines.length,
       tipIdx >= 0 ? tipIdx : lines.length
     );
-  
-  
     const usageLines =
       usageIdx >= 0 ? lines.slice(usageIdx, yellowStartIdx) : [];
   
+    // Yellow: examples and/or tips (from Examples:/Tip: onward)
     const examplesLines =
       examplesIdx >= 0
         ? lines.slice(examplesIdx + 1, tipIdx >= 0 ? tipIdx : lines.length)
         : [];
-  
-  
     const tipsLines =
       tipIdx >= 0 ? lines.slice(tipIdx + 1) : [];
   
+    // Helpers to strip label text from first line when needed
     const stripLabel = (line: string, label: 'Usage' | 'Examples' | 'Tip') =>
       line
         .replace(new RegExp(`<span[^>]*>${label}:<\\/span>\\s*`, 'i'), '')
         .replace(new RegExp(`${label}:\\s*`, 'i'), '');
   
+    // Build usage content: remove the leading "Usage:" label and keep the rest
     let usageContent = '';
     if (usageLines.length) {
-      const cleaned = usageLines.map(line => stripLabel(line, 'Usage'));
-      usageContent = `<div style="color: var(--theme-white);">${cleaned.join('<br>')}</div>`;
-      const cleaned = usageLines.map(line => stripLabel(line, 'Usage'));
-      usageContent = `<div style="color: var(--theme-white);">${cleaned.join('<br>')}</div>`;
+      const first = stripLabel(usageLines[0], 'Usage');
+      const rest = usageLines.slice(1).join('<br>');
+      usageContent = [first, rest].filter(Boolean).join('<br>');
     }
-  
   
     let examplesContent = '';
-    if (examplesLines.length) {
-    if (examplesLines.length) {
+    if (examplesIdx >= 0) {
       examplesContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-bottom: 4px;">Examples:</div>`;
-      examplesContent += `<div style="color: var(--theme-white);">${examplesLines.join('<br>')}</div>`;
-      examplesContent += `<div style="color: var(--theme-white);">${examplesLines.join('<br>')}</div>`;
+      examplesContent += `<div style="color: var(--theme-white);">${examplesLines.join('<br>') || ''}</div>`;
     }
-  
-  
     let tipsContent = '';
-    if (tipsLines.length) {
-      tipsContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-top: 8px;">Tip:</div>`;
-    if (tipsLines.length) {
-      tipsContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-top: 8px;">Tip:</div>`;
+    if (tipIdx >= 0) {
+      tipsContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-top: 8px; margin-bottom: 4px;">Tip:</div>`;
       tipsContent += `<div style="color: var(--theme-white);">${tipsLines.join('<br>') || ''}</div>`;
     }
   
+    // Compose standardized blocks (uniform overlay opacity and spacing)
     let output = '';
   
     // Cyan: explanation block
@@ -406,7 +400,6 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
       output += `</div>`;
     }
   
-    // Yellow: examples and tips in a single block
     if (examplesContent || tipsContent) {
       output += `<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 8px 0;">`;
       output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.12; border-radius: 4px;"></div>`;
@@ -418,12 +411,11 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
   }
 
   // Combine all commands
-  // export const commands (composition object)
   export const commands: Record<string, (args: string[], abortController?: AbortController) => Promise<string> | string> = {
-  ...systemCommands,
-  ...fileSystemCommands,
-  ...networkCommands,
-  ...terminalCommands,
-  ...demoCommands,
-  ...projectCommands
+    ...systemCommands,
+    ...fileSystemCommands,
+    ...networkCommands,
+    ...terminalCommands,
+    ...demoCommands,
+    ...projectCommands
   };
