@@ -14,11 +14,7 @@ import { createInitialFileSystem } from './virtualFileSystem';
 
 // Terminal-specific commands that don't fit in other modules
 const terminalCommands = {
-<<<<<<< HEAD
-  help: () => {
-=======
   help: (args: string[] = []) => {
->>>>>>> demo
     const commandList = Object.keys(commands);
     const target = args[0];
     if (target && commandList.includes(target)) {
@@ -34,60 +30,6 @@ const terminalCommands = {
       'Customisation': ['theme'],
       'Project': ['repo', 'email', 'banner']
     };
-<<<<<<< HEAD
-    
-    // Simple three-column layout using CSS columns
-    let output = '<div style="column-count: 3; column-gap: 50px; column-fill: balance; break-inside: avoid;">';
-    
-    // Process each category
-    Object.entries(categories).forEach(([category, cmds]) => {
-      const availableCommands = cmds.filter(cmd => commandList.includes(cmd));
-      if (availableCommands.length === 0) return;
-      
-      output += `<div style="break-inside: avoid; margin-bottom: 20px;">`;
-      
-      // Use theme variables for dynamic subtitle highlight and text color
-      output += `<div style="position: relative; display: block; width: 100%; box-sizing: border-box; border-radius: 4px; margin-bottom: 8px; overflow: hidden;">`;
-      output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.12;"></div>`;
-      output += `<div style="position: relative; color: var(--theme-yellow); font-weight: bold; padding: 6px 10px;">${category}</div>`;
-      output += `</div>`;
-      
-      // Render commands as simple rows without borders/boxes
-      for (const cmd of availableCommands) {
-        const description = commandDescriptions[cmd] || '';
-        output += `<div style="break-inside: avoid; margin: 4px 0; display: flex; align-items: baseline; gap: 12px;">`;
-        output += `<span style="color: var(--theme-brightBlack); font-family: monospace; font-weight: bold;">❯</span>`;
-        output += `<span style="color: var(--theme-green); font-weight: bold; min-width: 120px; flex-shrink: 0; font-family: monospace;">${cmd}</span>`;
-        output += `<span style="color: var(--theme-white); word-wrap: break-word; overflow-wrap: break-word;">${description}</span>`;
-        output += `</div>`;
-      }
-      output += `</div>`;
-    });
-    
-    output += '</div>';
-    
-    // Add responsive media query for smaller screens
-    output += `<style>
-      @media (max-width: 1000px) {
-        div[style*="column-count: 3"] {
-          column-count: 2 !important;
-          column-gap: 40px !important;
-        }
-      }
-      @media (max-width: 650px) {
-        div[style*="column-count: 3"] {
-          column-count: 1 !important;
-        }
-      }
-    </style>`;
-    
-    // Replace inline span with a full-width cyan-highlighted banner
-    output += `<div style="position: relative; display: block; width: 100%; box-sizing: border-box; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin-top: 8px; margin-bottom: 8px;">`;
-    output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.08; border-radius: 4px;"></div>`;
-    output += `<div style="position: relative; color: var(--theme-white);">Type <span style="color: var(--theme-cyan); font-family: monospace; font-weight: bold;">--help</span> after a command for detailed usage information</div>`;
-    output += `</div>`;
-    
-=======
     let output = '';
     output += `<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin: 6px 0;">`;
     output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.08; border-radius: 4px;"></div>`;
@@ -105,61 +47,48 @@ const terminalCommands = {
       output += `<div style="position: relative; display: inline; color: var(--theme-white);">${line}</div>`;
       output += `</div>`;
     });
->>>>>>> demo
     return output;
   },
 
   history: (args: string[]) => {
     const currentTheme = get(theme);
     const commandHistoryData: string[] = get(commandHistory);
-    
+
     if (commandHistoryData.length === 0) {
       return 'No commands in history.';
     }
-    
-    // Calculate responsive width for history display
+
     const baseCharWidth = 8;
     const padding = 40;
     const availableWidth = Math.max(window.innerWidth - padding, 200);
     const terminalWidth = Math.floor(availableWidth / baseCharWidth);
-    const minWidth = 30; // Minimum width for history
-    const maxWidth = 100; // Maximum width for history
+    const minWidth = 30;
+    const maxWidth = 100;
     const responsiveWidth = Math.min(maxWidth, Math.max(minWidth, terminalWidth));
-    
-    // Format history with line numbers and handle overflow
+
     const historyLines: string[] = [];
-    
+
     commandHistoryData.forEach((cmd: string, index: number) => {
       const lineNumber = (index + 1).toString().padStart(4, ' ');
-      // Use theme cyan for history numbers instead of brightBlack
       const prefix = `<span style="color: ${currentTheme.cyan};">${lineNumber}</span>  `;
-      
-      // Check if the line is too long and needs wrapping
-      const totalLength = lineNumber.length + 2 + cmd.length; // +2 for spacing
-      
+      const totalLength = lineNumber.length + 2 + cmd.length;
+
       if (totalLength > responsiveWidth) {
-        // Split long commands across multiple lines
-        const commandMaxWidth = responsiveWidth - 6; // Account for line number and spacing
+        const commandMaxWidth = responsiveWidth - 6;
         const chunks: string[] = [];
-        
         for (let i = 0; i < cmd.length; i += commandMaxWidth) {
           chunks.push(cmd.substring(i, i + commandMaxWidth));
         }
-        
-        // First line with line number
         historyLines.push(prefix + `<span style="color: ${currentTheme.white};">${chunks[0]}</span>`);
-        
-        // Continuation lines with proper indentation
         for (let i = 1; i < chunks.length; i++) {
-          const indent = '      '; // 6 spaces to align with command text
+          const indent = '      ';
           historyLines.push(`<span style="color: ${currentTheme.cyan};">${indent}</span><span style="color: ${currentTheme.white};">${chunks[i]}</span>`);
         }
       } else {
-        // Command fits on one line
         historyLines.push(prefix + `<span style="color: ${currentTheme.white};">${cmd}</span>`);
       }
     });
-    
+
     return historyLines.join('\n');
   },
 
@@ -167,37 +96,27 @@ const terminalCommands = {
     if (args.length === 0) {
       return commandHelp.sudo;
     }
-    
-    // This shouldn't be reached in normal flow since Input.svelte handles sudo specially
-    // But keeping as fallback
     window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
     return '';
   },
 
   reset: () => {
-    // Reset theme to default (petroica)
     const defaultTheme = themes.find((t) => t.name.toLowerCase() === 'petroica')!;
     theme.set(defaultTheme);
-    
-    // Reset current path to default
+
     currentPath.length = 0;
     currentPath.push('home', 'user');
-    
-    // Clear display history
+
     history.set([]);
-    
-    // Set command history to only contain banner
+
     commandHistory.set(['banner']);
-    
-    // Restore virtual file system to original state
+
     const initialFS = createInitialFileSystem();
     virtualFileSystem.children = initialFS.children;
-    
-    // Clear the terminal history and add the banner
+
     const bannerOutput = systemCommands.banner();
     history.set([{ command: 'banner', outputs: [bannerOutput] }]);
-    
-    // Return empty string since we're handling the output via history
+
     return '';
   }
 };
@@ -311,69 +230,56 @@ export function processCommand(input: string, abortController?: AbortController 
   const command = args[0];
   const hasHelpFlag = args.includes('--help') || args.includes('-h');
 
-<<<<<<< HEAD
-=======
-  // Allow typing `exit` to cancel the demo without shutting down terminal
+  // Allow typing `exit` to cancel the demo
   if (isDemoActive() && command === 'exit') {
     return stopDemoViaInterrupt();
   }
 
->>>>>>> demo
-  // Check if demo is active and process demo-specific logic
+  // Route demo input when active (except help)
   if (isDemoActive() && !hasHelpFlag) {
-      const demoResponse = processDemoCommand(input.trim());
-      if (demoResponse) {
-          // If demo processed the command, also execute the actual command
-          if (commands[command]) {
-              const actualOutput = typeof commands[command] === 'function' 
-                  ? commands[command](args.slice(1), abortController)
-                  : commands[command];
-              
-              // Show actual command output first, then any demo feedback
-              return Promise.resolve(actualOutput).then(output => {
-                  return output + '\n\n' + demoResponse;
-              });
-          }
-          return demoResponse;
+    const demoResponse = processDemoCommand(input.trim());
+    if (demoResponse) {
+      if (commands[command]) {
+        const actualOutput = typeof commands[command] === 'function'
+          ? commands[command](args.slice(1), abortController as AbortController)
+          : commands[command];
+
+        return Promise.resolve(actualOutput).then(output => {
+          return output + '\n\n' + demoResponse;
+        });
       }
+      return demoResponse;
+    }
   }
-  
-  // Detect incorrectly concatenated help flags (e.g., 'pwd--help', 'help-h')
+
+  // Detect incorrectly concatenated help flags (e.g., 'pwd--help')
   const concatenatedHelp = command.match(/^([A-Za-z0-9]+)(--help|-h)$/i);
   if (concatenatedHelp) {
-      const base = concatenatedHelp[1];
-  
-      // Try to suggest the closest valid command name
-      const suggestedBase = commands[base] ? base : (findSimilarCommand(base) || base);
-  
-      // Beep and return only a suggestion, do NOT execute or print help
-      playBeep();
-      return `Did you mean <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">${suggestedBase} --help</span>?`;
+    const base = concatenatedHelp[1];
+    const suggestedBase = commands[base] ? base : (findSimilarCommand(base) || base);
+    playBeep();
+    return `Did you mean <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">${suggestedBase} --help</span>?`;
   }
 
   if (hasHelpFlag) {
-      return getCommandHelp(command);
+    return getCommandHelp(command);
   }
-  
-  // Execute the actual command if it exists (exact match)
+
+  // Execute command when present
   if (commands[command]) {
-    // Pass abort controller to network commands and fastfetch
     if (['curl', 'weather', 'stock', 'fastfetch', 'speedtest'].includes(command) && abortController) {
       return commands[command](args.slice(1), abortController);
     }
     return commands[command](args.slice(1));
   }
-  
-  // Try to find a similar command with different case
+
+  // Suggest similar command
   const similarCommand = findSimilarCommand(command);
   if (similarCommand) {
-    // Play beep sound for unrecognized command
     playBeep();
-    const currentTheme = get(theme);
     return `Command '${command}' not found. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${similarCommand}</span>? Type 'help' to see available commands.`;
   }
-  
-  // Play beep sound for unrecognized command
+
   playBeep();
   return `Command '${command}' not found. Type 'help' to see available commands.`;
 }
@@ -388,76 +294,57 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
       return `No help available for command: ${command}`;
     }
   
-    // Normalize and split into lines
     const normalized = raw.replace(/\n/g, '<br>');
     const lines = normalized.split('<br>');
   
-    // Locate section indices
     const usageIdx = lines.findIndex(l => /Usage:/i.test(l));
     const examplesIdx = lines.findIndex(l => /Examples:/i.test(l));
     const tipIdx = lines.findIndex(l => /Tip:/i.test(l));
   
-    // Cyan: explanation (everything before Usage:)
     const explanationLines =
       usageIdx > 0 ? lines.slice(0, usageIdx) : (usageIdx === 0 ? [] : lines);
   
-    // Purple: usage (from Usage: to just before Examples:/Tip:)
     const yellowStartIdx = Math.min(
       examplesIdx >= 0 ? examplesIdx : lines.length,
       tipIdx >= 0 ? tipIdx : lines.length
     );
+  
     const usageLines =
       usageIdx >= 0 ? lines.slice(usageIdx, yellowStartIdx) : [];
   
-    // Yellow: examples and/or tips (from Examples:/Tip: onward)
     const examplesLines =
       examplesIdx >= 0
         ? lines.slice(examplesIdx + 1, tipIdx >= 0 ? tipIdx : lines.length)
         : [];
+  
     const tipsLines =
       tipIdx >= 0 ? lines.slice(tipIdx + 1) : [];
   
-    // Helpers to strip label text from first line when needed
     const stripLabel = (line: string, label: 'Usage' | 'Examples' | 'Tip') =>
       line
         .replace(new RegExp(`<span[^>]*>${label}:<\\/span>\\s*`, 'i'), '')
         .replace(new RegExp(`${label}:\\s*`, 'i'), '');
   
-    // Build usage content: remove the leading "Usage:" label and keep the rest
     let usageContent = '';
     if (usageLines.length) {
-      const first = stripLabel(usageLines[0], 'Usage');
-      const rest = usageLines.slice(1).join('<br>');
-      usageContent = [first, rest].filter(Boolean).join('<br>');
+      const cleaned = usageLines.map(line => stripLabel(line, 'Usage'));
+      usageContent = `<div style="color: var(--theme-white);">${cleaned.join('<br>')}</div>`;
     }
   
-<<<<<<< HEAD
-    // Build yellow content with standardized headings
-    let yellowContent = '';
-    if (examplesIdx >= 0) {
-      yellowContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-bottom: 4px;">Examples:</div>`;
-      yellowContent += `<div style="color: var(--theme-white);">${examplesLines.join('<br>') || ''}</div>`;
-    }
-    if (tipIdx >= 0) {
-      yellowContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-top: 8px; margin-bottom: 4px;">Tip:</div>`;
-      yellowContent += `<div style="color: var(--theme-white);">${tipsLines.join('<br>') || ''}</div>`;
-=======
     let examplesContent = '';
-    if (examplesIdx >= 0) {
+    if (examplesLines.length) {
       examplesContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-bottom: 4px;">Examples:</div>`;
-      examplesContent += `<div style="color: var(--theme-white);">${examplesLines.join('<br>') || ''}</div>`;
-    }
-    let tipsContent = '';
-    if (tipIdx >= 0) {
-      tipsContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-top: 8px; margin-bottom: 4px;">Tip:</div>`;
-      tipsContent += `<div style="color: var(--theme-white);">${tipsLines.join('<br>') || ''}</div>`;
->>>>>>> demo
+      examplesContent += `<div style="color: var(--theme-white);">${examplesLines.join('<br>')}</div>`;
     }
   
-    // Compose standardized blocks (uniform overlay opacity and spacing)
+    let tipsContent = '';
+    if (tipsLines.length) {
+      tipsContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-top: 8px;">Tip:</div>`;
+      tipsContent += `<div style="color: var(--theme-white);">${tipsLines.join('<br>') || ''}</div>`;
+    }
+  
     let output = '';
   
-    // Cyan: explanation block
     if (explanationLines.length) {
       output += `<div style="position: relative; border-left: 4px solid var(--theme-cyan); padding: 8px 10px; border-radius: 4px; margin: 8px 0;">`;
       output += `<div style="position: absolute; inset: 0; background: var(--theme-cyan); opacity: 0.12; border-radius: 4px;"></div>`;
@@ -465,7 +352,6 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
       output += `</div>`;
     }
   
-    // Purple: usage block
     if (usageContent) {
       output += `<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin: 8px 0;">`;
       output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div>`;
@@ -474,18 +360,10 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
       output += `</div>`;
     }
   
-<<<<<<< HEAD
-    // Yellow: examples/tips block
-    if (yellowContent) {
-      output += `<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 8px 0;">`;
-      output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.12; border-radius: 4px;"></div>`;
-      output += `<div style="position: relative;">${yellowContent}</div>`;
-=======
     if (examplesContent || tipsContent) {
       output += `<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 8px 0;">`;
       output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.12; border-radius: 4px;"></div>`;
       output += `<div style="position: relative;">${examplesContent}${tipsContent}</div>`;
->>>>>>> demo
       output += `</div>`;
     }
   
