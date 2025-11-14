@@ -253,6 +253,7 @@ export function processCommand(input: string, abortController?: AbortController 
   const hasHelpFlag = args.includes('--help') || args.includes('-h');
 
   // Allow typing `exit` to cancel the demo
+  // Allow typing `exit` to cancel the demo
   if (isDemoActive() && command === 'exit') {
     return stopDemoViaInterrupt();
   }
@@ -342,6 +343,7 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
       tipIdx >= 0 ? tipIdx : lines.length
     );
   
+  
     const usageLines =
       usageIdx >= 0 ? lines.slice(usageIdx, yellowStartIdx) : [];
   
@@ -349,6 +351,7 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
       examplesIdx >= 0
         ? lines.slice(examplesIdx + 1, tipIdx >= 0 ? tipIdx : lines.length)
         : [];
+  
   
     const tipsLines =
       tipIdx >= 0 ? lines.slice(tipIdx + 1) : [];
@@ -362,15 +365,23 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
     if (usageLines.length) {
       const cleaned = usageLines.map(line => stripLabel(line, 'Usage'));
       usageContent = `<div style="color: var(--theme-white);">${cleaned.join('<br>')}</div>`;
+      const cleaned = usageLines.map(line => stripLabel(line, 'Usage'));
+      usageContent = `<div style="color: var(--theme-white);">${cleaned.join('<br>')}</div>`;
     }
+  
   
     let examplesContent = '';
     if (examplesLines.length) {
+    if (examplesLines.length) {
       examplesContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-bottom: 4px;">Examples:</div>`;
+      examplesContent += `<div style="color: var(--theme-white);">${examplesLines.join('<br>')}</div>`;
       examplesContent += `<div style="color: var(--theme-white);">${examplesLines.join('<br>')}</div>`;
     }
   
+  
     let tipsContent = '';
+    if (tipsLines.length) {
+      tipsContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-top: 8px;">Tip:</div>`;
     if (tipsLines.length) {
       tipsContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-top: 8px;">Tip:</div>`;
       tipsContent += `<div style="color: var(--theme-white);">${tipsLines.join('<br>') || ''}</div>`;
