@@ -284,7 +284,7 @@ function getCurrentStepDisplay(): string {
   // Ctrl + C tip with theme variables and extra bottom spacing
   output += `<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin-top: 12px; margin-bottom: 20px;">`;
   output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div>`;
-  output += `<div style="position: relative;"><span style="color: var(--theme-white);">Press </span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span><span style="color: var(--theme-white);"> + </span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span><span style="color: var(--theme-white);"> to stop the demo at any time.</span></div>`;
+  output += `<div style="position: relative;"><span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">exit</span><span style="color: var(--theme-white);"> or press </span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span><span style="color: var(--theme-white);"> + </span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span><span style="color: var(--theme-white);"> to stop the demo at any time.</span></div>`;
   output += `</div>`;
 
   return output;
