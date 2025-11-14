@@ -500,14 +500,14 @@ export const fileSystemCommands = {
     return '';
   },
   
-  exit: (args: string[]) => {
+  poweroff: (args: string[]) => {
     const currentTheme = get(theme);
     
     // Check for help flag
     const hasHelpFlag = args.includes('--help') || args.includes('-h');
     
     if (hasHelpFlag) {
-      return `<span style="color: ${currentTheme.cyan}; font-weight: bold;">exit</span> - End terminal session<br><span style="color: ${currentTheme.yellow}; font-weight: bold;">Usage:</span> exit<br><br><span style="color: ${currentTheme.cyan}; font-weight: bold;">Description:</span> Attempts to close the window, then triggers shutdown sequence.`;
+      return `<span style="color: ${currentTheme.cyan}; font-weight: bold;">poweroff</span> - End terminal session<br><span style="color: ${currentTheme.yellow}; font-weight: bold;">Usage:</span> poweroff<br><br><span style="color: ${currentTheme.cyan}; font-weight: bold;">Description:</span> Attempts to close the window, then triggers shutdown sequence.`;
     }
     
     // Disable all inputs immediately to prevent further commands

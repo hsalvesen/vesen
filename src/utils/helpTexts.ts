@@ -6,7 +6,7 @@ export const commandHelp = {
   help: `<span style="color: var(--theme-cyan); font-weight: bold;">help</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Shows a list of all available commands organised by category.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> help`,
   clear: `<span style="color: var(--theme-cyan); font-weight: bold;">clear</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Clears all previous output from the terminal screen.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> clear`,
   echo: `<span style="color: var(--theme-cyan); font-weight: bold;">echo</span> : Display text or write to file<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span> > <span style="color: var(--theme-green);">[filename]</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span> >> <span style="color: var(--theme-green);">[filename]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;echo "Hello World"<br>&nbsp;&nbsp;echo "Content" > file.txt<br>&nbsp;&nbsp;echo "More content" >> file.txt`,
-  exit: `<span style="color: var(--theme-cyan); font-weight: bold;">exit</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Closes the terminal session. Attempts to close window, then triggers shutdown sequence.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> exit`,
+  poweroff: `<span style="color: var(--theme-cyan); font-weight: bold;">poweroff</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Closes the terminal session. Attempts to close window, then triggers shutdown sequence.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> poweroff`,
   history: `<span style="color: var(--theme-cyan); font-weight: bold;">history</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Displays a numbered list of previously executed commands.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> history<br><span style="color: var(--theme-magenta); font-weight: bold;">Note:</span> <span style="word-wrap: break-word; overflow-wrap: break-word;">Command history resets when the browser is reloaded or the session is restarted.</span>`,
   
   // File system commands
@@ -71,7 +71,7 @@ export const commandDescriptions = {
   'help': 'Show commands',
   'clear': 'Clear screen',
   'echo': 'Write text',
-  'exit': 'Close terminal',
+  'poweroff': 'Shut down terminal',
   'history': 'Show command history',
   'ls': 'List files',
   'pwd': 'Show current path',

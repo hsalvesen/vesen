@@ -4,7 +4,7 @@ import { history, commandHistory } from '../stores/history';
 import { systemCommands } from './commands/system';
 import { fileSystemCommands } from './commands/fileSystem';
 import { networkCommands } from './commands/network';
-import { demoCommands, isDemoActive, processDemoCommand } from './commands/demo';
+import { demoCommands, isDemoActive, processDemoCommand, stopDemoViaInterrupt } from './commands/demo';
 import { theme } from '../stores/theme';
 import { get } from 'svelte/store';
 import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from './virtualFileSystem';
@@ -14,20 +14,27 @@ import { createInitialFileSystem } from './virtualFileSystem';
 
 // Terminal-specific commands that don't fit in other modules
 const terminalCommands = {
+<<<<<<< HEAD
   help: () => {
+=======
+  help: (args: string[] = []) => {
+>>>>>>> demo
     const commandList = Object.keys(commands);
-    
-    // Group commands by category for better organisation
+    const target = args[0];
+    if (target && commandList.includes(target)) {
+      return getCommandHelp(target);
+    }
     const categories: Record<string, string[]> = {
       'Getting Started': ['demo'],
       'Info': ['fastfetch', 'whoami'],
-      'File System': ['ls', 'pwd', 'cd', 'cat', 'echo'], 
-      'File Operations': ['touch', 'rm', 'mkdir'], 
-      'Terminal': ['help', 'clear', 'reset', 'exit', 'history', 'sudo'],
+      'File System': ['ls', 'pwd', 'cd', 'cat', 'echo'],
+      'File Operations': ['touch', 'rm', 'mkdir'],
+      'Terminal': ['help', 'clear', 'reset', 'poweroff', 'history', 'sudo'],
       'Network': ['weather', 'curl', 'stock', 'speedtest'],
       'Customisation': ['theme'],
       'Project': ['repo', 'email', 'banner']
     };
+<<<<<<< HEAD
     
     // Simple three-column layout using CSS columns
     let output = '<div style="column-count: 3; column-gap: 50px; column-fill: balance; break-inside: avoid;">';
@@ -80,6 +87,25 @@ const terminalCommands = {
     output += `<div style="position: relative; color: var(--theme-white);">Type <span style="color: var(--theme-cyan); font-family: monospace; font-weight: bold;">--help</span> after a command for detailed usage information</div>`;
     output += `</div>`;
     
+=======
+    let output = '';
+    output += `<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin: 6px 0;">`;
+    output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.08; border-radius: 4px;"></div>`;
+    output += `<div style="position: relative; color: var(--theme-white);"><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">help &lt;command&gt;</span> or <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">&lt;command&gt; --help</span> for details</div>`;
+    output += `</div>`;
+    Object.entries(categories).forEach(([category, cmds]) => {
+      const availableCommands = cmds.filter((cmd) => commandList.includes(cmd));
+      if (!availableCommands.length) return;
+      const line = availableCommands
+        .map((cmd) => `<span style="color: var(--theme-green); font-weight: bold; font-family: monospace;">${cmd}</span>`)
+        .join(`<span style="color: var(--theme-brightBlack);">, </span>`);
+      output += `<div style="position: relative; padding: 6px 10px; border-radius: 4px; margin: 6px 0;">`;
+      output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div>`;
+      output += `<div style="position: relative; color: var(--theme-yellow); font-weight: bold; display: inline-block; min-width: 160px;">${category}</div>`;
+      output += `<div style="position: relative; display: inline; color: var(--theme-white);">${line}</div>`;
+      output += `</div>`;
+    });
+>>>>>>> demo
     return output;
   },
 
@@ -285,6 +311,14 @@ export function processCommand(input: string, abortController?: AbortController 
   const command = args[0];
   const hasHelpFlag = args.includes('--help') || args.includes('-h');
 
+<<<<<<< HEAD
+=======
+  // Allow typing `exit` to cancel the demo without shutting down terminal
+  if (isDemoActive() && command === 'exit') {
+    return stopDemoViaInterrupt();
+  }
+
+>>>>>>> demo
   // Check if demo is active and process demo-specific logic
   if (isDemoActive() && !hasHelpFlag) {
       const demoResponse = processDemoCommand(input.trim());
@@ -397,6 +431,7 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
       usageContent = [first, rest].filter(Boolean).join('<br>');
     }
   
+<<<<<<< HEAD
     // Build yellow content with standardized headings
     let yellowContent = '';
     if (examplesIdx >= 0) {
@@ -406,6 +441,17 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
     if (tipIdx >= 0) {
       yellowContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-top: 8px; margin-bottom: 4px;">Tip:</div>`;
       yellowContent += `<div style="color: var(--theme-white);">${tipsLines.join('<br>') || ''}</div>`;
+=======
+    let examplesContent = '';
+    if (examplesIdx >= 0) {
+      examplesContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-bottom: 4px;">Examples:</div>`;
+      examplesContent += `<div style="color: var(--theme-white);">${examplesLines.join('<br>') || ''}</div>`;
+    }
+    let tipsContent = '';
+    if (tipIdx >= 0) {
+      tipsContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-top: 8px; margin-bottom: 4px;">Tip:</div>`;
+      tipsContent += `<div style="color: var(--theme-white);">${tipsLines.join('<br>') || ''}</div>`;
+>>>>>>> demo
     }
   
     // Compose standardized blocks (uniform overlay opacity and spacing)
@@ -428,11 +474,18 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
       output += `</div>`;
     }
   
+<<<<<<< HEAD
     // Yellow: examples/tips block
     if (yellowContent) {
       output += `<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 8px 0;">`;
       output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.12; border-radius: 4px;"></div>`;
       output += `<div style="position: relative;">${yellowContent}</div>`;
+=======
+    if (examplesContent || tipsContent) {
+      output += `<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 8px 0;">`;
+      output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.12; border-radius: 4px;"></div>`;
+      output += `<div style="position: relative;">${examplesContent}${tipsContent}</div>`;
+>>>>>>> demo
       output += `</div>`;
     }
   

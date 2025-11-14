@@ -29,6 +29,28 @@ function updateCSSVariables(theme: Theme) {
   }
 }
 
+// Add dynamic favicon update based on theme
+function updateFavicon(theme: Theme) {
+  if (typeof document === 'undefined') return;
+
+  const href = `/dist/favicons/vesenFavicon${theme.name}.ico`;
+
+  // Update existing favicon links if present, otherwise create one
+  const links = document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="shortcut icon"]');
+  if (links.length > 0) {
+    links.forEach((link) => {
+      link.type = 'image/x-icon';
+      link.href = href;
+    });
+  } else {
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.type = 'image/x-icon';
+    link.href = href;
+    document.head.appendChild(link);
+  }
+}
+
 // Get initial theme and set CSS variables immediately
 const initialTheme = typeof document !== 'undefined' 
   ? JSON.parse(localStorage.getItem('colorscheme') || JSON.stringify(defaultColorscheme))
@@ -37,6 +59,7 @@ const initialTheme = typeof document !== 'undefined'
 // Initialise CSS variables immediately on first load
 if (typeof document !== 'undefined') {
   updateCSSVariables(initialTheme);
+  updateFavicon(initialTheme);
 }
 
 export const theme = writable<Theme>(initialTheme);
@@ -44,4 +67,5 @@ export const theme = writable<Theme>(initialTheme);
 theme.subscribe((value) => {
   localStorage.setItem('colorscheme', JSON.stringify(value));
   updateCSSVariables(value);
+  updateFavicon(value);
 });
