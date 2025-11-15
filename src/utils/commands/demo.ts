@@ -76,7 +76,11 @@ const demoSteps = [
     title: "Changing directories",
     description: "You can navigate between directories using the 'cd' command.",
     instruction: "Type 'cd documents' to enter the documents folder",
-    expectedCommand: "cd documents",
+    // Accept both `cd documents` and `cd documents/`
+    expectedCommand: (cmd: string) => {
+      const c = cmd.trim();
+      return /^cd\s+documents\/?$/i.test(c); // allow optional trailing slash
+    },
     note: "Type: cd documents",
     explanation: "'cd' means 'change directory'. Use it to move between folders."
   },
@@ -107,9 +111,13 @@ const demoSteps = [
   {
     title: "Network commands",
     description: "This terminal can interact with the internet! Let's check the weather.",
-    instruction: "Type 'weather Sydney' to get weather information",
-    expectedCommand: "weather Sydney",
-    note: "Type: weather Sydney",
+    instruction: "Type 'weather Gadigal' to get weather information",
+    // Case-insensitive match for 'weather gadigal'
+    expectedCommand: (cmd: string) => {
+      const normalised = cmd.trim().toLowerCase().replace(/\s+/g, ' ');
+      return normalised === 'weather gadigal';
+    },
+    note: "Type: weather Gadigal",
     explanation: "The weather command fetches real-time weather data from online services."
   },
   {
