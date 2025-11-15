@@ -104,7 +104,23 @@ const demoSteps = [
     title: "Writing to files",
     description: "Use 'echo' to write text to files or display messages.",
     instruction: "Type 'echo \"Hello Terminal!\" > my-first-file.txt' to write to your file",
-    expectedCommand: "echo \"Hello Terminal!\" > my-first-file.txt",
+    // Flexible matching: quotes (', ", “ ”), spacing, > or >>, optional ./ before filename
+    expectedCommand: (cmd: string) => {
+      const c = cmd.trim();
+
+      const filename = String.raw`(?:\./)?my-first-file\.txt`;
+      const redir = String.raw`(?:>>|>)`;
+      const space = String.raw`\s*`;
+
+      const patterns = [
+        new RegExp(`^echo\\s+"Hello\\s+Terminal!"${space}${redir}${space}${filename}${space}$`, 'i'),
+        new RegExp(`^echo\\s+'Hello\\s+Terminal!'${space}${redir}${space}${filename}${space}$`, 'i'),
+        new RegExp(`^echo\\s+“Hello\\s+Terminal!”${space}${redir}${space}${filename}${space}$`, 'i'),
+        new RegExp(`^echo\\s+Hello\\s+Terminal!${space}${redir}${space}${filename}${space}$`, 'i'),
+      ];
+
+      return patterns.some(p => p.test(c));
+    },
     note: "Type: echo \"Hello Terminal!\" > my-first-file.txt",
     explanation: "'echo' outputs text, and '>' redirects that text into a file."
   },
@@ -156,25 +172,23 @@ export const demoCommands = {
   // Hidden command to check if user input matches demo expectations
   _demoCheck: (args: string[]) => {
     if (!demoState.isActive) return '';
-    
+
     const userCommand = args.join(' ').trim();
     const currentStep = demoSteps[demoState.currentStep];
-    
+
     const expected = currentStep.expectedCommand as string | ((c: string) => boolean);
     const isMatch = typeof expected === 'function' ? expected(userCommand) : userCommand === expected;
 
     if (isMatch) {
       demoState.completedSteps.add(demoState.currentStep);
-      
-      // Carry success explanation into next step box (no standalone success box)
+      // Carry success explanation into the next step box
       demoState.pendingSuccessExplanation = currentStep.explanation;
-      
-      const delayMs = 1000; // small invisible pause
-      setTimeout(() => {
+
+      const scheduleNextStep = () => {
         const nextHtml = (demoState.currentStep < demoSteps.length - 1)
           ? (() => { demoState.currentStep++; return getCurrentStepDisplay(); })()
           : completeDemo();
-        
+
         history.update(h => {
           if (h.length === 0) return h;
           const last = { ...h[h.length - 1] };
@@ -182,11 +196,22 @@ export const demoCommands = {
           const newLast = { ...last, outputs };
           return [...h.slice(0, -1), newLast];
         });
-      }, delayMs);
-      
+      };
+
+      // For the weather step, wait for silent completion before advancing
+      if (currentStep.title === "Network commands") {
+        waitForEventOnce('vesen:weather:done', 15000).then(() => {
+          // Ensure weather output has been appended first
+          setTimeout(scheduleNextStep, 0);
+        });
+      } else {
+        const delayMs = 1000;
+        setTimeout(scheduleNextStep, delayMs);
+      }
+
       return '';
     }
-    
+
     return '';
   },
 };
@@ -347,4 +372,20 @@ function renderCountdownHtml(seconds: number): string {
     <div style="position: absolute; inset: 0; background: var(--theme-cyan); opacity: 0.12; border-radius: 4px;"></div>
     <div style="position: relative;"><span style="color: var(--theme-cyan); font-weight: bold;">Next step in ${seconds}s...</span></div>
   </div>`;
+}
+
+function waitForEventOnce(eventName: string, timeoutMs = 10000): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const handler = () => {
+      window.removeEventListener(eventName, handler);
+      resolve();
+    };
+    window.addEventListener(eventName, handler, { once: true });
+
+    // Fallback to avoid deadlock if something goes wrong
+    setTimeout(() => {
+      window.removeEventListener(eventName, handler);
+      resolve();
+    }, timeoutMs);
+  });
 }

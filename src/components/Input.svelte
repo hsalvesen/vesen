@@ -101,8 +101,51 @@
     return [];
   };
 
+  // Interrupt helper for sudo password prompt
+  function interruptSudoPasswordPrompt() {
+    isPasswordMode = false;
+    pendingSudoCommand = '';
+    passwordInput = '';
+
+    // Append interrupt message to the last history entry using demo-style block
+    history.update(h => {
+      if (h.length === 0) return h;
+      const last = { ...h[h.length - 1] };
+      const outputs = [
+        ...last.outputs,
+        `<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 6px 0; margin-bottom: 20px;"><div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div><div style="position: relative;"><span style="color: var(--theme-white);">sudo: password entry cancelled</span></div></div>`
+      ];
+      const newLast = { ...last, outputs };
+      return [...h.slice(0, -1), newLast];
+    });
+
+    // Reset input state
+    command = '';
+    historyIndex = -1;
+
+    // Ensure input is re-enabled and focused
+    if (input) {
+      input.disabled = false;
+      input.focus();
+    }
+  }
+
   onMount(() => {
     input.focus();
+
+    // Global Ctrl+C listener (works even if input loses focus)
+    const onGlobalKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.key === 'c' && isPasswordMode) {
+        event.preventDefault();
+        interruptSudoPasswordPrompt();
+      }
+    };
+    window.addEventListener('keydown', onGlobalKeyDown);
+
+    // Cleanup on destroy
+    return () => {
+      window.removeEventListener('keydown', onGlobalKeyDown);
+    };
   });
 
   $effect(() => {
@@ -142,7 +185,13 @@
     // Handle Ctrl+C globally (even when input is disabled)
     if (event.ctrlKey && event.key === 'c') {
       event.preventDefault();
-      
+
+      // Ensure sudo password prompt is cancelled immediately
+      if (isPasswordMode) {
+        interruptSudoPasswordPrompt();
+        return;
+      }
+
       let didAbort = false;
       if (isProcessing && currentAbortController && ['curl', 'weather', 'stock', 'fastfetch', 'speedtest'].includes(currentCommandName)) {
         currentAbortController.abort();
@@ -150,7 +199,7 @@
         currentCommandName = '';
         didAbort = true;
       }
-      
+
       // Stop demo if active and append interrupt message to the last history entry
       if (isDemoActive()) {
         const msg = stopDemoViaInterrupt();
