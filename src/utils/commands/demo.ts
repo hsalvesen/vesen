@@ -222,11 +222,6 @@ function getCurrentStepDisplay(): string {
   output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;">`;
 
 
-
-  // Progress bar
-  const progress = Math.round((stepNumber / totalSteps) * 100);
-  const progressBar = '█'.repeat(Math.floor(progress / 5)) + '░'.repeat(20 - Math.floor(progress / 5));
-
   // Success message carried into the next step box
   if (demoState.pendingSuccessExplanation) {
     output += `<div style="position: relative; padding: 6px 10px; margin: 6px 0 12px 0; border-radius: 4px; border-left: 4px solid var(--theme-green);">`;
@@ -244,15 +239,12 @@ function getCurrentStepDisplay(): string {
 
   // Step content (skip title/description for step 1)
   if (stepNumber) {
-  // Streamlined step header; keep title, move description into collapsible details
-  output += `<div style="margin-bottom: 8px;">`;
-  output += `<span style="color: var(--theme-cyan); font-weight: bold; font-size: 1.05em;">${step.title}</span>`;
-  output += `</div>`;
-  const descriptionText = typeof step.description === 'function' ? step.description(likelyShell) : step.description;
-  output += `<details style="margin: 6px 0;">`;
-  output += `<summary style="color: var(--theme-cyan); font-weight: bold; cursor: pointer;">Details</summary>`;
-  output += `<div style="color: var(--theme-white); margin-top: 4px;">${descriptionText}</div>`;
-  output += `</details>`;
+    // Inline step header and description (no collapsible)
+    output += `<div style="margin-bottom: 8px;">`;
+    output += `<span style="color: var(--theme-cyan); font-weight: bold; font-size: 1.05em;">${step.title}</span>`;
+    output += `</div>`;
+    const descriptionText = typeof step.description === 'function' ? step.description(likelyShell) : step.description;
+    output += `<div style="color: var(--theme-white); margin-top: 4px;">${descriptionText}</div>`;
   }
 
   // Instruction block
@@ -261,42 +253,31 @@ function getCurrentStepDisplay(): string {
   output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-cyan); font-weight: bold;">Task:</span> <span style="color: var(--theme-white);">${step.instruction}</span></div>`;
   output += `</div>`;
 
-  // note block
-  output += `<div style="position: relative; padding: 6px; border-radius: 4px;">`;
-  output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div>`;
-  output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-yellow); font-weight: bold;">Note:</span> <span style="color: var(--theme-white); font-family: monospace;">${step.note}</span></div>`;
-  output += `</div>`;
-
-  // Clean progress bar at the bottom (after note)
-  output += `<div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">`;
-
-  output += `<div style="position: relative; padding: 8px; border-radius: 4px; margin: 6px 0;">`;
-  output += `<div style="position: absolute; inset: 0; background: var(--theme-cyan); opacity: 0.08; border-radius: 4px;"></div>`;
-  output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-cyan); font-weight: bold;">Next:</span> <span style="color: var(--theme-white);">${step.instruction}</span></div>`;
-  output += `</div>`;
-
-  // note block
-  output += `<details style="margin: 6px 0;">`;
-  output += `<summary style="color: var(--theme-yellow); font-weight: bold; cursor: pointer;">Hint</summary>`;
+  // Hint directly after Task, new line
   output += `<div style="position: relative; padding: 6px; border-radius: 4px; margin-top: 4px;">`;
   output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div>`;
-  output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-white); font-family: monospace;">${step.note}</span></div>`;
+  output += `<div style="position: relative; white-space: normal; overflow-wrap: anywhere; word-break: break-word;"><span style="color: var(--theme-yellow); font-weight: bold;">Hint:</span> <span style="color: var(--theme-white); font-family: monospace;">${step.note}</span></div>`;
   output += `</div>`;
-  output += `</details>`;
 
-  // Clean progress bar at the bottom (after note)
-  output += `<div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">`;
-  output += `<span style="color: var(--theme-cyan); font-weight: bold;">Step ${stepNumber}/${totalSteps}</span>`;
-  output += `<div style="flex: 1; height: 6px; background: var(--theme-brightBlack); border-radius: 4px; overflow: hidden;">`;
-  output += `<div style="width: ${progress}%; height: 100%; background: var(--theme-green);"></div>`;
-  output += `</div>`;
-  output += `<span style="color: var(--theme-yellow);">${progress}%</span>`;
+  // Clean full-width progress bar + counts
+  const completedCount = demoState.completedSteps.size;
+  const remainingCount = totalSteps - completedCount;
+  const progress = Math.round((completedCount / totalSteps) * 100);
+
+  output += `<div style="margin-top: 8px;">`;
+  output += `  <div style="width: 100%; height: 8px; background: var(--theme-brightBlack); border-radius: 4px; overflow: hidden;">`;
+  output += `    <div style="width: ${progress}%; height: 100%; background: linear-gradient(90deg, var(--theme-green), var(--theme-cyan));"></div>`;
+  output += `  </div>`;
+  output += `  <div style="display: flex; justify-content: space-between; font-family: monospace; color: var(--theme-white); margin-top: 4px;">`;
+  output += `    <span>${completedCount} done</span>`;
+  output += `    <span>${remainingCount} to go</span>`;
+  output += `  </div>`;
   output += `</div>`;
 
   // Close inner and outer containers
   output += `</div></div>`;
 
-  // Ctrl + C tip with theme variables and extra bottom spacing
+  // Ctrl + C tip
   output += `<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin-top: 12px; margin-bottom: 20px;">`;
   output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div>`;
   output += `<div style="position: relative;"><span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">exit</span><span style="color: var(--theme-white);"> or press </span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">Ctrl</span><span style="color: var(--theme-white);"> + </span><span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">C</span><span style="color: var(--theme-white);"> to stop the demo at any time.</span></div>`;
