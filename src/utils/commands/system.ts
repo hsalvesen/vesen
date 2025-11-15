@@ -431,11 +431,17 @@ export const systemCommands = {
           
           // Try to detect refresh rate
           let refreshRate = '60 Hz';
-          if ('getDisplayMedia' in navigator.mediaDevices) {
-            // Modern displays often support higher refresh rates
-            if (screen.width >= 2560) refreshRate = '120 Hz';
+          try {
+            const mediaDevices = (navigator as any).mediaDevices;
+            if (mediaDevices && 'getDisplayMedia' in mediaDevices) {
+              // Modern displays often support higher refresh rates
+              if (screen.width >= 2560) refreshRate = '120 Hz';
+            }
+          } catch {
+            // Fall back if mediaDevices or property probing fails
+            refreshRate = 'Unknown';
           }
-          
+
           // Network information
           let localIP = 'Unknown';
           try {
@@ -501,7 +507,7 @@ export const systemCommands = {
           
           // Storage estimation
           let diskInfo = 'Unknown';
-          if ('storage' in navigator && 'estimate' in navigator.storage) {
+          if ((navigator as any).storage && 'estimate' in (navigator as any).storage) {
             try {
               const estimate = await navigator.storage.estimate();
               if (estimate.quota && estimate.usage) {
@@ -572,7 +578,8 @@ export const systemCommands = {
           if (error instanceof Error && error.name === 'AbortError') {
             resolve(`<span style="color: var(--theme-yellow);">Fastfetch request cancelled</span>`);
           } else {
-            reject(error);
+            // Soft-fail: keep terminal responsive and avoid throwing completely
+            resolve(`<span style="color: var(--theme-yellow);">Fastfetch encountered an issue; some fields may be unavailable.</span>`);
           }
         }
       })();
