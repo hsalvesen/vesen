@@ -33,7 +33,6 @@ function updateCSSVariables(theme: Theme) {
 function updateFavicon(theme: Theme) {
   if (typeof document === 'undefined') return;
 
-  // Map theme "wallaby" -> "Wallaby" to match file naming
   const fileNameTheme = theme.name.charAt(0).toUpperCase() + theme.name.slice(1);
   const file = `/favicons/vesenFavicon${fileNameTheme}.ico`;
   const href = `${file}?v=${encodeURIComponent(fileNameTheme)}`;
@@ -56,15 +55,39 @@ function updateFavicon(theme: Theme) {
   }
 }
 
+// Prefetch all theme favicons during idle time to eliminate switch lag
+function warmFaviconCache() {
+  if (typeof document === 'undefined') return;
+
+  const urls = themes.map((t) => {
+    const name = t.name.charAt(0).toUpperCase() + t.name.slice(1);
+    return `/favicons/vesenFavicon${name}.ico`;
+  });
+
+  const task = () => {
+    urls.forEach((url) => {
+      // Fire-and-forget fetch to warm the browser cache
+      fetch(url, { cache: 'force-cache' }).catch(() => {});
+    });
+  };
+
+  // Don’t block initial render; run when the browser is idle
+  if ('requestIdleCallback' in window) {
+    (window as any).requestIdleCallback(task);
+  } else {
+    setTimeout(task, 500);
+  }
+}
+
 // Get initial theme and set CSS variables immediately
 const initialTheme = typeof document !== 'undefined' 
   ? JSON.parse(localStorage.getItem('colorscheme') || JSON.stringify(defaultColorscheme))
   : defaultColorscheme;
 
-// Initialise CSS variables immediately on first load
 if (typeof document !== 'undefined') {
   updateCSSVariables(initialTheme);
   updateFavicon(initialTheme);
+  warmFaviconCache();
 }
 
 export const theme = writable<Theme>(initialTheme);
