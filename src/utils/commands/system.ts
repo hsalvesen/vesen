@@ -565,7 +565,7 @@ export const systemCommands = {
           ).join('');
           
           const isMobile = isMobileDevice();
-          const result = `<br><div style="display: flex; ${isMobile ? 'flex-direction: column;' : 'gap: 30px;'} font-family: monospace; line-height: 1.3;"><div style="${isMobile ? 'margin-bottom: 12px;' : 'flex-shrink: 0;'}">${logoHtml}${colourBlocksAscii}</div><div style="${isMobile ? '' : 'flex: 1; display: flex; flex-direction: column; justify-content: flex-start;'}">${userHostHtml}${infoHtml}</div></div><br>`;
+          const result = `<div style="display: flex; ${isMobile ? 'flex-direction: column;' : 'gap: 30px;'} font-family: monospace; line-height: 1.3;"><div style="${isMobile ? 'margin-bottom: 12px;' : 'flex-shrink: 0;'}">${logoHtml}${colourBlocksAscii}</div><div style="${isMobile ? '' : 'flex: 1; display: flex; flex-direction: column; justify-content: flex-start;'}">${userHostHtml}${infoHtml}</div></div>`;
           
           resolve(result);
         } catch (error) {
