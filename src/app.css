@@ -76,3 +76,13 @@
     font-size: 13px;
   }
 }
+
+/* Dynamic theme list highlight */
+.theme-name {
+  color: var(--theme-white);
+}
+
+.theme-name.is-current {
+  font-weight: bold;
+  color: var(--theme-bright-cyan);
+}

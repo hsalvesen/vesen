@@ -164,18 +164,14 @@ const projectCommands = {
         const currentTheme = get(theme);
         const themeList = themes.map((t) => {
           const themeName = t.name;
-          const isCurrentTheme = t.name === currentTheme.name;
-          
-          if (isCurrentTheme) {
-            return `<span style="color: var(--theme-bright-cyan); font-weight: bold;">${themeName}</span>`;
-          } else {
-            return `<span style="color: var(--theme-white);">${themeName}</span>`;
-          }
+          const isCurrentTheme = t.name.toLowerCase() === currentTheme.name.toLowerCase();
+          // Pre-apply highlight to the current theme; keep markers for dynamic updates
+          return `<span class="theme-name${isCurrentTheme ? ' is-current' : ''}" data-theme-name="${themeName.toLowerCase()}">${themeName}</span>`;
         }).join(', ');
-        
+
         let result = themeList;
         result += `\n<span style="color: var(--theme-cyan);">You can preview all these themes here: ${packageJson.repository.url}/tree/main/docs/themes</span>`;
-        
+
         return result;
       }
 

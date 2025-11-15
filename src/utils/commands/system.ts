@@ -446,7 +446,7 @@ export const systemCommands = {
             localIP = ipData.ip;
           } catch (error) {
             if (error instanceof Error && error.name === 'AbortError') {
-              resolve(`<span style="color: ${currentTheme.yellow};">Fastfetch request cancelled</span>`);
+              resolve(`<span style="color: var(--theme-yellow);">Fastfetch request cancelled</span>`);
               return;
             }
             localIP = 'Unable to fetch';
@@ -520,11 +520,11 @@ export const systemCommands = {
           const hostname = window.location.hostname || 'localhost';
           const userHost = `${username}@${hostname}`;
 
-          // ASCII art colour blocks
+          // ASCII art colour blocks (now using CSS variables for dynamic themes)
           const colourBlocksAscii = `
 <div style="font-family: monospace; line-height: 1; margin-top: 8px; margin-bottom: 8px;">
-<span style="color: ${currentTheme.black};">███</span><span style="color: ${currentTheme.red};">███</span><span style="color: ${currentTheme.green};">███</span><span style="color: ${currentTheme.yellow};">███</span><span style="color: ${currentTheme.blue};">███</span><span style="color: ${currentTheme.purple};">███</span><span style="color: ${currentTheme.cyan};">███</span><span style="color: ${currentTheme.white};">███</span>
-<span style="color: ${currentTheme.brightBlack};">███</span><span style="color: ${currentTheme.brightRed};">███</span><span style="color: ${currentTheme.brightGreen};">███</span><span style="color: ${currentTheme.brightYellow};">███</span><span style="color: ${currentTheme.brightBlue};">███</span><span style="color: ${currentTheme.brightPurple};">███</span><span style="color: ${currentTheme.brightCyan};">███</span><span style="color: ${currentTheme.brightWhite};">███</span>
+<span style="color: var(--theme-black);">███</span><span style="color: var(--theme-red);">███</span><span style="color: var(--theme-green);">███</span><span style="color: var(--theme-yellow);">███</span><span style="color: var(--theme-blue);">███</span><span style="color: var(--theme-purple);">███</span><span style="color: var(--theme-cyan);">███</span><span style="color: var(--theme-white);">███</span>
+<span style="color: var(--theme-bright-black);">███</span><span style="color: var(--theme-bright-red);">███</span><span style="color: var(--theme-bright-green);">███</span><span style="color: var(--theme-bright-yellow);">███</span><span style="color: var(--theme-bright-blue);">███</span><span style="color: var(--theme-bright-purple);">███</span><span style="color: var(--theme-bright-cyan);">███</span><span style="color: var(--theme-bright-white);">███</span>
 </div>`;
 
           // Format system information
@@ -538,7 +538,7 @@ export const systemCommands = {
             { label: 'Display', value: `${displayInfo} @ ${refreshRate}` },
             { label: 'DE', value: osName === 'macOS' ? 'Aqua' : osName === 'Windows' ? 'Windows Shell' : 'Unknown' },
             { label: 'WM', value: osName === 'macOS' ? 'Quartz Compositor' : osName === 'Windows' ? 'Desktop Window Manager' : 'Unknown' },
-            { label: 'WM Theme', value: wmTheme },
+            { label: 'WM Theme', value: `<span class="current-theme-name">${wmTheme}</span>` },
             { label: 'Font', value: font },
             { label: 'Cursor', value: 'Default System Cursor' },
             { label: 'Terminal', value: terminal },
@@ -570,7 +570,7 @@ export const systemCommands = {
           resolve(result);
         } catch (error) {
           if (error instanceof Error && error.name === 'AbortError') {
-            resolve(`<span style="color: ${currentTheme.yellow};">Fastfetch request cancelled</span>`);
+            resolve(`<span style="color: var(--theme-yellow);">Fastfetch request cancelled</span>`);
           } else {
             reject(error);
           }

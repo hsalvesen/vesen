@@ -29,6 +29,31 @@ function updateCSSVariables(theme: Theme) {
   }
 }
 
+// Dynamically highlight current theme in any past "theme ls" outputs
+function updateThemeListHighlight(theme: Theme) {
+  if (typeof document === 'undefined') return;
+  const current = theme.name.toLowerCase();
+  const nodes = document.querySelectorAll<HTMLElement>('.theme-name');
+
+  nodes.forEach((el) => {
+    const name = el.getAttribute('data-theme-name')?.toLowerCase();
+    if (name && name === current) {
+      el.classList.add('is-current');
+    } else {
+      el.classList.remove('is-current');
+    }
+  });
+}
+
+// Update fastfetch "WM Theme" value in past outputs
+function updateFastfetchThemeName(theme: Theme) {
+  if (typeof document === 'undefined') return;
+  const nodes = document.querySelectorAll<HTMLElement>('.current-theme-name');
+  nodes.forEach((el) => {
+    el.textContent = theme.name;
+  });
+}
+
 // Add dynamic favicon update based on theme
 function updateFavicon(theme: Theme) {
   if (typeof document === 'undefined') return;
@@ -65,6 +90,8 @@ const initialTheme = typeof document !== 'undefined'
 if (typeof document !== 'undefined') {
   updateCSSVariables(initialTheme);
   updateFavicon(initialTheme);
+  updateThemeListHighlight(initialTheme);
+  updateFastfetchThemeName(initialTheme);
 }
 
 export const theme = writable<Theme>(initialTheme);
@@ -73,4 +100,6 @@ theme.subscribe((value) => {
   localStorage.setItem('colorscheme', JSON.stringify(value));
   updateCSSVariables(value);
   updateFavicon(value);
+  updateThemeListHighlight(value);
+  updateFastfetchThemeName(value);
 });
