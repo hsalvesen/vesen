@@ -12,9 +12,13 @@
   import { processDemoCommand } from '../utils/commands/demo';
 
   // Use $props() to declare props with $bindable()
-  let { isPasswordMode = $bindable(), isProcessing = $bindable(false), loadingText = $bindable('') } = $props();
+  let {
+    isPasswordMode = $bindable(),
+    isProcessing = $bindable(false),
+    loadingText = $bindable(''),
+    command = $bindable('')
+  } = $props();
 
-  let command = $state('');
   let historyIndex = $state(-1);
   let input: HTMLInputElement;
   let pendingSudoCommand = $state('');

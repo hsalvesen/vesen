@@ -2,11 +2,13 @@
   import Ps1 from './components/Ps1.svelte';
   import Input from './components/Input.svelte';
   import History from './components/History.svelte';
+  import CommandSuggestionsRow from './components/CommandSuggestionsRow.svelte';
   import { theme } from './stores/theme';
   
   let isPasswordMode = $state(false);
   let isProcessing = $state(false);
   let loadingText = $state('');
+  let command = $state('');
   let mainElement: HTMLElement;
 
   // Auto-scroll to bottom when loading text appears
@@ -38,10 +40,15 @@
   <History />
 
   <div class="flex flex-col">
-    <div class="flex flex-row items-center gap-1">
-      <Ps1 {isPasswordMode} />
-      <Input bind:isPasswordMode bind:isProcessing bind:loadingText />
+    <div class="grid items-center gap-x-1" style="grid-template-columns: max-content 1fr;">
+      <div class="flex items-center">
+        <Ps1 {isPasswordMode} />
+      </div>
+      <Input bind:command bind:isPasswordMode bind:isProcessing bind:loadingText />
     </div>
+
+    <CommandSuggestionsRow {command} {isProcessing} {isPasswordMode} />
+
     {#if isProcessing && loadingText}
       <div class="flex flex-row items-center gap-1 mt-1">
         <span class="font-mono" style="color: var(--theme-cyan);">{loadingText}</span>
@@ -49,3 +56,5 @@
     {/if}
   </div>
 </main>
+
+
