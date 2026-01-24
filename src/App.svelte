@@ -10,6 +10,37 @@
   let loadingText = $state('');
   let command = $state('');
   let mainElement: HTMLElement;
+  let suggestionsScrollTop = $state<number | null>(null);
+
+  const onSuggestionsShow = () => {
+    if (!mainElement) return;
+    if (suggestionsScrollTop === null) {
+      suggestionsScrollTop = mainElement.scrollTop;
+    }
+    setTimeout(() => {
+      mainElement.scrollTop = mainElement.scrollHeight;
+    }, 0);
+  };
+
+  const onSuggestionsHide = () => {
+    if (!mainElement) return;
+    if (suggestionsScrollTop === null) return;
+    const restoreTo = suggestionsScrollTop;
+    suggestionsScrollTop = null;
+    setTimeout(() => {
+      mainElement.scrollTop = restoreTo;
+    }, 0);
+  };
+
+  const onSuggestionsUpdate = () => {
+    if (!mainElement) return;
+    if (suggestionsScrollTop === null) {
+      suggestionsScrollTop = mainElement.scrollTop;
+    }
+    setTimeout(() => {
+      mainElement.scrollTop = mainElement.scrollHeight;
+    }, 0);
+  };
 
   // Auto-scroll to bottom when loading text appears
   $effect(() => {
@@ -47,7 +78,7 @@
       <Input bind:command bind:isPasswordMode bind:isProcessing bind:loadingText />
     </div>
 
-    <CommandSuggestionsRow {command} {isProcessing} {isPasswordMode} />
+    <CommandSuggestionsRow {command} {isProcessing} {isPasswordMode} on:show={onSuggestionsShow} on:hide={onSuggestionsHide} on:update={onSuggestionsUpdate} />
 
     {#if isProcessing && loadingText}
       <div class="flex flex-row items-center gap-1 mt-1">

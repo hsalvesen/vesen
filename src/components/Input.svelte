@@ -8,8 +8,6 @@
   import { track } from '../utils/tracking';
   import { get } from 'svelte/store';
   import themes from '../../themes.json';
-  import { isDemoActive, stopDemoViaInterrupt } from '../utils/commands/demo';
-  import { processDemoCommand } from '../utils/commands/demo';
 
   // Use $props() to declare props with $bindable()
   let {
@@ -111,7 +109,7 @@
     pendingSudoCommand = '';
     passwordInput = '';
 
-    // Append interrupt message to the last history entry using demo-style block
+    // Append interrupt message to the last history entry using a highlighted block
     history.update(h => {
       if (h.length === 0) return h;
       const last = { ...h[h.length - 1] };
@@ -204,18 +202,8 @@
         didAbort = true;
       }
 
-      // Stop demo if active and append interrupt message to the last history entry
-      if (isDemoActive()) {
-        const msg = stopDemoViaInterrupt();
-        history.update(h => {
-          if (h.length === 0) return [{ command: '', outputs: [msg] }];
-          const last = { ...h[h.length - 1] };
-          const outputs = [...last.outputs, msg];
-          const newLast = { ...last, outputs };
-          return [...h.slice(0, -1), newLast];
-        });
-      } else if (!isProcessing && !didAbort) {
-        // If not processing a command and no demo to stop, add a new prompt line
+      if (!isProcessing && !didAbort) {
+        // If not processing a command, add a new prompt line
         if (command.trim()) {
           $history = [...$history, { command, outputs: [''] }];
         } else {
@@ -316,10 +304,6 @@
         $history = [...$history, { command: currentCommand, outputs: [output] }];
       }
 
-      // Notify demo when user runs any command with --help or -h
-      if (isDemoActive() && hasHelpFlag) {
-        processDemoCommand(currentCommand);
-      }
     } catch (error) {
       // Handle any errors
       $history = [...$history, { command: currentCommand, outputs: [`Error: ${error}`] }];

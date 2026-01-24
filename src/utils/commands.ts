@@ -4,7 +4,6 @@ import { history, commandHistory } from '../stores/history';
 import { systemCommands } from './commands/system';
 import { fileSystemCommands } from './commands/fileSystem';
 import { networkCommands } from './commands/network';
-import { demoCommands, isDemoActive, processDemoCommand, stopDemoViaInterrupt } from './commands/demo';
 import { theme } from '../stores/theme';
 import { get } from 'svelte/store';
 import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from './virtualFileSystem';
@@ -15,78 +14,36 @@ import { createInitialFileSystem } from './virtualFileSystem';
 // Terminal-specific commands that don't fit in other modules
 const terminalCommands = {
   help: (args: string[] = []) => {
-    const commandList = Object.keys(commands);
+    const commandList = Object.keys(commands).sort((a, b) => a.localeCompare(b));
     const target = args[0];
 
-    // If a specific command is requested, show detailed help
     if (target && commandList.includes(target)) {
       return getCommandHelp(target);
     }
 
-    // Group commands by category for better organisation
-    const categories: Record<string, string[]> = {
-      'Getting Started': ['demo'],
-      'Info': ['fastfetch', 'whoami'],
-      'File System': ['ls', 'pwd', 'cd', 'cat', 'echo'],
-      'File Operations': ['touch', 'rm', 'mkdir'],
-      'Terminal': ['help', 'clear', 'reset', 'exit', 'history', 'sudo'],
-      'Network': ['weather', 'curl', 'stock', 'speedtest'],
-      'Customisation': ['theme'],
-      'Project': ['repo', 'email', 'banner']
-    };
+    const baseCharWidth = 8;
+    const padding = 40;
+    const availableWidth = Math.max(window.innerWidth - padding, 200);
+    const terminalWidth = Math.floor(availableWidth / baseCharWidth);
+    const minWidth = 30;
+    const maxWidth = 120;
+    const responsiveWidth = Math.min(maxWidth, Math.max(minWidth, terminalWidth));
 
-    // Simple three-column layout using CSS columns
-    let output = '<div style="column-count: 3; column-gap: 50px; column-fill: balance; break-inside: avoid;">';
+    const maxCommandLength = commandList.reduce((max, cmd) => Math.max(max, cmd.length), 0);
+    const colWidth = Math.max(8, maxCommandLength + 4);
+    const cols = Math.max(1, Math.floor(responsiveWidth / colWidth));
 
-    // Process each category
-    Object.entries(categories).forEach(([category, cmds]) => {
-      const availableCommands = cmds.filter(cmd => commandList.includes(cmd));
-      if (availableCommands.length === 0) return;
+    const lines: string[] = [];
+    for (let i = 0; i < commandList.length; i += cols) {
+      const row = commandList
+        .slice(i, i + cols)
+        .map((cmd) => cmd.padEnd(colWidth, ' '))
+        .join('')
+        .trimEnd();
+      lines.push(row);
+    }
 
-      output += `<div style="break-inside: avoid; margin-bottom: 20px;">`;
-
-      // Use theme variables for dynamic subtitle highlight and text color
-      output += `<div style="position: relative; display: block; width: 100%; box-sizing: border-box; border-radius: 4px; margin-bottom: 8px; overflow: hidden;">`;
-      output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.12;"></div>`;
-      output += `<div style="position: relative; color: var(--theme-yellow); font-weight: bold; padding: 6px 10px;">${category}</div>`;
-      output += `</div>`;
-
-      // Render commands as simple rows without borders/boxes
-      for (const cmd of availableCommands) {
-        const description = commandDescriptions[cmd] || '';
-        output += `<div style="break-inside: avoid; margin: 4px 0; display: flex; align-items: baseline; gap: 12px;">`;
-        output += `<span style="color: var(--theme-brightBlack); font-family: monospace; font-weight: bold;">❯</span>`;
-        output += `<span style="color: var(--theme-green); font-weight: bold; min-width: 120px; flex-shrink: 0; font-family: monospace;">${cmd}</span>`;
-        output += `<span style="color: var(--theme-white); word-wrap: break-word; overflow-wrap: break-word;">${description}</span>`;
-        output += `</div>`;
-      }
-      output += `</div>`;
-    });
-
-    output += '</div>';
-
-    // Add responsive media query for smaller screens
-    output += `<style>
-      @media (max-width: 1000px) {
-        div[style*="column-count: 3"] {
-          column-count: 2 !important;
-          column-gap: 40px !important;
-        }
-      }
-      @media (max-width: 650px) {
-        div[style*="column-count: 3"] {
-          column-count: 1 !important;
-        }
-      }
-    </style>`;
-
-    // Replace inline span with a full-width cyan-highlighted banner
-    output += `<div style="position: relative; display: block; width: 100%; box-sizing: border-box; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin-top: 8px; margin-bottom: 8px;">`;
-    output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.08; border-radius: 4px;"></div>`;
-    output += `<div style="position: relative; color: var(--theme-white);">Type <span style="color: var(--theme-cyan); font-family: monospace; font-weight: bold;">--help</span> after a command for detailed usage information</div>`;
-    output += `</div>`;
-
-    return output;
+    return `<div style="font-family: monospace; white-space: pre;">${lines.join('\n')}</div>`;
   },
 
   history: (args: string[]) => {
@@ -287,30 +244,6 @@ export function processCommand(input: string, abortController?: AbortController 
   const command = args[0];
   const hasHelpFlag = args.includes('--help') || args.includes('-h');
 
-  // Allow typing `exit` to cancel the demo
-  if (isDemoActive() && command === 'exit') {
-    return stopDemoViaInterrupt();
-  }
-
-  // Check if demo is active and process demo-specific logic
-  if (isDemoActive() && !hasHelpFlag) {
-      const demoResponse = processDemoCommand(input.trim());
-      if (demoResponse) {
-          // If demo processed the command, also execute the actual command
-          if (commands[command]) {
-              const actualOutput = typeof commands[command] === 'function' 
-                  ? commands[command](args.slice(1), abortController)
-                  : commands[command];
-              
-              // Show actual command output first, then any demo feedback
-              return Promise.resolve(actualOutput).then(output => {
-                  return output + '\n\n' + demoResponse;
-              });
-          }
-          return demoResponse;
-      }
-  }
-  
   // Detect incorrectly concatenated help flags (e.g., 'pwd--help', 'help-h')
   const concatenatedHelp = command.match(/^([A-Za-z0-9]+)(--help|-h)$/i);
   if (concatenatedHelp) {
@@ -451,6 +384,5 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
     ...fileSystemCommands,
     ...networkCommands,
     ...terminalCommands,
-    ...demoCommands,
     ...projectCommands
   };

@@ -53,8 +53,7 @@ export const networkCommands = {
           if (result.includes('404 UNKNOWN LOCATION') || result.includes('ERROR') || result.includes('Unknown location')) {
             playBeep();
             const errorMessage = `<span style="color: var(--theme-red); font-weight: bold;">Weather data not available for "${city.replace(/\+/g, ' ')}"</span>\n<span style="color: var(--theme-yellow);">Please check the city name and try again.</span>\n<span style="color: var(--theme-cyan);">Example: weather Oslo</span>`;
-            // Silent completion signal for demo ordering
-            window.dispatchEvent(new CustomEvent('vesen:weather:done'));
+
             resolve(errorMessage);
             return;
           }
@@ -99,15 +98,11 @@ export const networkCommands = {
           
         } catch (error) {
           if (error instanceof Error && error.name === 'AbortError') {
-            // Silent completion signal for demo ordering
-            window.dispatchEvent(new CustomEvent('vesen:weather:done'));
             resolve(`<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 6px 0; margin-bottom: 20px;"><div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div><div style="position: relative;"><span style="color: var(--theme-white);">Weather request cancelled</span></div></div>`);
             return;
           }
           playBeep();
           const errorMessage = `<span style="color: var(--theme-red);">Error fetching weather data for ${city.replace(/\+/g, ' ')}: ${error}</span>`;
-          // Silent completion signal for demo ordering
-          window.dispatchEvent(new CustomEvent('vesen:weather:done'));
           resolve(errorMessage);
         }
       })();

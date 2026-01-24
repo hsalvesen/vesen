@@ -1,7 +1,7 @@
 [
 {
     "name": "cassowary",
-    "black": "#1F1F20",
+    "black": "#4A4A4D",
     "red": "#FB055A",
     "green": "#26FFD4",
     "yellow": "#E53E3E",
@@ -31,7 +31,7 @@
     "purple": "#97522c",
     "cyan": "#989a9c",
     "white": "#968c83",
-    "brightBlack": "#5e5252",
+    "brightBlack": "#B8AEA6",
     "brightRed": "#be100e",
     "brightGreen": "#858162",
     "brightYellow": "#eaa549",
@@ -97,7 +97,7 @@
     "purple": "#a481d3",
     "cyan": "#15ab9c",
     "white": "#02c5e0",
-    "brightBlack": "#ffffff",
+    "brightBlack": "#2A5E5C",
     "brightRed": "#ffcdd9",
     "brightGreen": "#beffa8",
     "brightYellow": "#d0ccca",
