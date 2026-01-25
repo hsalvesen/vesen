@@ -17,5 +17,5 @@ days of computing.
 1. Type <span style="color: var(--theme-cyan);">help</span> to see all available commands
 2. Type <span style="color: var(--theme-cyan);">ls</span> to explore the file system
 3. Type <span style="color: var(--theme-cyan);">theme ls</span> to see available color themes
-4. Type <span style="color: var(--theme-cyan);">neofetch</span> for system information with ASCII art
+4. Type <span style="color: var(--theme-cyan);">fastfetch</span> for system information with ASCII art
 
