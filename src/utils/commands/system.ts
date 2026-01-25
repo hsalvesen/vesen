@@ -594,7 +594,8 @@ export const systemCommands = {
 ╚██╗ ██╔╝██╔══╝  ╚════██║██╔══╝  ██║╚██╗██║ 
  ╚████╔╝ ███████╗███████║███████╗██║ ╚████║ 
   ╚═══╝  ╚══════╝╚══════╝╚══════╝╚═╝  ╚═══╝ v${packageJson.version}
-<span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-family: monospace; font-weight: bold;">help</span><span style="color: var(--theme-white);"> to see all available commands.</span>`;
+<span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-family: monospace;">help</span><span style="color: var(--theme-white);"> to see all available commands.</span>
+<span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-family: monospace;">cat README.md</span><span style="color: var(--theme-white);"> to learn more about this terminal.</span>`;
   },
   // ... existing code ...
 };
