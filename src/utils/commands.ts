@@ -112,8 +112,8 @@ const terminalCommands = {
   },
 
   reset: () => {
-    // Reset theme to default (petroica)
-    const defaultTheme = themes.find((t) => t.name.toLowerCase() === 'petroica')!;
+    // Reset theme to default (swamphen)
+    const defaultTheme = themes.find((t) => t.name.toLowerCase() === 'swamphen')!;
     theme.set(defaultTheme);
     
     // Reset current path to default
