@@ -38,25 +38,51 @@ async function loadRealFile(filePath: string): Promise<string> {
 // Helper function to find similar files/directories with case-insensitive matching
 function findSimilarFile(target: string, directory: VirtualFile): string | null {
   if (!directory.children) return null;
-  
+
   const targetLower = target.toLowerCase();
   const children = Object.keys(directory.children);
-  
+
   // First try exact case-insensitive match
   for (const child of children) {
     if (child.toLowerCase() === targetLower) {
       return child;
     }
   }
-  
+
   // If no exact match, try partial matches (starts with)
   for (const child of children) {
     if (child.toLowerCase().startsWith(targetLower)) {
       return child;
     }
   }
-  
+
   return null;
+}
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+type GrepTarget = {
+  displayPath: string;
+  file: VirtualFile;
+};
+
+function collectFilesRecursive(node: VirtualFile, baseSegments: string[] = []): GrepTarget[] {
+  if (node.type === 'file') {
+    return [{ displayPath: '/' + baseSegments.join('/'), file: node }];
+  }
+
+  if (!node.children) return [];
+
+  return Object.keys(node.children)
+    .sort((a, b) => a.localeCompare(b))
+    .flatMap((name) => collectFilesRecursive(node.children![name], [...baseSegments, name]));
 }
 
 export const fileSystemCommands = {
@@ -193,6 +219,123 @@ export const fileSystemCommands = {
     
     // Convert newlines to HTML line breaks for proper display in web terminal
     return content.replace(/\n/g, '<br>');
+  },
+
+  grep: async (args: string[]) => {
+    if (args.length === 0) {
+      return commandHelp.grep;
+    }
+
+    const recognisedOptions = new Set(['-i', '--ignore-case', '-n', '--line-number', '-l', '--files-with-matches', '-r', '-R', '--recursive']);
+
+    let ignoreCase = false;
+    let showLineNumbers = false;
+    let filesWithMatches = false;
+    let recursive = false;
+
+    const positional: string[] = [];
+    for (const arg of args) {
+      if (arg.startsWith('-') && recognisedOptions.has(arg) && positional.length === 0) {
+        if (arg === '-i' || arg === '--ignore-case') ignoreCase = true;
+        if (arg === '-n' || arg === '--line-number') showLineNumbers = true;
+        if (arg === '-l' || arg === '--files-with-matches') filesWithMatches = true;
+        if (arg === '-r' || arg === '-R' || arg === '--recursive') recursive = true;
+        continue;
+      }
+
+      if (arg.startsWith('-') && !recognisedOptions.has(arg) && positional.length === 0) {
+        playBeep();
+        return `grep: unrecognised option '${escapeHtml(arg)}'`;
+      }
+
+      positional.push(arg);
+    }
+
+    const pattern = positional[0];
+    const pathArgs = positional.slice(1);
+
+    if (!pattern || pathArgs.length === 0) {
+      playBeep();
+      return commandHelp.grep;
+    }
+
+    let regex: RegExp;
+    try {
+      regex = new RegExp(pattern, ignoreCase ? 'i' : '');
+    } catch {
+      playBeep();
+      return `grep: invalid pattern '${escapeHtml(pattern)}'`;
+    }
+
+    const targets: GrepTarget[] = [];
+
+    for (const targetArg of pathArgs) {
+      const targetPath = resolvePath(targetArg);
+
+      let current = virtualFileSystem;
+      for (let i = 0; i < targetPath.length; i++) {
+        const segment = targetPath[i];
+        if (current.children && current.children[segment]) {
+          current = current.children[segment];
+        } else {
+          if (current.children) {
+            const similar = findSimilarFile(segment, current);
+            if (similar) {
+              playBeep();
+              return `grep: ${escapeHtml(targetArg)}: No such file or directory. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${escapeHtml(similar)}</span>?`;
+            }
+          }
+          playBeep();
+          return `grep: ${escapeHtml(targetArg)}: No such file or directory`;
+        }
+      }
+
+      if (current.type === 'directory') {
+        if (!recursive) {
+          playBeep();
+          return `grep: ${escapeHtml(targetArg)}: Is a directory (use -r to search recursively)`;
+        }
+
+        targets.push(...collectFilesRecursive(current, targetPath));
+        continue;
+      }
+
+      targets.push({ displayPath: '/' + targetPath.join('/'), file: current });
+    }
+
+    const outputLines: string[] = [];
+
+    for (const target of targets) {
+      let content = '';
+      if (target.file.filePath) {
+        content = await loadRealFile(target.file.filePath);
+        if (content.startsWith('Error loading file:')) {
+          playBeep();
+          return `grep: ${escapeHtml(target.displayPath)}: Error reading file`;
+        }
+      } else {
+        content = target.file.content || '';
+      }
+
+      const lines = content.split(/\r?\n/);
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!regex.test(line)) continue;
+
+        if (filesWithMatches) {
+          outputLines.push(escapeHtml(target.displayPath));
+          break;
+        }
+
+        const prefix = showLineNumbers ? `${escapeHtml(target.displayPath)}:${i + 1}:` : `${escapeHtml(target.displayPath)}:`;
+        outputLines.push(prefix + escapeHtml(line));
+      }
+    }
+
+    if (outputLines.length === 0) return '';
+
+    return `<div style="font-family: monospace; white-space: pre;">${outputLines.join('\n')}</div>`;
   },
   
   cd: (args: string[]) => {

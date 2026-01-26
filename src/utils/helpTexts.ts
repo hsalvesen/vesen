@@ -14,6 +14,7 @@ export const commandHelp = {
   touch: `<span style="color: var(--theme-cyan); font-weight: bold;">touch</span> : Creates a new empty file with the specified name.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> touch <span style="color: var(--theme-green);">[filename]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;touch newfile.txt<br>&nbsp;&nbsp;touch documents/notes.md<br>&nbsp;&nbsp;touch script.js`,
   rm: `<span style="color: var(--theme-cyan); font-weight: bold;">rm</span> : Removes the specified file or directory.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> rm <span style="color: var(--theme-green);">[options] [filename/directory]</span><br><span style="color: var(--theme-green); font-weight: bold;">Options:</span><br>&nbsp;&nbsp;-r, --recursive  remove directories and their contents recursively<br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;rm has.txt<br>&nbsp;&nbsp;rm -r documents<br>&nbsp;&nbsp;rm script.js`,
   mkdir: `<span style="color: var(--theme-cyan); font-weight: bold;">mkdir</span> : Creates a new directory with the specified name.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> mkdir <span style="color: var(--theme-green);">[directory_name]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;mkdir new_folder<br>&nbsp;&nbsp;mkdir projects/myapp<br>&nbsp;&nbsp;mkdir temp`,
+  grep: `<span style="color: var(--theme-cyan); font-weight: bold;">grep</span> : Search for a pattern in one or more files.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> grep <span style="color: var(--theme-green);">[options] [pattern] [file|directory]</span><br><span style="color: var(--theme-green); font-weight: bold;">Options:</span><br>&nbsp;&nbsp;-i, --ignore-case  case-insensitive matching<br>&nbsp;&nbsp;-n, --line-number  show line numbers<br>&nbsp;&nbsp;-l, --files-with-matches  list matching file paths only<br>&nbsp;&nbsp;-r, --recursive  search directories recursively<br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;grep Vesen README.md<br>&nbsp;&nbsp;grep -n user history.txt<br>&nbsp;&nbsp;grep -ir linux documents`,
 
   // System info commands
   reset: `<span style="color: var(--theme-cyan); font-weight: bold;">reset</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Resets the terminal to its initial state, clearing history and resetting theme.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> reset`,
@@ -76,6 +77,7 @@ export const commandDescriptions = {
   'touch': 'Create file',
   'rm': 'Remove file',
   'mkdir': 'Make directory',
+  'grep': 'Search files',
   'reset': 'Reset terminal',
   'fastfetch': 'System info',
   'whoami': 'Developer info',
