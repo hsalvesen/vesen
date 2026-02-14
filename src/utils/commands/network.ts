@@ -449,123 +449,164 @@ export const networkCommands = {
   },
   speedtest: async (args: string[], abortController?: AbortController) => {
     const currentTheme = get(theme);
-    
-    // Show initial message
-    const initialMessage = `<span style="color: ${currentTheme.cyan};">Running speed test... Please wait 4 seconds.</span>`;
-    
-    return new Promise<string>((resolve, reject) => {
+    const { speedtestPhase } = await import('../../stores/history');
+
+    const escapeHtml = (text: string): string => {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    };
+
+    const downUrl = 'https://speed.cloudflare.com/__down';
+    const upUrl = 'https://speed.cloudflare.com/__up';
+
+    const measureDownload = async (bytes: number) => {
+      const url = `${downUrl}?bytes=${bytes}&ts=${Date.now()}`;
+      const t0 = performance.now();
+      const res = await fetch(url, { cache: 'no-store', signal: abortController?.signal });
+      const blob = await res.blob();
+      const t1 = performance.now();
+      const seconds = Math.max((t1 - t0) / 1000, 0.001);
+      const mbps = (bytes * 8) / seconds / 1e6;
+      return { seconds, mbps, bytes: blob.size || bytes };
+    };
+
+    const measureUploadBeacon = async (bytes: number) => {
+      const chunkSize = 64 * 1024;
+      let remaining = bytes;
+      let sent = 0;
+      const t0 = performance.now();
+      while (remaining > 0) {
+        const size = Math.min(remaining, chunkSize);
+        const ab = new ArrayBuffer(size);
+        new Uint8Array(ab).fill(0);
+        const ok = navigator.sendBeacon(upUrl, ab);
+        if (!ok) break;
+        sent += size;
+        remaining -= size;
+        await new Promise((r) => setTimeout(r, 0));
+      }
+      const t1 = performance.now();
+      const seconds = Math.max((t1 - t0) / 1000, 0.001);
+      const mbps = (sent * 8) / seconds / 1e6;
+      return { seconds, mbps, bytes: sent };
+    };
+
+    const measureUpload = async (bytes: number) => {
+      const chunkSize = 64 * 1024;
+      const chunks: Uint8Array[] = [];
+      let remaining = bytes;
+
+      while (remaining > 0) {
+        const size = Math.min(remaining, chunkSize);
+        const chunk = new Uint8Array(size);
+        try {
+          crypto.getRandomValues(chunk);
+        } catch {}
+        chunks.push(chunk);
+        remaining -= size;
+      }
+
+      const parts: ArrayBuffer[] = chunks.map((c) => {
+        const ab = new ArrayBuffer(c.byteLength);
+        new Uint8Array(ab).set(c);
+        return ab;
+      });
+      const payload = new Blob(parts, { type: 'application/octet-stream' });
+
+      const t0 = performance.now();
+      try {
+        const fd = new FormData();
+        fd.append('file', payload, 'upload.bin');
+        await fetch(upUrl, {
+          method: 'POST',
+          body: fd,
+          mode: 'no-cors',
+          cache: 'no-store',
+          signal: abortController?.signal,
+          referrerPolicy: 'no-referrer'
+        });
+      } catch {
+        const beaconResult = await measureUploadBeacon(bytes);
+        return beaconResult;
+      }
+      const t1 = performance.now();
+      const seconds = Math.max((t1 - t0) / 1000, 0.001);
+      const mbps = (bytes * 8) / seconds / 1e6;
+      return { seconds, mbps, bytes };
+    };
+
+    const measureLatency = async (count: number) => {
+      const samples: number[] = [];
+      for (let i = 0; i < count; i++) {
+        const url = `${downUrl}?bytes=1&ts=${Date.now()}&i=${i}`;
+        const t0 = performance.now();
+        await fetch(url, { cache: 'no-store', signal: abortController?.signal });
+        const t1 = performance.now();
+        samples.push(t1 - t0);
+      }
+      const avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+      const min = Math.min(...samples);
+      const max = Math.max(...samples);
+      return { avg, min, max };
+    };
+
+    return new Promise<string>((resolve) => {
       (async () => {
         try {
-          // Loading animation frames
-          const loadingFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-          let frameIndex = 0;
-          
-          // Data arrays for collecting measurements
-          const downloadData: number[] = [];
-          const uploadData: number[] = [];
-          const pingData: number[] = [];
-          
-          const testDuration = 4; // 4 seconds of testing
-          const sampleInterval = 62.5; // Sample every sixteenth of a second
-          const maxSamples = testDuration * (1000 / sampleInterval);
-          
-          // Start the test
-          let currentSample = 0;
-          const startTime = Date.now();
-          
-          const testInterval = setInterval(async () => {
-            if (abortController?.signal.aborted) {
-              clearInterval(testInterval);
-              resolve(`<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 6px 0; margin-bottom: 20px;"><div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div><div style="position: relative;"><span style="color: var(--theme-white);">Speed test cancelled</span></div></div>`);
-              return;
+          const lines: string[] = [];
+
+          lines.push(`<span style="color: ${currentTheme.cyan};">Cloudflare Speed Test</span>`);
+
+          speedtestPhase.set('Measuring download...');
+          const downloadSizes = [5 * 1024 * 1024, 10 * 1024 * 1024, 25 * 1024 * 1024];
+          const downloadSamples: number[] = [];
+          for (const size of downloadSizes) {
+            const m = await measureDownload(size);
+            downloadSamples.push(m.mbps);
+          }
+          const dAvg = downloadSamples.reduce((a, b) => a + b, 0) / downloadSamples.length;
+          lines.push(`<span style="color: ${currentTheme.green};">Download:</span> ${dAvg.toFixed(1)} Mbps (avg of ${downloadSamples.length} samples)`);
+
+          speedtestPhase.set('Measuring upload...');
+          const uploadSizes = [64 * 1024, 256 * 1024, 1 * 1024 * 1024];
+          const uploadSamples: number[] = [];
+          let uploadErrors = 0;
+          for (const size of uploadSizes) {
+            try {
+              const m = await measureUpload(size);
+              uploadSamples.push(m.mbps);
+            } catch {
+              uploadErrors++;
+              // continue collecting other samples
             }
-            
-            frameIndex = (frameIndex + 1) % loadingFrames.length;
-            
-            // Simulate realistic speed variations over time
-            let downloadSpeed, uploadSpeed, ping;
-            
-            if (currentSample < maxSamples / 3) {
-              // Initial ramp-up phase
-              downloadSpeed = 20 + (currentSample / (maxSamples / 3)) * 80 + Math.random() * 20;
-              uploadSpeed = 5 + (currentSample / (maxSamples / 3)) * 15 + Math.random() * 10;
-              ping = 50 - (currentSample / (maxSamples / 3)) * 20 + Math.random() * 10;
-            } else if (currentSample < (maxSamples * 2) / 3) {
-              // Stable phase
-              downloadSpeed = 90 + Math.random() * 30;
-              uploadSpeed = 18 + Math.random() * 12;
-              ping = 25 + Math.random() * 15;
-            } else {
-              // Final phase with some variation
-              downloadSpeed = 85 + Math.random() * 25;
-              uploadSpeed = 20 + Math.random() * 8;
-              ping = 30 + Math.random() * 10;
-            }
-            
-            downloadData.push(downloadSpeed);
-            uploadData.push(uploadSpeed);
-            pingData.push(ping);
-            
-            currentSample++;
-            
-            if (currentSample >= maxSamples) {
-              clearInterval(testInterval);
-              
-              // Calculate statistics
-              const avgDownload = downloadData.reduce((a, b) => a + b) / downloadData.length;
-              const avgUpload = uploadData.reduce((a, b) => a + b) / uploadData.length;
-              const avgPing = pingData.reduce((a, b) => a + b) / pingData.length;
-              
-              const peakDownload = Math.max(...downloadData);
-              const peakUpload = Math.max(...uploadData);
-              const minPing = Math.min(...pingData);
-              
-              const finalDownload = downloadData[downloadData.length - 1];
-              const finalUpload = uploadData[uploadData.length - 1];
-              const finalPing = pingData[pingData.length - 1];
-              
-              // Build the results output with proper column spacing and justification
-              let output = `<div style="font-family: monospace; line-height: 1.4;">`;
-              
-              // Create justified columns
-              const leftColumn = [
-                `<span style="color: ${currentTheme.green};">█ Download: </span>${finalDownload.toFixed(1)} Mbps (avg: ${avgDownload.toFixed(1)})`,
-                `<span style="color: ${currentTheme.blue};">▓ Upload:  </span> ${finalUpload.toFixed(1)} Mbps (avg: ${avgUpload.toFixed(1)})`,
-                `<span style="color: ${currentTheme.red};">░ Ping:  </span>   ${finalPing.toFixed(0)} ms (avg: ${avgPing.toFixed(0)})`
-              ];
-              
-              const rightColumn = [
-                `<span style="color: ${currentTheme.green};">Peak Download:</span> ${peakDownload.toFixed(1)} Mbps`,
-                `<span style="color: ${currentTheme.blue};">Peak Upload:</span>   ${peakUpload.toFixed(1)} Mbps`,
-                `<span style="color: ${currentTheme.red};">Min Ping:</span>      ${minPing.toFixed(0)} ms`
-              ];
-              
-              // Display in justified two columns
-              const isMobile = window.innerWidth < 768;
-              
-              if (isMobile) {
-                // Single column for mobile
-                output += leftColumn.join('<br>') + '<br><br>' + rightColumn.join('<br>');
-              } else {
-                // Two-column layout with proper spacing and justification
-                output += '<div style="display: flex; justify-content: space-between; max-width: 600px;">';
-                output += '<div style="flex: 1; padding-right: 20px;">' + leftColumn.join('<br>') + '</div>';
-                output += '<div style="flex: 1; padding-left: 20px;">' + rightColumn.join('<br>') + '</div>';
-                output += '</div>';
-              }
-              
-              output += '</div>';
-              
-              resolve(output);
-            }
-          }, sampleInterval);
-          
+          }
+          if (uploadSamples.length > 0) {
+            const uAvg = uploadSamples.reduce((a, b) => a + b, 0) / uploadSamples.length;
+            const note = uploadErrors > 0 ? ` (some samples blocked)` : '';
+            lines.push(`<span style="color: ${currentTheme.blue};">Upload:</span> ${uAvg.toFixed(1)} Mbps (avg of ${uploadSamples.length} samples)${note}`);
+          } else {
+            lines.push(`<span style="color: ${currentTheme.blue};">Upload:</span> unavailable due to browser/network restrictions`);
+          }
+
+          speedtestPhase.set('Measuring latency...');
+          const lat = await measureLatency(10);
+          lines.push(`<span style="color: ${currentTheme.red};">Ping:</span> avg ${lat.avg.toFixed(0)} ms, min ${lat.min.toFixed(0)} ms, max ${lat.max.toFixed(0)} ms`);
+
+          const isMobile = window.innerWidth < 768;
+          const content = isMobile ? lines.join('<br>') : lines.join('<br>');
+
+          speedtestPhase.set('');
+          resolve(`<div style="font-family: monospace; line-height: 1.4;">${content}</div>`);
         } catch (error) {
           if (error instanceof Error && error.name === 'AbortError') {
+            speedtestPhase.set('');
             resolve(`<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 6px 0; margin-bottom: 20px;"><div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div><div style="position: relative;"><span style="color: var(--theme-white);">Speed test cancelled</span></div></div>`);
-          } else {
-            reject(error);
+            return;
           }
+          playBeep();
+          speedtestPhase.set('');
+          resolve(`<span style="color: ${currentTheme.red};">Speed test failed: ${escapeHtml(String(error))}</span>`);
         }
       })();
     });

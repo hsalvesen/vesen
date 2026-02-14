@@ -16,6 +16,9 @@ export const history = writable<Array<Command>>(initialHistory);
 // Command navigation history (now also resets on page reload)
 export const commandHistory = writable<Array<string>>([]);
 
+// Progress text for long-running commands; used by Input to show phase-specific loading messages
+export const speedtestPhase = writable<string>('');
+
 history.subscribe((value) => {
   localStorage.setItem('history', JSON.stringify(value));
 });

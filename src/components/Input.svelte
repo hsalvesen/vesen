@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { history, commandHistory } from '../stores/history';
+  import { speedtestPhase } from '../stores/history';
   import { theme } from '../stores/theme';
   import { commands } from '../utils/commands';
   import { virtualFileSystem, currentPath } from '../utils/virtualFileSystem';
@@ -454,7 +455,10 @@ $effect(() => {
     frameIndex = 0;
     loadingInterval = setInterval(() => {
       frameIndex = (frameIndex + 1) % loadingFrames.length;
-      loadingText = `${loadingFrames[frameIndex]} Processing...`;
+      const phase = $speedtestPhase;
+      const isSpeedtest = currentCommandName === 'speedtest';
+      const label = isSpeedtest && phase ? phase : 'Processing...';
+      loadingText = `${loadingFrames[frameIndex]} ${label}`;
     }, 100);
   } else {
     if (loadingInterval) {
@@ -533,4 +537,3 @@ $effect(() => {
     -webkit-text-fill-color: var(--theme-cyan) !important;
   }
 </style>
-

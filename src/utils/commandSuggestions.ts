@@ -42,9 +42,15 @@ export function getCommandSuggestions(input: string, commandNames: string[]): st
       return ['..', ...dirs].map((name) => `cd ${name}`);
     }
 
-    if (command === 'cat' || command === 'rm') {
+    if (command === 'cat') {
       const files = getCurrentDirectoryEntries('files');
-      return files.map((name) => `${command} ${name}`);
+      return files.map((name) => `cat ${name}`);
+    }
+
+    if (command === 'rm') {
+      const files = getCurrentDirectoryEntries('files').map((name) => `rm ${name}`);
+      const dirs = getCurrentDirectoryEntries('directories').map((name) => `rm -r ${name}`);
+      return [...files, ...dirs];
     }
 
     const matches = commandNames
@@ -77,15 +83,47 @@ export function getCommandSuggestions(input: string, commandNames: string[]): st
     return entries.filter((name) => name.startsWith(prefix)).map((name) => `cd ${name}`);
   }
 
-  if (command === 'cat' || command === 'rm') {
+  if (command === 'cat') {
     const prefix = parts[1] ?? '';
 
     const entries = getCurrentDirectoryEntries('files');
     if (!prefix && endsWithSpace) {
-      return entries.map((name) => `${command} ${name}`);
+      return entries.map((name) => `cat ${name}`);
     }
 
-    return entries.filter((name) => name.startsWith(prefix)).map((name) => `${command} ${name}`);
+    return entries.filter((name) => name.startsWith(prefix)).map((name) => `cat ${name}`);
+  }
+
+  if (command === 'rm') {
+    const arg1 = parts[1] ?? '';
+
+    if (arg1.startsWith('-')) {
+      if (parts.length === 2 && !endsWithSpace) {
+        if (arg1 === '-f') return [];
+        return ['-f'].filter((opt) => opt.startsWith(arg1)).map((opt) => `rm ${opt}`);
+      }
+
+      if (arg1 === '-f') {
+        const prefix = parts[2] ?? '';
+        const entries = getCurrentDirectoryEntries('directories');
+
+        if (!prefix && endsWithSpace) {
+          return entries.map((name) => `rm -f ${name}`);
+        }
+
+        return entries.filter((name) => name.startsWith(prefix)).map((name) => `rm -f ${name}`);
+      }
+
+      return [];
+    }
+
+    const prefix = arg1;
+    const entries = getCurrentDirectoryEntries('files');
+    if (!prefix && endsWithSpace) {
+      return entries.map((name) => `rm ${name}`);
+    }
+
+    return entries.filter((name) => name.startsWith(prefix)).map((name) => `rm ${name}`);
   }
 
   if (command === 'theme') {
