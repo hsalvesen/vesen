@@ -5,7 +5,7 @@ export const commandHelp = {
   echo: `<span style="color: var(--theme-cyan); font-weight: bold;">echo</span> : Display text or write to file<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span> > <span style="color: var(--theme-green);">[filename]</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span> >> <span style="color: var(--theme-green);">[filename]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;echo "Hello World"<br>&nbsp;&nbsp;echo "Content" > file.txt<br>&nbsp;&nbsp;echo "More content" >> file.txt`,
   poweroff: `<span style="color: var(--theme-cyan); font-weight: bold;">poweroff</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Closes the terminal session. Attempts to close window, then triggers shutdown sequence.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> poweroff`,
   history: `<span style="color: var(--theme-cyan); font-weight: bold;">history</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Displays a numbered list of previously executed commands.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> history<br><span style="color: var(--theme-magenta); font-weight: bold;">Note:</span> <span style="word-wrap: break-word; overflow-wrap: break-word;">Command history resets when the browser is reloaded or the session is restarted.</span>`,
-  
+
   // File system commands
   ls: `<span style="color: var(--theme-cyan); font-weight: bold;">ls</span> : Lists files and directories in the current or specified directory.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> ls <span style="color: var(--theme-green);">[directory]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;ls<br>&nbsp;&nbsp;ls documents<br>&nbsp;&nbsp;ls /home/user`,
   pwd: `<span style="color: var(--theme-cyan); font-weight: bold;">pwd</span> : Displays the current directory path.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> pwd`,
@@ -20,7 +20,7 @@ export const commandHelp = {
   whoami: `<span style="color: var(--theme-cyan); font-weight: bold;">whoami</span> : Displays developer.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> whoami`,
   fastfetch: `<span style="color: var(--theme-cyan); font-weight: bold;">fastfetch</span> : Shows comprehensive system information with modern detection methods.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> fastfetch<br><span style="color: var(--theme-green); font-weight: bold;">Features:</span> Uses User-Agent Client Hints for accurate macOS version detection, Apple Silicon chip identification, and real-time system metrics.`,
   sudo: `<span style="color: var(--theme-cyan); font-weight: bold;">sudo</span> : Executes commands with elevated privileges (simulated).<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> sudo <span style="color: var(--theme-green);">[command]</span><br><span style="color: var(--theme-red); font-weight: bold;">Note:</span> In this web terminal, sudo is simulated and provides educational content.`,
-  
+
   // Network commands
   weather: `<span style="color: var(--theme-cyan); font-weight: bold;">weather</span> - Get weather information
 <span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> weather <span style="color: var(--theme-green);">[location]</span>
@@ -60,6 +60,12 @@ stock MSFT`,
   email: `<span style="color: var(--theme-cyan); font-weight: bold;">email</span> : Opens the default email client to send an email to the developer.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> email`,
   banner: `<span style="color: var(--theme-cyan); font-weight: bold;">banner</span> : Shows the terminal welcome banner with ASCII art and version information.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> banner`,
   speedtest: `<span style="color: var(--theme-cyan); font-weight: bold;">speedtest</span> : Test internet connection speed<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> speedtest<br><span style="color: var(--theme-green); font-weight: bold;">Features:</span> Tests download/upload speeds and ping latency using Cloudflare infrastructure.`,
+  qr: `<span style="color: var(--theme-cyan); font-weight: bold;">qr</span> - Generate a QR code from a URL or text
+<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> qr <span style="color: var(--theme-green);">[url or text]</span>
+<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
+  qr https://github.com/hsalvesen/vesen
+  qr https://example.com
+  qr hello-world`,
 };
 
 // Short descriptions for the help command
@@ -88,4 +94,5 @@ export const commandDescriptions = {
   'email': 'Open mail client',
   'banner': 'Show banner',
   'speedtest': 'Internet speed test',
+  'qr': 'Generate QR code',
 };

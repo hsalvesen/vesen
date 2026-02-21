@@ -1,16 +1,20 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-  import { commands } from '../utils/commands';
-  import { getCommandSuggestions } from '../utils/commandSuggestions';
+  import { createEventDispatcher } from "svelte";
+  import { commands } from "../utils/commands";
+  import { getCommandSuggestions } from "../utils/commandSuggestions";
 
-  let { command = '', isProcessing = false, isPasswordMode = false } = $props();
+  let { command = "", isProcessing = false, isPasswordMode = false } = $props();
 
-  const dispatch = createEventDispatcher<{ show: void; hide: void; update: void }>();
+  const dispatch = createEventDispatcher<{
+    show: void;
+    hide: void;
+    update: void;
+  }>();
 
   const commandNames = Object.keys(commands);
   let suggestions = $state([] as string[]);
   let wasVisible = $state(false);
-  let lastSuggestionsKey = $state('');
+  let lastSuggestionsKey = $state("");
 
   $effect(() => {
     if (isProcessing || isPasswordMode) {
@@ -21,20 +25,22 @@
   });
 
   $effect(() => {
-    const isVisible = !isProcessing && !isPasswordMode && suggestions.length > 0;
+    const isVisible =
+      !isProcessing && !isPasswordMode && suggestions.length > 0;
     if (isVisible === wasVisible) return;
     wasVisible = isVisible;
-    dispatch(isVisible ? 'show' : 'hide');
+    dispatch(isVisible ? "show" : "hide");
   });
 
   $effect(() => {
-    const isVisible = !isProcessing && !isPasswordMode && suggestions.length > 0;
+    const isVisible =
+      !isProcessing && !isPasswordMode && suggestions.length > 0;
     if (!isVisible) {
-      lastSuggestionsKey = '';
+      lastSuggestionsKey = "";
       return;
     }
 
-    const key = suggestions.join('\n');
+    const key = suggestions.join("\n");
     if (!lastSuggestionsKey) {
       lastSuggestionsKey = key;
       return;
@@ -42,15 +48,18 @@
 
     if (key !== lastSuggestionsKey) {
       lastSuggestionsKey = key;
-      dispatch('update');
+      dispatch("update");
     }
   });
 
-  const suggestionText = () => ['Suggestions:', ...suggestions].join('\n');
+  const suggestionHtml = () => {
+    const items = suggestions.join("\n");
+    return `<span style="color: var(--theme-cyan);">Suggestions:</span>\n${items}`;
+  };
 </script>
 
 {#if !isProcessing && !isPasswordMode && suggestions.length > 0}
-  <div class="command-suggestions">{suggestionText()}</div>
+  <div class="command-suggestions">{@html suggestionHtml()}</div>
 {/if}
 
 <style>

@@ -1,37 +1,37 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { history, commandHistory } from '../stores/history';
-  import { speedtestPhase } from '../stores/history';
-  import { theme } from '../stores/theme';
-  import { commands } from '../utils/commands';
-  import { virtualFileSystem, currentPath } from '../utils/virtualFileSystem';
-  import { processCommand } from '../utils/commands';
-  import { track } from '../utils/tracking';
-  import { get } from 'svelte/store';
-  import themes from '../../themes.json';
+  import { onMount } from "svelte";
+  import { history, commandHistory } from "../stores/history";
+  import { speedtestPhase } from "../stores/history";
+  import { theme } from "../stores/theme";
+  import { commands } from "../utils/commands";
+  import { virtualFileSystem, currentPath } from "../utils/virtualFileSystem";
+  import { processCommand } from "../utils/commands";
+  import { track } from "../utils/tracking";
+  import { get } from "svelte/store";
+  import themes from "../../themes.json";
 
   // Use $props() to declare props with $bindable()
   let {
     isPasswordMode = $bindable(),
     isProcessing = $bindable(false),
-    loadingText = $bindable(''),
-    command = $bindable('')
+    loadingText = $bindable(""),
+    command = $bindable(""),
   } = $props();
 
   let historyIndex = $state(-1);
   let input: HTMLInputElement;
-  let pendingSudoCommand = $state('');
-  let passwordInput = $state('');
-  
+  let pendingSudoCommand = $state("");
+  let passwordInput = $state("");
+
   // Abort controller for cancelling long-running commands
   let currentAbortController: AbortController | null = null;
-  let currentCommandName = $state('');
-  
+  let currentCommandName = $state("");
+
   // Loading animation state - remove local loadingText since it's now a prop
-  let loadingInterval: number | null = null;
-  
+  let loadingInterval: ReturnType<typeof setInterval> | null = null;
+
   // Loading animation frames
-  const loadingFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  const loadingFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
   let frameIndex = 0;
 
   // Getter/setter for input binding
@@ -43,39 +43,42 @@
       if (!isProcessing || isPasswordMode) {
         command = newValue;
       }
-    }
+    },
   };
-  
+
   // Helper function to resolve file paths for completion
-  const getCompletions = (input: string, isFilePath: boolean = false): string[] => {
+  const getCompletions = (
+    input: string,
+    isFilePath: boolean = false,
+  ): string[] => {
     if (!isFilePath) {
       // Command completion
-      return Object.keys(commands).filter(cmd => cmd.startsWith(input));
+      return Object.keys(commands).filter((cmd) => cmd.startsWith(input));
     }
 
     // File path completion using actual virtual file system
     let searchPath = [...currentPath];
     let searchTerm = input;
-    
+
     // Handle absolute paths
-    if (input.startsWith('/')) {
+    if (input.startsWith("/")) {
       searchPath = [];
       searchTerm = input.substring(1);
     }
-    
+
     // Handle relative paths with directories
-    if (input.includes('/')) {
-      const parts = input.split('/');
-      searchTerm = parts.pop() || '';
-      const pathParts = parts.filter(p => p !== '');
-      
-      if (input.startsWith('/')) {
+    if (input.includes("/")) {
+      const parts = input.split("/");
+      searchTerm = parts.pop() || "";
+      const pathParts = parts.filter((p) => p !== "");
+
+      if (input.startsWith("/")) {
         searchPath = pathParts;
       } else {
         searchPath = [...currentPath, ...pathParts];
       }
     }
-    
+
     // Navigate to the search directory
     let current = virtualFileSystem;
     for (const segment of searchPath) {
@@ -85,45 +88,46 @@
         return [];
       }
     }
-    
+
     // Get completions from current directory
     if (current && current.children) {
       return Object.keys(current.children)
-        .filter(name => name.startsWith(searchTerm))
-        .map(name => {
+        .filter((name) => name.startsWith(searchTerm))
+        .map((name) => {
           const child = current.children![name];
-          const fullPath = input.substring(0, input.lastIndexOf('/') + 1) + name;
+          const fullPath =
+            input.substring(0, input.lastIndexOf("/") + 1) + name;
           // Add trailing slash for directories
-          if (child && child.type === 'directory') {
-            return fullPath + '/';
+          if (child && child.type === "directory") {
+            return fullPath + "/";
           }
           return fullPath;
         });
     }
-    
+
     return [];
   };
 
   // Interrupt helper for sudo password prompt
   function interruptSudoPasswordPrompt() {
     isPasswordMode = false;
-    pendingSudoCommand = '';
-    passwordInput = '';
+    pendingSudoCommand = "";
+    passwordInput = "";
 
     // Append interrupt message to the last history entry using a highlighted block
-    history.update(h => {
+    history.update((h) => {
       if (h.length === 0) return h;
       const last = { ...h[h.length - 1] };
       const outputs = [
         ...last.outputs,
-        `<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 6px 0; margin-bottom: 20px;"><div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div><div style="position: relative;"><span style="color: var(--theme-white);">sudo: password entry cancelled</span></div></div>`
+        `<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 6px 0; margin-bottom: 20px;"><div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div><div style="position: relative;"><span style="color: var(--theme-white);">sudo: password entry cancelled</span></div></div>`,
       ];
       const newLast = { ...last, outputs };
       return [...h.slice(0, -1), newLast];
     });
 
     // Reset input state
-    command = '';
+    command = "";
     historyIndex = -1;
 
     // Ensure input is re-enabled and focused
@@ -138,31 +142,31 @@
 
     // Global Ctrl+C listener (works even if input loses focus)
     const onGlobalKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.key === 'c' && isPasswordMode) {
+      if (event.ctrlKey && event.key === "c" && isPasswordMode) {
         event.preventDefault();
         interruptSudoPasswordPrompt();
       }
     };
-    window.addEventListener('keydown', onGlobalKeyDown);
+    window.addEventListener("keydown", onGlobalKeyDown);
 
     // Cleanup on destroy
     return () => {
-      window.removeEventListener('keydown', onGlobalKeyDown);
+      window.removeEventListener("keydown", onGlobalKeyDown);
     };
   });
 
   $effect(() => {
     if (input) {
       // Scroll the main container to bottom after any history changes
-      const mainContainer = document.querySelector('main');
+      const mainContainer = document.querySelector("main");
       if (mainContainer) {
         setTimeout(() => {
           mainContainer.scrollTop = mainContainer.scrollHeight;
         }, 0);
       }
-      
+
       // Also ensure input is visible
-      input.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      input.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   });
 
@@ -170,14 +174,14 @@
   $effect(() => {
     // This effect runs whenever $history changes
     $history;
-    
+
     // Scroll to bottom after DOM updates
     setTimeout(() => {
-      const mainContainer = document.querySelector('main');
+      const mainContainer = document.querySelector("main");
       if (mainContainer) {
         mainContainer.scrollTo({
           top: mainContainer.scrollHeight,
-          behavior: 'smooth'
+          behavior: "smooth",
         });
       }
     }, 10);
@@ -186,7 +190,7 @@
   // handleKeyDown() function
   const handleKeyDown = async (event: KeyboardEvent) => {
     // Handle Ctrl+C globally (even when input is disabled)
-    if (event.ctrlKey && event.key === 'c') {
+    if (event.ctrlKey && event.key === "c") {
       event.preventDefault();
 
       // Ensure sudo password prompt is cancelled immediately
@@ -196,284 +200,387 @@
       }
 
       let didAbort = false;
-      if (isProcessing && currentAbortController && ['curl', 'weather', 'stock', 'fastfetch', 'speedtest'].includes(currentCommandName)) {
+      if (
+        isProcessing &&
+        currentAbortController &&
+        ["curl", "weather", "stock", "fastfetch", "speedtest"].includes(
+          currentCommandName,
+        )
+      ) {
         currentAbortController.abort();
         currentAbortController = null;
-        currentCommandName = '';
+        currentCommandName = "";
         didAbort = true;
       }
 
       if (!isProcessing && !didAbort) {
         // If not processing a command, add a new prompt line
         if (command.trim()) {
-          $history = [...$history, { command, outputs: [''] }];
+          $history = [...$history, { command, outputs: [""] }];
         } else {
-          $history = [...$history, { command: '', outputs: [''] }];
+          $history = [...$history, { command: "", outputs: [""] }];
         }
-        command = '';
+        command = "";
         historyIndex = -1;
       }
       return;
     }
-    
+
     // Handle Ctrl+L globally
-    if (event.ctrlKey && event.key === 'l') {
+    if (event.ctrlKey && event.key === "l") {
       event.preventDefault();
       $history = [];
       return;
     }
-    
+
     // For all other keys, only handle if input is not disabled/processing
     if (isProcessing && !isPasswordMode) {
       return;
     }
-    
+
     // Enter key handler in Input.svelte
-    if (event.key === 'Enter' && !isProcessing) {
-    if (isPasswordMode) {
-    isPasswordMode = false;
-    passwordInput = '';
-    
-    window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
-    pendingSudoCommand = '';
-    command = '';
-    return;
-    }
-    
-    // Check if command is empty or only whitespace
-    if (!command.trim()) {
-      // Just add an empty entry to history to show a new prompt line
-      $history = [...$history, { command: '', outputs: [''] }];
-      command = '';
-      return;
-    }
-    
-    const [commandName, ...args] = command.split(' ');
-  
-    if (import.meta.env.VITE_TRACKING_ENABLED === 'true') {
-      track(commandName, ...args);
-    }
-  
-    // Special handling for sudo
-    if (commandName === 'sudo' && args.length > 0) {
-      const hasHelpFlag = args.includes('--help') || args.includes('-h');
-      // Check if help flag is present
-      if (!hasHelpFlag) {
-        pendingSudoCommand = args.join(' ');
-        isPasswordMode = true;
-        $history = [...$history, { 
-          command, 
-          outputs: []
-        }];
-        command = '';
+    if (event.key === "Enter" && !isProcessing) {
+      if (isPasswordMode) {
+        isPasswordMode = false;
+        passwordInput = "";
+
+        window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "_blank");
+        pendingSudoCommand = "";
+        command = "";
         return;
       }
-    }
 
-    // Store the current command before processing
-    const currentCommand = command;
-    
-    // Set processing state to true but DON'T clear the command yet
-    isProcessing = true;
-    
-    // Set up abort controller for interruptible commands
-    if (['curl', 'weather', 'stock', 'fastfetch', 'speedtest'].includes(commandName)) {
-      currentAbortController = new AbortController();
-      currentCommandName = commandName;
-    }
-    
-    // Disable the input during async operations
-    if (input) {
-      input.disabled = true;
-    }
-
-    try {
-      // Use processCommand and wait for completion
-      const output = await processCommand(currentCommand, currentAbortController);
-  
-      // Only skip display history for clear/reset when NOT showing help
-      const hasHelpFlag = args.includes('--help') || args.includes('-h');
-      const shouldSkipDisplayHistory = (commandName === 'clear' || commandName === 'reset') && !hasHelpFlag;
-      
-      // Always add to command navigation history (for arrow keys), except for reset
-      if (commandName !== 'reset') {
-      $commandHistory = [...$commandHistory, currentCommand];
-      }
-      
-      // Only add to display history if not a clear/reset command
-      if (!shouldSkipDisplayHistory) {
-        $history = [...$history, { command: currentCommand, outputs: [output] }];
+      // Check if command is empty or only whitespace
+      if (!command.trim()) {
+        // Just add an empty entry to history to show a new prompt line
+        $history = [...$history, { command: "", outputs: [""] }];
+        command = "";
+        return;
       }
 
-    } catch (error) {
-      // Handle any errors
-      $history = [...$history, { command: currentCommand, outputs: [`Error: ${error}`] }];
-    } finally {
-      // Clear the command input only after processing is complete
-      command = '';
-      
-      // Reset history index to start from the most recent command
-      historyIndex = -1;
-      
-      // Clean up abort controller
-      currentAbortController = null;
-      currentCommandName = '';
-      
-      // Set processing state to false to show the prompt again
-      isProcessing = false;
-      
-      // Re-enable the input after command completion
+      const [commandName, ...args] = command.split(" ");
+
+      if (import.meta.env.VITE_TRACKING_ENABLED === "true") {
+        track(commandName, ...args);
+      }
+
+      // Special handling for sudo
+      if (commandName === "sudo" && args.length > 0) {
+        const hasHelpFlag = args.includes("--help") || args.includes("-h");
+        // Check if help flag is present
+        if (!hasHelpFlag) {
+          pendingSudoCommand = args.join(" ");
+          isPasswordMode = true;
+          $history = [
+            ...$history,
+            {
+              command,
+              outputs: [],
+            },
+          ];
+          command = "";
+          return;
+        }
+      }
+
+      // Store the current command before processing
+      const currentCommand = command;
+
+      // Set processing state to true but DON'T clear the command yet
+      isProcessing = true;
+
+      // Set up abort controller for interruptible commands
+      if (
+        ["curl", "weather", "stock", "fastfetch", "speedtest"].includes(
+          commandName,
+        )
+      ) {
+        currentAbortController = new AbortController();
+        currentCommandName = commandName;
+      }
+
+      // Disable the input during async operations
       if (input) {
-        input.disabled = false;
-        input.focus();
+        input.disabled = true;
       }
-    }
-  } else if (isPasswordMode) {
-    // Handle password input (hide characters)
-    if (event.key === 'Backspace') {
-      passwordInput = passwordInput.slice(0, -1);
-    } else if (event.key.length === 1) {
-      passwordInput += event.key;
-    }
-    event.preventDefault();
-  } else if (event.key === 'ArrowUp') {
-    if (historyIndex < $commandHistory.length - 1) {
-      historyIndex++;
-      command = $commandHistory[$commandHistory.length - 1 - historyIndex];
-    }
-    event.preventDefault();
-  } else if (event.key === 'ArrowDown') {
-    if (historyIndex > -1) {
-      historyIndex--;
-      command = historyIndex >= 0 
-        ? $commandHistory[$commandHistory.length - 1 - historyIndex] 
-        : '';
-    }
-    event.preventDefault();
-  } else if (event.key === 'Tab') {
-    event.preventDefault();
 
-    const parts = command.split(' ');
-    const commandName = parts[0];
-    const currentArg = parts[parts.length - 1] || '';
-    
-    // Commands that expect file paths as arguments
-    const fileCommands = ['cd', 'cat', 'rm', 'touch', 'nano'];
-    
-    if (parts.length === 1) {
-      // Complete command name
-      const completions = getCompletions(commandName, false);
-      if (completions.length === 1) {
-        command = completions[0];
-      } else if (completions.length > 1) {
-        // Find common prefix
-        const commonPrefix = completions.reduce((prefix, cmd) => {
-          let i = 0;
-          while (i < prefix.length && i < cmd.length && prefix[i] === cmd[i]) {
-            i++;
-          }
-          return prefix.substring(0, i);
-        });
-        if (commonPrefix.length > commandName.length) {
-          command = commonPrefix;
-        }
-      }
-    } else if (commandName === 'theme' && parts.length === 2) {
-      // Complete theme subcommands (ls, set)
-      const themeSubcommands = ['ls', 'set'];
-      const matchingSubcommands = themeSubcommands.filter(sub => sub.startsWith(currentArg.toLowerCase()));
-      
-      if (matchingSubcommands.length === 1) {
-        command = `theme ${matchingSubcommands[0]}`;
-      } else if (matchingSubcommands.length > 1) {
-        // Find common prefix
-        const commonPrefix = matchingSubcommands.reduce((prefix, sub) => {
-          let i = 0;
-          while (i < prefix.length && i < sub.length && prefix[i] === sub[i]) {
-            i++;
-          }
-          return prefix.substring(0, i);
-        });
-        if (commonPrefix.length > currentArg.length) {
-          command = `theme ${commonPrefix}`;
-        }
-      }
-    } else if (commandName === 'theme' && parts.length === 3 && parts[1] === 'set') {
-      // Complete theme names for 'theme set' command
-      const themeNames = themes.map(t => t.name.toLowerCase());
-      const matchingThemes = themeNames.filter(name => name.startsWith(currentArg.toLowerCase()));
-      
-      if (matchingThemes.length === 1) {
-        // Find the original case theme name
-        const originalTheme = themes.find(t => t.name.toLowerCase() === matchingThemes[0]);
-        if (originalTheme) {
-          parts[parts.length - 1] = originalTheme.name;
-          command = parts.join(' ');
-        }
-      } else if (matchingThemes.length > 1) {
-        // Find common prefix
-        const commonPrefix = matchingThemes.reduce((prefix, name) => {
-          let i = 0;
-          while (i < prefix.length && i < name.length && prefix[i] === name[i]) {
-            i++;
-          }
-          return prefix.substring(0, i);
-        });
-        if (commonPrefix.length > currentArg.length) {
-          parts[parts.length - 1] = commonPrefix;
-          command = parts.join(' ');
-        }
-      }
-    } else if (fileCommands.includes(commandName)) {
-      // Complete file path
-      const completions = getCompletions(currentArg, true);
-      if (completions.length === 1) {
-        parts[parts.length - 1] = completions[0];
-        command = parts.join(' ');
-      } else if (completions.length > 1) {
-        // Find common prefix for file paths
-        const commonPrefix = completions.reduce((prefix, path) => {
-          let i = 0;
-          while (i < prefix.length && i < path.length && prefix[i] === path[i]) {
-            i++;
-          }
-          return prefix.substring(0, i);
-        });
-        if (commonPrefix.length > currentArg.length) {
-          parts[parts.length - 1] = commonPrefix;
-          command = parts.join(' ');
-        }
-      }
-    }
-  }
-};
+      try {
+        // Use processCommand and wait for completion
+        const output = await processCommand(
+          currentCommand,
+          currentAbortController,
+        );
 
-// Effect to handle loading animation
-// Loading animation effect
-$effect(() => {
-  if (isProcessing) {
-    frameIndex = 0;
-    loadingInterval = setInterval(() => {
-      frameIndex = (frameIndex + 1) % loadingFrames.length;
-      const phase = $speedtestPhase;
-      const isSpeedtest = currentCommandName === 'speedtest';
-      const label = isSpeedtest && phase ? phase : 'Processing...';
-      loadingText = `${loadingFrames[frameIndex]} ${label}`;
-    }, 100);
-  } else {
-    if (loadingInterval) {
-      clearInterval(loadingInterval);
-      loadingInterval = null;
-    }
-    loadingText = '';
-  }
+        // Only skip display history for clear/reset when NOT showing help
+        const hasHelpFlag = args.includes("--help") || args.includes("-h");
+        const shouldSkipDisplayHistory =
+          (commandName === "clear" || commandName === "reset") && !hasHelpFlag;
 
-  return () => {
-    if (loadingInterval) {
-      clearInterval(loadingInterval);
+        // Always add to command navigation history (for arrow keys), except for reset
+        if (commandName !== "reset") {
+          $commandHistory = [...$commandHistory, currentCommand];
+        }
+
+        // Only add to display history if not a clear/reset command
+        if (!shouldSkipDisplayHistory) {
+          $history = [
+            ...$history,
+            { command: currentCommand, outputs: [output] },
+          ];
+        }
+      } catch (error) {
+        // Handle any errors
+        $history = [
+          ...$history,
+          { command: currentCommand, outputs: [`Error: ${error}`] },
+        ];
+      } finally {
+        // Clear the command input only after processing is complete
+        command = "";
+
+        // Reset history index to start from the most recent command
+        historyIndex = -1;
+
+        // Clean up abort controller
+        currentAbortController = null;
+        currentCommandName = "";
+
+        // Set processing state to false to show the prompt again
+        isProcessing = false;
+
+        // Re-enable the input after command completion
+        if (input) {
+          input.disabled = false;
+          input.focus();
+        }
+      }
+    } else if (isPasswordMode) {
+      // Handle password input (hide characters)
+      if (event.key === "Backspace") {
+        passwordInput = passwordInput.slice(0, -1);
+      } else if (event.key.length === 1) {
+        passwordInput += event.key;
+      }
+      event.preventDefault();
+    } else if (event.key === "ArrowUp") {
+      if (historyIndex < $commandHistory.length - 1) {
+        historyIndex++;
+        command = $commandHistory[$commandHistory.length - 1 - historyIndex];
+      }
+      event.preventDefault();
+    } else if (event.key === "ArrowDown") {
+      if (historyIndex > -1) {
+        historyIndex--;
+        command =
+          historyIndex >= 0
+            ? $commandHistory[$commandHistory.length - 1 - historyIndex]
+            : "";
+      }
+      event.preventDefault();
+    } else if (event.key === "Tab") {
+      event.preventDefault();
+
+      const parts = command.split(" ");
+      const commandName = parts[0];
+      const currentArg = parts[parts.length - 1] || "";
+
+      // Commands that expect file paths as arguments
+      const fileCommands = ["cd", "cat", "rm", "touch", "nano"];
+
+      if (parts.length === 1) {
+        // Complete command name
+        const completions = getCompletions(commandName, false);
+        if (completions.length === 1) {
+          command = completions[0];
+        } else if (completions.length > 1) {
+          // Find common prefix
+          const commonPrefix = completions.reduce((prefix, cmd) => {
+            let i = 0;
+            while (
+              i < prefix.length &&
+              i < cmd.length &&
+              prefix[i] === cmd[i]
+            ) {
+              i++;
+            }
+            return prefix.substring(0, i);
+          });
+          if (commonPrefix.length > commandName.length) {
+            command = commonPrefix;
+          }
+        }
+      } else if (commandName === "theme" && parts.length === 2) {
+        // Complete theme subcommands (ls, set)
+        const themeSubcommands = ["ls", "set"];
+        const matchingSubcommands = themeSubcommands.filter((sub) =>
+          sub.startsWith(currentArg.toLowerCase()),
+        );
+
+        if (matchingSubcommands.length === 1) {
+          command = `theme ${matchingSubcommands[0]}`;
+        } else if (matchingSubcommands.length > 1) {
+          // Find common prefix
+          const commonPrefix = matchingSubcommands.reduce((prefix, sub) => {
+            let i = 0;
+            while (
+              i < prefix.length &&
+              i < sub.length &&
+              prefix[i] === sub[i]
+            ) {
+              i++;
+            }
+            return prefix.substring(0, i);
+          });
+          if (commonPrefix.length > currentArg.length) {
+            command = `theme ${commonPrefix}`;
+          }
+        }
+      } else if (
+        commandName === "theme" &&
+        parts.length === 3 &&
+        parts[1] === "set"
+      ) {
+        // Complete theme names for 'theme set' command
+        const themeNames = themes.map((t) => t.name.toLowerCase());
+        const matchingThemes = themeNames.filter((name) =>
+          name.startsWith(currentArg.toLowerCase()),
+        );
+
+        if (matchingThemes.length === 1) {
+          // Find the original case theme name
+          const originalTheme = themes.find(
+            (t) => t.name.toLowerCase() === matchingThemes[0],
+          );
+          if (originalTheme) {
+            parts[parts.length - 1] = originalTheme.name;
+            command = parts.join(" ");
+          }
+        } else if (matchingThemes.length > 1) {
+          // Find common prefix
+          const commonPrefix = matchingThemes.reduce((prefix, name) => {
+            let i = 0;
+            while (
+              i < prefix.length &&
+              i < name.length &&
+              prefix[i] === name[i]
+            ) {
+              i++;
+            }
+            return prefix.substring(0, i);
+          });
+          if (commonPrefix.length > currentArg.length) {
+            parts[parts.length - 1] = commonPrefix;
+            command = parts.join(" ");
+          }
+        }
+      } else if (commandName === "curl" && parts.length >= 2) {
+        // Complete curl URL argument
+        const curlSuggestions = [
+          "curl explainshell.com",
+          "curl https://httpbin.org/get",
+        ];
+        const matchingCurl = curlSuggestions.filter((s) =>
+          s.startsWith(command.toLowerCase()),
+        );
+        const matchingCurlUrls = matchingCurl.map((s) =>
+          s.slice("curl ".length),
+        );
+
+        if (matchingCurlUrls.length === 1) {
+          command = `curl ${matchingCurlUrls[0]}`;
+        } else if (matchingCurlUrls.length > 1) {
+          const commonPrefix = matchingCurlUrls.reduce((prefix, url) => {
+            let i = 0;
+            while (i < prefix.length && i < url.length && prefix[i] === url[i])
+              i++;
+            return prefix.substring(0, i);
+          });
+          if (commonPrefix.length > currentArg.length) {
+            command = `curl ${commonPrefix}`;
+          }
+        }
+      } else if (commandName === "qr" && parts.length >= 2) {
+        // Complete qr URL argument
+        const qrSuggestions = [
+          "qr https://tldr.sh",
+          "qr explainshell.com",
+          "qr www.wikipedia.org/wiki/Computer_terminal",
+          "qr https://shellcheck.net",
+          "qr commandlinefu.com",
+        ];
+        const matchingFull = qrSuggestions.filter((s) =>
+          s.startsWith(command.toLowerCase()),
+        );
+        // Work only with the URL portion (after 'qr ')
+        const matchingUrls = matchingFull.map((s) => s.slice("qr ".length));
+
+        if (matchingUrls.length === 1) {
+          command = `qr ${matchingUrls[0]}`;
+        } else if (matchingUrls.length > 1) {
+          const commonPrefix = matchingUrls.reduce((prefix, url) => {
+            let i = 0;
+            while (i < prefix.length && i < url.length && prefix[i] === url[i])
+              i++;
+            return prefix.substring(0, i);
+          });
+          if (commonPrefix.length > currentArg.length) {
+            command = `qr ${commonPrefix}`;
+          }
+        }
+      } else if (fileCommands.includes(commandName)) {
+        // Complete file path
+        const completions = getCompletions(currentArg, true);
+        if (completions.length === 1) {
+          parts[parts.length - 1] = completions[0];
+          command = parts.join(" ");
+        } else if (completions.length > 1) {
+          // Find common prefix for file paths
+          const commonPrefix = completions.reduce((prefix, path) => {
+            let i = 0;
+            while (
+              i < prefix.length &&
+              i < path.length &&
+              prefix[i] === path[i]
+            ) {
+              i++;
+            }
+            return prefix.substring(0, i);
+          });
+          if (commonPrefix.length > currentArg.length) {
+            parts[parts.length - 1] = commonPrefix;
+            command = parts.join(" ");
+          }
+        }
+      }
     }
   };
-});
+
+  // Effect to handle loading animation
+  // Loading animation effect
+  $effect(() => {
+    if (isProcessing) {
+      frameIndex = 0;
+      loadingInterval = setInterval(() => {
+        frameIndex = (frameIndex + 1) % loadingFrames.length;
+        const phase = $speedtestPhase;
+        const isSpeedtest = currentCommandName === "speedtest";
+        const label = isSpeedtest && phase ? phase : "Processing...";
+        loadingText = `${loadingFrames[frameIndex]} ${label}`;
+      }, 100);
+    } else {
+      if (loadingInterval) {
+        clearInterval(loadingInterval);
+        loadingInterval = null;
+      }
+      loadingText = "";
+    }
+
+    return () => {
+      if (loadingInterval) {
+        clearInterval(loadingInterval);
+      }
+    };
+  });
 </script>
 
 <svelte:window
@@ -491,8 +598,8 @@ $effect(() => {
   bind:value={command}
   class="bg-transparent outline-none flex-1 command-input"
   style="color: var(--theme-white); opacity: 1;"
-  type={isPasswordMode ? 'password' : 'text'}
-  placeholder={isPasswordMode ? '' : ''}
+  type={isPasswordMode ? "password" : "text"}
+  placeholder={isPasswordMode ? "" : ""}
   autocomplete="off"
   spellcheck="false"
   autocapitalize="off"
@@ -531,7 +638,7 @@ $effect(() => {
     opacity: 1 !important;
     -webkit-text-fill-color: var(--theme-white) !important;
   }
-  
+
   input:readonly {
     color: var(--theme-cyan) !important;
     -webkit-text-fill-color: var(--theme-cyan) !important;

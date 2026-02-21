@@ -3,6 +3,17 @@ import { getCurrentDirectory } from './virtualFileSystem';
 
 const themeNames = themes.map((t) => t.name);
 const weatherExamples = ['weather Gadigal', 'weather Oslo', 'weather Aotearoa'];
+const curlExamples = [
+  'curl explainshell.com',
+  'curl https://httpbin.org/get',
+];
+const qrExamples = [
+  'qr https://tldr.sh',
+  'qr explainshell.com',
+  "qr www.wikipedia.org/wiki/Computer_terminal",
+  'qr shellcheck.net',
+  'qr commandlinefu.com',
+];
 
 function getCurrentDirectoryEntries(kind: 'all' | 'files' | 'directories' = 'all'): string[] {
   const dir = getCurrentDirectory();
@@ -35,6 +46,10 @@ export function getCommandSuggestions(input: string, commandNames: string[]): st
 
     if (command === 'weather') {
       return weatherExamples;
+    }
+
+    if (command === 'qr') {
+      return qrExamples;
     }
 
     if (command === 'cd') {
@@ -70,6 +85,28 @@ export function getCommandSuggestions(input: string, commandNames: string[]): st
     }
 
     return weatherExamples.filter((ex) => ex.toLowerCase().startsWith(`weather ${prefixLower}`));
+  }
+
+  if (command === 'curl') {
+    const prefix = parts[1] ?? '';
+    const prefixLower = prefix.toLowerCase();
+
+    if (!prefix && endsWithSpace) {
+      return curlExamples;
+    }
+
+    return curlExamples.filter((ex) => ex.toLowerCase().startsWith(`curl ${prefixLower}`));
+  }
+
+  if (command === 'qr') {
+    const prefix = parts[1] ?? '';
+    const prefixLower = prefix.toLowerCase();
+
+    if (!prefix && endsWithSpace) {
+      return qrExamples;
+    }
+
+    return qrExamples.filter((ex) => ex.toLowerCase().startsWith(`qr ${prefixLower}`));
   }
 
   if (command === 'cd') {

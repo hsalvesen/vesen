@@ -1,5 +1,5 @@
 [
-{
+  {
     "name": "cassowary",
     "black": "#4A4A4D",
     "red": "#FB055A",
@@ -163,7 +163,7 @@
     "purple": "#6A5ACD",
     "cyan": "#00bbbb",
     "white": "#00bbbb",
-    "brightBlack": "#555555",
+    "brightBlack": "#66cc88",
     "brightRed": "#bb0000",
     "brightGreen": "#00bb00",
     "brightYellow": "#e7b000",
