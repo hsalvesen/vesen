@@ -1,7 +1,11 @@
 import themes from '../../themes.json';
+import { cathodeModes } from '../stores/cathode';
 import { getCurrentDirectory } from './virtualFileSystem';
 
 const themeNames = themes.map((t) => t.name);
+// `off` is offered via its own `cathode off` subcommand, so the `set` list
+// only surfaces the actual visual variations.
+const cathodeVariations = cathodeModes.filter((m) => m !== 'off');
 const weatherExamples = ['weather Gadigal', 'weather Oslo', 'weather Aotearoa'];
 const curlExamples = [
   'curl explainshell.com',
@@ -42,6 +46,10 @@ export function getCommandSuggestions(input: string, commandNames: string[]): st
   if (parts.length === 1) {
     if (command === 'theme') {
       return ['theme ls', 'theme set'];
+    }
+
+    if (command === 'cathode') {
+      return ['cathode ls', 'cathode set', 'cathode off'];
     }
 
     if (command === 'weather') {
@@ -190,6 +198,36 @@ export function getCommandSuggestions(input: string, commandNames: string[]): st
       return themeNames
         .filter((name) => name.toLowerCase().startsWith(prefixLower))
         .map((name) => `theme set ${name}`);
+    }
+  }
+
+  if (command === 'cathode') {
+    const subcommands = ['ls', 'set', 'off'];
+    const subcommand = parts[1] ?? '';
+
+    if (parts.length === 2) {
+      if (subcommand === 'set') {
+        return cathodeVariations.map((name) => `cathode set ${name}`);
+      }
+
+      if (subcommands.includes(subcommand)) {
+        return [];
+      }
+
+      return subcommands.filter((s) => s.startsWith(subcommand)).map((s) => `cathode ${s}`);
+    }
+
+    if (parts.length >= 3 && parts[1] === 'set') {
+      const variationPrefix = parts[2] ?? '';
+      const prefixLower = variationPrefix.toLowerCase();
+
+      if (!variationPrefix && endsWithSpace) {
+        return cathodeVariations.map((name) => `cathode set ${name}`);
+      }
+
+      return cathodeVariations
+        .filter((name) => name.toLowerCase().startsWith(prefixLower))
+        .map((name) => `cathode set ${name}`);
     }
   }
 
