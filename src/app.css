@@ -86,3 +86,192 @@
   font-weight: bold;
   color: var(--theme-bright-cyan);
 }
+
+/* Dynamic cathode-mode list highlight (mirrors the theme list) */
+.cathode-name {
+  color: var(--theme-white);
+}
+
+.cathode-name.is-current {
+  font-weight: bold;
+  color: var(--theme-bright-cyan);
+}
+
+/* ==========================================================================
+   Cathode (CRT) display effect
+   --------------------------------------------------------------------------
+   The active variation is exposed as a class on <html> (e.g. `crt-vintage`)
+   plus a generic `crt-on` flag, both set by src/stores/cathode.ts.
+
+   Two things combine to sell the effect:
+     1. Per-character treatments applied directly to the terminal (`main`):
+        phosphor glow and RGB fringing, so they track each themed colour.
+     2. A fixed, pointer-events:none overlay of stacked layers (scanlines,
+        shadow mask, refresh sweep, flicker, vignette) that sits on top like
+        the curved glass of an old tube.
+   ========================================================================== */
+
+/* --- Terminal treatments (only when an effect is on) --------------------- */
+
+/* Phosphor + vintage: soft bloom that inherits each element's own colour. */
+:is(html.crt-phosphor, html.crt-vintage) main {
+  text-shadow: 0 0 1px currentColor, 0 0 6px currentColor;
+}
+
+/* Vintage additionally splits colour channels for a mistuned-tube look. */
+html.crt-vintage main {
+  text-shadow:
+    0.6px 0 0 rgba(255, 45, 90, 0.5),
+    -0.6px 0 0 rgba(60, 190, 255, 0.5),
+    0 0 6px currentColor;
+}
+
+/* Vintage nudges saturation/contrast up a touch to feel more analogue. */
+html.crt-vintage main {
+  filter: saturate(1.15) contrast(1.05);
+}
+
+/* --- Overlay scaffold ---------------------------------------------------- */
+
+.crt-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none; /* never steal clicks/scroll from the terminal */
+  overflow: hidden;
+}
+
+html.crt-on .crt-overlay {
+  display: block;
+}
+
+.crt-layer {
+  position: absolute;
+  inset: 0;
+}
+
+/* Scanlines: faint horizontal gaps between "raster" lines. On by default for
+   every variation; individual modes tune the intensity below. */
+.crt-layer-scanlines {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0) 1.5px,
+    rgba(0, 0, 0, 0.28) 1.5px,
+    rgba(0, 0, 0, 0.28) 3px
+  );
+}
+
+html.crt-phosphor .crt-layer-scanlines {
+  opacity: 0.55; /* glow is the star here, so ease off the lines */
+}
+
+/* Shadow mask: vertical RGB triads. Reserved for the maximal vintage mode. */
+.crt-layer-mask {
+  display: none;
+  background: repeating-linear-gradient(
+    to right,
+    rgba(255, 0, 0, 0.06) 0,
+    rgba(0, 255, 0, 0.06) 1px,
+    rgba(0, 0, 255, 0.06) 2px,
+    rgba(0, 0, 0, 0) 3px
+  );
+}
+
+/* Refresh sweep: a soft bright band rolling slowly down the screen. */
+.crt-layer-sweep {
+  display: none;
+  top: 0;
+  height: 45vh;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.035) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  will-change: transform;
+  animation: crt-sweep 7s linear infinite;
+}
+
+/* Flicker: quick, small brightness jitter as if the beam can't hold steady. */
+.crt-layer-flicker {
+  display: none;
+  background: rgba(0, 0, 0, 0.12);
+  will-change: opacity;
+  animation: crt-flicker 0.13s steps(3, end) infinite;
+}
+
+/* Vignette: darkens the corners so the picture feels bowed into the tube. */
+.crt-layer-vignette {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0) 58%,
+    rgba(0, 0, 0, 0.45) 100%
+  );
+}
+
+html.crt-vintage .crt-layer-vignette {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0) 48%,
+    rgba(0, 0, 0, 0.68) 100%
+  );
+}
+
+/* --- Which layers each variation switches on ----------------------------- */
+
+/* scanlines: static lines + rolling refresh sweep + gentle vignette. */
+html.crt-scanlines .crt-layer-sweep {
+  display: block;
+}
+
+/* phosphor: glow (above) + softened scanlines + a subtle flicker. */
+html.crt-phosphor .crt-layer-flicker {
+  display: block;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* vintage: everything at once. */
+html.crt-vintage .crt-layer-mask,
+html.crt-vintage .crt-layer-sweep,
+html.crt-vintage .crt-layer-flicker {
+  display: block;
+}
+
+@keyframes crt-sweep {
+  0% {
+    transform: translateY(-45vh);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+@keyframes crt-flicker {
+  0% {
+    opacity: 0.10;
+  }
+  25% {
+    opacity: 0.32;
+  }
+  50% {
+    opacity: 0.06;
+  }
+  75% {
+    opacity: 0.24;
+  }
+  100% {
+    opacity: 0.12;
+  }
+}
+
+/* Respect users who prefer reduced motion: keep the static look, drop the
+   moving/animated layers that could be distracting or nauseating. */
+@media (prefers-reduced-motion: reduce) {
+  .crt-layer-sweep,
+  .crt-layer-flicker {
+    animation: none;
+    display: none !important;
+  }
+}

@@ -6,6 +6,7 @@ import { fileSystemCommands } from './commands/fileSystem';
 import { networkCommands } from './commands/network';
 import { qrCommands } from './commands/qr';
 import { theme } from '../stores/theme';
+import { cathode, cathodeModes, cathodeModeInfo, type CathodeMode } from '../stores/cathode';
 import { get } from 'svelte/store';
 import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from './virtualFileSystem';
 import { commandHelp, commandDescriptions } from './helpTexts';
@@ -190,6 +191,80 @@ const projectCommands = {
       }
 
       default: {
+        return usage;
+      }
+    }
+  },
+  cathode: (args: string[]) => {
+    const usage = `<span style="color: var(--theme-cyan); font-weight: bold;">cathode</span> - Trial a retro CRT (cathode ray tube) display effect
+<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> cathode <span style="color: var(--theme-green);">[args]</span>.
+  <span style="color: var(--theme-green);">args:</span>
+    ls: list all cathode variations
+    set: set the effect to [variation]
+    off: turn the effect off
+
+<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
+  cathode ls
+  cathode set vintage
+  cathode off`;
+
+    const applyMode = (mode: CathodeMode) => {
+      cathode.set(mode);
+      if (mode === 'off') {
+        return 'Cathode effect turned off.';
+      }
+      return `Cathode effect set to ${mode}. Try 'cathode ls' to compare the variations.`;
+    };
+
+    if (args.length === 0) {
+      return usage;
+    }
+
+    switch (args[0]) {
+      case 'ls': {
+        const current = get(cathode);
+        const nameWidth = Math.max(...cathodeModes.map((m) => m.length));
+
+        const rows = cathodeModeInfo
+          .map(({ name, summary }) => {
+            const isCurrent = name === current;
+            const padding = ' '.repeat(nameWidth - name.length + 2);
+            const label = `<span class="cathode-name${isCurrent ? ' is-current' : ''}" data-cathode-name="${name}">${name}</span>`;
+            return `  ${label}${padding}<span style="color: var(--theme-white);">${summary}</span>`;
+          })
+          .join('\n');
+
+        return `<span style="color: var(--theme-cyan);">Cathode variations (current highlighted):</span>
+${rows}
+
+<span style="color: var(--theme-yellow);">Trial one with:</span> cathode set <span style="color: var(--theme-green);">[variation]</span>`;
+      }
+
+      case 'set': {
+        if (args.length !== 2) {
+          return usage;
+        }
+
+        const requested = args[1].toLowerCase();
+        const match = cathodeModes.find((m) => m === requested);
+        if (!match) {
+          return `Cathode variation '${args[1]}' not found. Try 'cathode ls' to see all available variations.`;
+        }
+
+        return applyMode(match);
+      }
+
+      case 'off': {
+        return applyMode('off');
+      }
+
+      default: {
+        // Friendly shortcut: `cathode vintage` behaves like `cathode set vintage`.
+        const requested = args[0].toLowerCase();
+        const match = cathodeModes.find((m) => m === requested);
+        if (match) {
+          return applyMode(match);
+        }
         return usage;
       }
     }

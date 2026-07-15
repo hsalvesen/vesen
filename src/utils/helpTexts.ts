@@ -56,6 +56,17 @@ stock MSFT`,
 <span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
   theme ls
   theme set swamphen`,
+  cathode: `<span style="color: var(--theme-cyan); font-weight: bold;">cathode</span> - Trial a retro CRT (cathode ray tube) display effect
+<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> cathode <span style="color: var(--theme-green);">[args]</span>.
+  <span style="color: var(--theme-green);">args:</span>
+    ls: list all cathode variations
+    set: set the effect to [variation]
+    off: turn the effect off
+
+<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
+  cathode ls
+  cathode set phosphor
+  cathode off`,
   repo: `<span style="color: var(--theme-cyan); font-weight: bold;">repo</span> : Opens the project's GitHub repository in a new tab.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> repo`,
   email: `<span style="color: var(--theme-cyan); font-weight: bold;">email</span> : Opens the default email client to send an email to the developer.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> email`,
   banner: `<span style="color: var(--theme-cyan); font-weight: bold;">banner</span> : Shows the terminal welcome banner with ASCII art and version information.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> banner`,
@@ -90,6 +101,7 @@ export const commandDescriptions = {
   'curl': 'HTTP request',
   'stock': 'Stock data',
   'theme': 'Change theme',
+  'cathode': 'Trial CRT effect',
   'repo': 'Open repository',
   'email': 'Open mail client',
   'banner': 'Show banner',
