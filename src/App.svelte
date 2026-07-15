@@ -3,7 +3,11 @@
   import Input from './components/Input.svelte';
   import History from './components/History.svelte';
   import CommandSuggestionsRow from './components/CommandSuggestionsRow.svelte';
+  import Cathode from './components/Cathode.svelte';
   import { theme } from './stores/theme';
+  // Importing the store ensures the CRT effect's <html> classes are applied on
+  // first paint (restoring a persisted mode without a flash of the flat theme).
+  import './stores/cathode';
   
   let isPasswordMode = $state(false);
   let isProcessing = $state(false);
@@ -87,5 +91,7 @@
     {/if}
   </div>
 </main>
+
+<Cathode />
 
 
