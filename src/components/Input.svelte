@@ -9,6 +9,7 @@
   import { track } from "../utils/tracking";
   import { get } from "svelte/store";
   import themes from "../../themes.json";
+  import { cathodeModes } from "../stores/cathode";
 
   // Use $props() to declare props with $bindable()
   let {
@@ -458,6 +459,64 @@
         } else if (matchingThemes.length > 1) {
           // Find common prefix
           const commonPrefix = matchingThemes.reduce((prefix, name) => {
+            let i = 0;
+            while (
+              i < prefix.length &&
+              i < name.length &&
+              prefix[i] === name[i]
+            ) {
+              i++;
+            }
+            return prefix.substring(0, i);
+          });
+          if (commonPrefix.length > currentArg.length) {
+            parts[parts.length - 1] = commonPrefix;
+            command = parts.join(" ");
+          }
+        }
+      } else if (commandName === "cathode" && parts.length === 2) {
+        // Complete cathode subcommands (ls, set, off)
+        const cathodeSubcommands = ["ls", "set", "off"];
+        const matchingSubcommands = cathodeSubcommands.filter((sub) =>
+          sub.startsWith(currentArg.toLowerCase()),
+        );
+
+        if (matchingSubcommands.length === 1) {
+          command = `cathode ${matchingSubcommands[0]}`;
+        } else if (matchingSubcommands.length > 1) {
+          const commonPrefix = matchingSubcommands.reduce((prefix, sub) => {
+            let i = 0;
+            while (
+              i < prefix.length &&
+              i < sub.length &&
+              prefix[i] === sub[i]
+            ) {
+              i++;
+            }
+            return prefix.substring(0, i);
+          });
+          if (commonPrefix.length > currentArg.length) {
+            command = `cathode ${commonPrefix}`;
+          }
+        }
+      } else if (
+        commandName === "cathode" &&
+        parts.length === 3 &&
+        parts[1] === "set"
+      ) {
+        // Complete cathode variation names for 'cathode set'
+        const variations: string[] = cathodeModes.filter(
+          (mode) => mode !== "off",
+        );
+        const matchingVariations = variations.filter((name) =>
+          name.startsWith(currentArg.toLowerCase()),
+        );
+
+        if (matchingVariations.length === 1) {
+          parts[parts.length - 1] = matchingVariations[0];
+          command = parts.join(" ");
+        } else if (matchingVariations.length > 1) {
+          const commonPrefix = matchingVariations.reduce((prefix, name) => {
             let i = 0;
             while (
               i < prefix.length &&
