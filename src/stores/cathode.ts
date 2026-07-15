@@ -48,10 +48,14 @@ function updateCathodeListHighlight(mode: CathodeMode) {
   });
 }
 
+// Default to the scanlines look on first load so visitors get the immersive
+// CRT feel straight away; a saved choice in localStorage still takes priority.
+const DEFAULT_MODE: CathodeMode = 'scanlines';
+
 const initialMode: CathodeMode =
   typeof localStorage !== 'undefined' && isCathodeMode(localStorage.getItem(STORAGE_KEY))
     ? (localStorage.getItem(STORAGE_KEY) as CathodeMode)
-    : 'off';
+    : DEFAULT_MODE;
 
 if (typeof document !== 'undefined') {
   applyDocumentMode(initialMode);
