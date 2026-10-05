@@ -1,0 +1,10 @@
+import { lex, cursorContext, lcp, smartMatch, apply, quoteFor } from './core.ts';
+const show = (l: string, c = l.length) => { const x = cursorContext(l, c); return JSON.stringify({ wi: x.wordIndex, frag: x.fragment, from: x.from, q: x.quote, redir: x.afterRedirect, words: x.words.map(w => w.value) }); };
+const cases = ['', 'th', 'theme ', 'theme s', 'cat "my fi', "cat 'it''s", 'cat my\\ fi', 'ls -la | gr', 'echo hi > ~/doc', 'echo hi >~/doc', 'cd ../pro', 'ls && cd doc', 'cat README.md 2>/dev/n', 'weather New\\ Y', 'stock --range=1', 'git commit -m "wip', 'echo $HO'];
+for (const c of cases) console.log(JSON.stringify(c).padEnd(26), show(c));
+console.log('lcp', lcp(['README.md', 'README-download.txt'], true), lcp(['documents/', 'downloads/', 'desktop/'], true), lcp(['Kookaburra', 'kangaroo'], true));
+console.log('smart', smartMatch('README.md', 'read'), smartMatch('readme', 'Rea'), smartMatch('README.md', 'REA'));
+console.log('quote', quoteFor('my file.txt', 'none'), quoteFor("it's", 'single'), quoteFor('a"b', 'double'), quoteFor('~/x', 'none'));
+const l1 = 'cat "my fi'; console.log(apply(l1, cursorContext(l1, l1.length), 'my file.txt', ' ', true));
+const l2 = 'cat my\\ fi'; console.log(apply(l2, cursorContext(l2, l2.length), 'my file.txt', ' ', false));
+const l3 = 'cd docu ls'; console.log(show(l3, 7), apply(l3, cursorContext(l3, 7), 'documents', '/', false));

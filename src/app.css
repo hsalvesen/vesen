@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Keep planning docs and prototypes out of Tailwind's class scan. */
+@source not "../docs/plan";
 
 /* Mobile-first responsive design */
 
