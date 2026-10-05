@@ -1,4 +1,7 @@
-@import "tailwindcss";
+/* Scan only the app for class names: src/ and index.html, not tooling, tests or docs. */
+@import "tailwindcss" source("../src");
+@source "../index.html";
+@source not "../src/**/*.test.ts";
 /* Keep planning docs and prototypes out of Tailwind's class scan. */
 @source not "../docs/plan";
 

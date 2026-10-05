@@ -1,20 +1,15 @@
 /// <reference types="svelte" />
 /// <reference types="vite/client" />
 
-declare module '*.svelte' {
-  import type { ComponentType } from 'svelte'
-  const component: ComponentType
-  export default component
-}
+declare global {
+  /** The package.json version, injected by Vite's `define` at build time. */
+  const __APP_VERSION__: string;
 
-interface ImportMetaEnv {
-  readonly VITE_TRACKING_ENABLED?: string
-  readonly VITE_TRACKING_SITE_ID?: string
-  readonly VITE_TRACKING_URL?: string
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv
+  interface ImportMetaEnv {
+    readonly VITE_TRACKING_ENABLED?: string;
+    readonly VITE_TRACKING_SITE_ID?: string;
+    readonly VITE_TRACKING_URL?: string;
+  }
 }
 
 export {};

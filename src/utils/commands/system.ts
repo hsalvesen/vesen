@@ -1,4 +1,3 @@
-import packageJson from '../../../package.json';
 import { theme } from '../../stores/theme';
 import { get } from 'svelte/store';
 import { getAppleLogo, getAndroidLogo, getWindowsLogo, getLinuxLogo } from '../osLogos';
@@ -494,7 +493,7 @@ export const systemCommands = {
           const packages = 'npm packages in node_modules';
           
           // Shell detection
-          const shell = `Vesen Terminal v${packageJson.version}`;
+          const shell = `Vesen Terminal v${__APP_VERSION__}`;
           
           // Theme information
           const wmTheme = currentTheme.name;
@@ -593,7 +592,7 @@ export const systemCommands = {
 ██║   ██║█████╗  ███████╗█████╗  ██╔██╗ ██║ 
 ╚██╗ ██╔╝██╔══╝  ╚════██║██╔══╝  ██║╚██╗██║ 
  ╚████╔╝ ███████╗███████║███████╗██║ ╚████║ 
-  ╚═══╝  ╚══════╝╚══════╝╚══════╝╚═╝  ╚═══╝ v${packageJson.version}
+  ╚═══╝  ╚══════╝╚══════╝╚══════╝╚═╝  ╚═══╝ v${__APP_VERSION__}
 <span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-family: monospace;">help</span><span style="color: var(--theme-white);"> to see all available commands.</span>
 <span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-family: monospace;">cat README.md</span><span style="color: var(--theme-white);"> to learn more about this terminal.</span>`;
   },

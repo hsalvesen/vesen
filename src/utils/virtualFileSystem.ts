@@ -40,7 +40,7 @@ function generateSystemContent() {
     
     version: `Linux version 5.15.0-vesen (vesen@${window.location.hostname}) (gcc version 11.2.0) #1 SMP PREEMPT ${currentTime.toDateString()}`,
     
-    osRelease: `NAME="Vesen Linux"\nVERSION="v1.0.0"\nID=vesen\nVERSION_ID="v1.0.0"\nPRETTY_NAME="Vesen Linux v1.0.0"\nHOME_URL="${window.location.origin}"\nBUILD_ID="${currentTime.getTime()}"`,
+    osRelease: `NAME="Vesen Linux"\nVERSION="v${__APP_VERSION__}"\nID=vesen\nVERSION_ID="${__APP_VERSION__}"\nPRETTY_NAME="Vesen Linux v${__APP_VERSION__}"\nHOME_URL="${window.location.origin}"\nBUILD_ID="${currentTime.getTime()}"`,
     
     hosts: `127.0.0.1\tlocalhost\n127.0.1.1\t${window.location.hostname}\n::1\t\tlocalhost ip6-localhost ip6-loopback`,
     

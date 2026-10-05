@@ -68,14 +68,14 @@ function updateFavicon(theme: Theme) {
     links.forEach((link) => {
       link.rel = 'icon';
       link.type = 'image/x-icon';
-      link.sizes = 'any';
+      link.setAttribute('sizes', 'any');
       link.href = href;
     });
   } else {
     const link = document.createElement('link');
     link.rel = 'icon';
     link.type = 'image/x-icon';
-    link.sizes = 'any';
+    link.setAttribute('sizes', 'any');
     link.href = href;
     document.head.appendChild(link);
   }

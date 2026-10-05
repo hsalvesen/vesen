@@ -1,26 +1,17 @@
-name: "tagged-release"
+name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ['v*']
+
+permissions:
+  contents: write
 
 jobs:
-  tagged-release:
-    name: "Tagged Release"
-    runs-on: "ubuntu-latest"
-    permissions:
-      contents: write
-      packages: write
-      pull-requests: read
-
+  release:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        
-      - uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          prerelease: false
-          automatic_release_tag: "latest"
-          title: "Release ${{ github.ref_name }}"
+      - name: Create the GitHub release for this tag
+        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --generate-notes --verify-tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

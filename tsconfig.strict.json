@@ -1,0 +1,40 @@
+{
+  // Strict checking for every folder written during the overhaul, from day one.
+  // The legacy code (src/utils, src/components, src/interfaces) stays under tsconfig.json
+  // until it is ported. Globs that match nothing yet are fine.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "checkJs": true,
+    "types": ["node"]
+  },
+  "include": [
+    "src/global.d.ts",
+    "src/shell/**/*.ts",
+    "src/output/**/*.ts",
+    "src/vfs/**/*.ts",
+    "src/lib/**/*.ts",
+    "src/services/**/*.ts",
+    "src/platform/**/*.ts",
+    "src/commands/**/*.ts",
+    "src/stores/**/*.ts",
+    "src/testing/**/*.ts",
+    "src/constants.ts",
+    "src/utils/beep.ts",
+    "src/utils/beep.test.ts",
+    "scripts/**/*.mjs",
+    "scripts/**/*.ts",
+    "worker/**/*.ts",
+    "e2e/**/*.ts",
+    "playwright.config.ts",
+    "vite.config.ts"
+  ],
+  // history.ts predates the overhaul and pulls in the legacy commands; drop it from this
+  // list when the store is rewritten.
+  "exclude": ["**/node_modules", "dist", "src/stores/history.ts"]
+}

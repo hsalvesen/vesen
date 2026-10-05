@@ -14,7 +14,7 @@ Vesen Terminal is a fully-featured web-based terminal emulator that replicates a
 - **Build tool**: [Vite](https://vitejs.dev/)
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
 - **Containerisation**: [Docker](https://docker.com/)
-- **Package manager**: npm (Node.js 18.17.0+)
+- **Package manager**: npm (Node.js 22.12+, see `.nvmrc`)
 
 ## Quick start
 
@@ -32,7 +32,7 @@ Access the terminal at `http://localhost:3000`
 
 ### Local development
 
-**Prerequisites**: Node.js 18.17.0 or higher
+**Prerequisites**: Node.js 22.12 or higher (`nvm use` reads `.nvmrc`)
 
 ```bash
 # Clone the repository
@@ -110,11 +110,20 @@ services:
 
 ### Available scripts
 ```bash
-npm run dev      # Start development server
-npm run build    # Build for production
-npm run preview  # Preview production build
-npm run check    # Run Svelte type checking
+npm run dev               # Start development server on port 3000
+npm run build             # Build for production into dist/
+npm run preview           # Serve the production build
+npm run check             # Svelte and TypeScript checking (svelte-check)
+npm run check:strict      # Strict TypeScript for the new folders, scripts and tests
+npm run check:boundaries  # Keep the DOM-free folders free of browser globals and Svelte
+npm run check:bundle      # Initial JS budget (60 kB gzip); run after build
+npm run check:contrast    # WCAG contrast of every theme (add -- --strict to enforce)
+npm test                  # Unit tests (Vitest)
+npm run test:e2e          # End-to-end tests (Playwright: desktop Chrome, iPhone Instagram, Pixel 7)
+npm run test:smoke        # The @smoke end-to-end tests on desktop Chrome, as CI runs them
 ```
+
+Install the Playwright browsers once with `npx playwright install chromium webkit`.
 
 ## Contributing
 
@@ -124,7 +133,7 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/new-feature`
 3. Make your changes
-4. Run tests: `npm run check`
+4. Run the checks: `npm run check && npm test` (CI runs every script above on each pull request)
 5. Commit your changes: `git commit -m 'Add new feature'`
 6. Push to the branch: `git push origin feature/new-feature`
 7. Open a Pull Request

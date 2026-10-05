@@ -1,4 +1,3 @@
-import packageJson from '../../package.json';
 import themes from '../../themes.json';
 import { history, commandHistory } from '../stores/history';
 import { systemCommands } from './commands/system';
@@ -12,6 +11,7 @@ import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from '.
 import { commandHelp, commandDescriptions } from './helpTexts';
 import { playBeep } from './beep';
 import { createInitialFileSystem } from './virtualFileSystem';
+import { REPO_URL } from '../constants';
 
 // Terminal-specific commands that don't fit in other modules
 const terminalCommands = {
@@ -168,7 +168,7 @@ const projectCommands = {
         }).join(', ');
 
         let result = themeList;
-        result += `\n<span style="color: var(--theme-cyan);">You can preview all these themes here: ${packageJson.repository.url}/tree/main/docs/themes</span>`;
+        result += `\n<span style="color: var(--theme-cyan);">You can preview all these themes here: ${REPO_URL}/tree/main/docs/themes</span>`;
 
         return result;
       }
@@ -271,7 +271,7 @@ ${rows}
   },
   repo: () => {
     const currentTheme = get(theme);
-    window.open('https://github.com/hsalvesen/vesen');
+    window.open(REPO_URL);
     return `<span style="color: ${currentTheme.cyan};">Opening Vesen repository...</span>`;
   },
 

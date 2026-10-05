@@ -17,24 +17,40 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "svelte-check --tsconfig ./tsconfig.json"
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "check:strict": "tsc -p tsconfig.strict.json --noEmit",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:bundle": "node scripts/check-bundle.mjs",
+    "check:contrast": "node scripts/check-contrast.mjs",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:smoke": "playwright test --grep @smoke --project desktop-chrome"
+  },
+  "dependencies": {
+    "dompurify": "^3.4.16",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "4.0.0",
-    "@tailwindcss/postcss": "^4.1.11",
-    "@tsconfig/svelte": "^5.0.4",
+    "@playwright/test": "^1.63.0",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/svelte": "^5.4.2",
+    "@tsconfig/svelte": "^5.0.8",
+    "@types/node": "^22.20.5",
     "@types/qrcode": "^1.5.6",
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.4.41",
-    "qrcode": "^1.5.4",
-    "svelte": "5.36.7",
-    "svelte-check": "4.3.0",
-    "tailwindcss": "^4.1.11",
-    "tslib": "^2.6.3",
-    "typescript": "5.5.4",
-    "vite": "^5.4.19"
+    "fast-check": "^4.10.2",
+    "happy-dom": "^20.14.5",
+    "jsqr": "^1.4.0",
+    "svelte": "^5.57.1",
+    "svelte-check": "^4.7.6",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
   },
   "engines": {
-    "node": ">=18.17.0"
-  }
+    "node": ">=22.12"
+  },
+  "packageManager": "npm@10.9.3"
 }
