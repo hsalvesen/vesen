@@ -1,0 +1,3 @@
+$ theme ls
+cassowary, cockatoo, crocodile, kangaroo, kookaburra, petroica, swamphen, treefrog, wallaby, wombat
+You can preview all these themes here: https://github.com/hsalvesen/vesen/tree/main/docs/themes

@@ -25,6 +25,7 @@
     "noUnusedParameters": false,
     "exactOptionalPropertyTypes": false
   },
-  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte"],
+  // tests/ stays here rather than in tsconfig.strict.json while the goldens import legacy code.
+  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte", "tests/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

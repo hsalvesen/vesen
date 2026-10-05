@@ -1,0 +1,75 @@
+$ cat documents/linux.txt
+Arch Linux Beginner Notes
+═══════════════════════════
+
+Initial Setup & Customisation
+─────────────────────────────────
+□ Install yay (AUR helper): git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
+□ Update system: sudo pacman -Syu
+□ Install essential packages: sudo pacman -S vim git htop neofetch
+□ Configure .bashrc with aliases and PS1 customization
+□ Install and configure zsh with oh-my-zsh
+□ Set up dotfiles repository for configuration management
+
+Desktop Environment & Window Manager
+───────────────────────────────────────
+□ Install i3wm: sudo pacman -S i3-wm i3status i3lock dmenu
+□ Configure i3 config file: ~/.config/i3/config
+□ Install polybar for better status bar
+□ Set up rofi as application launcher
+□ Configure picom for transparency and effects
+□ Install and configure nitrogen for wallpapers
+
+Cron Jobs & Automation
+─────────────────────────
+□ Edit crontab: crontab -e
+□ System updates: 0 2 * * 0 yay -Syu --noconfirm
+□ Backup home directory: 0 3 * * 1 rsync -av /home/user/ /backup/
+□ Clean package cache: 0 4 * * * paccache -r
+□ Check disk usage: 0 9 * * * df -h | mail -s "Disk Usage" user@localhost
+
+Common Errors & Solutions
+────────────────────────────
+
+1. "error: failed to commit transaction (conflicting files)"
+   Solution: sudo pacman -S --overwrite '*' package-name
+
+2. "error: could not lock database"
+   Solution: sudo rm /var/lib/pacman/db.lck
+
+3. "error: target not found"
+   Solution: sudo pacman -Sy then retry installation
+
+4. AUR package build fails
+   Solution: Check dependencies, install base-devel group
+
+5. "No space left on device"
+   Solution: Clean package cache with paccache -r, remove orphaned packages
+
+6. X11 won't start after update
+   Solution: Check Xorg logs, reinstall graphics drivers
+
+7. Sound not working
+   Solution: Install alsa-utils, run alsamixer, unmute channels
+
+8. Network issues after boot
+   Solution: Enable NetworkManager: sudo systemctl enable NetworkManager
+
+Useful Commands
+──────────────────
+• List installed packages: pacman -Q
+• Find package files: pacman -Ql package-name
+• Search for package: pacman -Ss search-term
+• Remove orphaned packages: sudo pacman -Rns $(pacman -Qtdq)
+• Check system logs: journalctl -xe
+• Monitor system resources: htop
+• Check running services: systemctl list-units --type=service
+
+Tips for Beginners
+─────────────────────
+• Always read the Arch Wiki before making changes
+• Keep a backup of working configurations
+• Test new configurations in a virtual machine first
+• Join the Arch Linux forums and IRC for help
+• Use timeshift for system snapshots
+• Don't run random commands from the internet without understanding them

@@ -1,0 +1,2 @@
+$ ls /home
+user/  projects/  desktop/  downloads/  pictures/  music/  videos/  public/  templates/  bin/  src/  scripts/  config/

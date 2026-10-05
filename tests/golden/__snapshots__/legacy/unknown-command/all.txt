@@ -1,0 +1,3 @@
+$ lss
+Command 'lss' not found. Did you mean ls? Type 'help' to see available commands.
+[bell]

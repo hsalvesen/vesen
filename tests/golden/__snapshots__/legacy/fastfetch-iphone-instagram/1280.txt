@@ -1,0 +1,45 @@
+$ fastfetch
+                    'c.
+                 ,xNMM.
+               .OMMMMo
+               OMMM0,
+     .;loddo:' loolloddol;.
+   cKMMMMMMMMMMNWMMMMMMMMMM0:
+ .KMMMMMMMMMMMMMMMMMMMMMMMWd.
+ XMMMMMMMMMMMMMMMMMMMMMMMX.
+;MMMMMMMMMMMMMMMMMMMMMMMM:
+:MMMMMMMMMMMMMMMMMMMMMMMM:
+.MMMMMMMMMMMMMMMMMMMMMMMMX.
+ kMMMMMMMMMMMMMMMMMMMMMMMMWd.
+ .XMMMMMMMMMMMMMMMMMMMMMMMMMMk
+  .XMMMMMMMMMMMMMMMMMMMMMMMMK.
+    kMMMMMMMMMMMMMMMMMMMMMMd
+     ;KMMMMMMMWXXWMMMMMMMk.
+       .cooc,.    .,coo:.
+
+
+████████████████████████
+████████████████████████
+user@www.vesen.app
+OS:iOS 17.5 arm64
+Host:iPhone
+Kernel:Darwin
+Uptime:1 hours, 2 mins
+Packages:npm packages in node_modules
+Shell:Vesen Terminal v0.0.0-golden
+Display:390x844 @ 60 Hz
+DE:Unknown
+WM:Unknown
+WM Theme:swamphen
+Font:System Font
+Cursor:Default System Cursor
+Terminal:Vesen Web Terminal
+CPU:arm64 CPU (6)
+GPU:Apple GPU
+Memory:Unknown / Unknown
+Swap:Not available in browser
+Disk (/):0 GiB / 1 GiB (5%) - WebStorage
+Local IP:203.0.113.7
+Battery:Unknown
+Power Adapter:Unknown
+Locale:en-AU

@@ -11,8 +11,14 @@ const { version } = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
 ) as { version: string };
 
-// Tests that need a DOM: anything under the UI folders, plus Svelte component tests.
-const domTests = ['src/ui/**/*.test.ts', 'src/components/**/*.test.ts', 'src/**/*.svelte.test.ts'];
+// Tests that need a DOM: anything under the UI folders, Svelte component tests, and the
+// golden snapshots of the legacy terminal.
+const domTests = [
+  'src/ui/**/*.test.ts',
+  'src/components/**/*.test.ts',
+  'src/**/*.svelte.test.ts',
+  'tests/golden/**/*.test.ts',
+];
 
 export default defineConfig({
   plugins: [svelte(), tailwindcss()],

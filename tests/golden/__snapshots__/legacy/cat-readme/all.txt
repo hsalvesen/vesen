@@ -1,0 +1,21 @@
+$ cat README.md
+
+This webapp replicates a Unix-like terminal environment in your web browser.
+It simulates the experience of using a command-line interface, complete with a
+virtual file system, various commands, and interactive features.
+
+The Terminal
+A terminal (also called a command line, shell, or console) is a text-based
+interface for interacting with a computer's operating system. Unlike graphical
+user interfaces (GUIs) that use windows, icons, and menus, terminals rely on
+typed commands.  Try running `cat history.txt` to discover more.
+
+Terminals have been the primary way to interact with computers since the early
+days of computing.
+
+Tips for Getting Started
+
+1. Type help to see all available commands
+2. Type ls to explore the file system
+3. Type theme ls to see available color themes
+4. Type fastfetch for system information with ASCII art

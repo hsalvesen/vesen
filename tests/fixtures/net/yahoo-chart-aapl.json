@@ -1,0 +1,131 @@
+{
+  "chart": {
+    "result": [
+      {
+        "meta": {
+          "currency": "USD",
+          "symbol": "AAPL",
+          "exchangeName": "NMS",
+          "fullExchangeName": "NasdaqGS",
+          "instrumentType": "EQUITY",
+          "firstTradeDate": 345479400,
+          "regularMarketTime": 1791230402,
+          "hasPrePostMarketData": true,
+          "gmtoffset": -14400,
+          "timezone": "EDT",
+          "exchangeTimezoneName": "America/New_York",
+          "regularMarketPrice": 332.89,
+          "regularMarketChangePercent": -0.24,
+          "fulldayPrice": 332.89,
+          "fulldayChange": -0.8,
+          "fulldayChangePercent": -0.24,
+          "fiftyTwoWeekHigh": 345.34,
+          "fiftyTwoWeekLow": 243.42,
+          "regularMarketDayHigh": 336.19,
+          "regularMarketDayLow": 331.65,
+          "regularMarketVolume": 34328912,
+          "longName": "Apple Inc.",
+          "shortName": "Apple Inc.",
+          "chartPreviousClose": 333.69,
+          "previousClose": 333.69,
+          "scale": 3,
+          "priceHint": 2,
+          "currentTradingPeriod": {
+            "pre": {
+              "timezone": "EDT",
+              "start": 1791187200,
+              "end": 1791207000,
+              "gmtoffset": -14400
+            },
+            "regular": {
+              "timezone": "EDT",
+              "start": 1791207000,
+              "end": 1791230400,
+              "gmtoffset": -14400
+            },
+            "post": {
+              "timezone": "EDT",
+              "start": 1791230400,
+              "end": 1791244800,
+              "gmtoffset": -14400
+            }
+          },
+          "tradingPeriods": [
+            [
+              {
+                "timezone": "EDT",
+                "start": 1791207000,
+                "end": 1791230400,
+                "gmtoffset": -14400
+              }
+            ]
+          ],
+          "dataGranularity": "1m",
+          "range": "1d",
+          "validRanges": [
+            "1d",
+            "5d",
+            "1mo",
+            "3mo",
+            "6mo",
+            "1y",
+            "2y",
+            "5y",
+            "10y",
+            "ytd",
+            "max"
+          ]
+        },
+        "timestamp": [
+          1791207000,
+          1791207060,
+          1791207120,
+          1791207180,
+          1791207240
+        ],
+        "indicators": {
+          "quote": [
+            {
+              "close": [
+                331.8999938964844,
+                333.2099914550781,
+                335.05499267578125,
+                335.2850036621094,
+                336.0736083984375
+              ],
+              "open": [
+                332.7950134277344,
+                331.8900146484375,
+                333.1600036621094,
+                335.0799865722656,
+                335.29998779296875
+              ],
+              "high": [
+                333.25,
+                333.25,
+                335.17999267578125,
+                335.54998779296875,
+                336.19000244140625
+              ],
+              "volume": [
+                881776,
+                158797,
+                326952,
+                200526,
+                242229
+              ],
+              "low": [
+                331.6499938964844,
+                331.78948974609375,
+                333.1199951171875,
+                334.8900146484375,
+                335.2799987792969
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "error": null
+  }
+}
