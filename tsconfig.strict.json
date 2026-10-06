@@ -33,6 +33,7 @@
     "worker/**/*.ts"
   ],
   // history.ts predates the overhaul and pulls in the legacy commands; drop it from this
-  // list when the store is rewritten.
-  "exclude": ["**/node_modules", "dist", "**/*.test.ts", "src/stores/history.ts"]
+  // list when the store is rewritten. The Worker's test helpers read fixtures with Node, so
+  // they are checked by tsconfig.strict.node.json.
+  "exclude": ["**/node_modules", "dist", "**/*.test.ts", "src/stores/history.ts", "worker/*/test/**"]
 }

@@ -1,0 +1,112 @@
+name: Stock Worker
+
+# Deploys worker/stock (the vesen-stock Cloudflare Worker) when it or its wire contract changes on
+# main, and checks the live Worker once a day. Both jobs skip cleanly until the owner has set up
+# Cloudflare: see worker/stock/README.md, "Owner setup".
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worker/stock/**'
+      - 'src/services/market/**'
+      - '.github/workflows/stock-worker.yml'
+  schedule:
+    # 21:17 UTC daily: after the US close, and early morning in Sydney.
+    - cron: '17 21 * * *'
+  workflow_dispatch:
+
+# One deploy at a time, never cut off halfway.
+concurrency:
+  group: stock-worker
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Secrets cannot be read in `if:` directly, so each step checks this env var instead.
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Skip when Cloudflare is not set up
+        if: env.CLOUDFLARE_API_TOKEN == ''
+        run: echo "::notice title=Stock Worker not deployed::CLOUDFLARE_API_TOKEN is not set. See worker/stock/README.md, Owner setup."
+
+      - uses: actions/checkout@v4
+        if: env.CLOUDFLARE_API_TOKEN != ''
+
+      - uses: actions/setup-node@v4
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Test and type-check the Worker
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        run: |
+          npm ci
+          npx vitest run --project worker
+          npx tsc -p worker/stock/tsconfig.json --noEmit
+
+      - name: Check the KV namespace id is set
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        working-directory: worker/stock
+        run: |
+          if grep -q 'REPLACE_WITH_SNAPSHOT_KV_ID' wrangler.toml; then
+            echo "::error file=worker/stock/wrangler.toml::Paste the SNAPSHOT KV namespace id into wrangler.toml (README, Owner setup)."
+            exit 1
+          fi
+
+      - name: Install Wrangler
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        working-directory: worker/stock
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+
+      - name: Deploy
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        working-directory: worker/stock
+        run: npx wrangler deploy
+
+  canary:
+    needs: deploy
+    # After a deploy, on the daily schedule (when deploy is skipped), and when run by hand.
+    if: always() && (needs.deploy.result == 'success' || needs.deploy.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      # The Worker's URL, such as https://vesen-stock.<account>.workers.dev: the repository
+      # variable the app's build also reads.
+      STOCK_API: ${{ vars.VITE_STOCK_API }}
+      ORIGIN: https://www.vesen.app
+    steps:
+      - name: Skip when the Worker URL is not set
+        if: env.STOCK_API == ''
+        run: echo "::notice title=Stock canary skipped::The VITE_STOCK_API repository variable is not set. See worker/stock/README.md, Owner setup."
+
+      - name: Health
+        if: env.STOCK_API != ''
+        run: |
+          base="${STOCK_API%/}"
+          curl -fsS --max-time 15 -H "Origin: $ORIGIN" "$base/v1/health" -o health.json
+          cat health.json; echo
+          jq -e '.kind == "health" and .ok == true' health.json > /dev/null
+
+      - name: Quote for AAPL from vesen.app
+        if: env.STOCK_API != ''
+        run: |
+          base="${STOCK_API%/}"
+          status=$(curl -sS --max-time 15 -H "Origin: $ORIGIN" -D headers.txt -o quote.json -w '%{http_code}' "$base/v1/quote?symbol=AAPL")
+          cat headers.txt; cat quote.json; echo
+          if [ "$status" != 200 ]; then echo "::error::/v1/quote answered HTTP $status"; exit 1; fi
+          if ! grep -qi "^access-control-allow-origin: $ORIGIN" headers.txt; then echo "::error::/v1/quote did not allow $ORIGIN"; exit 1; fi
+          # A stale answer means every provider failed and the Worker fell back to a saved copy.
+          jq -e '.kind == "quote" and .symbol == "AAPL" and .stale == false' quote.json > /dev/null || {
+            echo "::error::/v1/quote did not return a live AAPL quote"; exit 1;
+          }

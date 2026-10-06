@@ -25,6 +25,7 @@
     "tests/golden/format.ts",
     "tests/golden/html-to-text.test.ts",
     "e2e/**/*.ts",
+    "worker/*/test/**/*.ts",
     "playwright.config.ts",
     "vite.config.ts"
   ],

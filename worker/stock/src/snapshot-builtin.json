@@ -1,0 +1,507 @@
+{
+  "v": 1,
+  "kind": "snapshot",
+  "generatedAt": 1791257400,
+  "quotes": [
+    {
+      "v": 1,
+      "kind": "quote",
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "type": "EQUITY",
+      "exchange": "NasdaqGS",
+      "currency": "USD",
+      "priceHint": 2,
+      "price": 332.89,
+      "change": -0.8,
+      "changePercent": -0.2397,
+      "changeBasis": "previous_close",
+      "previousClose": 333.69,
+      "open": 332.795,
+      "openApprox": true,
+      "dayHigh": 336.19,
+      "dayLow": 331.65,
+      "fiftyTwoWeekHigh": 345.34,
+      "fiftyTwoWeekLow": 243.42,
+      "volume": 34328912,
+      "market": {
+        "phase": "closed",
+        "opensAt": null,
+        "closesAt": null,
+        "timezone": "America/New_York",
+        "tzAbbr": "EDT",
+        "periods": {
+          "pre": {
+            "start": 1791187200,
+            "end": 1791207000
+          },
+          "regular": {
+            "start": 1791207000,
+            "end": 1791230400
+          },
+          "post": {
+            "start": 1791230400,
+            "end": 1791244800
+          }
+        }
+      },
+      "series": null,
+      "source": "snapshot",
+      "provider": "yahoo",
+      "delayed": false,
+      "asOf": 1791230402,
+      "fetchedAt": 1791257400,
+      "stale": false,
+      "staleReason": null,
+      "resolvedFrom": null
+    },
+    {
+      "v": 1,
+      "kind": "quote",
+      "symbol": "TEAM",
+      "name": "Atlassian Corporation",
+      "type": "EQUITY",
+      "exchange": "NasdaqGS",
+      "currency": "USD",
+      "priceHint": 2,
+      "price": 196.65,
+      "change": 8.76,
+      "changePercent": 4.6623,
+      "changeBasis": "previous_close",
+      "previousClose": 187.89,
+      "open": 187.875,
+      "openApprox": true,
+      "dayHigh": 197.5,
+      "dayLow": 186.5,
+      "fiftyTwoWeekHigh": 200,
+      "fiftyTwoWeekLow": 56.01,
+      "volume": 3035416,
+      "market": {
+        "phase": "closed",
+        "opensAt": null,
+        "closesAt": null,
+        "timezone": "America/New_York",
+        "tzAbbr": "EDT",
+        "periods": {
+          "pre": {
+            "start": 1791187200,
+            "end": 1791207000
+          },
+          "regular": {
+            "start": 1791207000,
+            "end": 1791230400
+          },
+          "post": {
+            "start": 1791230400,
+            "end": 1791244800
+          }
+        }
+      },
+      "series": null,
+      "source": "snapshot",
+      "provider": "yahoo",
+      "delayed": false,
+      "asOf": 1791230401,
+      "fetchedAt": 1791257400,
+      "stale": false,
+      "staleReason": null,
+      "resolvedFrom": null
+    },
+    {
+      "v": 1,
+      "kind": "quote",
+      "symbol": "CBA.AX",
+      "name": "Commonwealth Bank of Australia",
+      "type": "EQUITY",
+      "exchange": "ASX",
+      "currency": "AUD",
+      "priceHint": 2,
+      "price": 152.09,
+      "change": 0.87,
+      "changePercent": 0.5753,
+      "changeBasis": "previous_close",
+      "previousClose": 151.22,
+      "open": 152.23,
+      "openApprox": true,
+      "dayHigh": 152.29,
+      "dayLow": 150.5,
+      "fiftyTwoWeekHigh": 185.59,
+      "fiftyTwoWeekLow": 146.98,
+      "volume": 647844,
+      "market": {
+        "phase": "open",
+        "opensAt": null,
+        "closesAt": 1791263520,
+        "timezone": "Australia/Sydney",
+        "tzAbbr": "AEDT",
+        "periods": {
+          "pre": {
+            "start": 1791230400,
+            "end": 1791241200
+          },
+          "regular": {
+            "start": 1791241200,
+            "end": 1791263520
+          },
+          "post": null
+        }
+      },
+      "series": null,
+      "source": "snapshot",
+      "provider": "yahoo",
+      "delayed": false,
+      "asOf": 1791256096,
+      "fetchedAt": 1791257400,
+      "stale": false,
+      "staleReason": null,
+      "resolvedFrom": null
+    },
+    {
+      "v": 1,
+      "kind": "quote",
+      "symbol": "BHP.AX",
+      "name": "BHP Group Limited",
+      "type": "EQUITY",
+      "exchange": "ASX",
+      "currency": "AUD",
+      "priceHint": 2,
+      "price": 62.625,
+      "change": 0.735,
+      "changePercent": 1.1876,
+      "changeBasis": "previous_close",
+      "previousClose": 61.89,
+      "open": 62.25,
+      "openApprox": true,
+      "dayHigh": 62.73,
+      "dayLow": 62.06,
+      "fiftyTwoWeekHigh": 68.77,
+      "fiftyTwoWeekLow": 40.175,
+      "volume": 2447576,
+      "market": {
+        "phase": "open",
+        "opensAt": null,
+        "closesAt": 1791263520,
+        "timezone": "Australia/Sydney",
+        "tzAbbr": "AEDT",
+        "periods": {
+          "pre": {
+            "start": 1791230400,
+            "end": 1791241200
+          },
+          "regular": {
+            "start": 1791241200,
+            "end": 1791263520
+          },
+          "post": null
+        }
+      },
+      "series": null,
+      "source": "snapshot",
+      "provider": "yahoo",
+      "delayed": false,
+      "asOf": 1791256362,
+      "fetchedAt": 1791257400,
+      "stale": false,
+      "staleReason": null,
+      "resolvedFrom": null
+    },
+    {
+      "v": 1,
+      "kind": "quote",
+      "symbol": "^AXJO",
+      "name": "S&P/ASX 200 [XJO]",
+      "type": "INDEX",
+      "exchange": "ASX",
+      "currency": "AUD",
+      "priceHint": 2,
+      "price": 8750.9,
+      "change": 68.8,
+      "changePercent": 0.7924,
+      "changeBasis": "previous_close",
+      "previousClose": 8682.1,
+      "open": 8717.4004,
+      "openApprox": true,
+      "dayHigh": 8753,
+      "dayLow": 8686.4,
+      "fiftyTwoWeekHigh": 9296.7,
+      "fiftyTwoWeekLow": 8262.4,
+      "volume": null,
+      "market": {
+        "phase": "open",
+        "opensAt": null,
+        "closesAt": 1791263520,
+        "timezone": "Australia/Sydney",
+        "tzAbbr": "AEDT",
+        "periods": {
+          "pre": {
+            "start": 1791230400,
+            "end": 1791241200
+          },
+          "regular": {
+            "start": 1791241200,
+            "end": 1791263520
+          },
+          "post": null
+        }
+      },
+      "series": null,
+      "source": "snapshot",
+      "provider": "yahoo",
+      "delayed": false,
+      "asOf": 1791256335,
+      "fetchedAt": 1791257400,
+      "stale": false,
+      "staleReason": null,
+      "resolvedFrom": null
+    },
+    {
+      "v": 1,
+      "kind": "quote",
+      "symbol": "^GSPC",
+      "name": "S&P 500",
+      "type": "INDEX",
+      "exchange": "SNP",
+      "currency": "USD",
+      "priceHint": 2,
+      "price": 7773.95,
+      "change": 51.23,
+      "changePercent": 0.6634,
+      "changeBasis": "previous_close",
+      "previousClose": 7722.72,
+      "open": 7730.8599,
+      "openApprox": true,
+      "dayHigh": 7794.35,
+      "dayLow": 7727.59,
+      "fiftyTwoWeekHigh": 7816.7,
+      "fiftyTwoWeekLow": 6316.91,
+      "volume": 3473000000,
+      "market": {
+        "phase": "closed",
+        "opensAt": null,
+        "closesAt": null,
+        "timezone": "America/New_York",
+        "tzAbbr": "EDT",
+        "periods": {
+          "pre": {
+            "start": 1791187200,
+            "end": 1791207000
+          },
+          "regular": {
+            "start": 1791207000,
+            "end": 1791230400
+          },
+          "post": {
+            "start": 1791230400,
+            "end": 1791244800
+          }
+        }
+      },
+      "series": null,
+      "source": "snapshot",
+      "provider": "yahoo",
+      "delayed": false,
+      "asOf": 1791230400,
+      "fetchedAt": 1791257400,
+      "stale": false,
+      "staleReason": null,
+      "resolvedFrom": null
+    },
+    {
+      "v": 1,
+      "kind": "quote",
+      "symbol": "BTC-USD",
+      "name": "Bitcoin USD",
+      "type": "CRYPTOCURRENCY",
+      "exchange": "CCC",
+      "currency": "USD",
+      "priceHint": 2,
+      "price": 85459.57,
+      "change": -600.891,
+      "changePercent": -0.698,
+      "changeBasis": "24h",
+      "previousClose": 85750.58,
+      "open": 85766.7734,
+      "openApprox": true,
+      "dayHigh": 86054.39,
+      "dayLow": 85453.82,
+      "fiftyTwoWeekHigh": 125184.02,
+      "fiftyTwoWeekLow": 57747.766,
+      "volume": 28235028480,
+      "market": {
+        "phase": "always_open",
+        "opensAt": null,
+        "closesAt": null,
+        "timezone": "UTC",
+        "tzAbbr": "UTC",
+        "periods": {
+          "pre": null,
+          "regular": {
+            "start": 1791244800,
+            "end": 1791331140
+          },
+          "post": null
+        }
+      },
+      "series": null,
+      "source": "snapshot",
+      "provider": "yahoo",
+      "delayed": false,
+      "asOf": 1791257292,
+      "fetchedAt": 1791257400,
+      "stale": false,
+      "staleReason": null,
+      "resolvedFrom": null
+    },
+    {
+      "v": 1,
+      "kind": "quote",
+      "symbol": "AUDUSD=X",
+      "name": "AUD/USD",
+      "type": "CURRENCY",
+      "exchange": "CCY",
+      "currency": "USD",
+      "priceHint": 4,
+      "price": 0.6978,
+      "change": 0.0004,
+      "changePercent": 0.0574,
+      "changeBasis": "previous_close",
+      "previousClose": 0.6974,
+      "open": 0.697058,
+      "openApprox": true,
+      "dayHigh": 0.6978,
+      "dayLow": 0.6966,
+      "fiftyTwoWeekHigh": 0.7277,
+      "fiftyTwoWeekLow": 0.6422,
+      "volume": null,
+      "market": {
+        "phase": "open",
+        "opensAt": null,
+        "closesAt": 1791327540,
+        "timezone": "Europe/London",
+        "tzAbbr": "BST",
+        "periods": {
+          "pre": null,
+          "regular": {
+            "start": 1791241200,
+            "end": 1791327540
+          },
+          "post": null
+        }
+      },
+      "series": null,
+      "source": "snapshot",
+      "provider": "yahoo",
+      "delayed": false,
+      "asOf": 1791257211,
+      "fetchedAt": 1791257400,
+      "stale": false,
+      "staleReason": null,
+      "resolvedFrom": null
+    },
+    {
+      "v": 1,
+      "kind": "quote",
+      "symbol": "MSFT",
+      "name": "Microsoft Corporation",
+      "type": "EQUITY",
+      "exchange": "NasdaqGS",
+      "currency": "USD",
+      "priceHint": 2,
+      "price": 525.18,
+      "change": 7.65,
+      "changePercent": 1.4782,
+      "changeBasis": "previous_close",
+      "previousClose": 517.53,
+      "open": 521.815,
+      "openApprox": true,
+      "dayHigh": 532.35,
+      "dayLow": 521.53,
+      "fiftyTwoWeekHigh": 553.72,
+      "fiftyTwoWeekLow": 349.2,
+      "volume": 26287910,
+      "market": {
+        "phase": "closed",
+        "opensAt": null,
+        "closesAt": null,
+        "timezone": "America/New_York",
+        "tzAbbr": "EDT",
+        "periods": {
+          "pre": {
+            "start": 1791187200,
+            "end": 1791207000
+          },
+          "regular": {
+            "start": 1791207000,
+            "end": 1791230400
+          },
+          "post": {
+            "start": 1791230400,
+            "end": 1791244800
+          }
+        }
+      },
+      "series": null,
+      "source": "snapshot",
+      "provider": "yahoo",
+      "delayed": false,
+      "asOf": 1791230402,
+      "fetchedAt": 1791257400,
+      "stale": false,
+      "staleReason": null,
+      "resolvedFrom": null
+    },
+    {
+      "v": 1,
+      "kind": "quote",
+      "symbol": "NVDA",
+      "name": "NVIDIA Corporation",
+      "type": "EQUITY",
+      "exchange": "NasdaqGS",
+      "currency": "USD",
+      "priceHint": 2,
+      "price": 238.9,
+      "change": 4.95,
+      "changePercent": 2.1158,
+      "changeBasis": "previous_close",
+      "previousClose": 233.95,
+      "open": 236.07,
+      "openApprox": true,
+      "dayHigh": 240.098,
+      "dayLow": 235.15,
+      "fiftyTwoWeekHigh": 240.098,
+      "fiftyTwoWeekLow": 164.27,
+      "volume": 126384437,
+      "market": {
+        "phase": "closed",
+        "opensAt": null,
+        "closesAt": null,
+        "timezone": "America/New_York",
+        "tzAbbr": "EDT",
+        "periods": {
+          "pre": {
+            "start": 1791187200,
+            "end": 1791207000
+          },
+          "regular": {
+            "start": 1791207000,
+            "end": 1791230400
+          },
+          "post": {
+            "start": 1791230400,
+            "end": 1791244800
+          }
+        }
+      },
+      "series": null,
+      "source": "snapshot",
+      "provider": "yahoo",
+      "delayed": false,
+      "asOf": 1791230401,
+      "fetchedAt": 1791257400,
+      "stale": false,
+      "staleReason": null,
+      "resolvedFrom": null
+    }
+  ],
+  "missing": []
+}

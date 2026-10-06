@@ -1,0 +1,17 @@
+# Stage 0 spike: a throwaway Worker that samples Yahoo and Cboe from Cloudflare for 24 hours.
+# Deploy from worker/stock with `npx wrangler deploy --config spike/wrangler.toml`, and delete it
+# afterwards with `npx wrangler delete --config spike/wrangler.toml`. See ../README.md.
+name = "vesen-stock-spike"
+main = "spike.ts"
+compatibility_date = "2026-10-06"
+workers_dev = true
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+# Samples are kept for 7 days. Create the namespace with
+#   npx wrangler kv namespace create SPIKE --config spike/wrangler.toml
+# and paste the id it prints below.
+[[kv_namespaces]]
+binding = "SPIKE"
+id = "REPLACE_WITH_SPIKE_KV_ID"

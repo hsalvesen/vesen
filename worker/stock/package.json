@@ -1,0 +1,19 @@
+{
+  "name": "vesen-stock",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Stock quotes for vesen.app: a Cloudflare Worker in front of Yahoo Finance and Cboe",
+  "license": "MIT",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "spike:deploy": "wrangler deploy --config spike/wrangler.toml",
+    "spike:delete": "wrangler delete --config spike/wrangler.toml"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250101.0",
+    "wrangler": "^4.0.0"
+  }
+}

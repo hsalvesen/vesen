@@ -53,6 +53,14 @@ export default defineConfig({
           setupFiles: ['src/testing/setup-dom.ts'],
         },
       },
+      {
+        // The stock quote Worker, a separate deployable; it needs neither Svelte nor a DOM.
+        test: {
+          name: 'worker',
+          environment: 'node',
+          include: ['worker/**/*.test.ts'],
+        },
+      },
     ],
   },
 });

@@ -38,6 +38,7 @@ The overhaul is split into workstreams: shell, terminal input, phone and Instagr
 | File system | `src/vfs/types.ts` |
 | Net, storage, bell, opener, clipboard, clock, system info, appearance | `src/services/types.ts` |
 | Storage keys | `src/services/storage-keys.ts` |
+| Stock quote wire format, shared with the `worker/stock` Worker | `src/services/market/contract.ts` |
 
 ## Consequences
 
@@ -52,3 +53,4 @@ Changes to the contracts since the full text was written. Where an amendment and
 - **`NetError` has a seventh kind, `network`.** Section 9 of the full text lists six kinds: offline, timeout, cors, http, parse and abort. `NetErrorKind` in `src/services/types.ts` adds `network`, a failed same-origin request while the browser reports being online. `cors` stays for failed cross-origin requests, which browsers do not explain further. Every kind-to-message map, such as weather's, stock's and curl's, handles all seven.
 - **The stale-chunk reload does not restore the session yet.** Section 13 of the full text reloads and restores the session from the snapshot. Phase 0 prints the notice and reloads once (`src/platform/chunkReload.ts`). The restore arrives with the `vesen:session:v1` snapshot in Phase 3; until then the reload starts a fresh transcript.
 - **The CSP is enforced from the first deploy.** Section 13 of the full text ships it as Report-Only for one deploy first. With no reporting endpoint, a Report-Only policy reports only to each visitor's own console, so the trial would collect nothing, and Instagram's in-app browsers cannot be inspected remotely. Instead the end-to-end tests run the app, the device probe and the 404 page under the enforced policy in Chromium and WebKit, and the device probe records every violation in its results, so a probe run from Instagram shows anything the policy blocks there.
+- **The market contract is a service contract.** `src/services/market/contract.ts` holds the stock Worker's wire types, `SYMBOL_RE`, the ranges, `normaliseSymbol` and `marketPhaseAt`. It imports nothing and touches no browser API, because the Worker bundles it as it is. DOM-free code may import it like `services/types.ts`, and `check:boundaries` holds it to the DOM-free rules.

@@ -74,6 +74,7 @@ describe('findBoundaryViolations: imports', () => {
     expect(importing('src/shell/kernel.ts', './types.ts')).toEqual([]);
     expect(importing('src/commands/system/whoami.ts', '../../services/types')).toEqual([]);
     expect(importing('src/commands/system/whoami.ts', '../../services/storage-keys.ts')).toEqual([]);
+    expect(importing('src/commands/network/stock.ts', '../../services/market/contract')).toEqual([]);
     expect(importing('src/commands/net/qr.ts', '../../lib/qr')).toEqual([]);
     expect(importing('src/lib/qr/index.ts', 'some-package')).toEqual([]);
   });

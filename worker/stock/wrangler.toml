@@ -1,0 +1,35 @@
+# vesen-stock: stock quotes for vesen.app. See README.md for setup and the API contract.
+name = "vesen-stock"
+main = "src/index.ts"
+compatibility_date = "2026-10-06"
+workers_dev = true
+
+# The curated snapshot (src/snapshot.ts) refreshes every 15 minutes: at most 96 KV writes a day,
+# well inside the free plan's 1,000.
+[triggers]
+crons = ["*/15 * * * *"]
+
+# Holds the snapshot under the key "snapshot:v1". Create the namespace once with
+#   npx wrangler kv namespace create SNAPSHOT
+# and paste the id it prints below. Until then /v1/snapshot answers from the copy built into the
+# Worker, marked stale. `wrangler dev` simulates KV locally and ignores the id.
+[[kv_namespaces]]
+binding = "SNAPSHOT"
+id = "REPLACE_WITH_SNAPSHOT_KV_ID"
+
+[vars]
+# Browser origins the Worker answers, comma-separated. A `*` in the host matches one DNS label
+# (the Firebase preview channels); a trailing `:*` matches any port. Requests with no Origin
+# (curl, the canary) are served under a tighter rate limit; any other origin gets 403.
+ALLOWED_ORIGINS = "https://www.vesen.app,https://vesen.app,https://vesenterminal--*.web.app,http://localhost:*,http://127.0.0.1:*"
+# Providers in the order they are tried. Add the optional keyed tier with
+#   npx wrangler secret put FINNHUB_KEY
+# and it is appended automatically (US symbols only).
+PROVIDER_ORDER = "yahoo,cboe"
+# Yahoo rate-limits curl's and full browser User-Agents but answers this short, honest one.
+UPSTREAM_UA = "Mozilla/5.0 (compatible; vesen-stock/1.0; +https://www.vesen.app)"
+
+# Sampled logs for debugging. The Worker never logs IP addresses.
+[observability]
+enabled = true
+head_sampling_rate = 0.1

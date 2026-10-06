@@ -15,8 +15,12 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 /** Folders that must stay free of the DOM, browser storage and Svelte. */
 export const DOM_FREE_DIRS = ['src/shell', 'src/output', 'src/vfs', 'src/lib', 'src/commands'];
 
-/** Modules outside those folders that DOM-free code may import: the service contracts, which are types and constants only. */
-export const DOM_FREE_IMPORTABLE = ['src/services/types', 'src/services/storage-keys'];
+/**
+ * Modules outside those folders that DOM-free code may import: the service contracts, which are
+ * types, constants and pure functions only. They are held to the same rules as the folders.
+ * The market contract is also bundled by the stock Worker (worker/stock).
+ */
+export const DOM_FREE_IMPORTABLE = ['src/services/types', 'src/services/storage-keys', 'src/services/market/contract'];
 
 /** Browser globals the DOM-free folders may not reference. Services reach the browser for them. */
 export const FORBIDDEN_GLOBALS = [
@@ -316,6 +320,20 @@ function main() {
   const failures = [];
 
   let scanned = 0;
+  for (const module of DOM_FREE_IMPORTABLE) {
+    const repoPath = `${module}.ts`;
+    let source;
+    try {
+      source = readFileSync(join(ROOT, repoPath), 'utf8');
+    } catch {
+      failures.push(`${repoPath}:1 is listed in DOM_FREE_IMPORTABLE but does not exist`);
+      continue;
+    }
+    scanned += 1;
+    for (const problem of findBoundaryViolations(source, repoPath)) {
+      failures.push(`${repoPath}:${problem.line} ${problem.message}`);
+    }
+  }
   for (const dir of DOM_FREE_DIRS) {
     for (const file of walk(join(ROOT, dir))) {
       if (TEST_FILE.test(file)) continue;

@@ -77,7 +77,8 @@ src/
 ├── services/
 │   ├── net.ts                    # fetch with timeouts, cancelling, byte caps and typed network errors
 │   ├── types.ts                  # Service interfaces: net, storage, bell, opener, clipboard, clock, system info
-│   └── storage-keys.ts           # Every browser storage key, in one registry
+│   ├── storage-keys.ts           # Every browser storage key, in one registry
+│   └── market/contract.ts        # The stock Worker's wire format, shared by the Worker and the app
 ├── stores/                       # Svelte stores: history, the running job, theme, cathode
 ├── testing/                      # Test setup
 └── utils/
@@ -92,6 +93,7 @@ src/
 public/                           # README.md, history.txt and linux.txt for cat; favicons; font;
                                   # 404.html; probe/ (device capability probe, not linked from the app)
 themes.json                       # The ten colour themes
+worker/stock/                     # vesen-stock, the Cloudflare Worker that serves stock quotes (its own README)
 tests/                            # Golden snapshots of command output, network fixtures, hosting checks, helpers
 e2e/                              # Playwright end-to-end tests
 scripts/                          # Checks: module boundaries, bundle budget, theme contrast (and its baseline)
