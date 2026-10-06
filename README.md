@@ -97,7 +97,8 @@ src/
 │   ├── net.ts                    # fetch with timeouts, cancelling, byte caps and typed network errors
 │   ├── storage.ts                # localStorage and sessionStorage with a memory fallback; one-time migrations
 │   ├── types.ts                  # Service interfaces: net, storage, bell, opener, clipboard, clock, system info
-│   └── storage-keys.ts           # Every browser storage key, in one registry
+│   ├── storage-keys.ts           # Every browser storage key, in one registry
+│   └── market/contract.ts        # The stock Worker's wire format, shared by the Worker and the app
 ├── stores/                       # Svelte stores, pure state: history, the running job, theme, cathode
 ├── ui/
 │   ├── OutputView.svelte         # Draws output blocks with text interpolation only
@@ -124,6 +125,7 @@ public/                           # README.md, history.txt and linux.txt for cat
                                   # manifest.webmanifest; probe/ (device capability probe, not linked from the app)
 assets-src/fonts/                 # The source font Vesen Mono is built from (not served)
 themes.json                       # The ten colour themes: each palette, and any role colours a theme sets itself
+worker/stock/                     # vesen-stock, the Cloudflare Worker that serves stock quotes (its own README)
 tests/                            # Golden snapshots and their parity check, XSS tests, network fixtures, hosting checks, helpers
 e2e/                              # Playwright end-to-end tests
 scripts/                          # Checks: module boundaries, bundle budget, theme contrast (and its baseline);

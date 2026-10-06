@@ -34,5 +34,7 @@
     "src/utils/beep.ts",
     "worker/**/*.ts"
   ],
-  "exclude": ["**/node_modules", "dist", "**/*.test.ts"]
+  // The Worker's test helpers read fixtures with Node, so they are checked by
+  // tsconfig.strict.node.json.
+  "exclude": ["**/node_modules", "dist", "**/*.test.ts", "worker/*/test/**"]
 }

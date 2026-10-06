@@ -1,0 +1,25 @@
+{
+  // Type-checks the Worker and the spike against the Workers runtime's web APIs. The few
+  // Cloudflare-only types come from src/env.d.ts, so this runs without installing anything:
+  //   npx tsc -p worker/stock/tsconfig.json --noEmit
+  // Wrangler bundles with esbuild and does not read this file. The tests are checked by the
+  // root tsconfig.strict.node.json and run by the root Vitest config (project "worker").
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "WebWorker"],
+    "types": [],
+    "strict": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.json", "spike/**/*.ts", "../../src/services/market/contract.ts"]
+}

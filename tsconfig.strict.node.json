@@ -28,6 +28,7 @@
     "tests/golden/html-to-text.test.ts",
     "tests/golden/parity.test.ts",
     "e2e/**/*.ts",
+    "worker/*/test/**/*.ts",
     "playwright.config.ts",
     "vite.config.ts"
   ],
