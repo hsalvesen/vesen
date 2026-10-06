@@ -1,0 +1,17 @@
+{
+  "accuracy": 10,
+  "area_code": "0",
+  "asn": 64496,
+  "city": "Sydney",
+  "continent_code": "OC",
+  "country": "Australia",
+  "country_code": "AU",
+  "country_code3": "AUS",
+  "ip": "203.0.113.7",
+  "latitude": "-33.8715",
+  "longitude": "151.2006",
+  "organization": "AS64496 Example Network",
+  "organization_name": "Example Network",
+  "region": "New South Wales",
+  "timezone": "Australia/Sydney"
+}

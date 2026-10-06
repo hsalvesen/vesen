@@ -5,7 +5,12 @@
 // AbortSignal.any and AbortSignal.timeout are deliberately not used: Instagram's WKWebView on
 // iOS before 17.4 lacks both, so signals are combined and timed by hand.
 
-import { REQUEST_TIMEOUT_MS, type NetError as NetErrorContract, type NetErrorKind } from './types';
+import {
+  MEMO_FAILURE_COOLDOWN_MS,
+  REQUEST_TIMEOUT_MS,
+  type NetError as NetErrorContract,
+  type NetErrorKind,
+} from './types';
 
 export type { NetErrorKind };
 
@@ -202,4 +207,104 @@ function parseUrl(url: string): URL | null {
 
 function isCrossOrigin(target: URL): boolean {
   return typeof location === 'undefined' || target.origin !== location.origin;
+}
+
+// ── memo ───────────────────────────────────────────────────────────────────────────────────
+
+export interface MemoOptions {
+  /** The clock; tests pass a fake one. */
+  now?: () => number;
+  /** How long a failure is remembered. Defaults to 30 s. */
+  failureCooldownMs?: number;
+}
+
+/**
+ * Runs `load` once per key within `ttlMs` of it succeeding: concurrent callers share the request
+ * in flight, and a failure is remembered for 30 s so a broken host is not hammered. A failure
+ * of kind `abort` or `offline` says nothing about the host and is not remembered.
+ *
+ * `load` takes no signal, because callers share it; a caller that may be cancelled races the
+ * returned promise against its own signal (see `untilAborted`).
+ */
+export interface Memo {
+  <T>(key: string, ttlMs: number, load: () => Promise<T>): Promise<T>;
+  /** Forgets one key, so the next call loads again. */
+  forget(key: string): void;
+  /** Forgets every key. */
+  clear(): void;
+}
+
+interface MemoEntry {
+  readonly promise: Promise<unknown>;
+  /** Infinity while the load is in flight. */
+  until: number;
+}
+
+/** Expired entries are swept once the table holds this many. */
+const MEMO_SWEEP_AT = 100;
+
+export function createMemo(options: MemoOptions = {}): Memo {
+  const { now = Date.now, failureCooldownMs = MEMO_FAILURE_COOLDOWN_MS } = options;
+  const entries = new Map<string, MemoEntry>();
+
+  const sweep = (at: number): void => {
+    if (entries.size < MEMO_SWEEP_AT) return;
+    for (const [key, entry] of entries) if (entry.until <= at) entries.delete(key);
+  };
+
+  const memo = <T>(key: string, ttlMs: number, load: () => Promise<T>): Promise<T> => {
+    const at = now();
+    const existing = entries.get(key);
+    if (existing && at < existing.until) return existing.promise as Promise<T>;
+    sweep(at);
+
+    // The async wrapper turns a synchronous throw in `load` into a rejection.
+    const promise = (async () => load())();
+    const entry: MemoEntry = { promise, until: Number.POSITIVE_INFINITY };
+    entries.set(key, entry);
+    promise.then(
+      () => {
+        if (entries.get(key) === entry) entry.until = now() + Math.max(0, ttlMs);
+      },
+      (error: unknown) => {
+        if (entries.get(key) !== entry) return;
+        if (isNetError(error) && (error.kind === 'abort' || error.kind === 'offline')) entries.delete(key);
+        else entry.until = now() + failureCooldownMs;
+      },
+    );
+    return promise;
+  };
+
+  return Object.assign(memo, {
+    forget: (key: string): void => {
+      entries.delete(key);
+    },
+    clear: (): void => entries.clear(),
+  });
+}
+
+/** The page's shared memo table. */
+export const memo: Memo = /* @__PURE__ */ createMemo();
+
+/**
+ * Settles like `promise`, or rejects with a NetError of kind `abort` for `host` as soon as
+ * `signal` aborts. For callers of a shared request (see `memo`) that can be cancelled alone.
+ */
+export function untilAborted<T>(promise: Promise<T>, signal: AbortSignal | null | undefined, host: string): Promise<T> {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(new NetError('abort', host));
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = (): void => reject(new NetError('abort', host));
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (error: unknown) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(error);
+      },
+    );
+  });
 }

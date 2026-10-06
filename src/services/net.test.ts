@@ -3,12 +3,16 @@ import {
   DEFAULT_TIMEOUT_MS,
   NetError,
   combineSignals,
+  createMemo,
   fetchJson,
   fetchText,
   fetchTextCapped,
   fetchWithTimeout,
   isOnline,
+  memo as sharedMemo,
+  untilAborted,
 } from './net';
+import { MEMO_FAILURE_COOLDOWN_MS } from './types';
 
 /** A fetch that never settles and ignores its signal, like a proxy that hangs. */
 const hangingFetch = () => new Promise<Response>(() => {});
@@ -289,6 +293,150 @@ describe('fetchTextCapped', () => {
     await expect(fetchTextCapped('https://example.com', { maxBytes: 2 })).resolves.toEqual({
       text: 'a',
       truncated: true,
+    });
+  });
+});
+
+describe('memo', () => {
+  let clock = 0;
+  const now = (): number => clock;
+
+  /** A load that settles when told to, counting its calls. */
+  function deferredLoad<T>() {
+    let calls = 0;
+    let settle: ((value: T) => void) | undefined;
+    const load = (): Promise<T> => {
+      calls += 1;
+      return new Promise<T>((resolve) => {
+        settle = resolve;
+      });
+    };
+    return { load, calls: () => calls, resolve: (value: T) => settle?.(value) };
+  }
+
+  beforeEach(() => {
+    clock = 1_000;
+  });
+
+  it('shares one load between concurrent callers', async () => {
+    const memo = createMemo({ now });
+    const source = deferredLoad<string>();
+    const a = memo('k', 1000, source.load);
+    const b = memo('k', 1000, source.load);
+    expect(source.calls()).toBe(1);
+    source.resolve('value');
+    await expect(Promise.all([a, b])).resolves.toEqual(['value', 'value']);
+  });
+
+  it('reuses a success for ttlMs after it settles, then loads again', async () => {
+    const memo = createMemo({ now });
+    let calls = 0;
+    const load = async (): Promise<number> => (calls += 1);
+    await memo('k', 1000, load);
+    clock += 999;
+    await expect(memo('k', 1000, load)).resolves.toBe(1);
+    clock += 1;
+    await expect(memo('k', 1000, load)).resolves.toBe(2);
+    await expect(memo('other', 1000, load)).resolves.toBe(3);
+  });
+
+  it(`remembers a failure for ${MEMO_FAILURE_COOLDOWN_MS / 1000} s, then tries again`, async () => {
+    const memo = createMemo({ now });
+    let calls = 0;
+    const load = async (): Promise<string> => {
+      calls += 1;
+      throw new NetError('http', 'example.com', { status: 503 });
+    };
+    await expect(memo('k', 60_000, load)).rejects.toMatchObject({ kind: 'http', status: 503 });
+    clock += MEMO_FAILURE_COOLDOWN_MS - 1;
+    await expect(memo('k', 60_000, load)).rejects.toMatchObject({ kind: 'http' });
+    expect(calls).toBe(1);
+    clock += 1;
+    await expect(memo('k', 60_000, load)).rejects.toMatchObject({ kind: 'http' });
+    expect(calls).toBe(2);
+  });
+
+  it('does not remember a cancelled or offline failure', async () => {
+    const memo = createMemo({ now });
+    const kinds = ['abort', 'offline', 'abort'] as const;
+    let calls = 0;
+    const load = async (): Promise<string> => {
+      const kind = kinds[calls] ?? 'abort';
+      calls += 1;
+      throw new NetError(kind, 'example.com');
+    };
+    await expect(memo('k', 60_000, load)).rejects.toMatchObject({ kind: 'abort' });
+    await expect(memo('k', 60_000, load)).rejects.toMatchObject({ kind: 'offline' });
+    await expect(memo('k', 60_000, load)).rejects.toMatchObject({ kind: 'abort' });
+    expect(calls).toBe(3);
+  });
+
+  it('turns a synchronous throw into a remembered rejection', async () => {
+    const memo = createMemo({ now });
+    const load = vi.fn((): Promise<string> => {
+      throw new Error('boom');
+    });
+    await expect(memo('k', 1000, load)).rejects.toThrow('boom');
+    await expect(memo('k', 1000, load)).rejects.toThrow('boom');
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it('forgets one key or all of them', async () => {
+    const memo = createMemo({ now });
+    let calls = 0;
+    const load = async (): Promise<number> => (calls += 1);
+    await memo('a', 60_000, load);
+    await memo('b', 60_000, load);
+    memo.forget('a');
+    await memo('a', 60_000, load);
+    await memo('b', 60_000, load);
+    expect(calls).toBe(3);
+    memo.clear();
+    await memo('b', 60_000, load);
+    expect(calls).toBe(4);
+  });
+
+  it('ignores how a forgotten load settles', async () => {
+    const memo = createMemo({ now });
+    const first = deferredLoad<string>();
+    const pending = memo('k', 60_000, first.load);
+    memo.forget('k');
+    await expect(memo('k', 60_000, async () => 'second')).resolves.toBe('second');
+    first.resolve('first');
+    await expect(pending).resolves.toBe('first');
+    await expect(memo('k', 60_000, async () => 'third')).resolves.toBe('second');
+  });
+
+  it('has a page-wide table', async () => {
+    await expect(sharedMemo('net.test', 0, async () => 'shared')).resolves.toBe('shared');
+    sharedMemo.forget('net.test');
+  });
+});
+
+describe('untilAborted', () => {
+  it('settles like the promise while not cancelled', async () => {
+    await expect(untilAborted(Promise.resolve(1), new AbortController().signal, 'example.com')).resolves.toBe(1);
+    await expect(untilAborted(Promise.reject(new Error('x')), undefined, 'example.com')).rejects.toThrow('x');
+  });
+
+  it('rejects with kind abort as soon as the signal aborts, leaving the shared promise alone', async () => {
+    const controller = new AbortController();
+    let resolveShared: (value: number) => void = () => {};
+    const shared = new Promise<number>((resolve) => {
+      resolveShared = resolve;
+    });
+    const waiting = untilAborted(shared, controller.signal, 'example.com');
+    controller.abort();
+    await expect(waiting).rejects.toMatchObject({ kind: 'abort', host: 'example.com' });
+    resolveShared(7);
+    await expect(shared).resolves.toBe(7);
+  });
+
+  it('rejects at once when already cancelled', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await expect(untilAborted(new Promise<never>(() => {}), controller.signal, 'example.com')).rejects.toMatchObject({
+      kind: 'abort',
     });
   });
 });
