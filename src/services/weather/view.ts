@@ -3,7 +3,7 @@
 // Compact lines fit 36 columns (a 320 px phone); wide lines fit 72. The card component picks a
 // layout by container width at display time, and pipes get plain text from the same lines.
 
-import type { Colour } from '../../output/model';
+import { charWidth, textWidth, type Colour } from '../../output/model';
 import { countryLabel, placeLabel } from './places';
 import type {
   ArtRow, BarSegment, CurrentView, Daily, DayView, Forecast, Line, Note, Place, RangeBar, Segment,
@@ -49,39 +49,6 @@ export const OPEN_METEO_CREDIT = 'Weather data by Open-Meteo.com (CC BY 4.0)';
 export const OSM_CREDIT = 'Place search © OpenStreetMap contributors';
 
 // ── Text measurement ───────────────────────────────────────────────────────────────────────
-
-function isWide(cp: number): boolean {
-  return (
-    (cp >= 0x1100 && cp <= 0x115f) ||
-    (cp >= 0x2e80 && cp <= 0x303e) ||
-    (cp >= 0x3041 && cp <= 0x33ff) ||
-    (cp >= 0x3400 && cp <= 0x4dbf) ||
-    (cp >= 0x4e00 && cp <= 0x9fff) ||
-    (cp >= 0xa000 && cp <= 0xa4cf) ||
-    (cp >= 0xac00 && cp <= 0xd7a3) ||
-    (cp >= 0xf900 && cp <= 0xfaff) ||
-    (cp >= 0xfe30 && cp <= 0xfe4f) ||
-    (cp >= 0xff00 && cp <= 0xff60) ||
-    (cp >= 0xffe0 && cp <= 0xffe6) ||
-    (cp >= 0x1f300 && cp <= 0x1f64f) ||
-    (cp >= 0x1f900 && cp <= 0x1f9ff) ||
-    (cp >= 0x20000 && cp <= 0x3fffd)
-  );
-}
-
-const ZERO_WIDTH = /^[\p{M}\u200b-\u200f\u2060\ufeff]$/u;
-
-function charWidth(ch: string): number {
-  if (ZERO_WIDTH.test(ch)) return 0;
-  return isWide(ch.codePointAt(0) ?? 0) ? 2 : 1;
-}
-
-/** Terminal columns a string occupies: combining marks take none, East Asian wide characters two. */
-export function textWidth(text: string): number {
-  let width = 0;
-  for (const ch of text) width += charWidth(ch);
-  return width;
-}
 
 /** The start of `text` in fewer than `width` columns, then '…'. */
 function cut(text: string, width: number): string {

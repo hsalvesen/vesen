@@ -137,11 +137,13 @@
     }
   }
 
-  /** Runs one line as the current job and records it once it finishes or is interrupted. */
+  /**
+   * Runs one line as the current job and records it once it finishes or is interrupted.
+   * The input is never disabled, so it keeps focus through the run and nothing gives focus back
+   * afterwards: it can only have left because the visitor put the keyboard away to read, and a
+   * phone's keyboard stays as the visitor left it.
+   */
   async function runLine(line: string, commandName: string, args: string[]) {
-    // The prompt gets focus back afterwards only if it had it now: a phone's keyboard stays as
-    // the visitor left it.
-    const hadFocus = document.activeElement === input;
     command = "";
     historyIndex = -1;
     runningLine = line;
@@ -173,8 +175,6 @@
     if (interrupted || !skipsDisplay) {
       $history = [...$history, { command: line, outputs: [output] }];
     }
-
-    if (hadFocus) input?.focus({ preventScroll: true });
   }
 
   // A keyboard and mouse can start typing at once. On touch, focus opens the soft keyboard over
@@ -182,6 +182,12 @@
   onMount(() => {
     if (!window.matchMedia?.("(pointer: coarse)").matches) input.focus({ preventScroll: true });
   });
+
+  // Escape at an idle prompt, then Tab or Shift+Tab within a second, moves focus out of the
+  // terminal as usual, so the page has no keyboard trap.
+  const ESCAPE_TAB_MS = 1000;
+  let escapedAt = -Infinity;
+  const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta", "CapsLock"]);
 
   const handleKeyDown = async (event: KeyboardEvent) => {
     if (event.ctrlKey && event.key === "c") {
@@ -192,9 +198,13 @@
       return;
     }
 
-    if (event.key === "Escape" && (isProcessing || isPasswordMode)) {
-      event.preventDefault();
-      interrupt();
+    if (event.key === "Escape") {
+      if (isProcessing || isPasswordMode) {
+        event.preventDefault();
+        interrupt();
+      } else {
+        escapedAt = performance.now();
+      }
       return;
     }
 
@@ -204,6 +214,14 @@
       $history = [];
       return;
     }
+
+    // The rest edits the prompt. Keys meant for another control, such as Enter on the
+    // new-output pill or the cancel button, are left to it.
+    if (event.target !== input) return;
+
+    const leaving = event.key === "Tab" && performance.now() - escapedAt <= ESCAPE_TAB_MS;
+    if (!MODIFIER_KEYS.has(event.key)) escapedAt = -Infinity;
+    if (leaving) return;
 
     // While a command runs, keys type ahead into the input. Enter waits for the prompt, and Tab
     // is held so focus stays in the input.

@@ -76,3 +76,15 @@ describe('legacy parity through the sanitiser', () => {
     }
   });
 });
+
+describe('legacy text colours', () => {
+  // The bright-black slot is under 4.5:1 on most themes' backgrounds. It may colour a swatch of
+  // block glyphs, but dim text uses the muted role (.out-muted) instead.
+  it.each(files)('%s draws no text in bright black', (file) => {
+    for (const { line, html } of parseHtmlTranscript(GOLDENS[file] ?? '')) {
+      const dim = Array.from(sanitizeLegacyHtml(html).querySelectorAll('[style*="--theme-bright-black"]'));
+      const text = dim.map((element) => (element.textContent ?? '').replace(/[█\s]/g, '')).filter(Boolean);
+      expect(text, `"${line}"`).toEqual([]);
+    }
+  });
+});

@@ -5,6 +5,7 @@ import { playBeep } from '../beep';
 import { fetchText, isNetError } from '../../services/net';
 import { cancelledNotice, errorLine } from '../notice';
 import { escapeHtml } from '../../output/escape';
+import { transcriptColumns } from '../../platform/measure';
 
 /**
  * Loads a file that public/ serves, such as /README.md. Each request has the default 8 s deadline
@@ -138,11 +139,8 @@ export const fileSystemCommands = {
         };
       });
     
-    // Improved mobile-responsive terminal width calculation
-    const baseCharWidth = 8; // Approximate character width in pixels
-    const padding = 40; // Account for terminal padding
-    const availableWidth = Math.max(window.innerWidth - padding, 200); // Minimum 200px
-    const terminalWidth = Math.floor(availableWidth / baseCharWidth);
+    // The transcript's width in cells
+    const terminalWidth = transcriptColumns(window);
     const minWidth = 20; // Minimum characters per line
     const maxWidth = 120; // Maximum characters per line
     const responsiveWidth = Math.min(maxWidth, Math.max(minWidth, terminalWidth));

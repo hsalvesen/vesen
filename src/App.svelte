@@ -113,6 +113,11 @@
     }
   }
 
+  /* Feedback for a tap, in place of the tap highlight styles/shell.css turns off. */
+  .processing:active {
+    opacity: 0.6;
+  }
+
   .new-output {
     position: absolute;
     z-index: 3;
@@ -134,5 +139,10 @@
       min-height: 44px;
       padding-inline: 16px;
     }
+  }
+
+  .new-output:active {
+    background: var(--role-accent);
+    color: var(--theme-background);
   }
 </style>

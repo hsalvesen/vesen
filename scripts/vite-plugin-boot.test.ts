@@ -12,8 +12,11 @@ interface Painted {
   icon: string | null;
 }
 
-/** Runs the boot script against a minimal page whose saved theme is `saved`. */
-function boot(saved: string | null | (() => never)): Painted {
+/**
+ * Runs the boot script against a minimal page whose saved theme is `saved`, and whose
+ * pre-overhaul `colorscheme` key holds `legacy`.
+ */
+function boot(saved: string | null | (() => never), legacy: string | null = null): Painted {
   const style: Record<string, string> = {};
   const attributes = { meta: '#222235', icon: '/icons/theme/swamphen.svg' };
   const element = (key: keyof typeof attributes) => ({
@@ -35,7 +38,7 @@ function boot(saved: string | null | (() => never)): Painted {
   const localStorage = {
     getItem: (key: string) => {
       if (typeof saved === 'function') return saved();
-      return key === 'vesen:theme:v1' ? saved : null;
+      return key === 'vesen:theme:v1' ? saved : key === 'colorscheme' ? legacy : null;
     },
   };
   runInNewContext(bootScript(), { window: { localStorage }, document });
@@ -83,6 +86,22 @@ describe('boot script', () => {
     ['the legacy JSON object', '{"name":"cockatoo"}'],
   ])('falls back to the default for %s', (_, saved) => {
     expect(boot(saved)).toEqual(swamphen);
+  });
+
+  // The app moves `colorscheme` to the new key once its bundle runs; until then the boot script
+  // reads it too, so a returning visitor's first visit after the overhaul is not painted twice.
+  it.each([
+    ['the whole colour object', JSON.stringify({ name: 'Cockatoo', background: '#000000' })],
+    ['a bare name', JSON.stringify('cockatoo')],
+  ])('paints the theme saved before the overhaul as %s', (_, legacy) => {
+    expect(boot(null, legacy)).toEqual(boot('cockatoo'));
+  });
+
+  it('prefers the new key to the legacy one, and ignores a legacy value it cannot read', () => {
+    expect(boot('swamphen', JSON.stringify({ name: 'cockatoo' }))).toEqual(swamphen);
+    for (const legacy of ['not json', '42', 'null', '{"name":7}', '{"name":"constructor"}', '{"name":"pinkRobin"}']) {
+      expect(boot(null, legacy), legacy).toEqual(swamphen);
+    }
   });
 
   it('falls back to the default when storage throws', () => {

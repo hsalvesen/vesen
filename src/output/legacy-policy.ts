@@ -19,31 +19,35 @@ export const LEGACY_DROP_WITH_CONTENT: ReadonlySet<string> = new Set([
 /**
  * Every class name legacy command output uses: the theme and cathode lists, fastfetch's
  * "WM Theme" value, the highlight the stores toggle on them, the art classes (the banner,
- * logos, colour blocks, charts and QR codes) with their screen-reader text, and the output
- * components in styles/components.css (role colours, errors, panels and their tones, swatches).
+ * logos, colour blocks, charts and QR codes, and a fallback glyph held to one cell) with their
+ * screen-reader text, and the output
+ * components in styles/components.css (role colours, errors, panels and their tones, swatches,
+ * and the banner's keyboard hint).
  */
 export const LEGACY_CLASSES: ReadonlySet<string> = new Set([
-  'theme-name', 'cathode-name', 'current-theme-name', 'is-current', 'art', 'art-fit', 'sr-only',
+  'theme-name', 'cathode-name', 'current-theme-name', 'is-current', 'art', 'art-fit', 'art-cell', 'sr-only',
   'out-strong', 'out-accent', 'out-muted', 'out-error',
   'out-panel', 'out-panel-title', 'tone-warn', 'tone-ok', 'tone-error', 'tone-link', 'tone-muted',
-  'swatches',
+  'swatches', 'keys-hint',
 ]);
 
 /** Attributes kept besides style, class and href, with the values they may hold. */
 const DATA_ATTRIBUTES: ReadonlySet<string> = new Set(['data-theme-name', 'data-cathode-name']);
 const DATA_VALUE = /^[a-z0-9 _-]{1,64}$/i;
 
+/**
+ * No `position`, `inset`, `z-index` or `transform`: output stays in the flow, so it cannot be
+ * laid over the prompt. ui/OutputView.svelte also gives each legacy output `contain: paint`, so
+ * what padding and negative margins can do is drawn, and hit, only inside that output's own box.
+ */
 const STYLE_PROPERTIES: ReadonlySet<string> = new Set([
   'color', 'background', 'background-color', 'font-weight', 'font-style', 'font-size', 'font-family',
   'text-decoration', 'white-space', 'display', 'flex', 'flex-direction', 'flex-wrap', 'flex-shrink',
   'flex-grow', 'gap', 'align-items', 'justify-content', 'width', 'min-width', 'max-width', 'border-left',
-  'border-radius', 'position', 'inset', 'opacity', 'line-height', 'letter-spacing', 'overflow-x',
+  'border-radius', 'opacity', 'line-height', 'letter-spacing', 'overflow-x',
   'overflow-wrap', 'word-wrap', 'word-break', 'vertical-align',
 ]);
 const BOX_PROPERTY = /^(?:margin|padding)(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?$/;
-
-/** `fixed` and `sticky` would let output cover the prompt, so only in-flow positions are kept. */
-const POSITIONS: ReadonlySet<string> = new Set(['static', 'relative', 'absolute']);
 
 /**
  * CSS functions a value may call; '' is a bare parenthesis inside calc(). Anything else, url()
@@ -60,13 +64,12 @@ export function isLegacyStyleProperty(name: string): boolean {
 }
 
 /** The value a declaration may keep, or null when the declaration must go. */
-function styleValue(property: string, raw: string): string | null {
+function styleValue(raw: string): string | null {
   const value = raw.trim().replace(/\s+/g, ' ');
   if (value === '' || !VALUE_CHARACTERS.test(value) || FORBIDDEN_IN_VALUE.test(value)) return null;
   for (const call of value.matchAll(/([\w-]*)\(/g)) {
     if (!STYLE_FUNCTIONS.has((call[1] ?? '').toLowerCase())) return null;
   }
-  if (property === 'position' && !POSITIONS.has(value.toLowerCase())) return null;
   return value;
 }
 
@@ -107,7 +110,7 @@ export function filterLegacyStyle(style: string): string {
     if (colon === -1) continue;
     const property = declaration.slice(0, colon).trim().toLowerCase();
     if (!isLegacyStyleProperty(property)) continue;
-    const value = styleValue(property, declaration.slice(colon + 1));
+    const value = styleValue(declaration.slice(colon + 1));
     if (value !== null) kept.push(`${property}: ${value}`);
   }
   return kept.join('; ');

@@ -31,8 +31,11 @@ body {
   }
 }
 
-/* Desktop: the framed monitor, with a 16px gutter around it. */
+/* Desktop: the framed monitor, with a 16px gutter around it. The shell listens for clicks
+   (ui/actions/focusPolicy.ts), so iOS would flash its grey tap highlight over the whole screen at
+   every tap on output; the controls show their own :active state instead. */
 .shell {
+  -webkit-tap-highlight-color: transparent;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;

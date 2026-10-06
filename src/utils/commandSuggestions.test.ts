@@ -63,3 +63,12 @@ describe('cathode suggestions', () => {
   });
 });
 
+
+describe('theme suggestions', () => {
+  it('never offer a cathode command, since theme has no quality subcommand', async () => {
+    const suggest = await freshSuggestions();
+    expect(suggest('theme quality a')).toEqual([]);
+    expect(suggest('theme quality ')).toEqual([]);
+    expect(suggest('theme s')).toEqual(['theme set']);
+  });
+});

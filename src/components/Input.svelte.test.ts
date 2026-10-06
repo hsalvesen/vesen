@@ -3,6 +3,7 @@ import { tick } from 'svelte';
 import { get } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { commandHistory, history } from '../stores/history';
+import { interruptJob } from '../stores/job';
 import Input from './Input.svelte';
 
 /** Lets pending promise callbacks and Svelte updates run, without moving any timer. */
@@ -178,5 +179,100 @@ describe('focus', () => {
     await settle();
     expect(lastEntry()?.command).toBe('echo two');
     expect(document.activeElement).not.toBe(prompt());
+  });
+
+  it('stays put away when the visitor dismissed the keyboard while a command ran', async () => {
+    let answer: (response: Response) => void = () => {};
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => (answer = resolve))));
+    render(Input);
+    prompt().focus();
+    await type('cat README.md');
+    await fireEvent.keyDown(prompt(), { key: 'Enter' });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    prompt().blur();
+    answer(new Response('# readme'));
+    await vi.waitFor(() => expect(lastEntry()?.command).toBe('cat README.md'));
+    await settle();
+    expect(document.activeElement).not.toBe(prompt());
+  });
+
+  it('stays put away when the visitor dismissed the keyboard and then tapped cancel', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
+    render(Input);
+    prompt().focus();
+    await type('cat README.md');
+    await fireEvent.keyDown(prompt(), { key: 'Enter' });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    prompt().blur();
+    interruptJob();
+    await vi.waitFor(() => expect(lastEntry()?.command).toBe('cat README.md'));
+    await settle();
+    expect(document.activeElement).not.toBe(prompt());
+  });
+});
+
+describe('keys meant for other controls', () => {
+  const key = (target: EventTarget, init: KeyboardEventInit): KeyboardEvent => {
+    const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+    target.dispatchEvent(event);
+    return event;
+  };
+
+  it('holds Tab in the prompt for completion, but lets Escape then Tab leave the terminal', async () => {
+    render(Input);
+    prompt().focus();
+    expect(key(prompt(), { key: 'Tab' }).defaultPrevented).toBe(true);
+
+    key(prompt(), { key: 'Escape' });
+    expect(key(prompt(), { key: 'Tab' }).defaultPrevented).toBe(false);
+
+    // Shift+Tab: the Shift press in between does not count as another key.
+    key(prompt(), { key: 'Escape' });
+    key(prompt(), { key: 'Shift', shiftKey: true });
+    expect(key(prompt(), { key: 'Tab', shiftKey: true }).defaultPrevented).toBe(false);
+
+    // Any other key in between, or waiting too long, goes back to completing.
+    key(prompt(), { key: 'Escape' });
+    key(prompt(), { key: 'a' });
+    expect(key(prompt(), { key: 'Tab' }).defaultPrevented).toBe(true);
+
+    const now = vi.spyOn(performance, 'now').mockReturnValue(10_000);
+    key(prompt(), { key: 'Escape' });
+    now.mockReturnValue(11_001);
+    expect(key(prompt(), { key: 'Tab' }).defaultPrevented).toBe(true);
+  });
+
+  it('leaves Enter on a button to the button', async () => {
+    render(Input);
+    const button = document.createElement('button');
+    button.dataset.testText = '';
+    document.body.append(button);
+    await type('echo hello');
+
+    const enter = key(button, { key: 'Enter' });
+    await settle();
+    expect(enter.defaultPrevented).toBe(false);
+    expect(get(history)).toEqual([]);
+    expect(prompt().value).toBe('echo hello');
+
+    expect(key(button, { key: 'ArrowUp' }).defaultPrevented).toBe(false);
+    expect(key(button, { key: 'Tab' }).defaultPrevented).toBe(false);
+  });
+
+  it('leaves Enter on the cancel button to it while a command runs', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
+    render(Input);
+    await type('cat README.md');
+    await fireEvent.keyDown(prompt(), { key: 'Enter' });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    const button = document.createElement('button');
+    button.dataset.testText = '';
+    document.body.append(button);
+    expect(key(button, { key: 'Enter' }).defaultPrevented).toBe(false);
+    interruptJob();
+    await vi.waitFor(() => expect(lastEntry()?.command).toBe('cat README.md'));
   });
 });

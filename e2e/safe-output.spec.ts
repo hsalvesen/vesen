@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { xssCorpus } from '../tests/support/xss';
+import { OVERLAY_PAYLOADS, xssCorpus } from '../tests/support/xss';
 
 // Served without the production CSP on purpose: the CSP would block inline handlers by itself,
 // and these tests are about the renderer never creating them.
@@ -47,7 +47,7 @@ test.describe('safe output', { tag: '@smoke' }, () => {
         for (const { name, value } of Array.from(element.attributes)) {
           if (name.startsWith('on')) found.push(name);
           if (name === 'href' && !/^(?:https?|mailto):/i.test(value)) found.push(`href=${value}`);
-          if (name === 'style' && /url\(|expression/i.test(value)) found.push(`style=${value}`);
+          if (name === 'style' && /url\(|expression|position\s*:|inset\s*:/i.test(value)) found.push(`style=${value}`);
         }
       }
       return found;
@@ -101,5 +101,30 @@ test.describe('safe output', { tag: '@smoke' }, () => {
     const link = page.locator('main a[href="https://ok.example/"]');
     await expect(link).toHaveAttribute('target', '_blank');
     await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  test('no output can lay a link over the prompt', async ({ page }) => {
+    // Served on their own: in the whole corpus an unclosed <math> swallows whatever follows it.
+    await page.route('**/README.md', (route) =>
+      route.fulfill({ contentType: 'text/markdown', body: `before\n${OVERLAY_PAYLOADS.join('\n')}\nafter` }),
+    );
+    await page.goto('/');
+    await run(page, 'cat README.md');
+    const log = page.getByRole('log');
+    await expect(log).toContainText('after');
+    await expect(page.locator('main a[href="https://evil.example/"]')).toHaveCount(OVERLAY_PAYLOADS.length);
+    expect(await planted(page)).toEqual([]);
+
+    // A tap anywhere on the prompt still reaches the input.
+    const hit = await page.getByRole('textbox', { name: 'Terminal command' }).evaluate((input) => {
+      input.scrollIntoView({ block: 'nearest' });
+      const box = input.getBoundingClientRect();
+      const points = [0.1, 0.5, 0.9].map((x) => [box.left + box.width * x, box.top + box.height / 2] as const);
+      return points.map(([x, y]) => {
+        const element = document.elementFromPoint(x, y);
+        return element === input ? 'input' : (element?.closest('a')?.getAttribute('href') ?? element?.localName ?? null);
+      });
+    });
+    expect(hit).toEqual(['input', 'input', 'input']);
   });
 });

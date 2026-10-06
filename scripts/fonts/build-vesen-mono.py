@@ -14,8 +14,9 @@ What it does:
   4. Renames the family and keeps the copyright and licence records.
   5. Writes WOFF2.
 
-Needs fontTools and brotli (pip install fonttools brotli). Paths default to the repository, so
-`python3 scripts/fonts/build-vesen-mono.py` works from any directory.
+Needs the pinned fontTools and brotli (pip install -r scripts/fonts/requirements.txt). Paths
+default to the repository, so `python3 scripts/fonts/build-vesen-mono.py` works from any directory.
+It stops if the source lacks any code point in REQUIRED, and lists the rest of RANGES it lacks.
 """
 
 from __future__ import annotations
@@ -37,30 +38,44 @@ FULL_NAME = "Vesen Mono Regular"
 POSTSCRIPT_NAME = "VesenMono-Regular"
 COPYRIGHT_SUFFIX = " Modified as Vesen Mono."
 
-# Inclusive code point ranges. Code points the source font lacks are skipped by the subsetter,
-# and the browser falls back to the next font in --term-font for them.
+# Inclusive code point ranges: the Unicode blocks a terminal draws from. The source font covers
+# several of them only in part (no diagonal arrows, for example), and the subsetter skips what it
+# lacks; the browser then falls back to the next font in --term-font, whose glyph may not fill
+# exactly one cell. The build lists each missing code point so none is assumed to be in the font.
 RANGES: list[tuple[int, int]] = [
     (0x0020, 0x007E),  # Basic Latin
     (0x00A0, 0x00FF),  # Latin-1 Supplement
     (0x0100, 0x017F),  # Latin Extended-A: ā ē ī ō ū Ā Ē Ī Ō Ū (Ōtautahi, Tāmaki Makaurau)
-    (0x1E00, 0x1EFF),  # Latin Extended Additional
-    (0x2000, 0x206F),  # General Punctuation
-    (0x2070, 0x209F),  # Superscripts and Subscripts
-    (0x20A0, 0x20CF),  # Currency Symbols
-    (0x2100, 0x214F),  # Letterlike Symbols
-    (0x2190, 0x21FF),  # Arrows
-    (0x2200, 0x22FF),  # Mathematical Operators
+    (0x1E00, 0x1EFF),  # Latin Extended Additional (in part)
+    (0x2000, 0x206F),  # General Punctuation (in part)
+    (0x2070, 0x209F),  # Superscripts and Subscripts (in part)
+    (0x20A0, 0x20CF),  # Currency Symbols (in part)
+    (0x2100, 0x214F),  # Letterlike Symbols (in part)
+    (0x2190, 0x21FF),  # Arrows (in part: ← ↑ → ↓ ↔ ↕, none of ↖ ↗ ↘ ↙)
+    (0x2200, 0x22FF),  # Mathematical Operators (in part)
     (0x23CE, 0x23CE),  # Return symbol, for key hints
     (0x2500, 0x257F),  # Box Drawing
     (0x2580, 0x259F),  # Block Elements
     (0x25A0, 0x25FF),  # Geometric Shapes
-    (0x2600, 0x2603),  # Sun, cloud, umbrella, snowman
-    (0x2614, 0x2614),  # Umbrella with rain
-    (0x26A1, 0x26A1),  # High voltage
     (0x2713, 0x2713),  # Check mark
-    (0x2717, 0x2717),  # Ballot X
-    (0x2744, 0x2744),  # Snowflake
     (0x2800, 0x28FF),  # Braille Patterns (the spinner)
+    (0xFFFD, 0xFFFD),  # Replacement character
+]
+
+# What art and the interface draw in fixed cells, which must come from this font. A source that
+# lacks any of these stops the build.
+REQUIRED: list[tuple[int, int]] = [
+    (0x0020, 0x007E),  # Basic Latin
+    (0x00A0, 0x017F),  # Latin-1 and Latin Extended-A
+    (0x2013, 0x2015),  # – — ― (dashes; ― draws wind in weather art)
+    (0x2018, 0x201D),  # ‘ ’ ‚ ‛ “ ” (‘ draws rain in weather art)
+    (0x2022, 0x2022),  # Bullet
+    (0x2026, 0x2026),  # Ellipsis
+    (0x2190, 0x2195),  # ← ↑ → ↓ ↔ ↕
+    (0x23CE, 0x23CE),  # Return symbol
+    (0x2500, 0x25FF),  # Box Drawing, Block Elements, Geometric Shapes
+    (0x2713, 0x2713),  # Check mark
+    (0x2800, 0x28FF),  # Braille Patterns
     (0xFFFD, 0xFFFD),  # Replacement character
 ]
 
@@ -74,8 +89,28 @@ LAYOUT_FEATURES = ["ccmp", "locl", "mark", "mkmk"]
 NAME_IDS = [0, 1, 2, 3, 4, 5, 6, 8, 9, 11, 12, 13, 14, 16, 17]
 
 
+def code_points(ranges: list[tuple[int, int]]) -> list[int]:
+    return [cp for start, end in ranges for cp in range(start, end + 1)]
+
+
 def unicodes() -> list[int]:
-    return [cp for start, end in RANGES for cp in range(start, end + 1)]
+    return code_points(RANGES)
+
+
+def check_coverage(font: TTFont) -> None:
+    """Stops when the source lacks a REQUIRED code point, and lists what else in RANGES it lacks."""
+    cmap = font.getBestCmap()
+    required = [cp for cp in code_points(REQUIRED) if cp not in cmap]
+    if required:
+        listed = " ".join(f"U+{cp:04X}" for cp in required)
+        raise SystemExit(f"the source font lacks code points the terminal needs: {listed}")
+    missing = [cp for cp in unicodes() if cp not in cmap]
+    if missing:
+        print(f"vesen-mono: {len(missing)} code points in RANGES are not in the source font and fall back:")
+        for start, end in RANGES:
+            gaps = [cp for cp in missing if start <= cp <= end]
+            if gaps:
+                print(f"  U+{start:04X}-U+{end:04X}: " + " ".join(f"{cp:04X}" for cp in gaps))
 
 
 def rename(font: TTFont) -> None:
@@ -118,6 +153,7 @@ def rename(font: TTFont) -> None:
 def build(source: Path, output: Path) -> int:
     # The source's own timestamps are kept so the output is the same on every run.
     font = TTFont(source, recalcTimestamp=False)
+    check_coverage(font)
     font = instancer.instantiateVariableFont(font, {"wght": 400}, updateFontNames=False)
 
     options = subset.Options()

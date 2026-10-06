@@ -30,49 +30,57 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      # Secrets cannot be read in `if:` directly, so each step checks this env var instead.
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # Secrets cannot be read in `if:`, so the steps check this flag. The token itself is given
+      # only to the Deploy step, never to the steps that install and run third-party packages.
+      CF_READY: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
     steps:
       - name: Skip when Cloudflare is not set up
-        if: env.CLOUDFLARE_API_TOKEN == ''
+        if: env.CF_READY != 'true'
         run: echo "::notice title=Stock Worker not deployed::CLOUDFLARE_API_TOKEN is not set. See worker/stock/README.md, Owner setup."
 
       - uses: actions/checkout@v4
-        if: env.CLOUDFLARE_API_TOKEN != ''
+        if: env.CF_READY == 'true'
 
       - uses: actions/setup-node@v4
-        if: env.CLOUDFLARE_API_TOKEN != ''
+        if: env.CF_READY == 'true'
         with:
           node-version-file: .nvmrc
           cache: npm
 
       - name: Test and type-check the Worker
-        if: env.CLOUDFLARE_API_TOKEN != ''
+        if: env.CF_READY == 'true'
         run: |
           npm ci
           npx vitest run --project worker
           npx tsc -p worker/stock/tsconfig.json --noEmit
 
-      - name: Check the KV namespace id is set
-        if: env.CLOUDFLARE_API_TOKEN != ''
+      - name: Check the KV namespace id and the lockfile are committed
+        if: env.CF_READY == 'true'
         working-directory: worker/stock
         run: |
           if grep -q 'REPLACE_WITH_SNAPSHOT_KV_ID' wrangler.toml; then
             echo "::error file=worker/stock/wrangler.toml::Paste the SNAPSHOT KV namespace id into wrangler.toml (README, Owner setup)."
             exit 1
           fi
+          # Wrangler and its dependencies install from the committed lockfile, never fresh from
+          # the registry, so every deploy runs the same, reviewed packages.
+          if [ ! -f package-lock.json ]; then
+            echo "::error file=worker/stock/package.json::Commit worker/stock/package-lock.json (README, Owner setup, step 2)."
+            exit 1
+          fi
 
       - name: Install Wrangler
-        if: env.CLOUDFLARE_API_TOKEN != ''
+        if: env.CF_READY == 'true'
         working-directory: worker/stock
-        run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+        run: npm ci --no-audit --no-fund
 
       - name: Deploy
-        if: env.CLOUDFLARE_API_TOKEN != ''
+        if: env.CF_READY == 'true'
         working-directory: worker/stock
-        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --no-install wrangler deploy
 
   canary:
     needs: deploy

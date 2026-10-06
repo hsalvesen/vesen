@@ -180,11 +180,6 @@ export function getCommandSuggestions(input: string, commandNames: string[]): st
       return subcommands.filter((s) => s.startsWith(subcommand)).map((s) => `theme ${s}`);
     }
 
-    if (parts.length === 3 && parts[1] === 'quality') {
-      const prefix = (parts[2] ?? '').toLowerCase();
-      return crtQualities.filter((quality) => quality.startsWith(prefix)).map((quality) => `cathode quality ${quality}`);
-    }
-
     if (parts.length >= 3 && parts[1] === 'set') {
       const themePrefix = parts[2] ?? '';
       const prefixLower = themePrefix.toLowerCase();

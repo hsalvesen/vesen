@@ -25,6 +25,18 @@ async function fillTranscript(page: Page): Promise<void> {
   expect(overflows, 'the transcript scrolls').toBe(true);
 }
 
+/**
+ * Scrolls the transcript to the top as a visitor does, with a wheel turn and the scroll it makes.
+ * The input matters: a scroll with none, in the frame new output arrives, is taken as the
+ * engine's own (ui/actions/stickToBottom.ts).
+ */
+async function scrollToTop(page: Page): Promise<void> {
+  await page.locator('main').evaluate((main) => {
+    main.dispatchEvent(new WheelEvent('wheel', { deltaY: -main.scrollHeight, bubbles: true }));
+    main.scrollTop = 0;
+  });
+}
+
 declare global {
   interface Window {
     /** Moves the stand-in visualViewport installed by fakeVisualViewport. */
@@ -105,6 +117,31 @@ test.describe('the app shell', { tag: '@smoke' }, () => {
         expect(overflow.app, `${line}: the app is wider than the screen`).toBeLessThanOrEqual(0);
         expect(overflow.transcript, `${line}: output is wider than the transcript`).toBeLessThanOrEqual(0);
       }
+    });
+  }
+
+  for (const width of [800, 1000, 1180]) {
+    test(`at ${width}px help shows every column of commands`, async ({ page }) => {
+      test.skip(isPhone(), 'desktop and tablet widths');
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto('/');
+      await run(page, 'help');
+      const grid = await page.locator('[role="log"] .output').last().evaluate((output) => {
+        const main = document.querySelector('main') as HTMLElement;
+        const box = output.querySelector('.legacy > div') as HTMLElement;
+        const range = document.createRange();
+        range.selectNodeContents(box);
+        return {
+          text: box.textContent ?? '',
+          // The text's right edge, against the transcript's content edge.
+          right: range.getBoundingClientRect().right,
+          edge: main.getBoundingClientRect().left + main.clientWidth - parseFloat(getComputedStyle(main).paddingRight),
+          scrolls: box.scrollWidth - box.clientWidth,
+        };
+      });
+      expect(grid.text).toContain('whoami');
+      expect(grid.right, 'the last column is cut off').toBeLessThanOrEqual(grid.edge + 1);
+      expect(grid.scrolls, 'the grid has to be scrolled').toBeLessThanOrEqual(0);
     });
   }
 
@@ -252,6 +289,88 @@ test.describe('focus', { tag: '@smoke' }, () => {
     expect(offset).toBeLessThanOrEqual(24);
   });
 
+  test('on touch, output that arrives after the transcript overflows is followed or anchored', async ({ page }) => {
+    test.skip(!isPhone(), 'phones only');
+    await page.goto('/');
+    await focusPrompt(page);
+    const overflows = () => page.locator('main').evaluate((main) => main.scrollHeight > main.clientHeight);
+    for (const line of ['help', 'ls -a', 'theme ls', 'cathode ls', 'history']) {
+      await run(page, line);
+      if (await overflows()) break;
+    }
+    expect(await overflows(), 'the transcript scrolls').toBe(true);
+
+    // cat fetches its file, so the output lands a moment after Enter, together with the running
+    // line and the cancel button going away. Typed at a person's pace, as on a phone.
+    for (const line of ['cat README.md', 'cat history.txt']) {
+      const echoes = page.locator('[role="log"] .command-input-display');
+      const before = await echoes.count();
+      await prompt(page).pressSequentially(line, { delay: 40 });
+      await prompt(page).press('Enter');
+      await expect(echoes).toHaveCount(before + 1);
+      await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
+
+      const view = () =>
+        page.evaluate(() => {
+          const main = document.querySelector('main') as HTMLElement;
+          const all = document.querySelectorAll('[role="log"] .command-input-display');
+          const echo = all[all.length - 1] as HTMLElement;
+          return {
+            echo: echo.getBoundingClientRect().top - main.getBoundingClientRect().top,
+            toEnd: main.scrollHeight - main.scrollTop - main.clientHeight,
+            pill: document.querySelector('.new-output') !== null,
+          };
+        });
+      // Either the whole output shows, down to the prompt, or a long one shows from its echo line.
+      await expect
+        .poll(async () => {
+          const { echo, toEnd, pill } = await view();
+          return !pill && echo >= 0 && (toEnd <= 1 || echo <= 24);
+        }, { message: `${line}: ${JSON.stringify(await view())}` })
+        .toBe(true);
+    }
+  });
+
+  test('on touch, a keyboard put away while a command runs stays away', async ({ page }) => {
+    test.skip(!isPhone(), 'phones only');
+    await page.goto('/');
+    await focusPrompt(page);
+
+    // README.md is held until released; `hold` starts holding the next request.
+    let release = () => {};
+    let held = Promise.resolve();
+    const hold = () => {
+      held = new Promise<void>((resolve) => (release = resolve));
+    };
+    await page.route('**/README.md', async (route) => {
+      await held;
+      await route.continue();
+    });
+
+    // The visitor puts the keyboard away to read, and the command finishes.
+    hold();
+    await prompt(page).fill('cat README.md');
+    await prompt(page).press('Enter');
+    await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'true');
+    await prompt(page).evaluate((input) => input.blur());
+    release();
+    await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
+    await expect(prompt(page)).not.toBeFocused();
+
+    // Or the visitor taps the cancel line after putting the keyboard away.
+    hold();
+    await focusPrompt(page);
+    await prompt(page).fill('cat README.md');
+    await prompt(page).press('Enter');
+    await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'true');
+    await prompt(page).evaluate((input) => input.blur());
+    await page.getByRole('button', { name: 'Cancel running command' }).tap();
+    await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
+    await expect(page.getByRole('log')).toContainText('cat cancelled');
+    await expect(prompt(page)).not.toBeFocused();
+    release();
+  });
+
   test('a mouse click on empty space focuses the prompt without scrolling', async ({ page }) => {
     test.skip(isPhone(), 'desktop only');
     await page.goto('/');
@@ -289,6 +408,75 @@ test.describe('focus', { tag: '@smoke' }, () => {
     await expect(prompt(page)).toBeFocused();
     await expect(prompt(page)).toHaveValue('ls');
   });
+
+  test('Escape then Tab leaves the terminal, so the keyboard is never trapped', async ({ page }) => {
+    test.skip(isPhone(), 'desktop only');
+    await page.clock.install();
+    await page.goto('/');
+    await expect(prompt(page)).toBeFocused();
+
+    // Tab alone completes, and keeps focus in the prompt.
+    await page.keyboard.type('he');
+    await page.keyboard.press('Tab');
+    await expect(prompt(page)).toHaveValue('help');
+    await expect(prompt(page)).toBeFocused();
+
+    // Tab leaves within a second of Escape. The clock stands still between the two presses, so a
+    // slow test machine cannot stretch that second.
+    await page.clock.pauseAt(Date.now() + 60_000);
+    for (const key of ['Tab', 'Shift+Tab']) {
+      await prompt(page).focus();
+      await page.keyboard.press('Escape');
+      await page.keyboard.press(key);
+      await expect(prompt(page), key).not.toBeFocused();
+    }
+    await page.clock.resume();
+  });
+});
+
+test.describe('keys on other controls', { tag: '@smoke' }, () => {
+  test('Enter on the new-output pill scrolls, and runs nothing', async ({ page }) => {
+    test.skip(isPhone(), 'a hardware keyboard');
+    await page.goto('/');
+    await fillTranscript(page);
+
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    await page.route('**/history.txt', async (route) => {
+      await held;
+      await route.continue();
+    });
+    await prompt(page).fill('cat history.txt');
+    await prompt(page).press('Enter');
+    await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'true');
+    // A line typed ahead, which Enter on the pill must not run. Typing brings the view down, so
+    // it comes before scrolling up.
+    await prompt(page).fill('echo typed');
+    await scrollToTop(page);
+    release();
+    const pill = page.getByRole('button', { name: 'Scroll to new output' });
+    await expect(pill).toBeVisible();
+
+    const entries = await page.locator('[role="log"] .command-input-display').count();
+    await pill.focus();
+    await page.keyboard.press('Enter');
+    await expect(pill).toBeHidden();
+    await expect(page.locator('[role="log"] .command-input-display')).toHaveCount(entries);
+    await expect(prompt(page)).toHaveValue('echo typed');
+  });
+
+  test('Enter on the cancel button cancels the running command', async ({ page }) => {
+    test.skip(isPhone(), 'a hardware keyboard');
+    await page.goto('/');
+    await page.route('**/README.md', () => new Promise(() => {}));
+    await prompt(page).fill('cat README.md');
+    await prompt(page).press('Enter');
+    const cancel = page.getByRole('button', { name: 'Cancel running command' });
+    await cancel.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
+    await expect(page.getByRole('log')).toContainText('cat cancelled');
+  });
 });
 
 test.describe('scrolling', { tag: '@smoke' }, () => {
@@ -311,9 +499,7 @@ test.describe('scrolling', { tag: '@smoke' }, () => {
     await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'true');
 
     const main = page.locator('main');
-    await main.evaluate((element) => {
-      element.scrollTop = 0;
-    });
+    await scrollToTop(page);
     release();
     await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
 

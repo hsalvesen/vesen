@@ -41,12 +41,38 @@ textarea,
   line-height: 1;
   letter-spacing: 0;
   font-variant-ligatures: none;
+  /* Vesen Mono has one weight. WebKit draws a synthetic bold wider than the regular glyph, which
+     would push every cell after a bold span out of line; bold art stays regular instead. */
+  font-synthesis: none;
+}
+
+/* A glyph the terminal's font lacks, drawn from a fallback font, held to one cell so the columns
+   after it stay in line. */
+.art-cell {
+  display: inline-block;
+  width: 1ch;
 }
 
 /* Art that shrinks to fit the output's width instead of scrolling. --art-cols is the widest row,
-   which the renderer sets. Without container units the declaration is dropped, and it scrolls. */
+   which the renderer sets. An engine without container units (iOS 15's WebKit, the last on the
+   320px iPhone SE) uses the screen's width less the phone padding of styles/shell.css; where a
+   screen is wide enough for the desktop frame, the banner fits at 1em anyway. The container rule
+   sits behind @supports because a declaration with var() is never dropped at parse time: one
+   with an unknown unit would leave the font size unset rather than fall back to the first. */
 .art-fit {
-  font-size: min(1em, calc(100cqi / var(--art-cols, 1) / var(--ch-ratio)));
+  font-size: min(
+    1em,
+    calc(
+      (100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) / var(--art-cols, 1) /
+        var(--ch-ratio)
+    )
+  );
+}
+
+@supports (width: 1cqi) {
+  .art-fit {
+    font-size: min(1em, calc(100cqi / var(--art-cols, 1) / var(--ch-ratio)));
+  }
 }
 
 /* Output text wraps at the edge of the screen, breaking anywhere a line has no space; only art

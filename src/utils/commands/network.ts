@@ -35,7 +35,10 @@ function colourWeather(report: string): string {
     .replace(/\b(sunny|clear|cloudy|overcast|rainy|snowy|foggy|misty|thunderstorm|drizzle|partly cloudy|mostly cloudy)\b/gi,
       `<span style="color: var(--theme-yellow); font-weight: bold;">$1</span>`)
     .replace(/\b([NSEW]{1,3})\b/g, `<span style="color: var(--theme-purple);">$1</span>`)
-    .replace(/([☀☁⛅⛈🌧🌦🌩❄⛄🌫])/g, `<span style="color: var(--theme-bright-yellow);">$1</span>`);
+    .replace(/([☀☁⛅⛈🌧🌦🌩❄⛄🌫])/g, `<span style="color: var(--theme-bright-yellow);">$1</span>`)
+    // The terminal's font has no diagonal arrows. The fallback font's glyph is held to one cell,
+    // so the forecast table's columns after a wind direction stay in line.
+    .replace(/([↖↗↘↙])/g, `<span class="art-cell">$1</span>`);
 }
 
 function weatherFailure(error: unknown): string {

@@ -16,6 +16,9 @@ function fontCacheControl(): string {
   return value;
 }
 
+/** The Vary header Firebase Hosting sends with every file. */
+const FIREBASE_VARY = 'x-fh-requested-host, accept-encoding';
+
 const prompt = (page: Page) => page.getByRole('textbox', { name: 'Terminal command' });
 
 /** Waits until the self-hosted font has loaded and is the one the terminal draws with. */
@@ -35,13 +38,16 @@ async function fontLoaded(page: Page): Promise<void> {
 
 test.describe('the terminal font', { tag: '@smoke' }, () => {
   test('Vesen Mono is preloaded, loads once, and is the first choice everywhere', async ({ page }) => {
-    // Served as Firebase serves it: WebKit fetches a font again when it may not reuse the preload.
+    // Served with the headers Firebase sends, because WebKit fetches a font again when it may not
+    // reuse the preload: vite preview's no-cache, or the Vary: Origin its CORS middleware adds,
+    // stops the reuse (the second only when the preload finishes before the stylesheet asks).
     const cacheControl = fontCacheControl();
     const fonts: string[] = [];
     await page.route('**/*.woff2', async (route) => {
       fonts.push(new URL(route.request().url()).pathname);
       const response = await route.fetch();
-      await route.fulfill({ response, headers: { ...response.headers(), 'cache-control': cacheControl } });
+      const headers = { ...response.headers(), 'cache-control': cacheControl, vary: FIREBASE_VARY };
+      await route.fulfill({ response, headers });
     });
     await page.goto('/');
     await fontLoaded(page);
@@ -54,6 +60,42 @@ test.describe('the terminal font', { tag: '@smoke' }, () => {
       }),
     );
     expect(families).toEqual(['Vesen Mono', 'Vesen Mono', 'Vesen Mono', 'Vesen Mono']);
+  });
+
+  test('a short window with a fine pointer keeps the desktop text size', async ({ page }) => {
+    test.skip(PHONES.includes(test.info().project.name), 'phones are checked below');
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto('/');
+    expect(await page.evaluate(() => getComputedStyle(document.body).fontSize)).toBe('16px');
+  });
+
+  test('bold text and fallback arrows in art keep to their cells', async ({ page }) => {
+    // Vesen Mono has one weight, where WebKit's synthetic bold draws wider glyphs, and no
+    // diagonal arrows, which come from a fallback font.
+    await page.goto('/');
+    await fontLoaded(page);
+    const widths = await page.evaluate(() => {
+      const art = document.createElement('div');
+      art.className = 'art';
+      const x = 'x'.repeat(20);
+      art.innerHTML =
+        `<span>${x}</span>\n<span style="font-weight: bold">${x}</span>\n` +
+        `<span><span class="art-cell">↗</span>${x.slice(1)}</span>`;
+      document.querySelector('.output')?.append(art);
+      const [regular = 0, bold = 0, arrow = 0] = Array.from(art.querySelectorAll(':scope > span'), (span) => span.getBoundingClientRect().width);
+      art.remove();
+      return { regular, bold, arrow };
+    });
+    expect(widths.bold).toBeCloseTo(widths.regular, 1);
+    expect(widths.arrow).toBeCloseTo(widths.regular, 0);
+  });
+
+  test('the banner shows the key hints only where there are keys', async ({ page }) => {
+    await page.goto('/');
+    const keys = page.locator('.keys-hint').first();
+    await expect(page.getByText('help <cmd> for details')).toBeVisible();
+    if (PHONES.includes(test.info().project.name)) await expect(keys).toBeHidden();
+    else await expect(keys).toHaveText('Tab completes · ↑ history · ');
   });
 
   test('the prompt names the brand as the host', async ({ page }) => {
@@ -135,6 +177,46 @@ test.describe('zoom and the touch input', { tag: '@smoke' }, () => {
       height: element.getBoundingClientRect().height,
     }));
     expect(measured).toEqual({ fontSize: '16px', scale: '1', plain: true, height: expect.closeTo(16 * 1.35, 0) });
+  });
+
+  test('a phone on its side keeps the 13px text and the scaled input', async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto('/');
+    const measured = await prompt(page).evaluate((input) => ({
+      termSize: getComputedStyle(document.body).fontSize,
+      inputSize: getComputedStyle(input).fontSize,
+      scale: getComputedStyle(document.documentElement).getPropertyValue('--input-scale').trim(),
+    }));
+    expect(measured).toEqual({ termSize: '13px', inputSize: '16px', scale: '0.8125' });
+  });
+
+  test('the banner fits at 320px without container units, as in iOS 15', async ({ page }) => {
+    // iOS 15's WebKit, the last on the 320px iPhone SE, has no container units. Renaming the unit
+    // gives this engine the same gap: @supports (width: 1cqi) fails, and a declaration that uses
+    // the unit with var() is invalid when computed.
+    await page.route('**/assets/*.css', async (route) => {
+      const response = await route.fetch();
+      const css = (await response.text()).replaceAll('cqi', 'zzq');
+      await route.fulfill({ response, body: css });
+    });
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.goto('/');
+    await fontLoaded(page);
+
+    const banner = page.locator('.art-fit').first();
+    await expect(banner).toContainText('██╗   ██╗');
+    const fit = await banner.evaluate((art) => ({
+      overflow: art.scrollWidth - art.clientWidth,
+      css: Array.from(document.styleSheets).some((sheet) => {
+        try {
+          return Array.from(sheet.cssRules).some((rule) => rule.cssText.includes('cqi'));
+        } catch {
+          return false;
+        }
+      }),
+    }));
+    expect(fit.css, 'container units were removed').toBe(false);
+    expect(fit.overflow, 'banner scrolls inside itself').toBeLessThanOrEqual(0);
   });
 
   for (const width of [320, 375]) {

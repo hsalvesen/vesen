@@ -4,7 +4,7 @@ import { TtlCache, quoteLifetime } from '../src/cache';
 import { DEFAULT_USER_AGENT, configFromEnv, providerOrder } from '../src/config';
 import { corsHeaders, originPattern, originPolicy } from '../src/cors';
 import { downsample, type Point } from '../src/downsample';
-import { TokenBucketLimiter } from '../src/ratelimit';
+import { TokenBucketLimiter, rateLimitKey } from '../src/ratelimit';
 import { zoneAbbreviation, zonedTimeToEpoch } from '../src/time';
 
 describe('origins', () => {
@@ -85,6 +85,38 @@ describe('TokenBucketLimiter', () => {
     expect(limiter.take('ip', 2000).ok).toBe(true);
     expect(limiter.take('ip', 2000).ok).toBe(false);
     expect(limiter.take('other', 0).ok).toBe(true);
+  });
+
+  it('counts an IPv4 address as itself', () => {
+    expect(rateLimitKey('198.51.100.7')).toBe('198.51.100.7');
+    expect(rateLimitKey('unknown')).toBe('unknown');
+  });
+
+  it('counts an IPv6 address by its /64, however it is written', () => {
+    const key = '2001:db8:85a3:12::/64';
+    for (const ip of [
+      '2001:db8:85a3:12::1',
+      '2001:0DB8:85A3:0012:ffff:ffff:ffff:fffe',
+      '2001:db8:85a3:12:0:0:0:0',
+      '2001:db8:85a3:12:abcd::',
+      '2001:db8:85a3:12::1%eth0',
+    ]) {
+      expect(rateLimitKey(ip), ip).toBe(key);
+    }
+    expect(rateLimitKey('2001:db8:85a3:13::1')).toBe('2001:db8:85a3:13::/64');
+    expect(rateLimitKey('::1')).toBe('0:0:0:0::/64');
+    expect(rateLimitKey('fe80::1:2:3:4')).toBe('fe80:0:0:0::/64');
+  });
+
+  it('counts an IPv4-mapped IPv6 address as its IPv4 address', () => {
+    expect(rateLimitKey('::ffff:198.51.100.7')).toBe('198.51.100.7');
+    expect(rateLimitKey('::ffff:c633:6407')).toBe('198.51.100.7');
+  });
+
+  it('keeps a value that is not an address as it is', () => {
+    for (const ip of ['1::2::3', '2001:db8::1::', '2001:db8:0:0:0:0:0:0:1', 'g::1', '::ffff:300.1.1.1', '1:2:3:4:5:6:7']) {
+      expect(rateLimitKey(ip), ip).toBe(ip);
+    }
   });
 
   it('forgets the least recently used keys beyond its limit', () => {

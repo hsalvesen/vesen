@@ -13,14 +13,20 @@ describe('filterLegacyStyle', () => {
     expect(
       filterLegacyStyle('color: var(--theme-cyan); font-weight: bold;font-family: monospace ; margin-bottom: 8px'),
     ).toBe('color: var(--theme-cyan); font-weight: bold; font-family: monospace; margin-bottom: 8px');
-    expect(filterLegacyStyle('position: relative; border-left: 4px solid var(--theme-purple); border-radius: 4px')).toBe(
-      'position: relative; border-left: 4px solid var(--theme-purple); border-radius: 4px',
-    );
-    expect(filterLegacyStyle('position: absolute; inset: 0; background: var(--theme-cyan); opacity: 0.12')).toBe(
-      'position: absolute; inset: 0; background: var(--theme-cyan); opacity: 0.12',
+    expect(filterLegacyStyle('border-left: 4px solid var(--theme-purple); border-radius: 4px')).toBe(
+      'border-left: 4px solid var(--theme-purple); border-radius: 4px',
     );
     expect(filterLegacyStyle('color: #f69154; flex: 0 0 380px; max-width: calc(100% - 2px)')).toBe(
       'color: #f69154; flex: 0 0 380px; max-width: calc(100% - 2px)',
+    );
+  });
+
+  it('takes nothing out of the flow, so output cannot be laid over the prompt', () => {
+    expect(filterLegacyStyle('position: absolute; inset: 0; background: var(--theme-cyan); opacity: 0.12')).toBe(
+      'background: var(--theme-cyan); opacity: 0.12',
+    );
+    expect(filterLegacyStyle('position:relative;inset:200px auto auto 0;display:block;height:200px;opacity:0')).toBe(
+      'display: block; opacity: 0',
     );
   });
 
@@ -49,6 +55,10 @@ describe('filterLegacyStyle', () => {
     'color: attr(title)',
     'position: fixed',
     'position: sticky',
+    'position: absolute',
+    'position: relative',
+    'inset: 0',
+    'inset: 200px auto auto 0',
     'behavior: url(x.htc)',
     '-moz-binding: url(x.xml#xss)',
     'z-index: 9999',
@@ -92,7 +102,7 @@ describe('filterLegacyClasses', () => {
     expect(filterLegacyClasses('art art-fit art-x')).toBe('art art-fit');
     expect(filterLegacyClasses('out-panel tone-warn fixed')).toBe('out-panel tone-warn');
     expect([...LEGACY_CLASSES].sort()).toEqual([
-      'art', 'art-fit', 'cathode-name', 'current-theme-name', 'is-current',
+      'art', 'art-cell', 'art-fit', 'cathode-name', 'current-theme-name', 'is-current', 'keys-hint',
       'out-accent', 'out-error', 'out-muted', 'out-panel', 'out-panel-title', 'out-strong',
       'sr-only', 'swatches', 'theme-name', 'tone-error', 'tone-link', 'tone-muted', 'tone-ok', 'tone-warn',
     ]);

@@ -301,6 +301,17 @@ describe('origins and limits', () => {
     expect((await call(worker, '/v1/quote?symbol=AAPL', { ip: '198.51.100.1' })).status).toBe(200);
   });
 
+  it('counts every address in an IPv6 /64 against one bucket', async () => {
+    const worker = testWorker();
+    for (let i = 0; i < 30; i += 1) {
+      const ip = `2001:db8:1:2::${(i + 1).toString(16)}`;
+      expect((await call(worker, '/v1/quote?symbol=AAPL', { ip })).status).toBe(200);
+    }
+    expect((await call(worker, '/v1/quote?symbol=AAPL', { ip: '2001:db8:1:2:ffff::99' })).status).toBe(429);
+    // The next /64 is someone else.
+    expect((await call(worker, '/v1/quote?symbol=AAPL', { ip: '2001:db8:1:3::1' })).status).toBe(200);
+  });
+
   it('serves requests with no Origin under a tighter limit and without CORS headers', async () => {
     const worker = testWorker();
     for (let i = 0; i < 10; i += 1) {

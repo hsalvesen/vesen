@@ -27,7 +27,7 @@ import {
 } from './contract';
 import { corsHeaders, type OriginVerdict } from './cors';
 import { toSearchHit } from './providers/yahooSearch';
-import type { TokenBucketLimiter } from './ratelimit';
+import { rateLimitKey, type TokenBucketLimiter } from './ratelimit';
 import { lookupQuote, providerContext, searchCached, type CacheState, type ServiceDeps } from './service';
 import { currentSnapshot, deliverSnapshot, snapshotFallback, type SnapshotStore } from './snapshot';
 
@@ -40,6 +40,7 @@ export interface HandlerDeps extends ServiceDeps {
 interface Scope {
   readonly origin: string | null;
   readonly verdict: OriginVerdict;
+  /** The client's rate-limit key: its IPv4 address, or its IPv6 /64 (ratelimit.ts). */
   readonly ip: string;
   readonly startedAt: number;
   readonly metrics: { upstreamMs: number; calls: number };
@@ -68,7 +69,7 @@ export async function handle(request: Request, deps: HandlerDeps): Promise<Respo
     origin,
     verdict: deps.config.origins.classify(origin),
     // Used only as a rate-limit key in memory; never logged.
-    ip: request.headers.get('CF-Connecting-IP') ?? 'unknown',
+    ip: rateLimitKey(request.headers.get('CF-Connecting-IP') ?? 'unknown'),
     startedAt: deps.now(),
     metrics: { upstreamMs: 0, calls: 0 },
     deps,

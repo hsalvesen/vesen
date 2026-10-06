@@ -8,6 +8,10 @@ import type { ActionReturn } from 'svelte/action';
 
 /** Within this many pixels of the bottom, the view follows new output. */
 export const PIN_THRESHOLD_PX = 40;
+/** A scroll this long after a wheel turn or a drag on the scroller is the visitor's own. */
+export const VISITOR_SCROLL_MS = 250;
+/** How long a flick can keep the transcript moving after the finger lifts. */
+export const MOMENTUM_MS = 1000;
 /** On touch, an entry taller than this share of the screen is anchored to its echo line. */
 export const LONG_OUTPUT_RATIO = 0.75;
 /** Space left above an anchored echo line. */
@@ -75,6 +79,15 @@ export function stickToBottom(node: HTMLElement, options: StickToBottomOptions =
   let pill = false;
   let viewHeight = node.clientHeight;
   let contentHeight = -1;
+  // The scroll height as of the last ResizeObserver report. Scroll events run before
+  // ResizeObserver callbacks in a frame, so a scroll can see content that changed since: new
+  // output, after the engine clamped scrollTop as the running line went, or anchored it. Such a
+  // scroll says nothing about the visitor, and the report for the change decides instead. While
+  // the visitor is scrolling (a wheel, a drag, a flick, the scrollbar), every scroll counts.
+  let knownHeight = node.scrollHeight;
+  let visitorUntil = 0;
+  let holdingScrollbar = false;
+  let dragged = false;
   // An entry is anchored, or not, once: when it first appears. Later changes (the keyboard
   // opening, a suggestion row) must not pull the view back up to it.
   let seen: Element | null = null;
@@ -89,9 +102,36 @@ export function stickToBottom(node: HTMLElement, options: StickToBottomOptions =
     pinned = true;
     setPill(false);
   };
+  const now = (): number => win?.performance.now() ?? 0;
+  const visitorScrolls = (ms: number): void => {
+    visitorUntil = Math.max(visitorUntil, now() + ms);
+  };
+  const visitorScrolling = (): boolean => holdingScrollbar || now() < visitorUntil;
+
   const onScroll = (): void => {
+    if (observer !== null && node.scrollHeight !== knownHeight && !visitorScrolling()) return;
     pinned = distanceFromBottom(node) <= PIN_THRESHOLD_PX;
     if (pinned) setPill(false);
+  };
+
+  const onWheel = (): void => visitorScrolls(VISITOR_SCROLL_MS);
+  const onTouchStart = (): void => {
+    dragged = false;
+  };
+  const onTouchMove = (): void => {
+    dragged = true;
+    visitorScrolls(VISITOR_SCROLL_MS);
+  };
+  const onTouchEnd = (): void => {
+    if (dragged) visitorScrolls(MOMENTUM_MS);
+  };
+  // A press on the scroller itself, not on anything in it, is on its scrollbar.
+  const onPointerDown = (event: PointerEvent): void => {
+    if (event.target === node) holdingScrollbar = true;
+  };
+  const onPointerUp = (): void => {
+    if (holdingScrollbar) visitorScrolls(VISITOR_SCROLL_MS);
+    holdingScrollbar = false;
   };
 
   const content = (): Element | null => (opts.content ? node.querySelector(opts.content) : null);
@@ -139,6 +179,7 @@ export function stickToBottom(node: HTMLElement, options: StickToBottomOptions =
           const contentRecord = records.find((record) => record.target !== node);
           if (records.some((record) => record.target === node)) viewResized(contentRecord !== undefined);
           if (contentRecord) contentResized(contentRecord.contentRect.height);
+          knownHeight = node.scrollHeight;
         });
 
   let observed: Element | null = null;
@@ -164,6 +205,13 @@ export function stickToBottom(node: HTMLElement, options: StickToBottomOptions =
   node.addEventListener('scroll', onScroll, { passive: true });
   node.addEventListener('keydown', onKeydown);
   node.addEventListener('input', onInput);
+  node.addEventListener('wheel', onWheel, { passive: true });
+  node.addEventListener('touchstart', onTouchStart, { passive: true });
+  node.addEventListener('touchmove', onTouchMove, { passive: true });
+  node.addEventListener('touchend', onTouchEnd, { passive: true });
+  node.addEventListener('pointerdown', onPointerDown, { passive: true });
+  win?.addEventListener('pointerup', onPointerUp);
+  win?.addEventListener('pointercancel', onPointerUp);
 
   return {
     update(next) {
@@ -175,6 +223,13 @@ export function stickToBottom(node: HTMLElement, options: StickToBottomOptions =
       node.removeEventListener('scroll', onScroll);
       node.removeEventListener('keydown', onKeydown);
       node.removeEventListener('input', onInput);
+      node.removeEventListener('wheel', onWheel);
+      node.removeEventListener('touchstart', onTouchStart);
+      node.removeEventListener('touchmove', onTouchMove);
+      node.removeEventListener('touchend', onTouchEnd);
+      node.removeEventListener('pointerdown', onPointerDown);
+      win?.removeEventListener('pointerup', onPointerUp);
+      win?.removeEventListener('pointercancel', onPointerUp);
     },
   };
 }

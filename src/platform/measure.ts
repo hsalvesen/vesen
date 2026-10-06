@@ -61,3 +61,31 @@ export function startMeasuring(win: Window): () => void {
     fonts?.removeEventListener?.('loadingdone', schedule);
   };
 }
+
+/** A cell's width in em when the stylesheet does not say: as wide as any fallback font's. */
+const DEFAULT_CH_RATIO = 0.6;
+
+/**
+ * The legacy estimate of the terminal's width in cells, (innerWidth - 40) / 8, for a page with no
+ * transcript to measure. The golden snapshots are recorded with it.
+ */
+export function estimatedColumns(innerWidth: number): number {
+  return Math.floor(Math.max(innerWidth - 40, 200) / 8);
+}
+
+/**
+ * How many cells fit across the transcript (<main>): its content width over the font size times
+ * --ch-ratio, the cell width that art is fitted with. Falls back to the estimate from the window's
+ * width when there is no laid-out transcript.
+ */
+export function transcriptColumns(win: Window): number {
+  const main = win.document.querySelector('main');
+  if (main && main.clientWidth > 0) {
+    const style = win.getComputedStyle(main);
+    const width = main.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight);
+    const ratio = Number.parseFloat(win.getComputedStyle(win.document.documentElement).getPropertyValue('--ch-ratio'));
+    const cell = Number.parseFloat(style.fontSize) * (ratio > 0 ? ratio : DEFAULT_CH_RATIO);
+    if (width > 0 && cell > 0) return Math.floor(width / cell);
+  }
+  return estimatedColumns(win.innerWidth);
+}

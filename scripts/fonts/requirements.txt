@@ -1,0 +1,7 @@
+# The font build's toolchain: pip install -r scripts/fonts/requirements.txt
+# fontTools decides the font's tables. This version rebuilds the tables of the committed
+# public/fonts/VesenMono.woff2 byte for byte.
+fonttools==4.54.1
+# Brotli only compresses the WOFF2 container. The version behind the committed file was not
+# recorded; another version gives the same tables in different compressed bytes.
+brotli==1.1.0

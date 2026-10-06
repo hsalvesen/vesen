@@ -23,6 +23,7 @@ import { createInitialFileSystem } from './virtualFileSystem';
 import { errorLine } from './notice';
 import { REPO_URL } from '../constants';
 import { escapeHtml } from '../output/escape';
+import { transcriptColumns } from '../platform/measure';
 
 // Terminal-specific commands that don't fit in other modules
 const terminalCommands = {
@@ -34,10 +35,7 @@ const terminalCommands = {
       return getCommandHelp(target);
     }
 
-    const baseCharWidth = 8;
-    const padding = 40;
-    const availableWidth = Math.max(window.innerWidth - padding, 200);
-    const terminalWidth = Math.floor(availableWidth / baseCharWidth);
+    const terminalWidth = transcriptColumns(window);
     const minWidth = 30;
     const maxWidth = 120;
     const responsiveWidth = Math.min(maxWidth, Math.max(minWidth, terminalWidth));
@@ -56,7 +54,8 @@ const terminalCommands = {
       lines.push(row);
     }
 
-    return `<div style="white-space: pre;">${lines.join('\n')}</div>`;
+    // Should the font be wider than measured, the grid scrolls rather than being cut off.
+    return `<div style="white-space: pre; overflow-x: auto;">${lines.join('\n')}</div>`;
   },
 
   history: (args: string[]) => {
@@ -67,10 +66,7 @@ const terminalCommands = {
     }
 
     // Calculate responsive width for history display
-    const baseCharWidth = 8;
-    const padding = 40;
-    const availableWidth = Math.max(window.innerWidth - padding, 200);
-    const terminalWidth = Math.floor(availableWidth / baseCharWidth);
+    const terminalWidth = transcriptColumns(window);
     const minWidth = 30; // Minimum width for history
     const maxWidth = 100; // Maximum width for history
     const responsiveWidth = Math.min(maxWidth, Math.max(minWidth, terminalWidth));

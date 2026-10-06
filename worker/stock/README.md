@@ -119,6 +119,8 @@ Then delete the spike with `npx wrangler delete --config spike/wrangler.toml`, a
    npx wrangler login
    ```
 
+   Commit the `package-lock.json` that `npm install` writes. The deploy workflow installs Wrangler from it with `npm ci`, and refuses to deploy without it, so every deploy runs the same packages. The Cloudflare token reaches only the workflow's Deploy step, never the steps that install packages.
+
 3. **Run the Stage 0 spike** above, and follow its verdict.
 4. **Create the snapshot store** and paste the id it prints into `wrangler.toml`, replacing `REPLACE_WITH_SNAPSHOT_KV_ID`:
 

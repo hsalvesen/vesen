@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ANCHOR_MARGIN_PX,
   LONG_OUTPUT_RATIO,
+  MOMENTUM_MS,
   PIN_THRESHOLD_PX,
   reactToContent,
   scrollToEnd,
@@ -194,6 +195,107 @@ describe('use:stickToBottom', () => {
     view.scroll(100);
     grow(view, 1500);
     expect(pills).toEqual([]);
+  });
+
+  // Scroll events run before ResizeObserver callbacks in a frame, so a scroll the visitor did
+  // not make can arrive together with output the observer has not reported yet.
+  describe('a scroll in the same frame as new output', () => {
+    /** Fires the scroll event an engine queued, without the visitor scrolling. */
+    const engineScroll = () => main.dispatchEvent(new Event('scroll'));
+
+    it('the engine clamping scrollTop as the running line goes leaves the view following', () => {
+      const view = start({ view: 600, content: 2000 });
+      // The running line and the cancel button go; the shorter layout clamps the scroll.
+      grow(view, 1952);
+      main.scrollTop = 1352;
+      // The output arrives before the clamp's scroll event is dispatched.
+      view.metrics.content = 2600;
+      engineScroll();
+      observer().resize({ target: content, height: 2600 });
+      expect(view.atBottom()).toBe(true);
+      expect(pills).toEqual([]);
+    });
+
+    it('scroll anchoring leaves the view following', () => {
+      const view = start({ view: 600, content: 2000 });
+      view.metrics.content = 2600;
+      main.scrollTop = 1440;
+      engineScroll();
+      observer().resize({ target: content, height: 2600 });
+      expect(view.atBottom()).toBe(true);
+      expect(pills).toEqual([]);
+    });
+
+    it('on touch, a long output is still anchored to its echo line', () => {
+      coarse = true;
+      const view = start({ view: 600, content: 2000 });
+      const entry = addEntry(2000, 1000);
+      view.metrics.content = 3000;
+      main.scrollTop = 1440;
+      engineScroll();
+      observer().resize({ target: content, height: 3000 });
+      expect(main.scrollTop).toBe(2000 - ANCHOR_MARGIN_PX);
+      expect(entry.getBoundingClientRect().top).toBe(ANCHOR_MARGIN_PX);
+      expect(pills).toEqual([]);
+    });
+
+    it('the visitor scrolling up with a wheel still leaves the view where they put it', () => {
+      const view = start({ view: 600, content: 2000 });
+      main.dispatchEvent(new WheelEvent('wheel', { deltaY: -1500 }));
+      view.metrics.content = 2600;
+      view.scroll(500);
+      observer().resize({ target: content, height: 2600 });
+      expect(main.scrollTop).toBe(500);
+      expect(pills).toEqual([true]);
+    });
+
+    it('so does a flick, while it carries on after the finger lifts', () => {
+      const now = vi.spyOn(performance, 'now').mockReturnValue(1000);
+      const view = start({ view: 600, content: 2000 });
+      main.dispatchEvent(new Event('touchstart'));
+      main.dispatchEvent(new Event('touchmove'));
+      main.dispatchEvent(new Event('touchend'));
+      now.mockReturnValue(1000 + MOMENTUM_MS - 1);
+      view.metrics.content = 2600;
+      view.scroll(500);
+      observer().resize({ target: content, height: 2600 });
+      expect(main.scrollTop).toBe(500);
+      expect(pills).toEqual([true]);
+    });
+
+    it('a tap is not a scroll, and a flick is over once the momentum is', () => {
+      const now = vi.spyOn(performance, 'now').mockReturnValue(1000);
+      const view = start({ view: 600, content: 2000 });
+      main.dispatchEvent(new Event('touchstart'));
+      main.dispatchEvent(new Event('touchend'));
+      view.metrics.content = 2600;
+      main.scrollTop = 1440;
+      engineScroll();
+      observer().resize({ target: content, height: 2600 });
+      expect(view.atBottom()).toBe(true);
+
+      main.dispatchEvent(new Event('touchstart'));
+      main.dispatchEvent(new Event('touchmove'));
+      main.dispatchEvent(new Event('touchend'));
+      now.mockReturnValue(1000 + MOMENTUM_MS + 1);
+      view.metrics.content = 3200;
+      main.scrollTop = 2040;
+      engineScroll();
+      observer().resize({ target: content, height: 3200 });
+      expect(view.atBottom()).toBe(true);
+      expect(pills).toEqual([]);
+    });
+
+    it('dragging the scrollbar counts as the visitor scrolling', () => {
+      const view = start({ view: 600, content: 2000 });
+      main.dispatchEvent(new Event('pointerdown'));
+      view.metrics.content = 2600;
+      view.scroll(500);
+      observer().resize({ target: content, height: 2600 });
+      window.dispatchEvent(new Event('pointerup'));
+      expect(main.scrollTop).toBe(500);
+      expect(pills).toEqual([true]);
+    });
   });
 
   it('keeps the bottom in view when the screen shrinks for the keyboard', () => {

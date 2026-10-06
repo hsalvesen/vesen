@@ -70,4 +70,10 @@
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
+
+  /* Legacy HTML is drawn, and takes taps, only inside its own box: padding or a negative margin
+     in it can never reach over later output or the prompt. */
+  .legacy {
+    contain: paint;
+  }
 </style>

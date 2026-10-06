@@ -12,6 +12,7 @@ import {
   plain,
   safeHref,
   textWidth,
+  charWidth,
   type Action,
   type Block,
   type BlockType,
@@ -264,14 +265,26 @@ describe('plain', () => {
     expect(plain(ragged)).toBe('a     b\nlong\n');
   });
 
-  it('table measures width in code points, not UTF-16 units', () => {
+  it('table measures width in terminal cells, not UTF-16 units', () => {
     expect(textWidth('°C')).toBe(2);
-    expect(textWidth('🌧x')).toBe(2);
+    expect(textWidth('Tāmaki')).toBe(6);
     const table = out.table([
       [[out.span('🌧')], [out.span('x')]],
       [[out.span('ab')], [out.span('y')]],
     ]);
-    expect(plain(table)).toBe('🌧   x\nab  y\n');
+    expect(plain(table)).toBe('🌧  x\nab  y\n');
+  });
+
+  it('counts East Asian wide characters and emoji as two cells, and combining marks as none', () => {
+    expect(textWidth('東京')).toBe(4);
+    expect(textWidth('🦘x')).toBe(3);
+    expect(textWidth('🌧x')).toBe(3);
+    expect(textWidth('한글')).toBe(4);
+    expect(textWidth('ｶﾀｶﾅ')).toBe(4);
+    expect(textWidth('a\u0301')).toBe(1);
+    expect(textWidth('a\u200bb')).toBe(2);
+    expect(charWidth('東')).toBe(2);
+    expect(charWidth('\u0301')).toBe(0);
   });
 
   it('art keeps its shape', () => {

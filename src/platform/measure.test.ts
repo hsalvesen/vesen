@@ -1,6 +1,14 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { applyInputScale, INPUT_FONT_PX, inputScale, plainInputRequested, startMeasuring } from './measure';
+import {
+  applyInputScale,
+  estimatedColumns,
+  INPUT_FONT_PX,
+  inputScale,
+  plainInputRequested,
+  startMeasuring,
+  transcriptColumns,
+} from './measure';
 
 interface HappyDOMApi {
   setURL(url: string): void;
@@ -152,5 +160,32 @@ describe('startMeasuring', () => {
     flushFrames();
     expect(frames).toHaveLength(0);
     expect(scale()).toBe('0.8125');
+  });
+});
+
+describe('transcriptColumns', () => {
+  afterEach(() => {
+    document.querySelector('main')?.remove();
+    root.style.removeProperty('--ch-ratio');
+  });
+
+  it('estimates from the window width when there is no transcript, as the goldens are recorded', () => {
+    expect([estimatedColumns(360), estimatedColumns(680), estimatedColumns(1000), estimatedColumns(100)]).toEqual([40, 80, 120, 25]);
+    expect(transcriptColumns(window)).toBe(estimatedColumns(window.innerWidth));
+  });
+
+  it('measures the transcript: its content width over the cell width', () => {
+    const main = document.createElement('main');
+    main.style.padding = '8px 16px';
+    main.style.fontSize = '16px';
+    Object.defineProperty(main, 'clientWidth', { configurable: true, value: 964 });
+    document.body.append(main);
+    root.style.setProperty('--ch-ratio', '0.6');
+    // (964 - 32) / (16 × 0.6): a 1000px desktop window has 97 cells, not the estimate's 120.
+    expect(transcriptColumns(window)).toBe(97);
+
+    // Without --ch-ratio, a cell is still 0.6em.
+    root.style.removeProperty('--ch-ratio');
+    expect(transcriptColumns(window)).toBe(97);
   });
 });

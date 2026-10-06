@@ -34,7 +34,9 @@ export const systemCommands = {
     // readers hear the name instead of the block glyphs.
     `<div class="art art-fit" aria-hidden="true">${BANNER_ART}</div><span class="sr-only">Vesen logo</span>` +
     `<span class="out-muted">vesen v${__APP_VERSION__} · a terminal by Has Salvesen</span>\n` +
-    `<span class="out-muted">Tab completes · ↑ history · help &lt;cmd&gt; for details</span>\n\n` +
+    // A touch screen has no Tab or arrow keys until the phone's key bar lands, so it hears only
+    // about help (the keys-hint class, styles/components.css).
+    `<span class="out-muted"><span class="keys-hint">Tab completes · ↑ history · </span>help &lt;cmd&gt; for details</span>\n\n` +
     `<span class="out-strong">Type <span class="out-accent">help</span> to see all available commands.</span>\n` +
     `<span class="out-strong">Type <span class="out-accent">cat README.md</span> to learn more about this terminal.</span>`,
 };

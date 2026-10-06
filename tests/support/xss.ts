@@ -68,8 +68,16 @@ export function xssCorpus(effect = 'window.__x=1'): string[] {
     `<listing>&lt;img src=x onerror=${effect}&gt;</listing>`,
     // Tap actions are never read from markup.
     `<span data-cmd="rm -rf ~" data-action="run">x</span>`,
+    ...OVERLAY_PAYLOADS,
   ];
 }
+
+/** Invisible links laid over the prompt, so that any tap on the terminal would open them. */
+export const OVERLAY_PAYLOADS: readonly string[] = [
+  `<a href="https://evil.example/" style="position:absolute;inset:0;opacity:0">x</a>`,
+  `<a href="https://evil.example/" style="position:relative;inset:200px auto auto 0;display:block;height:200px;opacity:0">x</a>`,
+  `<a href="https://evil.example/" style="display:block;padding-bottom:600px;margin-bottom:-600px;opacity:0">x</a>`,
+];
 
 /** Elements that must never appear in rendered output. */
 const FORBIDDEN_ELEMENTS = [
@@ -84,7 +92,10 @@ function scheme(value: string): string {
   return value.replace(/[\s\u0000-\u001f]+/g, '').toLowerCase();
 }
 
-/** Every problem found under `root`: event handlers, active elements, script URLs and style loads. */
+/**
+ * Every problem found under `root`: event handlers, active elements, script URLs, style loads,
+ * and positioning that could lay output over the prompt.
+ */
 export function activeContent(root: ParentNode): string[] {
   const problems: string[] = [];
   for (const name of FORBIDDEN_ELEMENTS) {
@@ -97,7 +108,7 @@ export function activeContent(root: ParentNode): string[] {
       if (URL_ATTRIBUTES.includes(lower) && /^(?:javascript|data|vbscript):/.test(scheme(value))) {
         problems.push(`${lower}="${value}" on <${element.localName}>`);
       }
-      if (lower === 'style' && /url\(|expression|javascript:|\\/i.test(value)) {
+      if (lower === 'style' && /url\(|expression|javascript:|\\|position\s*:|inset\s*:/i.test(value)) {
         problems.push(`style="${value}" on <${element.localName}>`);
       }
       if (lower.startsWith('data-') && !['data-theme-name', 'data-cathode-name'].includes(lower)) {

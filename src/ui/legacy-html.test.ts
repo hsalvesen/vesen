@@ -48,11 +48,20 @@ describe('sanitizeLegacyHtml: what legacy output keeps', () => {
   it('keeps allowed tags, classes, data names and safe styles exactly', () => {
     const html =
       '<span class="theme-name is-current" data-theme-name="swamphen">swamphen</span>' +
-      '<div style="position: relative; border-left: 4px solid var(--theme-cyan)"><br><pre>x</pre></div>';
+      '<div style="border-left: 4px solid var(--theme-cyan)"><br><pre>x</pre></div>';
     expect(render(html).innerHTML).toBe(
       '<span class="theme-name is-current" data-theme-name="swamphen">swamphen</span>' +
-        '<div style="position: relative; border-left: 4px solid var(--theme-cyan)"><br><pre>x</pre></div>',
+        '<div style="border-left: 4px solid var(--theme-cyan)"><br><pre>x</pre></div>',
     );
+  });
+
+  it('keeps no positioning, so output cannot be laid over the prompt', () => {
+    const html =
+      '<a href="https://evil.example/" style="position:absolute;inset:0;opacity:0">x</a>' +
+      '<div style="position: relative; inset: 200px auto auto 0; border-left: 4px solid var(--theme-cyan)">y</div>';
+    const root = render(html);
+    expect(root.querySelector('a')?.getAttribute('style')).toBe('opacity: 0');
+    expect(root.querySelector('div')?.getAttribute('style')).toBe('border-left: 4px solid var(--theme-cyan)');
   });
 
   it('opens http, https and mailto links in a new tab without an opener', () => {

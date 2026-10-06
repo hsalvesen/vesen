@@ -40,3 +40,12 @@
     --term-fs: 16px;
   }
 }
+
+/* A phone on its side is still a phone, laid out as one by styles/shell.css, and it keeps the
+   phone's text size. The widest phones are 956px on their side; the cap leaves out a tablet whose
+   keyboard has made the page short, so its text does not shrink while the visitor types. */
+@media (pointer: coarse) and (max-height: 479px) and (max-width: 959px) {
+  :root {
+    --term-fs: 13px;
+  }
+}

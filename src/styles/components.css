@@ -27,6 +27,14 @@
   color: var(--role-muted);
 }
 
+/* The banner's keyboard shortcuts, which a touch screen has no keys for until the phone's key
+   bar lands (docs/plan/04-phone-and-instagram.md). */
+@media (pointer: coarse) {
+  .keys-hint {
+    display: none;
+  }
+}
+
 /* --- Errors -----------------------------------------------------------------
    One style: `cmd: message` in the error role, then optionally a dim hint on
    the next line (utils/notice.ts errorLine). */

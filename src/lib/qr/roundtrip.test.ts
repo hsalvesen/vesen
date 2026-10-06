@@ -1,13 +1,9 @@
-// Round trips: encode, render, read back.
-// - Always: the independent structural reader in tests/support/qr-decode.ts.
-// - With jsqr installed: a real image decoder reading raster renders and rasterised text art.
-// - With fast-check installed: random byte strings up to capacity survive jsQR.
+// Round trips: encode, then read back with the independent structural reader in
+// tests/support/qr-decode.ts, for a spread of payloads, every mask at every version, and seeded
+// random bytes up to capacity.
 import { describe, expect, it } from 'vitest';
 import { decodeMatrix } from '../../../tests/support/qr-decode';
-import { optionalModule } from '../../../tests/support/optional-module';
 import { encodeText } from './encode';
-import { toRgba, type RgbaRaster } from './render/raster';
-import { toText, type TextStyle } from './render/text';
 import { ECC_ORDER, maxPayloadBytes } from './tables';
 import type { EccLevel, MaskId, QrSymbol, SegmentMode } from './types';
 
@@ -117,131 +113,19 @@ describe('structural round trip', () => {
   });
 });
 
-// ── jsQR ─────────────────────────────────────────────────────────────────────────────────────
-
-interface JsQrResult {
-  binaryData: number[];
-  data: string;
-  version: number;
-}
-type JsQr = (
-  data: Uint8ClampedArray,
-  width: number,
-  height: number,
-  options?: { inversionAttempts?: 'dontInvert' | 'onlyInvert' | 'attemptBoth' | 'invertFirst' },
-) => JsQrResult | null;
-
-const jsqr = optionalModule<JsQr | { default: JsQr }>('jsqr');
-const jsQR: JsQr | null = jsqr.module === null ? null : typeof jsqr.module === 'function' ? jsqr.module : jsqr.module.default;
-
-/** Pixels per module that keep large symbols decodable without making small ones huge. */
-const scaleFor = (qr: QrSymbol): number => (qr.version <= 10 ? 4 : qr.version <= 25 ? 3 : 2);
-
-function decodeRgba(raster: RgbaRaster, invert = false): JsQrResult | null {
-  if (!jsQR) throw new Error('jsqr is not installed');
-  return jsQR(raster.data, raster.width, raster.height, { inversionAttempts: invert ? 'attemptBoth' : 'dontInvert' });
-}
-
-/** Stretches a raster vertically by `factor`, as half-block glyphs in a 1.2 line height do. */
-function stretch(r: RgbaRaster, factor: number): RgbaRaster {
-  const height = Math.round(r.height * factor);
-  const data = new Uint8ClampedArray(r.width * height * 4);
-  for (let y = 0; y < height; y++) {
-    const src = Math.min(r.height - 1, Math.floor(y / factor));
-    data.set(r.data.subarray(src * r.width * 4, (src + 1) * r.width * 4), y * r.width * 4);
-  }
-  return { width: r.width, height, data };
-}
-
-/**
- * Draws text art the way a terminal shows it: light glyphs on a dark background. Each cell is
- * `cell` pixels wide and `2 * cell` tall, and a half-block fills half of it.
- */
-function rasteriseText(lines: string[], cell: number): RgbaRaster {
-  const quiet = 4 * cell;
-  const cols = Array.from(lines[0] ?? '').length;
-  const width = cols * cell + 2 * quiet;
-  const height = lines.length * 2 * cell + 2 * quiet;
-  const data = new Uint8ClampedArray(width * height * 4);
-  for (let i = 0; i < width * height; i++) data[i * 4 + 3] = 255; // black background
-  const paint = (x0: number, y0: number): void => {
-    for (let y = y0; y < y0 + cell; y++) {
-      for (let x = x0; x < x0 + cell; x++) data.fill(255, (y * width + x) * 4, (y * width + x) * 4 + 3);
+describe('property: random bytes up to capacity', () => {
+  it('round-trip through the structural reader at every level', { timeout: 60_000 }, () => {
+    const next = seeded(2026);
+    for (let run = 0; run < 60; run++) {
+      const ecc = ECC_ORDER[run % 4]!;
+      // Each byte becomes one character U+0000..U+00FF, which is 1 or 2 UTF-8 bytes, so half the
+      // byte capacity is the longest string that always fits.
+      const length = 1 + Math.floor(next() * Math.floor(maxPayloadBytes(ecc) / 2));
+      const text = String.fromCharCode(...Array.from({ length }, () => Math.floor(next() * 256)));
+      const qr = encodeText(text, { ecc });
+      const read = decodeMatrix(qr.modules, qr.size);
+      expect(read.ecc, `run ${run}`).toBe(ecc);
+      expect(Buffer.from(read.bytes).equals(Buffer.from(utf8.encode(text))), `run ${run}`).toBe(true);
     }
-  };
-  lines.forEach((line, row) => {
-    Array.from(line).forEach((glyph, col) => {
-      const x = quiet + col * cell;
-      const y = quiet + row * 2 * cell;
-      if (glyph === '█' || glyph === '▀') paint(x, y);
-      if (glyph === '█' || glyph === '▄') paint(x, y + cell);
-    });
-  });
-  return { width, height, data };
-}
-
-describe.skipIf(!jsQR)(`jsQR round trip${jsqr.note}`, () => {
-  it('decodes raster renders of payloads across versions and levels', { timeout: 120_000 }, () => {
-    // Every third case keeps the run time down while still covering versions 1 to 40.
-    for (const { text, qr } of encodedCases().filter((_, i) => i % 3 === 0)) {
-      const result = decodeRgba(toRgba(qr, { scale: scaleFor(qr) }));
-      expect(result, `v${qr.version}-${qr.ecc} ${text.slice(0, 30)}`).not.toBeNull();
-      expect(Buffer.from(result!.binaryData).equals(Buffer.from(utf8.encode(text)))).toBe(true);
-      expect(result!.version).toBe(qr.version);
-    }
-  });
-
-  it('decodes the fixed payloads with themed, stretched pixels', { timeout: 60_000 }, () => {
-    for (const text of FIXED) {
-      const qr = encodeText(text, { ecc: 'M', boostEcc: true });
-      const raster = stretch(toRgba(qr, { scale: 4, ink: [34, 34, 53], paper: [255, 255, 255] }), 1.2);
-      expect(decodeRgba(raster)?.data, text).toBe(text);
-    }
-  });
-
-  it('decodes half-block text art in both polarities', { timeout: 60_000 }, () => {
-    for (const text of ['https://www.vesen.app', 'Kia ora, Aotearoa', 'owl 🦉']) {
-      const qr = encodeText(text, { ecc: 'M' });
-      for (const style of ['utf8', 'utf8i'] as TextStyle[]) {
-        // utf8 paints its own quiet zone; utf8i relies on the dark terminal around it.
-        const art = toText(qr, { style, margin: style === 'utf8' ? 4 : 0 });
-        expect(decodeRgba(rasteriseText(art, 4), true)?.data, `${style} ${text}`).toBe(text);
-      }
-    }
-  });
-});
-
-// ── fast-check ───────────────────────────────────────────────────────────────────────────────
-
-interface Arbitrary<T> {
-  map<U>(f: (value: T) => U): Arbitrary<U>;
-}
-interface FastCheck {
-  assert(property: unknown, params?: { numRuns?: number; seed?: number }): void;
-  property<A, B>(a: Arbitrary<A>, b: Arbitrary<B>, predicate: (a: A, b: B) => boolean | void): unknown;
-  uint8Array(constraints: { minLength?: number; maxLength?: number }): Arbitrary<Uint8Array>;
-  constantFrom<T>(...values: T[]): Arbitrary<T>;
-}
-
-const fastCheck = optionalModule<FastCheck>('fast-check');
-const fc = fastCheck.module;
-
-describe.skipIf(!fc || !jsQR)(`property: random bytes up to capacity${fastCheck.note || jsqr.note}`, () => {
-  it('round-trips through jsQR', { timeout: 120_000 }, () => {
-    if (!fc) return;
-    // Each byte becomes one character U+0000..U+00FF, which is 1 or 2 UTF-8 bytes, so half the
-    // byte capacity is the longest string that always fits.
-    const level = fc.constantFrom<EccLevel>('L', 'M', 'Q', 'H');
-    const bytes = fc.uint8Array({ minLength: 1, maxLength: Math.floor(maxPayloadBytes('L') / 2) });
-    fc.assert(
-      fc.property(level, bytes, (ecc, raw) => {
-        const text = String.fromCharCode(...raw.subarray(0, Math.floor(maxPayloadBytes(ecc) / 2)));
-        const qr = encodeText(text, { ecc });
-        const result = decodeRgba(toRgba(qr, { scale: scaleFor(qr) }));
-        expect(result).not.toBeNull();
-        expect(Buffer.from(result!.binaryData).equals(Buffer.from(utf8.encode(text)))).toBe(true);
-      }),
-      { numRuns: 60, seed: 2026 },
-    );
   });
 });

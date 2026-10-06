@@ -382,9 +382,42 @@ export function lineText(line: Line): string {
   return line.map((s) => s.text).join('');
 }
 
-/** Display width in terminal cells. Counts code points; wide East Asian characters count as one. */
+/** East Asian wide characters and emoji, which a terminal draws two cells wide. */
+function isWide(cp: number): boolean {
+  return (
+    (cp >= 0x1100 && cp <= 0x115f) ||
+    (cp >= 0x2e80 && cp <= 0x303e) ||
+    (cp >= 0x3041 && cp <= 0x33ff) ||
+    (cp >= 0x3400 && cp <= 0x4dbf) ||
+    (cp >= 0x4e00 && cp <= 0x9fff) ||
+    (cp >= 0xa000 && cp <= 0xa4cf) ||
+    (cp >= 0xac00 && cp <= 0xd7a3) ||
+    (cp >= 0xf900 && cp <= 0xfaff) ||
+    (cp >= 0xfe30 && cp <= 0xfe4f) ||
+    (cp >= 0xff00 && cp <= 0xff60) ||
+    (cp >= 0xffe0 && cp <= 0xffe6) ||
+    (cp >= 0x1f300 && cp <= 0x1f64f) ||
+    (cp >= 0x1f900 && cp <= 0x1f9ff) ||
+    (cp >= 0x20000 && cp <= 0x3fffd)
+  );
+}
+
+const ZERO_WIDTH = /^[\p{M}\u200b-\u200f\u2060\ufeff]$/u;
+
+/** Terminal cells one code point occupies: 0 for a combining mark, 2 for a wide character. */
+export function charWidth(ch: string): number {
+  if (ZERO_WIDTH.test(ch)) return 0;
+  return isWide(ch.codePointAt(0) ?? 0) ? 2 : 1;
+}
+
+/**
+ * Display width in terminal cells: combining marks and zero-width characters take none, East
+ * Asian wide characters and emoji two, everything else one.
+ */
 export function textWidth(text: string): number {
-  return Array.from(text).length;
+  let width = 0;
+  for (const ch of text) width += charWidth(ch);
+  return width;
 }
 
 function terminated(text: string): string {

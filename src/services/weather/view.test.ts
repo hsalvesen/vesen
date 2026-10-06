@@ -6,9 +6,10 @@ import { parseForecast, parseGeocoding } from './sources';
 import type { Daily, Forecast, Line, Note, Place } from './types';
 import { UNIT_PRESETS, UNIT_SYSTEMS } from './units';
 import { ART, ART_WIDTH } from './wmo';
+import { textWidth } from '../../output/model';
 import {
   COMPACT_COLS, ROLE_COLOUR, WIDE_COLS, barText, buildView, fit, lineWidth, noteText, renderOneLine, renderPlain,
-  textWidth, toPlain, wrap,
+  toPlain, wrap,
 } from './view';
 
 /** 14:15 in Sydney (GMT+11) and 05:15 in Oslo (GMT+2), when the fixtures were recorded. */
