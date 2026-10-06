@@ -1,0 +1,12 @@
+{
+  "ip": "203.0.113.7",
+  "hostname": "host.example.net",
+  "city": "Sydney",
+  "region": "New South Wales",
+  "country": "AU",
+  "loc": "-33.8678,151.2073",
+  "org": "AS64496 Example Network",
+  "postal": "2000",
+  "timezone": "Australia/Sydney",
+  "readme": "https://ipinfo.io/missingauth"
+}
