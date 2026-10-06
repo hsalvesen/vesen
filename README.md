@@ -53,7 +53,9 @@ View all themes: [Vesen themes](/docs/themes)
 ### Project structure
 ```bash
 src/
-├── main.ts                       # Sends alias hosts to www.vesen.app, reloads on stale chunks, drops old storage keys, mounts the app
+├── main.ts                       # Calls app/bootstrap.ts, then mounts the app, or shows a plain boot error
+├── app/bootstrap.ts              # Composition root: host redirect, storage and its migrations, theme and CRT
+│                                 # applied to the page, stale-chunk reload, the banner
 ├── App.svelte                    # Layout: scrollback, prompt, suggestions, running-command line
 ├── app.css                       # Global styles and the CRT (cathode) effect
 ├── constants.ts                  # Repository URL
@@ -74,17 +76,21 @@ src/
 │   ├── legacy-policy.ts          # What the legacy HTML shim keeps: tags, attributes, classes, styles
 │   └── escape.ts                 # HTML escaping for command output
 ├── vfs/types.ts                  # The file system contract
-├── platform/                     # Browser-facing helpers: canonical host redirect, stale-chunk reload, legacy keys
+├── lib/colour.ts                  # Luminance and the light or dark color-scheme of a background
+├── platform/                     # Browser-facing helpers: canonical host redirect, stale-chunk reload,
+│                                 # head.ts (theme colours, theme-color, favicon), crt.ts (CRT classes)
 ├── services/
 │   ├── net.ts                    # fetch with timeouts, cancelling, byte caps and typed network errors
+│   ├── storage.ts                # localStorage and sessionStorage with a memory fallback; one-time migrations
 │   ├── types.ts                  # Service interfaces: net, storage, bell, opener, clipboard, clock, system info
 │   └── storage-keys.ts           # Every browser storage key, in one registry
-├── stores/                       # Svelte stores: history, the running job, theme, cathode
+├── stores/                       # Svelte stores, pure state: history, the running job, theme, cathode
 ├── ui/
 │   ├── OutputView.svelte         # Draws output blocks with text interpolation only
 │   ├── SpanView.svelte           # One styled span: link, trusted action button or live theme binding
 │   ├── legacy-html.ts            # use:legacyHtml, which rebuilds legacy HTML from the allowlist
 │   ├── span-style.ts             # Colour tokens to CSS, with role fallbacks
+│   ├── legacy-highlights.ts      # Moves the current-theme and CRT markers in earlier legacy listings
 │   └── components/registry.ts    # Rich cards a component block may name (none yet)
 ├── testing/                      # Test setup
 └── utils/
@@ -96,12 +102,16 @@ src/
     ├── notice.ts                 # Shared notices (cancelled commands, errors)
     ├── beep.ts                   # The terminal bell
     └── mobile.ts, osLogos.ts
-public/                           # README.md, history.txt and linux.txt for cat; favicons; font;
-                                  # 404.html; probe/ (device capability probe, not linked from the app)
+public/                           # README.md, history.txt and linux.txt for cat; font; 404.html;
+                                  # icons/ and og.png (generated, see scripts/); manifest.webmanifest;
+                                  # probe/ (device capability probe, not linked from the app)
 themes.json                       # The ten colour themes
 tests/                            # Golden snapshots and their parity check, XSS tests, network fixtures, hosting checks, helpers
 e2e/                              # Playwright end-to-end tests
-scripts/                          # Checks: module boundaries, bundle budget, theme contrast (and its baseline)
+scripts/                          # Checks: module boundaries, bundle budget, theme contrast (and its baseline);
+                                  # vite-plugin-boot.ts (emits /boot.js, which paints the saved theme before
+                                  # the app loads); icons.mjs and og.mjs (regenerate public/icons and
+                                  # public/og.png with `node scripts/icons.mjs` or `node scripts/og.mjs`)
 docs/
 ├── adr/                          # Architecture decision records; 0001 fixes the shared contracts
 ├── plan/                         # The improvement plan

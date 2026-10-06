@@ -20,6 +20,7 @@
   },
   "include": [
     "src/global.d.ts",
+    "src/app/**/*.ts",
     "src/shell/**/*.ts",
     "src/output/**/*.ts",
     "src/vfs/**/*.ts",
@@ -33,7 +34,5 @@
     "src/utils/beep.ts",
     "worker/**/*.ts"
   ],
-  // history.ts predates the overhaul and pulls in the legacy commands; drop it from this
-  // list when the store is rewritten.
-  "exclude": ["**/node_modules", "dist", "**/*.test.ts", "src/stores/history.ts"]
+  "exclude": ["**/node_modules", "dist", "**/*.test.ts"]
 }

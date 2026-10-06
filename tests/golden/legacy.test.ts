@@ -141,6 +141,9 @@ async function boot(viewport: Viewport): Promise<LegacyTerminal> {
 
   const { processCommand } = await import('../../src/utils/commands');
   const { history, commandHistory } = await import('../../src/stores/history');
+  const { systemCommands } = await import('../../src/utils/commands/system');
+  // What app/bootstrap.ts puts in the transcript before the app mounts.
+  history.set([{ command: 'banner', outputs: [systemCommands.banner()] }]);
 
   return {
     async type(line) {

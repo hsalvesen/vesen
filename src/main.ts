@@ -1,27 +1,19 @@
 import './app.css';
 import { mount } from 'svelte';
 import App from './App.svelte';
-import { installChunkReload } from './platform/chunkReload';
-import { canonicalRedirect } from './platform/hosts';
-import { dropLegacyKeys } from './platform/legacyKeys';
-import { history } from './stores/history';
-import { notice } from './utils/notice';
+import { bootstrap, renderBootError } from './app/bootstrap';
+import { systemCommands } from './utils/commands/system';
 
-// The entry chunk's URL carries the build hash, so it identifies this deploy.
-installChunkReload(window, import.meta.url, (message) => {
-  history.update((entries) => [...entries, { command: '', outputs: [notice(message)] }]);
-});
+const target = document.getElementById('app');
 
-dropLegacyKeys(window);
-
-// The apex and the two Firebase hostnames serve the same build; send visitors to the one
-// origin so storage and the prompt are the same everywhere.
-const canonical = canonicalRedirect(new URL(window.location.href));
-
-if (canonical) {
-  window.location.replace(canonical);
-} else {
-  mount(App, {
-    target: document.getElementById('app')!,
-  });
+try {
+  // The entry chunk's URL carries the build hash, so it identifies this deploy.
+  const booted = bootstrap({ window, build: import.meta.url, banner: () => systemCommands.banner() });
+  if (booted) {
+    if (!target) throw new Error('#app is missing from the page');
+    mount(App, { target });
+  }
+} catch (error) {
+  console.error(error);
+  renderBootError(document, target, error);
 }

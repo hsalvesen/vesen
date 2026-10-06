@@ -1,105 +1,40 @@
+// The current colour theme. Pure state: importing this module touches neither the DOM nor
+// storage. app/bootstrap.ts restores the saved theme with persistTheme() and applies each value
+// to the page (platform/head.ts).
 import { writable } from 'svelte/store';
-import themes from '../../themes.json';
+import themesJson from '../../themes.json';
 import type { Theme } from '../interfaces/theme';
+import { STORAGE_KEYS } from '../services/storage-keys';
+import type { KV } from '../services/types';
 
-const defaultColorscheme: Theme = themes.find((t) => t.name.toLowerCase() === 'swamphen')!;
+export const themes: readonly Theme[] = themesJson;
 
-// Function to update CSS variables
-function updateCSSVariables(theme: Theme) {
-  if (typeof document !== 'undefined') {
-    const root = document.documentElement;
-    root.style.setProperty('--theme-black', theme.black);
-    root.style.setProperty('--theme-red', theme.red);
-    root.style.setProperty('--theme-green', theme.green);
-    root.style.setProperty('--theme-yellow', theme.yellow);
-    root.style.setProperty('--theme-blue', theme.blue);
-    root.style.setProperty('--theme-purple', theme.purple);
-    root.style.setProperty('--theme-cyan', theme.cyan);
-    root.style.setProperty('--theme-white', theme.white);
-    root.style.setProperty('--theme-bright-black', theme.brightBlack);
-    root.style.setProperty('--theme-bright-red', theme.brightRed);
-    root.style.setProperty('--theme-bright-green', theme.brightGreen);
-    root.style.setProperty('--theme-bright-yellow', theme.brightYellow);
-    root.style.setProperty('--theme-bright-blue', theme.brightBlue);
-    root.style.setProperty('--theme-bright-purple', theme.brightPurple);
-    root.style.setProperty('--theme-bright-cyan', theme.brightCyan);
-    root.style.setProperty('--theme-bright-white', theme.brightWhite);
-    root.style.setProperty('--theme-foreground', theme.foreground);
-    root.style.setProperty('--theme-background', theme.background);
-  }
+export const DEFAULT_THEME_NAME = 'swamphen';
+
+/** The theme with this name, ignoring case; undefined for anything else. */
+export function findTheme(name: unknown): Theme | undefined {
+  if (typeof name !== 'string') return undefined;
+  const lower = name.trim().toLowerCase();
+  return themes.find((t) => t.name.toLowerCase() === lower);
 }
 
-// Dynamically highlight current theme in any past "theme ls" outputs
-function updateThemeListHighlight(theme: Theme) {
-  if (typeof document === 'undefined') return;
-  const current = theme.name.toLowerCase();
-  const nodes = document.querySelectorAll<HTMLElement>('.theme-name');
+// themes.json always has the default; the first theme only guards against an edit removing it.
+export const defaultTheme: Theme = findTheme(DEFAULT_THEME_NAME) ?? (themes[0] as Theme);
 
-  nodes.forEach((el) => {
-    const name = el.getAttribute('data-theme-name')?.toLowerCase();
-    if (name && name === current) {
-      el.classList.add('is-current');
-    } else {
-      el.classList.remove('is-current');
-    }
+export const theme = writable<Theme>(defaultTheme);
+
+/**
+ * Restores the saved theme, then saves each later change by name only, so a returning visitor
+ * picks up edits to themes.json (F002). A saved name that no longer exists falls back to the
+ * default. Returns a function that stops saving.
+ */
+export function persistTheme(store: KV<'local'>): () => void {
+  const saved = findTheme(store.get(STORAGE_KEYS.theme.key));
+  if (saved) theme.set(saved);
+  let restoring = true;
+  const stop = theme.subscribe((value) => {
+    if (!restoring) store.set(STORAGE_KEYS.theme.key, value.name);
   });
+  restoring = false;
+  return stop;
 }
-
-// Update fastfetch "WM Theme" value in past outputs
-function updateFastfetchThemeName(theme: Theme) {
-  if (typeof document === 'undefined') return;
-  const nodes = document.querySelectorAll<HTMLElement>('.current-theme-name');
-  nodes.forEach((el) => {
-    el.textContent = theme.name;
-  });
-}
-
-// Add dynamic favicon update based on theme
-function updateFavicon(theme: Theme) {
-  if (typeof document === 'undefined') return;
-
-  // Map theme "wallaby" -> "Wallaby" to match file naming
-  const fileNameTheme = theme.name.charAt(0).toUpperCase() + theme.name.slice(1);
-  const file = `/favicons/vesenFavicon${fileNameTheme}.ico`;
-  const href = `${file}?v=${encodeURIComponent(fileNameTheme)}`;
-
-  const links = document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="shortcut icon"]');
-  if (links.length > 0) {
-    links.forEach((link) => {
-      link.rel = 'icon';
-      link.type = 'image/x-icon';
-      link.setAttribute('sizes', 'any');
-      link.href = href;
-    });
-  } else {
-    const link = document.createElement('link');
-    link.rel = 'icon';
-    link.type = 'image/x-icon';
-    link.setAttribute('sizes', 'any');
-    link.href = href;
-    document.head.appendChild(link);
-  }
-}
-
-// Get initial theme and set CSS variables immediately
-const initialTheme = typeof document !== 'undefined' 
-  ? JSON.parse(localStorage.getItem('colorscheme') || JSON.stringify(defaultColorscheme))
-  : defaultColorscheme;
-
-// Initialise CSS variables immediately on first load
-if (typeof document !== 'undefined') {
-  updateCSSVariables(initialTheme);
-  updateFavicon(initialTheme);
-  updateThemeListHighlight(initialTheme);
-  updateFastfetchThemeName(initialTheme);
-}
-
-export const theme = writable<Theme>(initialTheme);
-
-theme.subscribe((value) => {
-  localStorage.setItem('colorscheme', JSON.stringify(value));
-  updateCSSVariables(value);
-  updateFavicon(value);
-  updateThemeListHighlight(value);
-  updateFastfetchThemeName(value);
-});

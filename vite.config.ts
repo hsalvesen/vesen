@@ -5,6 +5,7 @@ import { configDefaults } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
 import { svelteTesting } from '@testing-library/svelte/vite';
+import { bootScriptPlugin } from './scripts/vite-plugin-boot.ts';
 
 // Read the version at build time so package.json itself never ships in the bundle.
 const { version } = JSON.parse(
@@ -22,7 +23,7 @@ const domTests = [
 ];
 
 export default defineConfig({
-  plugins: [svelte(), tailwindcss()],
+  plugins: [svelte(), tailwindcss(), bootScriptPlugin()],
   define: {
     __APP_VERSION__: JSON.stringify(version),
   },

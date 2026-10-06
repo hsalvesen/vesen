@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
+import { createStorage, type StorageHost } from '../services/storage';
+import type { KV } from '../services/types';
 import { CHUNK_RELOAD_KEY, UPDATE_NOTICE, installChunkReload, type ReloadTarget } from './chunkReload';
 
 class MemoryStorage {
@@ -9,16 +11,31 @@ class MemoryStorage {
   setItem(key: string, value: string): void {
     this.items.set(key, value);
   }
+  removeItem(key: string): void {
+    this.items.delete(key);
+  }
+}
+
+/** The tab's sessionStorage through the storage service, as bootstrap builds it. */
+function sessionArea(storage: () => MemoryStorage): KV<'session'> {
+  const host = {
+    get sessionStorage() {
+      return storage();
+    },
+    get localStorage() {
+      return storage();
+    },
+  } as unknown as StorageHost;
+  return createStorage(host).session;
 }
 
 function fakeWindow(storage: () => MemoryStorage) {
   const events = new EventTarget();
   const reload = vi.fn();
+  const session = sessionArea(storage);
   const target = {
     addEventListener: events.addEventListener.bind(events),
-    get sessionStorage() {
-      return storage();
-    },
+    removeEventListener: events.removeEventListener.bind(events),
     location: { reload },
     // Frames and timeouts run at once, so each test sees the reload synchronously.
     requestAnimationFrame: (callback: FrameRequestCallback) => {
@@ -37,14 +54,14 @@ function fakeWindow(storage: () => MemoryStorage) {
     events.dispatchEvent(event);
     return event.defaultPrevented;
   };
-  return { target, reload, preloadError };
+  return { target, session, reload, preloadError };
 }
 
 describe('installChunkReload', () => {
   it('reloads once per build and then lets the error through', () => {
     const storage = new MemoryStorage();
     const tab = fakeWindow(() => storage);
-    installChunkReload(tab.target, '/assets/index-old.js');
+    installChunkReload(tab.target, tab.session, '/assets/index-old.js');
 
     expect(tab.preloadError()).toBe(true);
     expect(tab.reload).toHaveBeenCalledTimes(1);
@@ -61,7 +78,7 @@ describe('installChunkReload', () => {
     const frames: FrameRequestCallback[] = [];
     tab.target.requestAnimationFrame = (callback) => frames.push(callback);
     tab.reload.mockImplementation(() => order.push('reload'));
-    installChunkReload(tab.target, '/assets/index-old.js', (message) => order.push(message));
+    installChunkReload(tab.target, tab.session, '/assets/index-old.js', (message) => order.push(message));
 
     expect(tab.preloadError()).toBe(true);
     expect(order).toEqual([UPDATE_NOTICE]);
@@ -76,7 +93,7 @@ describe('installChunkReload', () => {
     storage.setItem(CHUNK_RELOAD_KEY, '/assets/index-old.js');
     const tab = fakeWindow(() => storage);
     const announce = vi.fn();
-    installChunkReload(tab.target, '/assets/index-old.js', announce);
+    installChunkReload(tab.target, tab.session, '/assets/index-old.js', announce);
 
     expect(tab.preloadError()).toBe(false);
     expect(announce).not.toHaveBeenCalled();
@@ -86,7 +103,7 @@ describe('installChunkReload', () => {
     const storage = new MemoryStorage();
     storage.setItem(CHUNK_RELOAD_KEY, '/assets/index-old.js');
     const tab = fakeWindow(() => storage);
-    installChunkReload(tab.target, '/assets/index-new.js');
+    installChunkReload(tab.target, tab.session, '/assets/index-new.js');
 
     expect(tab.preloadError()).toBe(true);
     expect(tab.reload).toHaveBeenCalledTimes(1);
@@ -96,7 +113,16 @@ describe('installChunkReload', () => {
     const tab = fakeWindow(() => {
       throw new DOMException('The operation is insecure.', 'SecurityError');
     });
-    installChunkReload(tab.target, '/assets/index-old.js');
+    installChunkReload(tab.target, tab.session, '/assets/index-old.js');
+
+    expect(tab.preloadError()).toBe(false);
+    expect(tab.reload).not.toHaveBeenCalled();
+  });
+
+  it('stops listening once uninstalled', () => {
+    const tab = fakeWindow(() => new MemoryStorage());
+    const uninstall = installChunkReload(tab.target, tab.session, '/assets/index-old.js');
+    uninstall();
 
     expect(tab.preloadError()).toBe(false);
     expect(tab.reload).not.toHaveBeenCalled();
@@ -108,7 +134,7 @@ describe('installChunkReload', () => {
       throw new DOMException('Quota exceeded', 'QuotaExceededError');
     };
     const tab = fakeWindow(() => storage);
-    installChunkReload(tab.target, '/assets/index-old.js');
+    installChunkReload(tab.target, tab.session, '/assets/index-old.js');
 
     expect(tab.preloadError()).toBe(false);
     expect(tab.reload).not.toHaveBeenCalled();

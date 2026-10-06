@@ -96,8 +96,14 @@ describe('firebase.json', () => {
       expect(header(source, 'Cache-Control'), source).toBe('no-cache');
     }
     expect(header('/assets/**', 'Cache-Control')).toBe('public, max-age=31536000, immutable');
-    for (const source of ['/favicons/**', '/fonts/**']) {
-      expect(header(source, 'Cache-Control'), source).toMatch(/^public, max-age=\d+$/);
+    expect(header('/icons/**', 'Cache-Control')).toBe('public, max-age=86400');
+    expect(header('/fonts/**', 'Cache-Control')).toMatch(/^public, max-age=\d+$/);
+  });
+
+  // Neither has a hash in its name, and a stale boot script would paint retired theme colours.
+  it('revalidates the boot script and the manifest', () => {
+    for (const source of ['/boot.js', '/manifest.webmanifest']) {
+      expect(header(source, 'Cache-Control'), source).toBe('no-cache');
     }
   });
 });

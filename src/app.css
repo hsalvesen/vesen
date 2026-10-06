@@ -106,7 +106,7 @@
    Cathode (CRT) display effect
    --------------------------------------------------------------------------
    The active variation is exposed as a class on <html> (e.g. `crt-vintage`)
-   plus a generic `crt-on` flag, both set by src/stores/cathode.ts.
+   plus a generic `crt-on` flag, both set by src/platform/crt.ts.
 
    Two things combine to sell the effect:
      1. Per-character treatments applied directly to the terminal (`main`):

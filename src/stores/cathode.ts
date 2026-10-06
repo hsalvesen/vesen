@@ -1,7 +1,11 @@
+// The CRT ("cathode") effect. Pure state: importing this module touches neither the DOM nor
+// storage. app/bootstrap.ts restores the saved mode with persistCathode() and reflects each mode
+// onto <html> as classes (platform/crt.ts).
 import { writable } from 'svelte/store';
+import { STORAGE_KEYS } from '../services/storage-keys';
+import type { StoredCathode } from '../services/storage';
+import type { KV } from '../services/types';
 
-// A "cathode" effect emulates the look of an old CRT (cathode ray tube) display.
-// Each mode is a distinct variation the user can trial on the terminal.
 export const cathodeModes = ['off', 'scanlines', 'phosphor', 'vintage'] as const;
 export type CathodeMode = (typeof cathodeModes)[number];
 
@@ -18,56 +22,33 @@ export const cathodeModeInfo: CathodeModeInfo[] = [
   { name: 'vintage', summary: 'The full retro set: glow, flicker, RGB fringing and a heavy vignette.' },
 ];
 
-const STORAGE_KEY = 'cathode';
-const CLASS_PREFIX = 'crt-';
+// Scanlines greet visitors who have not chosen; a saved choice takes priority.
+export const DEFAULT_CATHODE_MODE: CathodeMode = 'scanlines';
 
-function isCathodeMode(value: string | null): value is CathodeMode {
-  return value !== null && (cathodeModes as readonly string[]).includes(value);
+export function isCathodeMode(value: unknown): value is CathodeMode {
+  return typeof value === 'string' && (cathodeModes as readonly string[]).includes(value);
 }
 
-// Reflect the active mode onto <html> so global CSS can style the terminal
-// (text glow, curvature) without every component needing to know the mode.
-// `crt-on` is a convenience flag so selectors can target "any effect" cheaply.
-function applyDocumentMode(mode: CathodeMode) {
-  if (typeof document === 'undefined') return;
-  const root = document.documentElement;
-  cathodeModes.forEach((m) => root.classList.remove(`${CLASS_PREFIX}${m}`));
-  root.classList.toggle('crt-on', mode !== 'off');
-  if (mode !== 'off') {
-    root.classList.add(`${CLASS_PREFIX}${mode}`);
-  }
+export const cathode = writable<CathodeMode>(DEFAULT_CATHODE_MODE);
+
+/** The saved mode in a `vesen:cathode:v1` value, if it holds a known one. */
+function savedMode(raw: unknown): CathodeMode | undefined {
+  if (typeof raw !== 'object' || raw === null || !('mode' in raw)) return undefined;
+  return isCathodeMode(raw.mode) ? raw.mode : undefined;
 }
 
-// Keep any previously printed "cathode ls" output in sync with the active mode.
-function updateCathodeListHighlight(mode: CathodeMode) {
-  if (typeof document === 'undefined') return;
-  const nodes = document.querySelectorAll<HTMLElement>('.cathode-name');
-  nodes.forEach((el) => {
-    const name = el.getAttribute('data-cathode-name');
-    el.classList.toggle('is-current', name === mode);
+/**
+ * Restores the saved mode, then saves each later change. Nothing is saved until the visitor
+ * picks a mode, so the default can differ by device. Returns a function that stops saving.
+ */
+export function persistCathode(store: KV<'local'>): () => void {
+  const saved = store.getJson(STORAGE_KEYS.cathode.key, savedMode);
+  if (saved) cathode.set(saved);
+  let restoring = true;
+  const stop = cathode.subscribe((mode) => {
+    const value: StoredCathode = { mode };
+    if (!restoring) store.setJson(STORAGE_KEYS.cathode.key, value);
   });
+  restoring = false;
+  return stop;
 }
-
-// Default to the scanlines look on first load so visitors get the immersive
-// CRT feel straight away; a saved choice in localStorage still takes priority.
-const DEFAULT_MODE: CathodeMode = 'scanlines';
-
-const initialMode: CathodeMode =
-  typeof localStorage !== 'undefined' && isCathodeMode(localStorage.getItem(STORAGE_KEY))
-    ? (localStorage.getItem(STORAGE_KEY) as CathodeMode)
-    : DEFAULT_MODE;
-
-if (typeof document !== 'undefined') {
-  applyDocumentMode(initialMode);
-  updateCathodeListHighlight(initialMode);
-}
-
-export const cathode = writable<CathodeMode>(initialMode);
-
-cathode.subscribe((mode) => {
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY, mode);
-  }
-  applyDocumentMode(mode);
-  updateCathodeListHighlight(mode);
-});

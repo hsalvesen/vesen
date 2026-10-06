@@ -8,6 +8,7 @@
   },
   "include": [
     "src/global.d.ts",
+    "src/app/**/*.test.ts",
     "src/shell/**/*.test.ts",
     "src/output/**/*.test.ts",
     "src/vfs/**/*.test.ts",
@@ -30,5 +31,5 @@
     "playwright.config.ts",
     "vite.config.ts"
   ],
-  "exclude": ["**/node_modules", "dist", "src/stores/history.ts"]
+  "exclude": ["**/node_modules", "dist"]
 }

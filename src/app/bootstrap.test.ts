@@ -1,0 +1,172 @@
+// @vitest-environment happy-dom
+import { get } from 'svelte/store';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Booted, BootOptions } from './bootstrap';
+
+const AREAS = ['localStorage', 'sessionStorage'] as const;
+const saved = AREAS.map((name) => [name, Object.getOwnPropertyDescriptor(window, name)] as const);
+let booted: Booted | null = null;
+
+/** The head index.html ships with, as far as bootstrap is concerned. */
+const STATIC_HEAD = `
+  <meta name="theme-color" content="#222235" />
+  <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="icon" href="/icons/theme/swamphen.svg" sizes="any" type="image/svg+xml" />`;
+
+beforeEach(() => {
+  vi.resetModules();
+  document.head.innerHTML = STATIC_HEAD;
+});
+
+afterEach(() => {
+  booted?.stop();
+  booted = null;
+  for (const [name, descriptor] of saved) {
+    if (descriptor) Object.defineProperty(window, name, descriptor);
+    else Reflect.deleteProperty(window, name);
+  }
+  localStorage.clear();
+  sessionStorage.clear();
+  document.head.innerHTML = '';
+  document.body.innerHTML = '';
+  document.documentElement.removeAttribute('style');
+  document.documentElement.removeAttribute('class');
+  vi.restoreAllMocks();
+});
+
+function blockStorage(): void {
+  for (const name of AREAS) {
+    Object.defineProperty(window, name, {
+      configurable: true,
+      get() {
+        throw new DOMException('The operation is insecure.', 'SecurityError');
+      },
+    });
+  }
+}
+
+/** Fresh modules, as on a page load. */
+async function load() {
+  const app = await import('./bootstrap');
+  const { theme, findTheme } = await import('../stores/theme');
+  const { cathode } = await import('../stores/cathode');
+  const { history } = await import('../stores/history');
+  const boot = (options: Partial<BootOptions> = {}) => {
+    booted = app.bootstrap({ window, build: '/assets/index-test.js', banner: () => 'BANNER', ...options });
+    return booted;
+  };
+  const setTheme = (name: string) => {
+    const found = findTheme(name);
+    if (!found) throw new Error(`no theme ${name}`);
+    theme.set(found);
+  };
+  return { ...app, boot, theme, setTheme, cathode, history };
+}
+
+const themeColor = () => document.querySelector('meta[name="theme-color"]')?.getAttribute('content');
+const svgIcon = () => document.querySelector('link[type="image/svg+xml"]')?.getAttribute('href');
+
+describe('bootstrap', () => {
+  it('boots with the defaults and the banner when storage is blocked', async () => {
+    blockStorage();
+    const { boot, history, setTheme } = await load();
+
+    const result = boot();
+
+    expect(result?.storage.local.persistent).toBe(false);
+    expect(get(history)).toEqual([{ command: 'banner', outputs: ['BANNER'] }]);
+    expect(themeColor()).toBe('#222235');
+    expect(svgIcon()).toBe('/icons/theme/swamphen.svg');
+    expect(document.documentElement.style.colorScheme).toBe('dark');
+    expect([...document.documentElement.classList].sort()).toEqual(['crt-on', 'crt-scanlines']);
+
+    // Themes still change for the session.
+    setTheme('cockatoo');
+    expect(themeColor()).toBe('#e8ddd0');
+  });
+
+  it('migrates and applies what a returning visitor chose before the overhaul', async () => {
+    localStorage.setItem('colorscheme', JSON.stringify({ name: 'cockatoo', background: '#000000' }));
+    localStorage.setItem('cathode', 'vintage');
+    localStorage.setItem('history', '[{"command":"echo secret","outputs":[]}]');
+    localStorage.setItem('commandHistory', '["echo secret"]');
+    const { boot, theme, cathode } = await load();
+
+    boot();
+
+    expect(get(theme).background).toBe('#e8ddd0');
+    expect(get(cathode)).toBe('vintage');
+    expect(themeColor()).toBe('#e8ddd0');
+    expect(svgIcon()).toBe('/icons/theme/cockatoo.svg');
+    expect(document.documentElement.style.colorScheme).toBe('light');
+    expect(document.documentElement.classList.contains('crt-vintage')).toBe(true);
+    expect({ ...localStorage }).toEqual({ 'vesen:theme:v1': 'cockatoo', 'vesen:cathode:v1': '{"mode":"vintage"}' });
+  });
+
+  it('saves a new theme by name and re-marks earlier listings', async () => {
+    const { boot, setTheme, cathode } = await load();
+    boot();
+    expect(localStorage.length).toBe(0);
+    document.body.innerHTML = `
+      <span class="theme-name is-current" data-theme-name="swamphen">swamphen</span>
+      <span class="theme-name" data-theme-name="wombat">wombat</span>
+      <span class="cathode-name" data-cathode-name="off">off</span>`;
+
+    setTheme('wombat');
+    cathode.set('off');
+
+    expect(localStorage.getItem('vesen:theme:v1')).toBe('wombat');
+    expect(localStorage.getItem('vesen:cathode:v1')).toBe('{"mode":"off"}');
+    expect(document.querySelector('.theme-name.is-current')?.textContent).toBe('wombat');
+    expect(document.querySelector('.cathode-name')?.classList.contains('is-current')).toBe(true);
+    expect(document.documentElement.classList.contains('crt-on')).toBe(false);
+  });
+
+  it('announces a reload for a stale chunk in the transcript', async () => {
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 0);
+    const { boot, history } = await load();
+    boot();
+
+    const event = new Event('vite:preloadError', { cancelable: true });
+    window.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    const last = get(history).at(-1);
+    expect(last?.command).toBe('');
+    expect(String(last?.outputs[0])).toContain('vesen was updated, reloading…');
+  });
+
+  it('sends an alias host to the canonical origin and boots nothing', async () => {
+    const replace = vi.fn();
+    const { bootstrap } = await load();
+    const { history } = await import('../stores/history');
+    const alias = { location: { href: 'https://vesen.app/docs?x=1#top', replace } } as unknown as Window;
+
+    expect(bootstrap({ window: alias, build: 'b', banner: () => 'BANNER' })).toBeNull();
+    expect(replace).toHaveBeenCalledWith('https://www.vesen.app/docs?x=1#top');
+    expect(get(history)).toEqual([]);
+  });
+});
+
+describe('renderBootError', () => {
+  it('replaces the app with a plain-text explanation', async () => {
+    const { renderBootError } = await load();
+    const target = document.createElement('div');
+    target.innerHTML = '<main>half mounted</main>';
+    document.body.append(target);
+
+    renderBootError(document, target, new Error('mount failed <b>here</b>'));
+
+    expect(target.children).toHaveLength(1);
+    const message = target.querySelector('pre');
+    expect(message?.getAttribute('role')).toBe('alert');
+    expect(message?.textContent).toBe('vesen: failed to start\nmount failed <b>here</b>\n\nReload the page to try again.');
+    expect(target.querySelector('b')).toBeNull();
+  });
+
+  it('writes into the body when #app is missing, whatever was thrown', async () => {
+    const { renderBootError } = await load();
+    renderBootError(document, null, 'storage exploded');
+    expect(document.body.textContent).toContain('storage exploded');
+  });
+});

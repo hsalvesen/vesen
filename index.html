@@ -1,13 +1,38 @@
 <!doctype html>
-<html class="dark" lang="en" style="color-scheme: dark;">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Vesen · a terminal in your browser</title>
     <meta name="description" content="A terminal in your browser by Has Salvesen. Explore a small Unix-like shell with themes, a CRT effect, weather, stock quotes and QR codes." />
     <link rel="canonical" href="https://www.vesen.app/" />
+    <meta name="theme-color" content="#222235" />
+    <meta name="format-detection" content="telephone=no" />
 
-    <title>Vesen Terminal</title>
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Vesen" />
+    <meta property="og:title" content="Vesen · a terminal in your browser" />
+    <meta property="og:description" content="A small Unix-like shell by Has Salvesen, with themes, a CRT effect, weather, stock quotes and QR codes." />
+    <meta property="og:url" content="https://www.vesen.app/" />
+    <meta property="og:image" content="https://www.vesen.app/og.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The VESEN banner in block letters, with the line: a terminal in your browser, www.vesen.app" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- The SVG follows the theme (platform/head.ts); the PNGs stay on the default, swamphen. -->
+    <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="icon" href="/icons/theme/swamphen.svg" sizes="any" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!--
+      Paints the saved theme before first paint (scripts/vite-plugin-boot.ts). A plain classic
+      script: vite-ignore only stops Vite from trying to bundle it, and is stripped from the output.
+    -->
+    <script vite-ignore src="/boot.js"></script>
   </head>
 
   <body class="min-h-screen font-mono antialiased">

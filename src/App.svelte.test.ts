@@ -3,6 +3,7 @@ import { tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from './App.svelte';
 import { history } from './stores/history';
+import { systemCommands } from './utils/commands/system';
 
 async function settle(): Promise<void> {
   for (let i = 0; i < 20; i += 1) await Promise.resolve();
@@ -19,6 +20,8 @@ describe('App', () => {
   it('has one hidden heading, a labelled input and a polite log that is busy while a command runs', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
+    // What app/bootstrap.ts puts in the transcript before the app mounts.
+    history.set([{ command: 'banner', outputs: [systemCommands.banner()] }]);
     const { container } = render(App);
 
     const headings = container.querySelectorAll('h1');

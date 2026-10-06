@@ -22,11 +22,13 @@
       { "source": "/index.html", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
       { "source": "/probe/", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
       { "source": "/probe/index.html", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "/boot.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "/manifest.webmanifest", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
       {
         "source": "/assets/**",
         "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
       },
-      { "source": "/favicons/**", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
+      { "source": "/icons/**", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
       { "source": "/fonts/**", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
     ]
   }
