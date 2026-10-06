@@ -3,7 +3,6 @@ import { speedtestPhase } from '../../stores/history';
 import { get } from 'svelte/store';
 import { commandHelp } from '../helpTexts';
 import { playBeep } from '../beep';
-import { shouldUseStackedLayout, getAvailableWidth, isMobileDevice } from '../mobile';
 import { fetchJson, fetchText, fetchTextCapped, fetchWithTimeout, isNetError } from '../../services/net';
 import { escapeHtml } from '../../output/escape';
 import { cancelledNotice, errorLine } from '../notice';
@@ -26,6 +25,20 @@ const inSeconds = (ms: number) => `${ms / 1000} s`;
 
 const wasCancelled = (error: unknown, signal?: AbortSignal) =>
   Boolean(signal?.aborted) || (isNetError(error) && error.kind === 'abort');
+
+/** wttr.in's report in the theme's colours: temperatures, wind, rain, distances and conditions. */
+function colourWeather(report: string): string {
+  return report
+    .replace(/(\d+°[CF]?)/g, `<span style="color: var(--theme-bright-red); font-weight: bold;">$1</span>`)
+    .replace(/(\d+\s*(?:km\/h|mph|m\/s|kts))/g, `<span style="color: var(--theme-bright-blue); font-weight: bold;">$1</span>`)
+    .replace(/(\d+%)/g, `<span style="color: var(--theme-cyan);">$1</span>`)
+    .replace(/(\d+(?:\.\d+)?\s*mm)/g, `<span style="color: var(--theme-bright-cyan);">$1</span>`)
+    .replace(/(\d+(?:\.\d+)?\s*km)/g, `<span style="color: var(--theme-green);">$1</span>`)
+    .replace(/\b(sunny|clear|cloudy|overcast|rainy|snowy|foggy|misty|thunderstorm|drizzle|partly cloudy|mostly cloudy)\b/gi,
+      `<span style="color: var(--theme-yellow); font-weight: bold;">$1</span>`)
+    .replace(/\b([NSEW]{1,3})\b/g, `<span style="color: var(--theme-purple);">$1</span>`)
+    .replace(/([☀☁⛅⛈🌧🌦🌩❄⛄🌫])/g, `<span style="color: var(--theme-bright-yellow);">$1</span>`);
+}
 
 function weatherFailure(error: unknown): string {
   if (!isNetError(error)) return 'weather: the forecast could not be read. Try again in a moment.';
@@ -218,25 +231,17 @@ function renderQuote(quote: Quote, ticker: string): string {
 
   const miniChart = createMiniChart(price, low, high);
 
-  // Determine layout type for responsive design
-  const useStackedLayout = shouldUseStackedLayout(600);
-  const availableWidth = getAvailableWidth();
-
-  // Create OHLC ASCII chart with mobile responsiveness
-  const createOHLCChart = (open: number, high: number, low: number, close: number, isMobile: boolean = false): string => {
+  // OHLC ASCII chart: about a dozen columns wide, so it fits any screen.
+  const createOHLCChart = (open: number, high: number, low: number, close: number): string => {
     const range = high - low;
     if (range === 0 || isNaN(range)) return 'No range data available';
 
     const formatPriceLabel = (label: string, price: number): string => {
       const priceStr = price.toFixed(2);
-      if (isMobile) {
-        // Shorter format for mobile to prevent overflow
-        return `${label}${priceStr.padStart(6, ' ')}`;
-      }
       return `${label}─${priceStr.padStart(8, ' ')}`;
     };
 
-    const chartHeight = isMobile ? 6 : 8; // Shorter chart on mobile
+    const chartHeight = 8;
     const normalize = (value: number) => Math.round(((value - low) / range) * chartHeight);
 
     const openPos = normalize(open);
@@ -279,7 +284,7 @@ function renderQuote(quote: Quote, ticker: string): string {
     return chart;
   };
 
-  const ohlcChart = createOHLCChart(open, high, low, price, useStackedLayout);
+  const ohlcChart = createOHLCChart(open, high, low, price);
 
   // Format the output
   let output = `<span style="color: var(--theme-bright-cyan); font-weight: bold;">${symbol}</span>`;
@@ -290,64 +295,32 @@ function renderQuote(quote: Quote, ticker: string): string {
   output += `<span style="color: var(--theme-white);">$${price.toFixed(2)}</span> `;
   output += `<span style="color: ${changeColor}; font-weight: bold;">${arrow} ${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n\n`;
 
-  // Use responsive layout based on screen size
+  // Side by side where there is room, the chart under the figures where there is not: the row
+  // wraps, so the layout follows the screen's width without measuring it.
+  output += `<div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-start;">\n`;
 
-  if (useStackedLayout) {
-    // Mobile/narrow screen layout - stack vertically
-    output += `<div style="display: flex; flex-direction: column; gap: 15px;">\n`;
+  output += `<div style="flex: 0 1 380px; min-width: 0;">`;
+  output += `<span style="color: var(--theme-yellow);">Day Range:</span> `;
+  output += `<span style="color: var(--theme-green);">$${low.toFixed(2)}</span> `;
+  output += `<span style="color: var(--theme-white);">${miniChart}</span> `;
+  output += `<span style="color: var(--theme-red);">$${high.toFixed(2)}</span>\n\n`;
 
-    // Stock info section
-    output += `<div style="width: 100%; max-width: ${availableWidth}px;">`;
-    output += `<span style="color: var(--theme-yellow);">Day Range:</span> `;
-    output += `<span style="color: var(--theme-green);">$${low.toFixed(2)}</span> `;
-    output += `<span style="color: var(--theme-white);">${miniChart}</span> `;
-    output += `<span style="color: var(--theme-red);">$${high.toFixed(2)}</span>\n\n`;
+  output += `<span style="color: var(--theme-cyan);">Open:</span> <span style="color: var(--theme-white);">$${open.toFixed(2)}</span>\n`;
+  output += `<span style="color: var(--theme-cyan);">Previous Close:</span> <span style="color: var(--theme-white);">$${previousClose.toFixed(2)}</span>\n`;
+  output += `<span style="color: var(--theme-cyan);">Volume:</span> <span style="color: var(--theme-white);">${volume}</span>\n\n`;
 
-    output += `<span style="color: var(--theme-cyan);">Open:</span> <span style="color: var(--theme-white);">$${open.toFixed(2)}</span>\n`;
-    output += `<span style="color: var(--theme-cyan);">Previous Close:</span> <span style="color: var(--theme-white);">$${previousClose.toFixed(2)}</span>\n`;
-    output += `<span style="color: var(--theme-cyan);">Volume:</span> <span style="color: var(--theme-white);">${volume}</span>\n\n`;
+  const trendFromOpen = price - open;
+  const trendFromPrevious = change;
 
-    const trendFromOpen = price - open;
-    const trendFromPrevious = change;
+  output += `<span style="color: var(--theme-purple);">Trends:</span>\n`;
+  output += `From Open: <span style="color: ${trendFromOpen >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromOpen.toFixed(2)} (${open > 0 ? ((trendFromOpen/open)*100).toFixed(2) : '0.00'}%)</span>\n`;
+  output += `From Previous: <span style="color: ${trendFromPrevious >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromPrevious.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n`;
+  output += `</div>\n`;
 
-    output += `<span style="color: var(--theme-purple);">Trends:</span>\n`;
-    output += `From Open: <span style="color: ${trendFromOpen >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromOpen.toFixed(2)} (${open > 0 ? ((trendFromOpen/open)*100).toFixed(2) : '0.00'}%)</span>\n`;
-    output += `From Previous: <span style="color: ${trendFromPrevious >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromPrevious.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n`;
-    output += `</div>\n`;
-
-    // OHLC Chart section - stacked below on mobile
-    output += `<div style="width: 100%; max-width: ${availableWidth}px; overflow-x: auto;">`;
-    output += `<span style="color: var(--theme-purple); font-weight: bold;">OHLC Chart:</span>\n`;
-    output += `<pre class="art" style="margin: 0;">${ohlcChart}</pre>`;
-    output += `</div>\n`;
-
-  } else {
-    // Desktop/wide screen layout - side by side
-    output += `<div style="display: flex; gap: 15px; align-items: flex-start;">\n`;
-
-    output += `<div style="flex: 0 0 380px;">`;
-    output += `<span style="color: var(--theme-yellow);">Day Range:</span> `;
-    output += `<span style="color: var(--theme-green);">$${low.toFixed(2)}</span> `;
-    output += `<span style="color: var(--theme-white);">${miniChart}</span> `;
-    output += `<span style="color: var(--theme-red);">$${high.toFixed(2)}</span>\n\n`;
-
-    output += `<span style="color: var(--theme-cyan);">Open:</span> <span style="color: var(--theme-white);">$${open.toFixed(2)}</span>\n`;
-    output += `<span style="color: var(--theme-cyan);">Previous Close:</span> <span style="color: var(--theme-white);">$${previousClose.toFixed(2)}</span>\n`;
-    output += `<span style="color: var(--theme-cyan);">Volume:</span> <span style="color: var(--theme-white);">${volume}</span>\n\n`;
-
-    const trendFromOpen = price - open;
-    const trendFromPrevious = change;
-
-    output += `<span style="color: var(--theme-purple);">Trends:</span>\n`;
-    output += `From Open: <span style="color: ${trendFromOpen >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromOpen.toFixed(2)} (${open > 0 ? ((trendFromOpen/open)*100).toFixed(2) : '0.00'}%)</span>\n`;
-    output += `From Previous: <span style="color: ${trendFromPrevious >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromPrevious.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n`;
-    output += `</div>\n`;
-
-    output += `<div style="flex: 1; padding-left: 10%;">`;
-    output += `<span style="color: var(--theme-purple); font-weight: bold;">OHLC Chart:</span>\n`;
-    output += `<pre class="art" style="margin: 0;">${ohlcChart}</pre>`;
-    output += `</div>\n`;
-  }
+  output += `<div style="flex: 1; padding-left: 10%;">`;
+  output += `<span style="color: var(--theme-purple); font-weight: bold;">OHLC Chart:</span>\n`;
+  output += `<pre class="art" style="margin: 0;">${ohlcChart}</pre>`;
+  output += `</div>\n`;
 
   output += `</div>\n`;
 
@@ -410,34 +383,21 @@ export const networkCommands = {
       !line.includes('wttr.in updates')
     );
 
-    // On mobile, show only the current weather header (first section) plus location
-    if (isMobileDevice()) {
-      // Find the location line (contains coordinates in brackets)
-      const locationLine = filteredLines.find(line =>
-        line.includes('Location:') && line.includes('[') && line.includes(']')
-      );
+    // The report opens with the current conditions (seven lines), then the forecast tables, which
+    // are about 125 columns wide, then the location. The tables are art: they keep their rows and
+    // scroll sideways inside themselves on a narrow screen, rather than wrapping into a jumble.
+    const locationAt = filteredLines.findIndex(line =>
+      line.includes('Location:') && line.includes('[') && line.includes(']')
+    );
+    const tableEnd = locationAt === -1 ? filteredLines.length : locationAt;
+    const current = filteredLines.slice(0, 7).join('\n');
+    const forecast = filteredLines.slice(7, tableEnd).join('\n');
+    const rest = filteredLines.slice(tableEnd).join('\n');
 
-      let mobileResult = filteredLines.slice(0, 7).join('\n');
-      if (locationLine) {
-        mobileResult += '\n\n' + locationLine;
-      }
-      result = mobileResult + '\n\n';
-    } else {
-      result = filteredLines.join('\n');
-    }
-
-    // Apply theme colors to the weather output
-    return result
-      .replace(/(\d+°[CF]?)/g, `<span style="color: var(--theme-bright-red); font-weight: bold;">$1</span>`)
-      .replace(/(\d+\s*(?:km\/h|mph|m\/s|kts))/g, `<span style="color: var(--theme-bright-blue); font-weight: bold;">$1</span>`)
-      .replace(/(\d+%)/g, `<span style="color: var(--theme-cyan);">$1</span>`)
-      .replace(/(\d+(?:\.\d+)?\s*mm)/g, `<span style="color: var(--theme-bright-cyan);">$1</span>`)
-      .replace(/(\d+(?:\.\d+)?\s*km)/g, `<span style="color: var(--theme-green);">$1</span>`)
-      .replace(/\b(sunny|clear|cloudy|overcast|rainy|snowy|foggy|misty|thunderstorm|drizzle|partly cloudy|mostly cloudy)\b/gi,
-        `<span style="color: var(--theme-yellow); font-weight: bold;">$1</span>`)
-      .replace(/\b([NSEW]{1,3})\b/g, `<span style="color: var(--theme-purple);">$1</span>`)
-      .replace(/([☀☁⛅⛈🌧🌦🌩❄⛄🌫])/g, `<span style="color: var(--theme-bright-yellow);">$1</span>`)
-      .replace(/^(.+)$/m, `<span style="color: var(--theme-bright-green); font-weight: bold;">$1</span>`);
+    // The report's title, its first line, is the one in bold green.
+    return colourWeather(current).replace(/^(.+)$/m, `<span style="color: var(--theme-bright-green); font-weight: bold;">$1</span>`) +
+      (forecast.trim() ? `<div class="art">${colourWeather(forecast)}</div>` : '\n') +
+      colourWeather(rest);
   },
 
   // A direct fetch: the browser allows it only when the site sends CORS headers, and curl says so
@@ -489,12 +449,10 @@ export const networkCommands = {
       data = data.substring(0, CURL_MAX_CHARS) + '\n\n[Output truncated - content too long]';
     }
 
-    // Use mobile-responsive styling
-    const isMobileLayout = shouldUseStackedLayout(600);
-    const maxWidth = isMobileLayout ? getAvailableWidth() : 'none';
+    // Wraps at the edge of the screen, whatever its width.
     const currentTheme = get(theme);
 
-    return `<pre style="color: ${currentTheme.foreground}; white-space: pre-wrap; word-wrap: break-word; word-break: break-word; max-width: ${maxWidth}px; overflow-wrap: break-word;">${escapeHtml(data)}</pre>`;
+    return `<pre style="color: ${currentTheme.foreground}; white-space: pre-wrap; word-wrap: break-word; word-break: break-word; max-width: 100%; overflow-wrap: break-word;">${escapeHtml(data)}</pre>`;
   },
 
   stock: async (args: string[], signal?: AbortSignal) => {

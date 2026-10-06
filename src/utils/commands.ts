@@ -2,7 +2,7 @@ import themes from '../../themes.json';
 import { history, commandHistory } from '../stores/history';
 import { systemCommands } from './commands/system';
 import { fileSystemCommands } from './commands/fileSystem';
-import { networkCommands } from './commands/network';
+import type { networkCommands as NetworkCommands } from './commands/network';
 import { qrCommands } from './commands/qr';
 import { theme } from '../stores/theme';
 import { cathode, cathodeModes, cathodeModeInfo, type CathodeMode } from '../stores/cathode';
@@ -11,6 +11,7 @@ import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from '.
 import { commandHelp, commandDescriptions } from './helpTexts';
 import { playBeep } from './beep';
 import { createInitialFileSystem } from './virtualFileSystem';
+import { errorLine } from './notice';
 import { REPO_URL } from '../constants';
 import { escapeHtml } from '../output/escape';
 
@@ -449,6 +450,40 @@ function getCommandHelp(command: string): string {
 
   return output;
 }
+
+// The network commands load the first time one of them runs, which keeps them out of the
+// initial chunk. Their names are known up front, so help and completion list them before then.
+type NetworkCommand = keyof typeof NetworkCommands;
+export const NETWORK_COMMAND_NAMES: readonly NetworkCommand[] = ['weather', 'curl', 'stock', 'speedtest'];
+
+let networkModule: Promise<typeof import('./commands/network')> | undefined;
+
+function loadNetworkCommands(): Promise<typeof import('./commands/network')> {
+  if (networkModule === undefined) {
+    const loading = import('./commands/network');
+    // A failed load (offline, say) is tried again the next time.
+    loading.catch(() => {
+      if (networkModule === loading) networkModule = undefined;
+    });
+    networkModule = loading;
+  }
+  return networkModule;
+}
+
+const networkCommands = Object.fromEntries(
+  NETWORK_COMMAND_NAMES.map((name) => [
+    name,
+    async (args: string[], signal?: AbortSignal): Promise<string> => {
+      // Undefined when platform/chunkReload has taken the failure over to reload the page.
+      const module = await loadNetworkCommands().catch(() => undefined);
+      if (!module) {
+        playBeep();
+        return errorLine(`${name}: could not load the command. Check the connection and try again.`);
+      }
+      return module.networkCommands[name](args, signal);
+    },
+  ]),
+);
 
 // Combine all commands
 export const commands: Record<string, (args: string[], signal?: AbortSignal) => Promise<string> | string> = {

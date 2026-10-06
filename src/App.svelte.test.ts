@@ -17,6 +17,20 @@ afterEach(() => {
 });
 
 describe('App', () => {
+  it('is a column of the screen frame, holding the transcript and the CRT overlay, then the dock slot', () => {
+    const { container } = render(App);
+    const shell = container.querySelector('.shell');
+    const [frame, dock] = Array.from(shell?.children ?? []);
+
+    expect(frame?.className).toContain('screen-frame');
+    expect(frame?.querySelector(':scope > main')).not.toBeNull();
+    expect(frame?.querySelector(':scope > .crt-overlay')).not.toBeNull();
+    expect(dock?.className).toContain('dock-slot');
+    expect(dock?.children).toHaveLength(0);
+    // Somewhere to tap to type: the prompt row and the space under it.
+    expect(container.querySelectorAll('main [data-prompt-area]')).toHaveLength(2);
+  });
+
   it('has one hidden heading, a labelled input and a polite log that is busy while a command runs', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));

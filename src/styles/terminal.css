@@ -48,3 +48,11 @@ textarea,
 .art-fit {
   font-size: min(1em, calc(100cqi / var(--art-cols, 1) / var(--ch-ratio)));
 }
+
+/* Output text wraps at the edge of the screen, breaking anywhere a line has no space; only art
+   keeps its rows. Lines and legacy output already wrap (ui/OutputView.svelte); a <pre> in legacy
+   output would otherwise keep the browser's white-space: pre. */
+.output pre:not(.art) {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

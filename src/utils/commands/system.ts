@@ -1,6 +1,5 @@
 import { theme } from '../../stores/theme';
 import { get } from 'svelte/store';
-import { isMobileDevice } from '../mobile';
 import { fetchJson, isNetError } from '../../services/net';
 import { escapeHtml } from '../../output/escape';
 import { cancelledNotice } from '../notice';
@@ -578,8 +577,9 @@ export const systemCommands = {
             `<div style="display: flex; margin-bottom: 1px;"><span style="color: var(--theme-cyan); font-weight: bold; width: 140px; display: inline-block;">${label}:</span><span style="color: var(--theme-white);">${label === 'WM Theme' ? value : escapeHtml(value)}</span></div>`
           ).join('');
           
-          const isMobile = isMobileDevice();
-          const result = `<div style="display: flex; ${isMobile ? 'flex-direction: column;' : 'gap: 30px;'}"><div style="${isMobile ? 'margin-bottom: 12px;' : 'flex-shrink: 0;'}">${logoHtml}${colourBlocksAscii}</div><div style="${isMobile ? '' : 'flex: 1; display: flex; flex-direction: column; justify-content: flex-start;'}">${userHostHtml}${infoHtml}</div></div>`;
+          // The logo and the details side by side where there is room, the details under the logo
+          // where there is not: the row wraps, so it follows the screen without measuring it.
+          const result = `<div style="display: flex; flex-wrap: wrap; gap: 12px 30px;"><div style="flex-shrink: 0; max-width: 100%;">${logoHtml}${colourBlocksAscii}</div><div style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; justify-content: flex-start;">${userHostHtml}${infoHtml}</div></div>`;
           
           resolve(result);
         } catch (error) {

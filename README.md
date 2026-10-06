@@ -56,10 +56,13 @@ src/
 ├── main.ts                       # Calls app/bootstrap.ts, then mounts the app, or shows a plain boot error
 ├── app/bootstrap.ts              # Composition root: host redirect, storage and its migrations, theme and CRT
 │                                 # applied to the page, stale-chunk reload, the banner
-├── App.svelte                    # Layout: scrollback, prompt, suggestions, running-command line
+├── App.svelte                    # The app shell: the screen frame (transcript, prompt, new-output pill,
+│                                 # CRT overlay) above an empty slot for the phone dock
 ├── app.css                       # Global styles and the CRT (cathode) effect
-├── styles/                       # tokens.css (Vesen Mono, --term-font, --term-fs, --term-lh) and
+├── styles/                       # tokens.css (Vesen Mono, --term-font, --term-fs, --term-lh),
 │                                 # terminal.css (base type, the .art class for banners, logos and charts)
+│                                 # and shell.css (the fixed shell sized to the visible viewport; phones
+│                                 # edge to edge, the desktop framed)
 ├── constants.ts                  # Repository URL and the prompt's host
 ├── global.d.ts                   # Build-time globals
 ├── components/
@@ -67,7 +70,7 @@ src/
 │   ├── Input.svelte              # The prompt: keys, history, Tab completion, running and cancelling commands
 │   ├── Ps1.svelte                # The prompt string
 │   ├── CommandSuggestionsRow.svelte  # Suggestions while typing
-│   └── Cathode.svelte            # CRT overlay
+│   └── Cathode.svelte            # CRT overlay, inside the screen frame
 ├── interfaces/                   # TypeScript interfaces (command, theme)
 ├── shell/                        # Contracts for the DOM-free shell kernel (docs/adr/0001-architecture.md)
 │   ├── types.ts                  # CommandSpec, command context, registry, history, TTY, streams, identity
@@ -81,7 +84,8 @@ src/
 ├── lib/colour.ts                  # Luminance and the light or dark color-scheme of a background
 ├── platform/                     # Browser-facing helpers: canonical host redirect, stale-chunk reload,
 │                                 # head.ts (theme colours, theme-color, favicon), crt.ts (CRT classes),
-│                                 # measure.ts (--input-scale for the 16px touch input)
+│                                 # measure.ts (--input-scale for the 16px touch input), viewport.ts
+│                                 # (--app-h, --app-top and --kb-h from visualViewport)
 ├── services/
 │   ├── net.ts                    # fetch with timeouts, cancelling, byte caps and typed network errors
 │   ├── storage.ts                # localStorage and sessionStorage with a memory fallback; one-time migrations
@@ -94,17 +98,19 @@ src/
 │   ├── legacy-html.ts            # use:legacyHtml, which rebuilds legacy HTML from the allowlist
 │   ├── span-style.ts             # Colour tokens to CSS, with role fallbacks
 │   ├── legacy-highlights.ts      # Moves the current-theme and CRT markers in earlier legacy listings
+│   ├── actions/                  # stickToBottom (the one scroll owner, with the new-output pill) and
+│   │                             # focusPolicy (when a click, tap or key puts the caret in the prompt)
 │   └── components/registry.ts    # Rich cards a component block may name (none yet)
 ├── testing/                      # Test setup
 └── utils/
-    ├── commands.ts               # Command table and dispatcher
+    ├── commands.ts               # Command table and dispatcher; the network commands load on first use
     ├── commands/                 # Commands: file system, network, system, QR
     ├── virtualFileSystem.ts      # The in-memory file system
     ├── helpTexts.ts              # Help for each command
     ├── commandSuggestions.ts     # Suggestions while typing
     ├── notice.ts                 # Shared notices (cancelled commands, errors)
     ├── beep.ts                   # The terminal bell
-    └── mobile.ts, osLogos.ts
+    └── osLogos.ts                # fastfetch's logos, loaded with it
 public/                           # README.md, history.txt and linux.txt for cat; 404.html; fonts/ (Vesen Mono
                                   # and its licence, OFL.txt); icons/ and og.png (generated, see scripts/);
                                   # manifest.webmanifest; probe/ (device capability probe, not linked from the app)

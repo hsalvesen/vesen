@@ -109,7 +109,7 @@
     command = "";
     historyIndex = -1;
 
-    input?.focus();
+    input?.focus({ preventScroll: true });
   }
 
   /** True when text is selected in the page or in the prompt, so Ctrl+C should copy it. */
@@ -139,6 +139,9 @@
 
   /** Runs one line as the current job and records it once it finishes or is interrupted. */
   async function runLine(line: string, commandName: string, args: string[]) {
+    // The prompt gets focus back afterwards only if it had it now: a phone's keyboard stays as
+    // the visitor left it.
+    const hadFocus = document.activeElement === input;
     command = "";
     historyIndex = -1;
     runningLine = line;
@@ -171,45 +174,13 @@
       $history = [...$history, { command: line, outputs: [output] }];
     }
 
-    input?.focus();
+    if (hadFocus) input?.focus({ preventScroll: true });
   }
 
+  // A keyboard and mouse can start typing at once. On touch, focus opens the soft keyboard over
+  // the page, so the prompt waits for a tap (ui/actions/focusPolicy.ts).
   onMount(() => {
-    input.focus();
-  });
-
-  $effect(() => {
-    if (input) {
-      // Scroll the main container to bottom after any history changes
-      const mainContainer = document.querySelector("main");
-      if (mainContainer) {
-        setTimeout(() => {
-          mainContainer.scrollTop = mainContainer.scrollHeight;
-        }, 0);
-      }
-
-      // Also ensure input is visible
-      input.scrollIntoView({ behavior: "smooth", block: "end" });
-    }
-  });
-
-  // Add a new effect that triggers specifically on history changes
-  $effect(() => {
-    // This effect runs whenever $history changes
-    $history;
-
-    // Scroll to bottom after DOM updates. Cleared if the history changes again first or the
-    // prompt unmounts, so no timer outlives the component.
-    const timer = setTimeout(() => {
-      const mainContainer = document.querySelector("main");
-      if (mainContainer) {
-        mainContainer.scrollTo({
-          top: mainContainer.scrollHeight,
-          behavior: "smooth",
-        });
-      }
-    }, 10);
-    return () => clearTimeout(timer);
+    if (!window.matchMedia?.("(pointer: coarse)").matches) input.focus({ preventScroll: true });
   });
 
   const handleKeyDown = async (event: KeyboardEvent) => {
@@ -564,15 +535,7 @@
   });
 </script>
 
-<svelte:window
-  onclick={(event) => {
-    // Only focus if we're not selecting text and not clicking on selectable content
-    if (!window.getSelection()?.toString() && event.target !== input) {
-      input.focus();
-    }
-  }}
-  onkeydown={handleKeyDown}
-/>
+<svelte:window onkeydown={handleKeyDown} />
 
 <div class="prompt-line">
   {#if isProcessing && runningLine}
@@ -597,8 +560,8 @@
 </div>
 
 <style>
-  /* Wraps, so a long running line pushes the type-ahead input onto its own line instead of
-     squeezing it to nothing. */
+  /* While a command runs, its line sits on the prompt row and the type-ahead input on the line
+     below, so the input is never squeezed to nothing. */
   .prompt-line {
     display: flex;
     flex-wrap: wrap;
@@ -622,7 +585,11 @@
     caret-color: var(--theme-cursor-color, currentColor);
   }
 
+  /* A whole line to itself, so the input is the same width with or without it. WebKit scrolls
+     a focused input back into view whenever its width changes, which would drag the transcript
+     to the bottom when the command finishes, away from a visitor reading further up. */
   .running-line {
+    flex-basis: 100%;
     color: var(--theme-white);
     white-space: pre-wrap;
     overflow-wrap: anywhere;

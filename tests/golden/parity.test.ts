@@ -59,7 +59,8 @@ function declarations(root: ParentNode): string[] {
 
 describe('legacy parity through the sanitiser', () => {
   it('covers every golden transcript', () => {
-    expect(files.length).toBeGreaterThanOrEqual(48);
+    // 20 cases the same at every width, plus 6 recorded at each of the three widths.
+    expect(files.length).toBeGreaterThanOrEqual(38);
   });
 
   it.each(files)('%s keeps its text and colours', (file) => {

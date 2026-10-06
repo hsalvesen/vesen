@@ -25,7 +25,7 @@ interface Viewport {
 /**
  * The plan's 40, 80 and 120 columns. The legacy code turns width into columns as
  * floor((innerWidth - 40) / 8), so these are exactly 360, 680 and 1000 px: a small phone, a
- * large phone or small tablet (the legacy code treats up to 768 px as mobile), and a desktop.
+ * large phone or small tablet, and a desktop.
  */
 const VIEWPORTS: readonly Viewport[] = [
   { width: 360, height: 780 },
@@ -70,11 +70,11 @@ const CASES: GoldenCase[] = [
   { slug: 'touch-two', lines: ['touch a b'] },
   { slug: 'qr', lines: ['qr https://www.vesen.app'] },
   { slug: 'unknown-command', lines: ['lss'] },
-  { slug: 'weather-oslo', lines: ['weather Oslo'], responsive: true },
-  { slug: 'stock-aapl', lines: ['stock AAPL'], responsive: true },
-  { slug: 'curl-httpbin', lines: ['curl https://httpbin.org/get'], responsive: true },
-  { slug: 'fastfetch-mac-chrome', lines: ['fastfetch'], responsive: true },
-  { slug: 'fastfetch-iphone-instagram', lines: ['fastfetch'], responsive: true, device: IPHONE_INSTAGRAM },
+  { slug: 'weather-oslo', lines: ['weather Oslo'] },
+  { slug: 'stock-aapl', lines: ['stock AAPL'] },
+  { slug: 'curl-httpbin', lines: ['curl https://httpbin.org/get'] },
+  { slug: 'fastfetch-mac-chrome', lines: ['fastfetch'] },
+  { slug: 'fastfetch-iphone-instagram', lines: ['fastfetch'], device: IPHONE_INSTAGRAM },
 ];
 
 interface HappyDOMApi {

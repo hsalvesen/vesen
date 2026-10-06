@@ -2,6 +2,7 @@
   Decorative CRT ("cathode") overlay. Every layer is always present in the DOM;
   which layers are visible and how they animate is controlled entirely by the
   `crt-*` classes applied to <html> by platform/crt.ts (see app.css).
+  It sits inside the screen frame and covers the terminal only, never the dock.
   The overlay is pointer-events:none so it never intercepts terminal input.
 -->
 <div class="crt-overlay" aria-hidden="true">

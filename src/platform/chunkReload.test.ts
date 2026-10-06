@@ -119,6 +119,20 @@ describe('installChunkReload', () => {
     expect(tab.reload).not.toHaveBeenCalled();
   });
 
+  it('never reloads offline, where the reload would fail too', () => {
+    const storage = new MemoryStorage();
+    const tab = fakeWindow(() => storage);
+    const announce = vi.fn();
+    const offline = { ...tab.target, navigator: { onLine: false } };
+    installChunkReload(offline, tab.session, '/assets/index-old.js', announce);
+
+    expect(tab.preloadError()).toBe(false);
+    expect(tab.reload).not.toHaveBeenCalled();
+    expect(announce).not.toHaveBeenCalled();
+    // Still free to reload for this build once the connection is back.
+    expect(storage.getItem(CHUNK_RELOAD_KEY)).toBeNull();
+  });
+
   it('stops listening once uninstalled', () => {
     const tab = fakeWindow(() => new MemoryStorage());
     const uninstall = installChunkReload(tab.target, tab.session, '/assets/index-old.js');

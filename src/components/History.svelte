@@ -35,23 +35,10 @@
     overflow-wrap: anywhere;
   }
 
-  /* OutputView wraps text (pre-wrap, overflow-wrap: anywhere) at every width. */
+  /* OutputView wraps text (pre-wrap, overflow-wrap: anywhere) at every width, and art scrolls
+     inside itself, so an output is never wider than the screen. */
   .command-output {
     max-width: 100%;
-  }
-
-  /* Phones keep the widths the old output wrapper gave them, until the app shell is sized to the
-     visible viewport. */
-  @media (max-width: 768px) {
-    .command-output {
-      max-width: calc(100vw - 64px);
-      overflow-x: hidden;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .command-output {
-      max-width: calc(100vw - 32px);
-    }
+    min-width: 0;
   }
 </style>

@@ -7,7 +7,7 @@ export const CHUNK_RELOAD_KEY = STORAGE_KEYS.chunkReload.key;
 export type ReloadTarget = Pick<
   Window,
   'addEventListener' | 'removeEventListener' | 'location' | 'requestAnimationFrame' | 'setTimeout'
->;
+> & { readonly navigator?: { readonly onLine: boolean } };
 
 /** What the visitor reads just before the reload. */
 export const UPDATE_NOTICE = 'vesen was updated, reloading…';
@@ -19,7 +19,9 @@ export const UPDATE_NOTICE = 'vesen was updated, reloading…';
  * `vite:preloadError`. The tab then says so through `announce` and reloads once, after the
  * next paint, to pick up the new build. Each build may reload at most once per tab session,
  * and never when sessionStorage is unavailable, so a chunk that is genuinely missing cannot
- * cause a reload loop. When no reload happens, the error reaches the importer as usual.
+ * cause a reload loop. Offline, a chunk fails because the network is down, and a reload would
+ * only swap the terminal for the browser's offline page, so none happens. When no reload
+ * happens, the error reaches the importer as usual.
  *
  * The transcript is not restored after the reload yet; that arrives with the session snapshot
  * (`vesen:session:v1`) in Phase 3.
@@ -36,7 +38,7 @@ export function installChunkReload(
   announce: (message: string) => void = () => {},
 ): () => void {
   const onPreloadError = (event: Event) => {
-    if (!claimReload(session, build)) return;
+    if (target.navigator?.onLine === false || !claimReload(session, build)) return;
     event.preventDefault();
     announce(UPDATE_NOTICE);
     // A frame callback runs before that frame paints; the timeout lets the notice paint first.

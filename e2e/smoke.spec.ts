@@ -55,7 +55,7 @@ test.describe('smoke', { tag: '@smoke' }, () => {
     await expect(prompt).toBeFocused();
   });
 
-  test('type-ahead stays visible beside a long running command', async ({ page }) => {
+  test('type-ahead stays visible under a long running command', async ({ page }) => {
     // httpbin accepts the request and never answers, so curl keeps running.
     await page.route('https://httpbin.org/**', () => {});
     await page.goto('/');

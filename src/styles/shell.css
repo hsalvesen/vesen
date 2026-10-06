@@ -1,0 +1,119 @@
+/* ==========================================================================
+   The app shell (docs/plan/04-phone-and-instagram.md, "App shell, viewport,
+   focus and scroll")
+   --------------------------------------------------------------------------
+   The page never scrolls. #app is fixed to the visible viewport, which
+   platform/viewport.ts measures into --app-h and --app-top; without them it
+   falls back to 100dvh, then 100vh. Inside it, App.svelte's .shell is a
+   column: the screen frame (the transcript and the CRT overlay) and the dock
+   slot. The transcript, <main>, is the only thing that scrolls.
+   ========================================================================== */
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+#app {
+  position: fixed;
+  top: var(--app-top, 0px);
+  left: 0;
+  right: 0;
+  height: var(--app-h, 100vh);
+}
+
+@supports (height: 100dvh) {
+  #app {
+    height: var(--app-h, 100dvh);
+  }
+}
+
+/* Desktop: the framed monitor, with a 16px gutter around it. */
+.shell {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+
+.screen-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  border: 2px solid var(--theme-green);
+  border-radius: 6px;
+  background: var(--theme-background);
+  color: var(--theme-foreground);
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Room for a classic scrollbar from the start, so the text does not reflow, and a focused
+     input is not scrolled back into view, when the transcript first overflows. */
+  scrollbar-gutter: stable;
+  padding: 8px;
+}
+
+.scrollback {
+  flex: none;
+  min-width: 0;
+}
+
+/* Fills the rest of the screen under the prompt, as somewhere to tap to type. */
+.tap-to-type {
+  flex: 1 0 auto;
+}
+
+.dock-slot {
+  flex: none;
+}
+
+@media (min-width: 640px) {
+  .screen {
+    padding: 16px;
+  }
+}
+
+/* Phones, portrait or landscape: edge to edge, with only a thin rule along the top. The safe
+   areas keep clear of the notch and the home indicator; the keyboard covers the indicator, so
+   its inset goes while the keyboard is open. */
+@media (max-width: 639px), (pointer: coarse) and (max-width: 767px), (pointer: coarse) and (max-height: 479px) {
+  .shell {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+  }
+
+  html.kb-open .shell {
+    padding-bottom: 0;
+  }
+
+  .screen-frame {
+    border-width: 1px 0 0;
+    border-radius: 0;
+  }
+
+  .screen {
+    padding: 8px 12px;
+  }
+}
+
+/* A little room under the prompt on touch, so it is not pressed against the bottom edge. */
+@media (pointer: coarse) {
+  .tap-to-type {
+    min-height: 2em;
+  }
+}

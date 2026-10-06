@@ -97,9 +97,10 @@ describe('a running command', () => {
     render(Input);
     await type('stock AAPL');
     await fireEvent.keyDown(prompt(), { key: 'Enter' });
+    // The network commands load on first use, then make the request.
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
     await settle();
 
-    expect(fetch).toHaveBeenCalledTimes(1);
     expect(screen.getByText('stock AAPL')).toBeInTheDocument();
     expect(get(history)).toEqual([]);
 
@@ -146,5 +147,36 @@ describe('a running command', () => {
     expect(get(history)).toHaveLength(1);
     expect(lastEntry()?.command).toBe('weather Oslo');
     expect(prompt().value).toBe('ls');
+  });
+});
+
+describe('focus', () => {
+  it('starts in the prompt with a mouse and keyboard', () => {
+    render(Input);
+    expect(document.activeElement).toBe(prompt());
+  });
+
+  it('waits for a tap on touch, where focus would open the keyboard over the page', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) => ({ matches: query === '(pointer: coarse)' }) as MediaQueryList,
+    );
+    render(Input);
+    expect(document.activeElement).not.toBe(prompt());
+  });
+
+  it('comes back to the prompt after a command only if it was there at submit', async () => {
+    render(Input);
+    await type('echo one');
+    await fireEvent.keyDown(prompt(), { key: 'Enter' });
+    await settle();
+    expect(lastEntry()?.command).toBe('echo one');
+    expect(document.activeElement).toBe(prompt());
+
+    prompt().blur();
+    await type('echo two');
+    await fireEvent.keyDown(prompt(), { key: 'Enter' });
+    await settle();
+    expect(lastEntry()?.command).toBe('echo two');
+    expect(document.activeElement).not.toBe(prompt());
   });
 });

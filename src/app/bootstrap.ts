@@ -7,6 +7,7 @@ import { installChunkReload } from '../platform/chunkReload';
 import { applyTheme } from '../platform/head';
 import { canonicalRedirect } from '../platform/hosts';
 import { startMeasuring } from '../platform/measure';
+import { startViewport } from '../platform/viewport';
 import { createStorage, runMigrations } from '../services/storage';
 import type { StorageService } from '../services/types';
 import { cathode, cathodeModes, DEFAULT_CATHODE_MODE, persistCathode } from '../stores/cathode';
@@ -67,6 +68,8 @@ export function bootstrap({ window: win, build, banner }: BootOptions): Booted |
     }),
     // The touch input's scale and the font's cell width, as CSS variables.
     startMeasuring(win),
+    // The shell's height and position: the part of the page above the toolbars and keyboard.
+    startViewport(win),
   ];
 
   history.set([{ command: 'banner', outputs: [banner()] }]);

@@ -21,7 +21,7 @@ On CI (`CI=true`) a missing golden fails instead of being written.
 
 `__snapshots__/legacy/<case>/<variant>.html` and `.txt`, where `<case>` is a slug from `CASES` in `legacy.test.ts`.
 
-- **Variant `360`, `680`, `1000`:** the window width, for output that depends on it. The legacy code turns width into columns as `floor((innerWidth - 40) / 8)`, so these widths give exactly the plan's 40, 80 and 120 columns. (`history` clamps columns to 100, so it lays out its 120-column golden at 100.) The legacy code also treats any width up to 768 px as a phone, so the 680 variant takes its mobile layout where a command has one.
+- **Variant `360`, `680`, `1000`:** the window width, for output that depends on it. The legacy code turns width into columns as `floor((innerWidth - 40) / 8)`, so these widths give exactly the plan's 40, 80 and 120 columns. (`history` clamps columns to 100, so it lays out its 120-column golden at 100.) Only `help`, `ls` and `history` still lay out columns from the width; weather, stock, curl and fastfetch wrap with CSS instead, so they are recorded once.
 - **Variant `all`:** the output is identical at all three widths, and the test asserts that. If a change makes such a case width-dependent on purpose, mark it `responsive: true`.
 - **`rendered-session/<width>.html`:** the markup `History.svelte` renders after boot, `ls`, `cd documents` and `pwd`, one history entry per line. Svelte's comment anchors and scoped `svelte-<hash>` classes are stripped.
 
