@@ -1,17 +1,14 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { history, commandHistory } from "../stores/history";
-  import { speedtestPhase } from "../stores/history";
-  import { theme } from "../stores/theme";
-  import { commands } from "../utils/commands";
+  import { onMount, untrack } from "svelte";
+  import { history, commandHistory, speedtestPhase } from "../stores/history";
+  import { commands, processCommand } from "../utils/commands";
   import { virtualFileSystem, currentPath } from "../utils/virtualFileSystem";
-  import { processCommand } from "../utils/commands";
-  import { track } from "../utils/tracking";
-  import { get } from "svelte/store";
   import themes from "../../themes.json";
   import { cathodeModes } from "../stores/cathode";
+  import { interruptJob, runJob } from "../stores/job";
+  import { escapeHtml } from "../output/escape";
+  import { cancelledNotice, notice } from "../utils/notice";
 
-  // Use $props() to declare props with $bindable()
   let {
     isPasswordMode = $bindable(),
     isProcessing = $bindable(false),
@@ -24,28 +21,12 @@
   let pendingSudoCommand = $state("");
   let passwordInput = $state("");
 
-  // Abort controller for cancelling long-running commands
-  let currentAbortController: AbortController | null = null;
-  let currentCommandName = $state("");
-
-  // Loading animation state - remove local loadingText since it's now a prop
-  let loadingInterval: ReturnType<typeof setInterval> | null = null;
+  // The line that is running. It leaves the input on Enter, so the input collects type-ahead.
+  let runningLine = $state("");
+  let runningName = $state("");
 
   // Loading animation frames
   const loadingFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-  let frameIndex = 0;
-
-  // Getter/setter for input binding
-  let displayValue = {
-    get value() {
-      return isProcessing && !isPasswordMode ? loadingText : command;
-    },
-    set value(newValue: string) {
-      if (!isProcessing || isPasswordMode) {
-        command = newValue;
-      }
-    },
-  };
 
   // Helper function to resolve file paths for completion
   const getCompletions = (
@@ -119,10 +100,7 @@
     history.update((h) => {
       if (h.length === 0) return h;
       const last = { ...h[h.length - 1] };
-      const outputs = [
-        ...last.outputs,
-        `<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 6px 0; margin-bottom: 20px;"><div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div><div style="position: relative;"><span style="color: var(--theme-white);">sudo: password entry cancelled</span></div></div>`,
-      ];
+      const outputs = [...last.outputs, notice("sudo: password entry cancelled")];
       const newLast = { ...last, outputs };
       return [...h.slice(0, -1), newLast];
     });
@@ -131,29 +109,73 @@
     command = "";
     historyIndex = -1;
 
-    // Ensure input is re-enabled and focused
-    if (input) {
-      input.disabled = false;
-      input.focus();
+    input?.focus();
+  }
+
+  /** True when text is selected in the page or in the prompt, so Ctrl+C should copy it. */
+  function hasSelection(): boolean {
+    if (window.getSelection()?.toString()) return true;
+    return (
+      document.activeElement === input &&
+      input.selectionStart !== null &&
+      input.selectionStart !== input.selectionEnd
+    );
+  }
+
+  /** Ctrl+C: cancels the sudo prompt, interrupts the running command, or abandons the line. */
+  function interrupt() {
+    if (isPasswordMode) {
+      interruptSudoPasswordPrompt();
+    } else if (isProcessing) {
+      // runLine sees the interrupt at once and prints the cancelled notice.
+      interruptJob();
+    } else {
+      // Like bash: echo the abandoned line with ^C under a fresh prompt. It is not kept in history.
+      $history = [...$history, { command: `${command}^C`, outputs: [] }];
+      command = "";
+      historyIndex = -1;
     }
+  }
+
+  /** Runs one line as the current job and records it once it finishes or is interrupted. */
+  async function runLine(line: string, commandName: string, args: string[]) {
+    command = "";
+    historyIndex = -1;
+    runningLine = line;
+    runningName = commandName;
+    isProcessing = true;
+
+    let output: string;
+    let interrupted = false;
+    try {
+      const outcome = await runJob(commandName, (signal) => processCommand(line, signal));
+      interrupted = outcome.status === "interrupted";
+      output = outcome.status === "done" ? outcome.value : cancelledNotice(commandName);
+    } catch (error) {
+      output = `Error: ${escapeHtml(String(error))}`;
+    } finally {
+      runningLine = "";
+      runningName = "";
+      isProcessing = false;
+    }
+
+    // Arrow-key history keeps everything except reset, which clears it.
+    if (commandName !== "reset") {
+      $commandHistory = [...$commandHistory, line];
+    }
+
+    // clear and reset leave the screen to themselves unless they were asked for help.
+    const hasHelpFlag = args.includes("--help") || args.includes("-h");
+    const skipsDisplay = (commandName === "clear" || commandName === "reset") && !hasHelpFlag;
+    if (interrupted || !skipsDisplay) {
+      $history = [...$history, { command: line, outputs: [output] }];
+    }
+
+    input?.focus();
   }
 
   onMount(() => {
     input.focus();
-
-    // Global Ctrl+C listener (works even if input loses focus)
-    const onGlobalKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.key === "c" && isPasswordMode) {
-        event.preventDefault();
-        interruptSudoPasswordPrompt();
-      }
-    };
-    window.addEventListener("keydown", onGlobalKeyDown);
-
-    // Cleanup on destroy
-    return () => {
-      window.removeEventListener("keydown", onGlobalKeyDown);
-    };
   });
 
   $effect(() => {
@@ -188,42 +210,18 @@
     }, 10);
   });
 
-  // handleKeyDown() function
   const handleKeyDown = async (event: KeyboardEvent) => {
-    // Handle Ctrl+C globally (even when input is disabled)
     if (event.ctrlKey && event.key === "c") {
+      // With text selected, let the browser copy it.
+      if (hasSelection()) return;
       event.preventDefault();
+      interrupt();
+      return;
+    }
 
-      // Ensure sudo password prompt is cancelled immediately
-      if (isPasswordMode) {
-        interruptSudoPasswordPrompt();
-        return;
-      }
-
-      let didAbort = false;
-      if (
-        isProcessing &&
-        currentAbortController &&
-        ["curl", "weather", "stock", "fastfetch", "speedtest"].includes(
-          currentCommandName,
-        )
-      ) {
-        currentAbortController.abort();
-        currentAbortController = null;
-        currentCommandName = "";
-        didAbort = true;
-      }
-
-      if (!isProcessing && !didAbort) {
-        // If not processing a command, add a new prompt line
-        if (command.trim()) {
-          $history = [...$history, { command, outputs: [""] }];
-        } else {
-          $history = [...$history, { command: "", outputs: [""] }];
-        }
-        command = "";
-        historyIndex = -1;
-      }
+    if (event.key === "Escape" && (isProcessing || isPasswordMode)) {
+      event.preventDefault();
+      interrupt();
       return;
     }
 
@@ -234,13 +232,14 @@
       return;
     }
 
-    // For all other keys, only handle if input is not disabled/processing
-    if (isProcessing && !isPasswordMode) {
+    // While a command runs, keys type ahead into the input. Enter waits for the prompt, and Tab
+    // is held so focus stays in the input.
+    if (isProcessing) {
+      if (event.key === "Enter" || event.key === "Tab") event.preventDefault();
       return;
     }
 
-    // Enter key handler in Input.svelte
-    if (event.key === "Enter" && !isProcessing) {
+    if (event.key === "Enter") {
       if (isPasswordMode) {
         isPasswordMode = false;
         passwordInput = "";
@@ -261,10 +260,6 @@
 
       const [commandName, ...args] = command.split(" ");
 
-      if (import.meta.env.VITE_TRACKING_ENABLED === "true") {
-        track(commandName, ...args);
-      }
-
       // Special handling for sudo
       if (commandName === "sudo" && args.length > 0) {
         const hasHelpFlag = args.includes("--help") || args.includes("-h");
@@ -284,77 +279,7 @@
         }
       }
 
-      // Store the current command before processing
-      const currentCommand = command;
-
-      // Set processing state to true but DON'T clear the command yet
-      isProcessing = true;
-
-      // Set up abort controller for interruptible commands
-      if (
-        ["curl", "weather", "stock", "fastfetch", "speedtest"].includes(
-          commandName,
-        )
-      ) {
-        currentAbortController = new AbortController();
-        currentCommandName = commandName;
-      }
-
-      // Disable the input during async operations
-      if (input) {
-        input.disabled = true;
-      }
-
-      try {
-        // Use processCommand and wait for completion
-        const output = await processCommand(
-          currentCommand,
-          currentAbortController,
-        );
-
-        // Only skip display history for clear/reset when NOT showing help
-        const hasHelpFlag = args.includes("--help") || args.includes("-h");
-        const shouldSkipDisplayHistory =
-          (commandName === "clear" || commandName === "reset") && !hasHelpFlag;
-
-        // Always add to command navigation history (for arrow keys), except for reset
-        if (commandName !== "reset") {
-          $commandHistory = [...$commandHistory, currentCommand];
-        }
-
-        // Only add to display history if not a clear/reset command
-        if (!shouldSkipDisplayHistory) {
-          $history = [
-            ...$history,
-            { command: currentCommand, outputs: [output] },
-          ];
-        }
-      } catch (error) {
-        // Handle any errors
-        $history = [
-          ...$history,
-          { command: currentCommand, outputs: [`Error: ${error}`] },
-        ];
-      } finally {
-        // Clear the command input only after processing is complete
-        command = "";
-
-        // Reset history index to start from the most recent command
-        historyIndex = -1;
-
-        // Clean up abort controller
-        currentAbortController = null;
-        currentCommandName = "";
-
-        // Set processing state to false to show the prompt again
-        isProcessing = false;
-
-        // Re-enable the input after command completion
-        if (input) {
-          input.disabled = false;
-          input.focus();
-        }
-      }
+      await runLine(command, commandName, args);
     } else if (isPasswordMode) {
       // Handle password input (hide characters)
       if (event.key === "Backspace") {
@@ -614,31 +539,26 @@
     }
   };
 
-  // Effect to handle loading animation
-  // Loading animation effect
+  // The spinner under the prompt while a command runs; speedtest reports its phase.
   $effect(() => {
-    if (isProcessing) {
-      frameIndex = 0;
-      loadingInterval = setInterval(() => {
-        frameIndex = (frameIndex + 1) % loadingFrames.length;
-        const phase = $speedtestPhase;
-        const isSpeedtest = currentCommandName === "speedtest";
-        const label = isSpeedtest && phase ? phase : "Processing...";
-        loadingText = `${loadingFrames[frameIndex]} ${label}`;
-      }, 100);
-    } else {
-      if (loadingInterval) {
-        clearInterval(loadingInterval);
-        loadingInterval = null;
-      }
+    if (!isProcessing) {
       loadingText = "";
+      return;
     }
 
-    return () => {
-      if (loadingInterval) {
-        clearInterval(loadingInterval);
-      }
+    let frame = 0;
+    const render = () => {
+      const phase = $speedtestPhase;
+      const label = runningName === "speedtest" && phase ? phase : "Processing…";
+      loadingText = `${loadingFrames[frame]} ${label}`;
     };
+    untrack(render);
+    const timer = setInterval(() => {
+      frame = (frame + 1) % loadingFrames.length;
+      render();
+    }, 100);
+
+    return () => clearInterval(timer);
   });
 </script>
 
@@ -652,24 +572,33 @@
   onkeydown={handleKeyDown}
 />
 
-<input
-  bind:this={input}
-  bind:value={command}
-  class="bg-transparent outline-none flex-1 command-input"
-  style="color: var(--theme-white); opacity: 1;"
-  type={isPasswordMode ? "password" : "text"}
-  placeholder={isPasswordMode ? "" : ""}
-  autocomplete="off"
-  spellcheck="false"
-  autocapitalize="off"
-  autocorrect="off"
-  inputmode="text"
-  disabled={isProcessing}
-  readonly={isProcessing}
-/>
+<div class="prompt-line">
+  {#if isProcessing && runningLine}
+    <span class="prompt-text running-line">{runningLine}</span>
+  {/if}
+  <input
+    bind:this={input}
+    bind:value={command}
+    class="bg-transparent outline-none flex-1 min-w-0 prompt-text command-input"
+    style="color: var(--theme-white); opacity: 1;"
+    type={isPasswordMode ? "password" : "text"}
+    autocomplete="off"
+    spellcheck="false"
+    autocapitalize="off"
+    autocorrect="off"
+    inputmode="text"
+  />
+</div>
 
 <style>
-  .command-input {
+  .prompt-line {
+    display: flex;
+    align-items: center;
+    gap: 1ch;
+    min-width: 0;
+  }
+
+  .prompt-text {
     font-family: monospace;
     font-size: 0.75rem; /* text-xs */
     letter-spacing: 0;
@@ -680,26 +609,22 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  .running-line {
+    color: var(--theme-white);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+
   @media (min-width: 640px) {
-    .command-input {
+    .prompt-text {
       font-size: 0.875rem; /* sm:text-sm */
     }
   }
 
   @media (min-width: 768px) {
-    .command-input {
+    .prompt-text {
       font-size: 1rem; /* md:text-base */
     }
-  }
-
-  input:disabled {
-    color: var(--theme-white) !important;
-    opacity: 1 !important;
-    -webkit-text-fill-color: var(--theme-white) !important;
-  }
-
-  input:readonly {
-    color: var(--theme-cyan) !important;
-    -webkit-text-fill-color: var(--theme-cyan) !important;
   }
 </style>

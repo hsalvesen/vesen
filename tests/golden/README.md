@@ -33,7 +33,7 @@ On CI (`CI=true`) a missing golden fails instead of being written.
 ## What keeps them deterministic
 
 - Each session is a fresh page load. Storage is emptied, `vi.resetModules()` runs, and the legacy modules are imported again, because the file system and current path are module singletons.
-- Lines run the way `Input.svelte`'s Enter handler runs them. Network commands get an `AbortController`, and the history stores are updated, so `history` sees earlier lines.
+- Lines run the way `Input.svelte`'s Enter handler runs them. Every command gets an abort signal, and the history stores are updated, so `history` sees earlier lines.
 - The clock is frozen at 2026-10-06 09:00 Sydney time, `Math.random()` returns 0.5, `__APP_VERSION__` reads `0.0.0-golden`, numbers format as `en-US`, and the page URL is `https://www.vesen.app/`.
 - The browser is a fixed device from `tests/support/devices.ts`. Chrome on a Mac is the default, and one `fastfetch` case uses Instagram's in-app browser on an iPhone.
 - `fetch` is answered by `tests/support/net.ts`. Same-origin paths come from `public/`, and network calls come from `tests/fixtures/net/`. Any request without a fixture fails the test.

@@ -29,9 +29,6 @@ const VIEWPORTS: readonly Viewport[] = [
   { width: 1280, height: 800 },
 ];
 
-/** Input.svelte hands these commands an AbortController so ^C can cancel them. */
-const ABORTABLE = ['curl', 'weather', 'stock', 'fastfetch', 'speedtest'];
-
 interface GoldenCase {
   /** Folder under __snapshots__/legacy. */
   slug: string;
@@ -144,9 +141,9 @@ async function boot(viewport: Viewport): Promise<LegacyTerminal> {
   return {
     async type(line) {
       const [name = '', ...args] = line.split(' ');
-      const controller = ABORTABLE.includes(name) ? new AbortController() : null;
+      // Input.svelte runs every line as a job with its own abort signal.
       const ringsBefore = bells;
-      const html = await processCommand(line, controller);
+      const html = await processCommand(line, new AbortController().signal);
 
       // Mirrors Input.svelte's Enter handler: reset stays out of the arrow-key history, and
       // clear and reset stay off the screen unless they were asked for help.

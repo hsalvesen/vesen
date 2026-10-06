@@ -122,11 +122,9 @@ const terminalCommands = {
     currentPath.length = 0;
     currentPath.push('home', 'user');
 
-    // Clear display history
+    // Clear display history and the arrow-key history
     history.set([]);
-
-    // Set command history to only contain banner
-    commandHistory.set(['banner']);
+    commandHistory.set([]);
 
     // Restore virtual file system to original state
     const initialFS = createInitialFileSystem();
@@ -315,7 +313,8 @@ function findSimilarCommand(inputCommand: string): string | null {
   return partialMatch || null;
 }
 
-export function processCommand(input: string, abortController?: AbortController | null): string | Promise<string> {
+/** Runs one line. `signal` aborts when the user interrupts; long-running commands pass it to their requests. */
+export function processCommand(input: string, signal?: AbortSignal): string | Promise<string> {
   const args = input.trim().split(/\s+/);
   const command = args[0];
   const hasHelpFlag = args.includes('--help') || args.includes('-h');
@@ -339,11 +338,7 @@ export function processCommand(input: string, abortController?: AbortController 
 
   // Execute the actual command if it exists (exact match)
   if (commands[command]) {
-    // Pass abort controller to network commands and fastfetch
-    if (['curl', 'weather', 'stock', 'fastfetch', 'speedtest'].includes(command) && abortController) {
-      return commands[command](args.slice(1), abortController);
-    }
-    return commands[command](args.slice(1));
+    return commands[command](args.slice(1), signal);
   }
 
   // Try to find a similar command with different case
@@ -455,7 +450,7 @@ function getCommandHelp(command: string): string {
 }
 
 // Combine all commands
-export const commands: Record<string, (args: string[], abortController?: AbortController) => Promise<string> | string> = {
+export const commands: Record<string, (args: string[], signal?: AbortSignal) => Promise<string> | string> = {
   ...systemCommands,
   ...fileSystemCommands,
   ...networkCommands,

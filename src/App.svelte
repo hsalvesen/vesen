@@ -5,6 +5,7 @@
   import CommandSuggestionsRow from './components/CommandSuggestionsRow.svelte';
   import Cathode from './components/Cathode.svelte';
   import { theme } from './stores/theme';
+  import { interruptJob } from './stores/job';
   // Importing the store ensures the CRT effect's <html> classes are applied on
   // first paint (restoring a persisted mode without a flash of the flat theme).
   import './stores/cathode';
@@ -16,13 +17,19 @@
   let mainElement: HTMLElement;
   let suggestionsScrollTop = $state<number | null>(null);
 
+  // Phones get a tap target; keyboards get the shortcut. Both can click the line.
+  const cancelHint =
+    typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches
+      ? 'tap to cancel'
+      : 'Ctrl+C to cancel';
+
   const onSuggestionsShow = () => {
     if (!mainElement) return;
     if (suggestionsScrollTop === null) {
       suggestionsScrollTop = mainElement.scrollTop;
     }
     setTimeout(() => {
-      mainElement.scrollTop = mainElement.scrollHeight;
+      if (mainElement) mainElement.scrollTop = mainElement.scrollHeight;
     }, 0);
   };
 
@@ -32,7 +39,7 @@
     const restoreTo = suggestionsScrollTop;
     suggestionsScrollTop = null;
     setTimeout(() => {
-      mainElement.scrollTop = restoreTo;
+      if (mainElement) mainElement.scrollTop = restoreTo;
     }, 0);
   };
 
@@ -42,7 +49,7 @@
       suggestionsScrollTop = mainElement.scrollTop;
     }
     setTimeout(() => {
-      mainElement.scrollTop = mainElement.scrollHeight;
+      if (mainElement) mainElement.scrollTop = mainElement.scrollHeight;
     }, 0);
   };
 
@@ -50,22 +57,11 @@
   $effect(() => {
     if (isProcessing && loadingText && mainElement) {
       setTimeout(() => {
-        mainElement.scrollTop = mainElement.scrollHeight;
+        if (mainElement) mainElement.scrollTop = mainElement.scrollHeight;
       }, 0);
     }
   });
 </script>
-
-<svelte:head>
-  {#if import.meta.env.VITE_TRACKING_ENABLED === 'true'}
-    <script
-      async
-      defer
-      data-website-id={import.meta.env.VITE_TRACKING_SITE_ID}
-      src={import.meta.env.VITE_TRACKING_URL}
-    ></script>
-  {/if}
-</svelte:head>
 
 <main
   bind:this={mainElement}
@@ -85,13 +81,37 @@
     <CommandSuggestionsRow {command} {isProcessing} {isPasswordMode} on:show={onSuggestionsShow} on:hide={onSuggestionsHide} on:update={onSuggestionsUpdate} />
 
     {#if isProcessing && loadingText}
-      <div class="flex flex-row items-center gap-1 mt-1">
-        <span class="font-mono" style="color: var(--theme-cyan);">{loadingText}</span>
-      </div>
+      <!-- pointerdown is cancelled so the tap does not take focus, and the keyboard, from the prompt. -->
+      <button
+        type="button"
+        class="processing font-mono mt-1"
+        aria-label="Cancel running command"
+        onpointerdown={(event) => event.preventDefault()}
+        onclick={() => interruptJob()}
+      >{loadingText} ({cancelHint})</button>
     {/if}
   </div>
 </main>
 
 <Cathode />
+
+<style>
+  .processing {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    color: var(--theme-cyan);
+    cursor: pointer;
+  }
+
+  @media (pointer: coarse) {
+    .processing {
+      min-height: 44px;
+    }
+  }
+</style>
 
 

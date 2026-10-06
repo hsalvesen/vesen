@@ -65,3 +65,6 @@ $RECYCLE.BIN/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Vercel (not used; the site is on Firebase Hosting)
+.vercel

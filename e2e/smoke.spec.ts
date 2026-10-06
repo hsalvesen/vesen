@@ -32,4 +32,24 @@ test.describe('smoke', { tag: '@smoke' }, () => {
 
     expect(errors).toEqual([]);
   });
+
+  test('a hung request is cancelled from the processing line, and the prompt stays usable', async ({ page }) => {
+    // The stock proxy accepts the request and never answers.
+    await page.route('https://api.allorigins.win/**', () => {});
+    await page.goto('/');
+
+    const prompt = page.locator('input.command-input');
+    await prompt.click();
+    await prompt.fill('stock AAPL');
+    await prompt.press('Enter');
+
+    const cancel = page.getByRole('button', { name: 'Cancel running command' });
+    await expect(cancel).toBeVisible();
+    await expect(prompt).toBeEnabled();
+    await cancel.click();
+
+    await expect(page.getByText('Stock request cancelled')).toBeVisible();
+    await expect(cancel).toBeHidden();
+    await expect(prompt).toBeFocused();
+  });
 });

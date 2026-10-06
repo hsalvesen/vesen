@@ -200,234 +200,234 @@ export function createInitialFileSystem(): VirtualFile {
                     filePath: '/linux.txt'
                   }
                 }
-              }
-            }
-          },
-          'projects': {
-            name: 'projects',
-            type: 'directory',
-            children: {
-              'vesen': {
-                name: 'vesen',
+              },
+              'projects': {
+                name: 'projects',
                 type: 'directory',
                 children: {
-                  'info.txt': {
-                    name: 'info.txt',
-                    type: 'file',
-                    content: 'Vesen Terminal\n\nA web-based terminal built with Svelte and TypeScript.\n\nRepository: https://github.com/hsalvesen/vesen'
+                  'vesen': {
+                    name: 'vesen',
+                    type: 'directory',
+                    children: {
+                      'info.txt': {
+                        name: 'info.txt',
+                        type: 'file',
+                        content: 'Vesen Terminal\n\nA web-based terminal built with Svelte and TypeScript.\n\nRepository: https://github.com/hsalvesen/vesen'
+                      }
+                    }
+                  },
+                  'portfolio': {
+                    name: 'portfolio',
+                    type: 'directory',
+                    children: {
+                      'index.html': {
+                        name: 'index.html',
+                        type: 'file',
+                        content: '<!DOCTYPE html>\n<html>\n<head><title>Portfolio</title></head>\n<body><h1>My Portfolio</h1></body>\n</html>'
+                      }
+                    }
+                  },
+                  'learning': {
+                    name: 'learning',
+                    type: 'directory',
+                    children: {
+                      'javascript-basics.js': {
+                        name: 'javascript-basics.js',
+                        type: 'file',
+                        content: '// JavaScript learning examples\nconsole.log("Hello, World!");\n\nfunction greet(name) {\n  return `Hello, ${name}!`;\n}'
+                      }
+                    }
                   }
                 }
               },
-              'portfolio': {
-                name: 'portfolio',
+              'desktop': {
+                name: 'desktop',
                 type: 'directory',
                 children: {
-                  'index.html': {
-                    name: 'index.html',
+                  'shortcuts.txt': {
+                    name: 'shortcuts.txt',
                     type: 'file',
-                    content: '<!DOCTYPE html>\n<html>\n<head><title>Portfolio</title></head>\n<body><h1>My Portfolio</h1></body>\n</html>'
+                    content: 'Desktop shortcuts and quick access files'
                   }
                 }
               },
-              'learning': {
-                name: 'learning',
+              'downloads': {
+                name: 'downloads',
                 type: 'directory',
                 children: {
-                  'javascript-basics.js': {
-                    name: 'javascript-basics.js',
+                  'software.tar.gz': {
+                    name: 'software.tar.gz',
                     type: 'file',
-                    content: '// JavaScript learning examples\nconsole.log("Hello, World!");\n\nfunction greet(name) {\n  return `Hello, ${name}!`;\n}'
+                    content: 'Compressed archive file'
+                  },
+                  'README-download.txt': {
+                    name: 'README-download.txt',
+                    type: 'file',
+                    content: 'Downloaded files and packages'
                   }
                 }
-              }
-            }
-          },
-          'desktop': {
-            name: 'desktop',
-            type: 'directory',
-            children: {
-              'shortcuts.txt': {
-                name: 'shortcuts.txt',
-                type: 'file',
-                content: 'Desktop shortcuts and quick access files'
-              }
-            }
-          },
-          'downloads': {
-            name: 'downloads',
-            type: 'directory',
-            children: {
-              'software.tar.gz': {
-                name: 'software.tar.gz',
-                type: 'file',
-                content: 'Compressed archive file'
               },
-              'README-download.txt': {
-                name: 'README-download.txt',
-                type: 'file',
-                content: 'Downloaded files and packages'
-              }
-            }
-          },
-          'pictures': {
-            name: 'pictures',
-            type: 'directory',
-            children: {
-              'vacation.jpg': {
-                name: 'vacation.jpg',
-                type: 'file',
-                content: 'JPEG image file'
-              }
-            }
-          },
-          'music': {
-            name: 'music',
-            type: 'directory',
-            children: {
-              'playlist.m3u': {
-                name: 'playlist.m3u',
-                type: 'file',
-                content: '#EXTM3U\n#EXTINF:180,Song Title\nsong.mp3'
-              }
-            }
-          },
-          'videos': {
-            name: 'videos',
-            type: 'directory',
-            children: {
-              'tutorial.mp4': {
-                name: 'tutorial.mp4',
-                type: 'file',
-                content: 'MP4 video file'
-              }
-            }
-          },
-          'public': {
-            name: 'public',
-            type: 'directory',
-            children: {
-              'shared-file.txt': {
-                name: 'shared-file.txt',
-                type: 'file',
-                content: 'This file is shared with other users'
-              }
-            }
-          },
-          'templates': {
-            name: 'templates',
-            type: 'directory',
-            children: {
-              'document-template.txt': {
-                name: 'document-template.txt',
-                type: 'file',
-                content: 'Template for creating new documents'
-              }
-            }
-          },
-          // Development-Specific Directories
-          'bin': {
-            name: 'bin',
-            type: 'directory',
-            children: {
-              'my-script': {
-                name: 'my-script',
-                type: 'file',
-                content: '#!/bin/bash\necho "Personal script executed"'
+              'pictures': {
+                name: 'pictures',
+                type: 'directory',
+                children: {
+                  'vacation.jpg': {
+                    name: 'vacation.jpg',
+                    type: 'file',
+                    content: 'JPEG image file'
+                  }
+                }
               },
-              'deploy': {
-                name: 'deploy',
-                type: 'file',
-                content: '#!/bin/bash\necho "Deploying application..."'
-              }
-            }
-          },
-          'src': {
-            name: 'src',
-            type: 'directory',
-            children: {
-              'main.c': {
-                name: 'main.c',
-                type: 'file',
-                content: '#include <stdio.h>\n\nint main() {\n    printf("Hello, World!\\n");\n    return 0;\n}'
-              }
-            }
-          },
-          'scripts': {
-            name: 'scripts',
-            type: 'directory',
-            children: {
-              'backup.sh': {
-                name: 'backup.sh',
-                type: 'file',
-                content: '#!/bin/bash\n# Backup script\necho "Creating backup..."\ntar -czf backup-$(date +%Y%m%d).tar.gz ~/documents'
+              'music': {
+                name: 'music',
+                type: 'directory',
+                children: {
+                  'playlist.m3u': {
+                    name: 'playlist.m3u',
+                    type: 'file',
+                    content: '#EXTM3U\n#EXTINF:180,Song Title\nsong.mp3'
+                  }
+                }
               },
-              'setup.py': {
-                name: 'setup.py',
-                type: 'file',
-                content: '#!/usr/bin/env python3\n# Setup script\nprint("Setting up environment...")'
-              }
-            }
-          },
-          'config': {
-            name: 'config',
-            type: 'directory',
-            children: {
-              'app.conf': {
-                name: 'app.conf',
-                type: 'file',
-                content: '# Application configuration\ntheme=dark\nlanguage=en\ndebug=false'
-              }
-            }
-          },
-          // Hidden Files (dotfiles)
-          '.bashrc': {
-            name: '.bashrc',
-            type: 'file',
-            content: '# ~/.bashrc: executed by bash(1) for non-login shells\n\n# User specific aliases and functions\nalias ll="ls -la"\nalias la="ls -A"\nalias l="ls -CF"\n\n# Add ~/bin to PATH\nexport PATH="$HOME/bin:$PATH"\n\n# Custom prompt\nexport PS1="\\u@\\h:\\w$ "'
-          },
-          '.profile': {
-            name: '.profile',
-            type: 'file',
-            content: '# ~/.profile: executed by the command interpreter for login shells\n\n# Set PATH to include user\'s private bin if it exists\nif [ -d "$HOME/bin" ] ; then\n    PATH="$HOME/bin:$PATH"\nfi\n\n# Set default editor\nexport EDITOR=vim'
-          },
-          '.vimrc': {
-            name: '.vimrc',
-            type: 'file',
-            content: '" ~/.vimrc: Vim configuration\n\nset number\nset tabstop=4\nset shiftwidth=4\nset expandtab\nset autoindent\nset hlsearch\nset incsearch\n\nsyntax on\ncolorscheme default'
-          },
-          '.gitconfig': {
-            name: '.gitconfig',
-            type: 'file',
-            content: '[user]\n\tname = User\n\temail = user@example.com\n\n[core]\n\teditor = vim\n\n[alias]\n\tst = status\n\tco = checkout\n\tbr = branch\n\tci = commit'
-          },
-          '.ssh': {
-            name: '.ssh',
-            type: 'directory',
-            children: {
+              'videos': {
+                name: 'videos',
+                type: 'directory',
+                children: {
+                  'tutorial.mp4': {
+                    name: 'tutorial.mp4',
+                    type: 'file',
+                    content: 'MP4 video file'
+                  }
+                }
+              },
+              'public': {
+                name: 'public',
+                type: 'directory',
+                children: {
+                  'shared-file.txt': {
+                    name: 'shared-file.txt',
+                    type: 'file',
+                    content: 'This file is shared with other users'
+                  }
+                }
+              },
+              'templates': {
+                name: 'templates',
+                type: 'directory',
+                children: {
+                  'document-template.txt': {
+                    name: 'document-template.txt',
+                    type: 'file',
+                    content: 'Template for creating new documents'
+                  }
+                }
+              },
+              // Development-Specific Directories
+              'bin': {
+                name: 'bin',
+                type: 'directory',
+                children: {
+                  'my-script': {
+                    name: 'my-script',
+                    type: 'file',
+                    content: '#!/bin/bash\necho "Personal script executed"'
+                  },
+                  'deploy': {
+                    name: 'deploy',
+                    type: 'file',
+                    content: '#!/bin/bash\necho "Deploying application..."'
+                  }
+                }
+              },
+              'src': {
+                name: 'src',
+                type: 'directory',
+                children: {
+                  'main.c': {
+                    name: 'main.c',
+                    type: 'file',
+                    content: '#include <stdio.h>\n\nint main() {\n    printf("Hello, World!\\n");\n    return 0;\n}'
+                  }
+                }
+              },
+              'scripts': {
+                name: 'scripts',
+                type: 'directory',
+                children: {
+                  'backup.sh': {
+                    name: 'backup.sh',
+                    type: 'file',
+                    content: '#!/bin/bash\n# Backup script\necho "Creating backup..."\ntar -czf backup-$(date +%Y%m%d).tar.gz ~/documents'
+                  },
+                  'setup.py': {
+                    name: 'setup.py',
+                    type: 'file',
+                    content: '#!/usr/bin/env python3\n# Setup script\nprint("Setting up environment...")'
+                  }
+                }
+              },
               'config': {
                 name: 'config',
-                type: 'file',
-                content: '# SSH client configuration\n\nHost github.com\n    HostName github.com\n    User git\n    IdentityFile ~/.ssh/id_rsa'
-              },
-              'known_hosts': {
-                name: 'known_hosts',
-                type: 'file',
-                content: '# SSH known hosts\ngithu.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC7vbqajDjI+e\ntest-server.local ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4rT3vTt\ndev.localhost ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDGhlOTsIXO\nmyserver.net ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCvuydfeYbH'
-              }
-            }
-          },
-          '.local': {
-            name: '.local',
-            type: 'directory',
-            children: {
-              'share': {
-                name: 'share',
                 type: 'directory',
                 children: {
-                  'applications': {
-                    name: 'applications',
+                  'app.conf': {
+                    name: 'app.conf',
+                    type: 'file',
+                    content: '# Application configuration\ntheme=dark\nlanguage=en\ndebug=false'
+                  }
+                }
+              },
+              // Hidden Files (dotfiles)
+              '.bashrc': {
+                name: '.bashrc',
+                type: 'file',
+                content: '# ~/.bashrc: executed by bash(1) for non-login shells\n\n# User specific aliases and functions\nalias ll="ls -la"\nalias la="ls -A"\nalias l="ls -CF"\n\n# Add ~/bin to PATH\nexport PATH="$HOME/bin:$PATH"\n\n# Custom prompt\nexport PS1="\\u@\\h:\\w$ "'
+              },
+              '.profile': {
+                name: '.profile',
+                type: 'file',
+                content: '# ~/.profile: executed by the command interpreter for login shells\n\n# Set PATH to include user\'s private bin if it exists\nif [ -d "$HOME/bin" ] ; then\n    PATH="$HOME/bin:$PATH"\nfi\n\n# Set default editor\nexport EDITOR=vim'
+              },
+              '.vimrc': {
+                name: '.vimrc',
+                type: 'file',
+                content: '" ~/.vimrc: Vim configuration\n\nset number\nset tabstop=4\nset shiftwidth=4\nset expandtab\nset autoindent\nset hlsearch\nset incsearch\n\nsyntax on\ncolorscheme default'
+              },
+              '.gitconfig': {
+                name: '.gitconfig',
+                type: 'file',
+                content: '[user]\n\tname = User\n\temail = user@example.com\n\n[core]\n\teditor = vim\n\n[alias]\n\tst = status\n\tco = checkout\n\tbr = branch\n\tci = commit'
+              },
+              '.ssh': {
+                name: '.ssh',
+                type: 'directory',
+                children: {
+                  'config': {
+                    name: 'config',
+                    type: 'file',
+                    content: '# SSH client configuration\n\nHost github.com\n    HostName github.com\n    User git\n    IdentityFile ~/.ssh/id_rsa'
+                  },
+                  'known_hosts': {
+                    name: 'known_hosts',
+                    type: 'file',
+                    content: '# SSH known hosts\ngithub.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC7vbqajDjI+e\ntest-server.local ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4rT3vTt\ndev.localhost ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDGhlOTsIXO\nmyserver.net ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCvuydfeYbH'
+                  }
+                }
+              },
+              '.local': {
+                name: '.local',
+                type: 'directory',
+                children: {
+                  'share': {
+                    name: 'share',
                     type: 'directory',
-                    children: {}
+                    children: {
+                      'applications': {
+                        name: 'applications',
+                        type: 'directory',
+                        children: {}
+                      }
+                    }
                   }
                 }
               }

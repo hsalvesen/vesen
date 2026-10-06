@@ -2,6 +2,12 @@ import { theme } from '../../stores/theme';
 import { get } from 'svelte/store';
 import { getAppleLogo, getAndroidLogo, getWindowsLogo, getLinuxLogo } from '../osLogos';
 import { isMobileDevice } from '../mobile';
+import { fetchJson, isNetError } from '../../services/net';
+import { escapeHtml } from '../../output/escape';
+import { cancelledNotice } from '../notice';
+
+// The public IP lookup is a nice-to-have, so it gets a short deadline.
+const IP_LOOKUP_TIMEOUT_MS = 4000;
 
 export const systemCommands = {
   whoami: () => {
@@ -10,7 +16,7 @@ export const systemCommands = {
     return `<span style="color: ${currentTheme.cyan};">Opening developer's LinkedIn profile...</span>`;
   },
   
-  fastfetch: async (args: string[], abortController?: AbortController) => {
+  fastfetch: async (args: string[], signal?: AbortSignal) => {
     const currentTheme = get(theme);
     
     return new Promise<string>((resolve, reject) => {
@@ -444,14 +450,14 @@ export const systemCommands = {
           // Network information
           let localIP = 'Unknown';
           try {
-            const ipResponse = await fetch('https://api.ipify.org?format=json', {
-              signal: abortController?.signal
+            const ipData = await fetchJson<{ ip?: unknown } | null>('https://api.ipify.org?format=json', {
+              signal,
+              timeoutMs: IP_LOOKUP_TIMEOUT_MS
             });
-            const ipData = await ipResponse.json();
-            localIP = ipData.ip;
+            localIP = typeof ipData?.ip === 'string' ? escapeHtml(ipData.ip) : 'Unable to fetch';
           } catch (error) {
-            if (error instanceof Error && error.name === 'AbortError') {
-              resolve(`<span style="color: var(--theme-yellow);">Fastfetch request cancelled</span>`);
+            if (signal?.aborted || (isNetError(error) && error.kind === 'abort')) {
+              resolve(cancelledNotice('fastfetch'));
               return;
             }
             localIP = 'Unable to fetch';
@@ -574,8 +580,8 @@ export const systemCommands = {
           
           resolve(result);
         } catch (error) {
-          if (error instanceof Error && error.name === 'AbortError') {
-            resolve(`<span style="color: var(--theme-yellow);">Fastfetch request cancelled</span>`);
+          if (signal?.aborted) {
+            resolve(cancelledNotice('fastfetch'));
           } else {
             // Soft-fail: keep terminal responsive and avoid throwing completely
             resolve(`<span style="color: var(--theme-yellow);">Fastfetch encountered an issue; some fields may be unavailable.</span>`);

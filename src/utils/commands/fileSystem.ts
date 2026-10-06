@@ -1,11 +1,8 @@
 import { theme } from '../../stores/theme';
 import { get } from 'svelte/store';
 import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from '../virtualFileSystem';
-import { history, commandHistory } from '../../stores/history';
-import { systemCommands } from './system';
-import themes from '../../../themes.json';
+import { history } from '../../stores/history';
 import { commandHelp } from '../helpTexts';
-import { createInitialFileSystem } from '../virtualFileSystem';
 import { playBeep } from '../beep';
 
 // Helper function to load real file content
@@ -476,30 +473,6 @@ export const fileSystemCommands = {
     return output;
   },
 
-  reset: () => {
-    // Reset theme to default (petroica)
-    const defaultTheme = themes.find((t) => t.name.toLowerCase() === 'petroica')!;
-    theme.set(defaultTheme);
-    
-    // Reset current path to default
-    currentPath.length = 0;
-    currentPath.push('home', 'user');
-    
-    // Clear display history but preserve command navigation history
-    history.set([])
-    
-    // Restore virtual file system to original state
-    const initialFS = createInitialFileSystem();
-    virtualFileSystem.children = initialFS.children;
-    
-    // Clear the terminal history and add the banner
-    const bannerOutput = systemCommands.banner();
-    history.set([{ command: 'banner', outputs: [bannerOutput] }]);
-    
-    // Return empty string since we're handling the output via history
-    return '';
-  },
-  
   poweroff: (args: string[]) => {
     const currentTheme = get(theme);
     

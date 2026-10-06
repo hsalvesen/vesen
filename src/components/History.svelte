@@ -35,12 +35,11 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Long commands wrap like a terminal line instead of being cut off with an ellipsis. */
   .command-input-display {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    word-break: break-all;
+    min-width: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 
   .command-output {
@@ -83,10 +82,6 @@
       max-width: calc(100vw - 64px);
       overflow-x: hidden;
     }
-    
-    .command-input-display {
-      max-width: calc(100vw - 140px); /* Account for prompt width */
-    }
   }
 
   @media (max-width: 480px) {
@@ -100,10 +95,6 @@
     .command-output {
       max-width: calc(100vw - 32px);
       overflow-x: hidden;
-    }
-    
-    .command-input-display {
-      max-width: calc(100vw - 120px); /* Account for prompt width */
     }
   }
 </style>

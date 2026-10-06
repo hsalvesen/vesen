@@ -13,22 +13,10 @@ Vesen Terminal is a fully-featured web-based terminal emulator that replicates a
 - **Frontend framework**: [Svelte 5](https://svelte.dev/)
 - **Build tool**: [Vite](https://vitejs.dev/)
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
-- **Containerisation**: [Docker](https://docker.com/)
+- **Hosting**: [Firebase Hosting](https://firebase.google.com/docs/hosting)
 - **Package manager**: npm (Node.js 22.12+, see `.nvmrc`)
 
 ## Quick start
-
-### Using Docker (Recommended)
-
-```bash
-# Run the latest version
-docker run -d --name vesen-terminal -p 3000:3000 ghcr.io/hsavlesen/vesen
-
-# Or use docker-compose
-docker-compose up -d
-```
-
-Access the terminal at `http://localhost:3000`
 
 ### Local development
 
@@ -42,7 +30,7 @@ cd vesen
 # Install dependencies
 npm install
 
-# Start development server
+# Start development server at http://localhost:3000
 npm run dev
 
 # Build for production
@@ -60,52 +48,42 @@ Type `help` in the terminal to see all available commands, or explore the file s
 ![themes](/docs/themes/themes.gif)
 View all themes: [Vesen themes](/docs/themes)
 
-##  Docker deployment
-
-### Using docker hub image
-```bash
-docker run -d \
-  --name vesen-terminal \
-  -p 3000:3000 \
-  --restart unless-stopped \
-  ghcr.io/hsavlesen/vesen
-```
-
-### Building from source
-```bash
-# Build the image
-docker build -t vesen-terminal .
-
-# Run the container
-docker run -d -p 3000:3000 vesen-terminal
-```
-
-### Docker compose
-```yaml
-services:
-  terminal:
-    image: ghcr.io/hsavlesen/vesen
-    container_name: vesen-terminal
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-```
-
 ##  Development
 
 ### Project structure
 ```bash
-.src/
-├── components/                # Svelte components
-│   ├── History.svelte         # Command history display
-│   ├── Input.svelte           # Command input handling
-│   └── Ps1.svelte             # Terminal prompt
-├── utils/
-│   ├── commands/              # Command implementations
-│   ├── virtualFileSystem.ts
-│   └── commands.ts
-├── stores/                    # Svelte stores
-└── interfaces/                # TypeScript interfaces
+src/
+├── main.ts                       # Mounts the app
+├── App.svelte                    # Layout: scrollback, prompt, suggestions, running-command line
+├── app.css                       # Global styles and the CRT (cathode) effect
+├── constants.ts                  # Repository URL
+├── global.d.ts                   # Build-time globals
+├── components/
+│   ├── History.svelte            # Scrollback of commands and their output
+│   ├── Input.svelte              # The prompt: keys, history, Tab completion, running and cancelling commands
+│   ├── Ps1.svelte                # The prompt string
+│   ├── CommandSuggestionsRow.svelte  # Suggestions while typing
+│   └── Cathode.svelte            # CRT overlay
+├── interfaces/                   # TypeScript interfaces (command, theme)
+├── output/escape.ts              # HTML escaping for command output
+├── services/net.ts               # fetch with timeouts, cancelling and typed network errors
+├── stores/                       # Svelte stores: history, the running job, theme, cathode
+├── testing/                      # Test setup
+└── utils/
+    ├── commands.ts               # Command table and dispatcher
+    ├── commands/                 # Commands: file system, network, system, QR
+    ├── virtualFileSystem.ts      # The in-memory file system
+    ├── helpTexts.ts              # Help for each command
+    ├── commandSuggestions.ts     # Suggestions while typing
+    ├── notice.ts                 # Shared notices (cancelled commands, errors)
+    ├── beep.ts                   # The terminal bell
+    └── mobile.ts, textWrap.ts, osLogos.ts
+public/                           # README.md, history.txt and linux.txt for cat; favicons; font
+themes.json                       # The ten colour themes
+tests/                            # Golden snapshots of command output, network fixtures, helpers
+e2e/                              # Playwright end-to-end tests
+scripts/                          # Checks: module boundaries, bundle budget, theme contrast
+docs/                             # Theme screenshots and the improvement plan
 ```
 
 ### Available scripts
@@ -133,7 +111,7 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/new-feature`
 3. Make your changes
-4. Run the checks: `npm run check && npm test` (CI runs every script above on each pull request)
+4. Run the checks: `npm run check && npm test` (CI runs the checks, tests, build and smoke tests on each pull request)
 5. Commit your changes: `git commit -m 'Add new feature'`
 6. Push to the branch: `git push origin feature/new-feature`
 7. Open a Pull Request
