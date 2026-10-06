@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 // system after this plan"): the prompt follows cd while earlier prompts keep their folder, files
 // under ~ survive a reload, and reset puts the seed back.
 
-const prompt = (page: Page) => page.getByRole('textbox', { name: 'Terminal command' });
+const prompt = (page: Page) => page.getByRole('combobox', { name: 'Terminal command' });
 const entries = (page: Page) => page.locator('[role="log"] .entry');
 const lastEntry = (page: Page) => entries(page).last();
 

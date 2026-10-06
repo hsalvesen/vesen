@@ -1,5 +1,5 @@
 // Script injection through the whole pipeline: lines typed at the prompt run through the shell
-// exactly as Input.svelte runs them (legacy commands through the adapter), and the transcript is
+// exactly as the prompt runs them (legacy commands through the adapter), and the transcript is
 // mounted with the real Transcript component, which renders the shell's own output as text and
 // legacy output through OutputView's sanitising legacy block.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

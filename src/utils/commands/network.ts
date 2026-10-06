@@ -1,4 +1,3 @@
-import { speedtestPhase } from '../legacyStores';
 import { commandHelp } from '../helpTexts';
 import { playBeep } from '../beep';
 import { fetchJson, fetchText, fetchTextCapped, fetchWithTimeout, isNetError } from '../../services/net';
@@ -482,7 +481,7 @@ export const networkCommands = {
     return renderQuote(lookup.quote, ticker);
   },
 
-  speedtest: async (args: string[], signal?: AbortSignal) => {
+  speedtest: async (args: string[], signal?: AbortSignal, status?: (text: string | null) => void) => {
     const downUrl = 'https://speed.cloudflare.com/__down';
     const upUrl = 'https://speed.cloudflare.com/__up';
 
@@ -585,7 +584,7 @@ export const networkCommands = {
 
       lines.push(`<span style="color: var(--role-accent);">Cloudflare Speed Test</span>`);
 
-      speedtestPhase.set('Measuring download...');
+      status?.('measuring the download speed…');
       const downloadSizes = [5 * 1024 * 1024, 10 * 1024 * 1024, 25 * 1024 * 1024];
       const downloadSamples: number[] = [];
       for (const size of downloadSizes) {
@@ -595,7 +594,7 @@ export const networkCommands = {
       const dAvg = downloadSamples.reduce((a, b) => a + b, 0) / downloadSamples.length;
       lines.push(`<span style="color: var(--role-ok);">Download:</span> ${dAvg.toFixed(1)} Mbps (avg of ${downloadSamples.length} samples)`);
 
-      speedtestPhase.set('Measuring upload...');
+      status?.('measuring the upload speed…');
       const uploadSizes = [64 * 1024, 256 * 1024, 1 * 1024 * 1024];
       const uploadSamples: number[] = [];
       let uploadErrors = 0;
@@ -617,14 +616,14 @@ export const networkCommands = {
         lines.push(`<span style="color: var(--role-link);">Upload:</span> unavailable due to browser/network restrictions`);
       }
 
-      speedtestPhase.set('Measuring latency...');
+      status?.('measuring the latency…');
       const lat = await measureLatency(10);
       lines.push(`<span style="color: var(--role-warn);">Ping:</span> avg ${lat.avg.toFixed(0)} ms, min ${lat.min.toFixed(0)} ms, max ${lat.max.toFixed(0)} ms`);
 
-      speedtestPhase.set('');
+      status?.(null);
       return `<div>${lines.join('<br>')}</div>`;
     } catch (error) {
-      speedtestPhase.set('');
+      status?.(null);
       if (wasCancelled(error, signal)) return cancelledNotice('speedtest');
       playBeep();
       return errorLine(speedtestFailure(error));

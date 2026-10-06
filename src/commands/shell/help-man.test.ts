@@ -70,7 +70,7 @@ describe('help', () => {
   it("shows a command's panels for help NAME, and says so for a topic it does not know", async () => {
     expect((await runLine('help ls')).stdoutPlain).toContain('ls - list directory contents');
     expect(await runLine('help nope')).toMatchObject({ status: 1, stderrPlain: "help: no help topics match 'nope'\nTry 'help' for the list, or 'apropos nope' to search it." });
-    expect((await runLine('help keys')).stdoutPlain).toMatch(/^Ctrl\+L +clear the screen$/m);
+    expect((await runLine('help keys')).stdoutPlain).toMatch(/^Ctrl\+L +clear the screen, keeping the line$/m);
   });
 
   it('answers --help and man for every spec file', async () => {

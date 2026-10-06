@@ -19,7 +19,7 @@ function fontCacheControl(): string {
 /** The Vary header Firebase Hosting sends with every file. */
 const FIREBASE_VARY = 'x-fh-requested-host, accept-encoding';
 
-const prompt = (page: Page) => page.getByRole('textbox', { name: 'Terminal command' });
+const prompt = (page: Page) => page.getByRole('combobox', { name: 'Terminal command' });
 
 /** Waits until the self-hosted font has loaded and is the one the terminal draws with. */
 async function fontLoaded(page: Page): Promise<void> {
@@ -104,20 +104,25 @@ test.describe('the terminal font', { tag: '@smoke' }, () => {
     await expect(ps1).toHaveText(/^guest\s*@\s*vesen\s*:\s*~\s*\$$/);
   });
 
-  test('a fine pointer keeps the input at the terminal size, unscaled', async ({ page }) => {
+  test('a fine pointer keeps the input at the terminal size, unscaled, under a block cursor', async ({ page }) => {
     test.skip(PHONES.includes(test.info().project.name), 'phones are checked below');
     await page.goto('/');
+    await expect(prompt(page)).toBeFocused();
+    // Typing holds the cursor still, so it is drawn, not mid-blink.
+    await page.keyboard.type('l');
     const styles = await prompt(page).evaluate((input) => {
       const style = getComputedStyle(input);
+      const cursor = document.querySelector('.mirror .cursor');
       return {
         size: style.fontSize,
         body: getComputedStyle(document.body).fontSize,
         transform: style.transform,
         caret: style.caretColor,
+        cursor: cursor === null ? null : getComputedStyle(cursor).backgroundColor,
       };
     });
-    // The caret is the theme's cursor colour: white on the default theme.
-    expect(styles).toEqual({ size: '16px', body: '16px', transform: 'none', caret: 'rgb(255, 255, 255)' });
+    // The native caret is hidden; the block cursor is the theme's cursor colour: white on the default theme.
+    expect(styles).toEqual({ size: '16px', body: '16px', transform: 'none', caret: 'rgba(0, 0, 0, 0)', cursor: 'rgb(255, 255, 255)' });
   });
 });
 

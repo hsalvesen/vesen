@@ -32,12 +32,6 @@ describe('Prompt', () => {
     expect(container.firstElementChild?.localName).toBe('span');
   });
 
-  it('switches to a password prompt', () => {
-    render(Prompt, { secret: true });
-    expect(screen.getByText('Password:')).toBeInTheDocument();
-    expect(screen.queryByText('guest')).not.toBeInTheDocument();
-  });
-
   it('follows the cwd and status stores, and turns the $ red after a failure', () => {
     const cwd = writable('/home/guest');
     const status = writable(0);

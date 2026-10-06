@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 // the terminal has today, plus the CRT tiers and the role colours behind it. No axe dependency:
 // the page is audited for the rules that matter here by a small script, and the rest by name.
 
-const prompt = (page: Page) => page.getByRole('textbox', { name: 'Terminal command' });
+const prompt = (page: Page) => page.getByRole('combobox', { name: 'Terminal command' });
 
 /** Runs a line at the prompt and waits until its output is in the transcript. */
 async function run(page: Page, line: string): Promise<void> {

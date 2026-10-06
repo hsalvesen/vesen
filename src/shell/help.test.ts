@@ -179,7 +179,8 @@ describe('help keys', () => {
   it('lists the key bindings, and on touch what to tap', () => {
     const desktop = text(keysHelp());
     for (const binding of KEY_BINDINGS) expect(desktop).toContain(binding.keys);
-    expect(desktop).toMatch(/^Ctrl\+C +stop the running command; with text selected, copy it$/m);
+    expect(desktop).toMatch(/^Ctrl\+C +stop the running command, or abandon the line; with text selected, copy it$/m);
+    expect(desktop).toMatch(/^Ctrl\+W \(Mac\) +cut back to the last space$/m);
     expect(desktop).not.toContain('On a touch screen');
     expect(text(keysHelp({ touch: true }))).toContain('On a touch screen');
   });

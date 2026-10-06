@@ -5,22 +5,6 @@ import { commandHelp } from './helpTexts';
 import { playBeep } from './beep';
 import { errorLine } from './notice';
 
-// Terminal-specific commands that don't fit in other modules. help, theme and cathode are specs in
-// src/commands now, with their help generated from them.
-const terminalCommands = {
-  sudo: (args: string[]) => {
-    if (args.length === 0) {
-      return commandHelp.sudo;
-    }
-
-    // This shouldn't be reached in normal flow since Input.svelte handles sudo specially
-    // But keeping as fallback
-    window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
-    return '';
-  },
-
-};
-
 const projectCommands = {
   // The shell opens the repository (spec.opens, inside the Enter gesture); this is what it prints.
   repo: () => `<span class="out-accent">Opening Vesen repository...</span>`,
@@ -142,14 +126,14 @@ function loadNetworkCommands(): Promise<typeof import('./commands/network')> {
 const networkCommands = Object.fromEntries(
   NETWORK_COMMAND_NAMES.map((name) => [
     name,
-    async (args: string[], signal?: AbortSignal): Promise<string> => {
+    async (args: string[], signal?: AbortSignal, status?: (text: string | null) => void): Promise<string> => {
       // Undefined when platform/chunkReload has taken the failure over to reload the page.
       const module = await loadNetworkCommands().catch(() => undefined);
       if (!module) {
         playBeep();
         return errorLine(`${name}: could not load the command. Check the connection and try again.`);
       }
-      return module.networkCommands[name](args, signal);
+      return module.networkCommands[name](args, signal, status);
     },
   ]),
 );
@@ -168,11 +152,10 @@ const qrCommands = {
 };
 
 // Combine all commands
-export const commands: Record<string, (args: string[], signal?: AbortSignal) => Promise<string> | string> = {
+export const commands: Record<string, (args: string[], signal?: AbortSignal, status?: (text: string | null) => void) => Promise<string> | string> = {
   ...systemCommands,
   ...fileSystemCommands,
   ...networkCommands,
-  ...terminalCommands,
   ...projectCommands,
   ...qrCommands
 };

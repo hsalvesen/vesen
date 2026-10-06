@@ -1,23 +1,12 @@
-// The keys the terminal answers to, for `help keys` and `man vesen`. They are the bindings the
-// prompt (src/components/Input.svelte) implements today; the line editor's keymap replaces this
-// list when it lands (docs/plan/03-terminal-input.md).
+// The keys the terminal answers to, for `help keys` and `man vesen`: generated from the prompt's
+// own key table (src/shell/editor/keymap.ts), so what help says is what the keys do.
 
-export interface KeyBinding {
-  readonly keys: string;
-  readonly does: string;
-}
+import { keyHelp, type KeyHelp } from './editor/keymap';
 
-/** On a keyboard. */
-export const KEY_BINDINGS: readonly KeyBinding[] = [
-  { keys: 'Enter', does: 'run the line' },
-  { keys: 'Tab', does: 'complete; again to list the choices, again to step through them' },
-  { keys: 'Shift+Tab', does: 'step back through the choices' },
-  { keys: '↑ ↓', does: 'step through the command history' },
-  { keys: 'Ctrl+C', does: 'stop the running command; with text selected, copy it' },
-  { keys: 'Escape', does: 'stop the running command; in the choices, put back what you typed' },
-  { keys: 'Ctrl+L', does: 'clear the screen' },
-  { keys: 'Escape, Tab', does: 'leave the terminal for the rest of the page' },
-];
+export type KeyBinding = KeyHelp;
+
+/** On a keyboard: every binding, with the ones bound only on a Mac marked. */
+export const KEY_BINDINGS: readonly KeyBinding[] = keyHelp();
 
 /** On a touch screen, which has no Tab, arrow or Ctrl keys. */
 export const TOUCH_BINDINGS: readonly KeyBinding[] = [

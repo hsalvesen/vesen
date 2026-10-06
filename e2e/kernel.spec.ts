@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 // legacy adapter"): every legacy command runs through it, so quotes, pipes, redirection, && and
 // ||, $? and ^C work for all of them.
 
-const prompt = (page: Page) => page.getByRole('textbox', { name: 'Terminal command' });
+const prompt = (page: Page) => page.getByRole('combobox', { name: 'Terminal command' });
 const lastEntry = (page: Page) => page.locator('[role="log"] .entry').last();
 
 /** Runs a line at the prompt and waits until it is in the transcript and nothing runs. */

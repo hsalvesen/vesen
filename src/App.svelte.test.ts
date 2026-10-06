@@ -60,7 +60,7 @@ describe('App', () => {
     expect(headings[0]?.textContent).toBe('Vesen terminal');
     expect(headings[0]?.classList.contains('sr-only')).toBe(true);
 
-    const prompt = screen.getByRole('textbox', { name: 'Terminal command' });
+    const prompt = screen.getByRole('combobox', { name: 'Terminal command' });
     expect(prompt.getAttribute('enterkeyhint')).toBe('go');
 
     const log = screen.getByRole('log');
@@ -85,7 +85,7 @@ describe('App', () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
     renderApp();
-    const prompt = screen.getByRole('textbox');
+    const prompt = screen.getByRole('combobox');
 
     await fireEvent.input(prompt, { target: { value: 'stock AAPL' } });
     await fireEvent.keyDown(prompt, { key: 'Enter' });
@@ -111,7 +111,7 @@ describe('App', () => {
 
   it('runs a tapped did-you-mean as if it were typed', async () => {
     renderApp();
-    const prompt = screen.getByRole('textbox');
+    const prompt = screen.getByRole('combobox');
     await fireEvent.input(prompt, { target: { value: 'pwdd' } });
     await fireEvent.keyDown(prompt, { key: 'Enter' });
     const suggestion = await screen.findByRole('button', { name: 'pwd' });
@@ -123,7 +123,7 @@ describe('App', () => {
 
   it('shows ~/documents in the prompt after cd, and earlier prompts keep their folder (F023)', async () => {
     const { container } = renderApp();
-    const prompt = screen.getByRole('textbox');
+    const prompt = screen.getByRole('combobox');
     await fireEvent.input(prompt, { target: { value: 'cd documents' } });
     await fireEvent.keyDown(prompt, { key: 'Enter' });
     await vi.waitFor(() => expect(container.querySelectorAll('.entry')).toHaveLength(1));
@@ -145,7 +145,7 @@ describe('App', () => {
       return spans[spans.length - 1]?.getAttribute('style') ?? '';
     };
     expect(dollar()).toContain('--role-fg-strong');
-    const prompt = screen.getByRole('textbox');
+    const prompt = screen.getByRole('combobox');
     await fireEvent.input(prompt, { target: { value: 'cd nowhere' } });
     await fireEvent.keyDown(prompt, { key: 'Enter' });
     await vi.waitFor(() => expect(dollar()).toContain('--role-error'));
@@ -153,7 +153,7 @@ describe('App', () => {
 });
 
 describe('Tab completion and the completion row', () => {
-  const promptBox = () => screen.getByRole('textbox', { name: 'Terminal command' }) as HTMLInputElement;
+  const promptBox = () => screen.getByRole('combobox', { name: 'Terminal command' }) as HTMLInputElement;
   const press = async (key: string, init: KeyboardEventInit = {}) => fireEvent.keyDown(promptBox(), { key, ...init });
   const type = async (value: string) => {
     await fireEvent.input(promptBox(), { target: { value } });

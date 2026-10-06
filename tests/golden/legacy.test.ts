@@ -129,7 +129,7 @@ function useDevice(device: DeviceProfile) {
 }
 
 interface LegacyTerminal {
-  /** Runs a line through the shell, as Input.svelte does, legacy commands through the adapter. */
+  /** Runs a line through the shell, as the prompt does, legacy commands through the adapter. */
   type(line: string): Promise<Step>;
   /** Mounts the transcript (ui/Transcript.svelte) over everything typed so far and returns one line per entry. */
   renderHistory(): Promise<string>;
@@ -167,7 +167,7 @@ async function boot(viewport: Viewport): Promise<LegacyTerminal> {
   return {
     async type(line) {
       const ringsBefore = bells;
-      // The shell records the line in the transcript itself, as it does for Input.svelte.
+      // The shell records the line in the transcript itself, as it does for the prompt.
       const result = await shell.run(line);
       return { line, html: blocksToGoldenHtml(result.blocks), bells: bells - ringsBefore };
     },

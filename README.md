@@ -43,6 +43,8 @@ npm run preview
 ### Getting started
 Type `help` in the terminal to see every command by category, `man <command>` for one command's manual (`man vesen` is about the terminal itself), and `help keys` for the keys. Explore the file system with `ls` and `cd`; `exit` ends the session and offers a new one.
 
+At the prompt, Tab completes, ↑ and ↓ step through the history lines that start with what is typed, Ctrl+R searches the history, and grey text offers the rest of a past line (→ takes it). While the prompt has focus, the readline keys edit the line: Ctrl+A, E, U, K, Y, L and D everywhere, Ctrl+W, P, N, F, B and T on a Mac, and Alt+B, F, D, Y, . and Backspace. Ctrl+C copies selected text, and otherwise stops the running command. Escape then Tab leaves the terminal for the rest of the page.
+
 ## Themes
 
 ![themes](/docs/themes/themes.gif)
@@ -70,15 +72,18 @@ src/
 ├── constants.ts                  # Repository URL (the prompt's host is in vfs/identity.ts)
 ├── global.d.ts                   # Build-time globals
 ├── components/
-│   ├── Input.svelte              # The prompt: keys, history, Tab completion, running and cancelling commands
-│   ├── CommandSuggestionsRow.svelte  # Suggestions while typing
 │   └── Cathode.svelte            # CRT overlay, inside the screen frame
 ├── interfaces/                   # TypeScript interfaces (command, theme)
 ├── shell/                        # The DOM-free shell kernel (docs/adr/0001-architecture.md)
 │   ├── types.ts                  # CommandSpec, command context, registry, history, TTY, streams, identity
 │   ├── lexer-types.ts            # The lexer's result and tokens
 │   ├── help.ts                   # help, --help, man, whatis and apropos, all generated from the specs
-│   └── keys.ts                   # The keys the terminal answers to, for help keys and man vesen
+│   ├── reader.ts                 # A running command reading a line at the prompt (rm -i, sudo's password)
+│   ├── complete/                 # Tab completion, the ghost and the chips, from the specs
+│   ├── editor/                   # The line editor's pure parts: readline ops and the kill ring, the key
+│   │                             # table (keymap.ts), history stepping and reverse-i-search, the `> `
+│   │                             # continuation, and straightening typed and pasted text
+│   └── keys.ts                   # help keys and man vesen, generated from the key table
 ├── output/                       # DOM-free output
 │   ├── model.ts                  # Spans, blocks, actions, the `out` builders and plain()
 │   ├── html-to-text.ts           # Plain text of legacy HTML output, for pipes
@@ -118,6 +123,11 @@ src/
 │   └── market/contract.ts        # The stock Worker's wire format, shared by the Worker and the app
 ├── stores/                       # Svelte stores, pure state: screen (the transcript), term, theme, cathode
 ├── ui/
+│   ├── prompt/                   # The prompt: promptController.svelte.ts (the line, its keys, Tab,
+│   │                             # history, search, type-ahead, ^C, reads and secrets), LineEditor.svelte
+│   │                             # (a real input; with a mouse, over a mirror with a block cursor and
+│   │                             # the ghost) and PromptLine.svelte (PS1, the running line, the status)
+│   ├── CompletionRow.svelte      # The chips under the prompt, and Tab's list
 │   ├── Transcript.svelte         # Each entry: the prompt it was typed at, the line, its output
 │   ├── Prompt.svelte             # guest@vesen:~/documents$, live under the transcript and as each entry's snapshot
 │   ├── OutputView.svelte         # Draws output blocks with text interpolation only
@@ -131,13 +141,12 @@ src/
 │   └── components/registry.ts    # Rich cards a component block may name (none yet)
 ├── testing/                      # Test setup
 └── utils/
-    ├── commands.ts               # The legacy command table (sudo, repo, email); the network commands
+    ├── commands.ts               # The legacy command table (repo, email); the network commands
     │                             # load on first use
     ├── commands/                 # Legacy commands not yet ported: network, system, QR, poweroff;
     │                             # fastfetch and the network commands load on first use
     ├── virtualFileSystem.ts      # A shim over the VFS for the legacy commands not yet ported
     ├── helpTexts.ts              # Help for each legacy command not yet ported
-    ├── commandSuggestions.ts     # Suggestions while typing
     ├── notice.ts                 # The one notice panel and the one error style (cmd: message, then a hint)
     ├── beep.ts                   # The terminal bell
     └── osLogos.ts                # fastfetch's logos, loaded with it

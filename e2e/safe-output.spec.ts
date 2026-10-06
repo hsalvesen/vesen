@@ -8,12 +8,23 @@ test.describe('safe output', { tag: '@smoke' }, () => {
     test.skip(test.info().project.name === 'pixel-7', 'desktop Chrome and iPhone Instagram cover this');
   });
 
-  /** Types a line, runs it, and waits for its transcript entry. */
+  /**
+   * Types a line, runs it, and waits for its transcript entry. A line the shell sees as
+   * unfinished (an open quote) waits at the `> ` prompt, as in bash; ^C then abandons it into the
+   * transcript as typed, which shows the payload just the same.
+   */
   async function run(page: Page, line: string): Promise<void> {
-    const prompt = page.getByRole('textbox', { name: 'Terminal command' });
+    const prompt = page.getByRole('combobox', { name: 'Terminal command' });
+    const echo = page.locator('.command-input-display').last();
     await prompt.fill(line);
     await prompt.press('Enter');
-    await expect(page.locator('.command-input-display').last()).toHaveText(line);
+    if ((await page.locator('.prompt-line .ps2').count()) > 0) {
+      await expect(page.locator('.prompt-line .frozen').first()).toContainText(line);
+      await prompt.press('Control+c');
+      await expect(echo).toHaveText(`${line}\n> ^C`);
+      return;
+    }
+    await expect(echo).toHaveText(line);
   }
 
   test('cat shows source code with its angle brackets', async ({ page }) => {
@@ -34,13 +45,16 @@ test.describe('safe output', { tag: '@smoke' }, () => {
     return dialogs;
   }
 
-  /** Active elements and event-handler attributes anywhere in the terminal. */
+  /**
+   * Active elements and event-handler attributes anywhere in the terminal, besides the prompt's
+   * own form and input.
+   */
   async function planted(page: Page): Promise<string[]> {
     return page.evaluate(() => {
       const main = document.querySelector('main');
       if (!main) return ['no main'];
       const found = Array.from(
-        main.querySelectorAll('img, svg, math, iframe, script, object, embed, style, form, input:not(.command-input), template'),
+        main.querySelectorAll('img, svg, math, iframe, script, object, embed, style, form:not(.line-form), input:not(.command-input), template'),
         (el) => el.localName,
       );
       for (const element of Array.from(main.querySelectorAll('*'))) {
@@ -124,7 +138,7 @@ test.describe('safe output', { tag: '@smoke' }, () => {
     expect(await planted(page)).toEqual([]);
 
     // A tap anywhere on the prompt still reaches the input.
-    const hit = await page.getByRole('textbox', { name: 'Terminal command' }).evaluate((input) => {
+    const hit = await page.getByRole('combobox', { name: 'Terminal command' }).evaluate((input) => {
       input.scrollIntoView({ block: 'nearest' });
       const box = input.getBoundingClientRect();
       const points = [0.1, 0.5, 0.9].map((x) => [box.left + box.width * x, box.top + box.height / 2] as const);

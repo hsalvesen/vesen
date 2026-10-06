@@ -16,14 +16,11 @@
     line = null,
     cwd,
     status,
-    secret = false,
   }: {
     /** A snapshot to draw; without one, the live prompt. */
     line?: Line | null;
     cwd?: Readable<string>;
     status?: Readable<number>;
-    /** The password prompt sudo asks at. */
-    secret?: boolean;
   } = $props();
 
   let liveCwd = $state(GUEST.home);
@@ -34,11 +31,7 @@
   const shown = $derived(line ?? promptLine({ cwd: liveCwd, status: liveStatus, columns: $columns }));
 </script>
 
-{#if secret}
-  <span class="prompt"><span class="punct">Password:</span></span>
-{:else}
-  <span class="prompt"><LineView line={shown} /></span>
-{/if}
+<span class="prompt"><LineView line={shown} /></span>
 
 <style>
   /* Inline, so the prompt copies as one line of text: guest@vesen:~$. It may wrap, anywhere, so
@@ -46,9 +39,5 @@
   .prompt {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-  }
-
-  .punct {
-    color: var(--role-fg-strong);
   }
 </style>

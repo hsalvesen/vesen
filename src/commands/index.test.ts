@@ -10,7 +10,7 @@ describe('the command catalogue', () => {
     expect(specFiles().map((found) => found.name).sort()).toEqual([
       'alias', 'apropos', 'banner', 'cat', 'cathode', 'cd', 'clear', 'command', 'cp', 'date', 'echo', 'env', 'exit', 'export',
       'false', 'help', 'history', 'ln', 'login', 'ls', 'man', 'mkdir', 'mv', 'printenv', 'printf', 'pwd', 'reset', 'rm',
-      'rmdir', 'set', 'sleep', 'source', 'stat', 'test', 'theme', 'touch', 'true', 'type', 'unalias', 'unset', 'whatis',
+      'rmdir', 'set', 'sleep', 'source', 'stat', 'sudo', 'test', 'theme', 'touch', 'true', 'type', 'unalias', 'unset', 'whatis',
       'which',
     ]);
   });

@@ -1,0 +1,546 @@
+import { fireEvent, render } from '@testing-library/svelte';
+import { tick } from 'svelte';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import sudo, { SUDO_HINT } from '../../commands/shell/sudo';
+import rm from '../../commands/files/rm';
+import { createStorage } from '../../services/storage';
+import { createScreen, type ScreenStore } from '../../stores/screen';
+import { harness } from '../../testing/shell-harness';
+import PromptLine from './PromptLine.svelte';
+import { ESCAPE_TAB_MS, PromptController } from './promptController.svelte';
+
+const SECRET = 'hunter2-correct-horse';
+
+let cleanup: (() => void)[] = [];
+
+beforeEach(() => {
+  localStorage.clear();
+  sessionStorage.clear();
+});
+
+afterEach(() => {
+  for (const stop of cleanup.splice(0)) stop();
+  window.getSelection()?.removeAllRanges();
+  document.body.querySelectorAll('[data-test-text]').forEach((node) => node.remove());
+  vi.restoreAllMocks();
+});
+
+function setup(options: { touch?: boolean; platform?: 'mac' | 'other'; now?: () => number } = {}) {
+  const storage = createStorage(window).local;
+  const h = harness({ specs: [sudo, rm], storage });
+  const screen: ScreenStore = createScreen();
+  const controller = new PromptController({
+    shell: h.shell,
+    screen,
+    platform: options.platform ?? 'other',
+    touch: options.touch ?? false,
+    ...(options.now ? { now: options.now } : {}),
+  });
+  const view = render(PromptLine, { props: { controller, shell: h.shell } });
+  const input = view.container.querySelector('input.command-input') as HTMLInputElement;
+  cleanup.push(() => {
+    h.shell.abort();
+    controller.destroy();
+  });
+  return { h, screen, controller, view, input };
+}
+
+/** Types `text` into the input, as the browser does: the value, the caret, then an input event. */
+async function type(input: HTMLInputElement, text: string, caret = text.length): Promise<void> {
+  input.value = text;
+  input.setSelectionRange(caret, caret);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await tick();
+}
+
+/** Presses a key on the input; returns the event, to see whether its default was prevented. */
+function press(input: HTMLInputElement, key: string, init: KeyboardEventInit = {}): KeyboardEvent {
+  const code = /^[a-z]$/i.test(key) ? `Key${key.toUpperCase()}` : key === '.' ? 'Period' : key;
+  const event = new KeyboardEvent('keydown', { key, code, bubbles: true, cancelable: true, ...init });
+  input.dispatchEvent(event);
+  return event;
+}
+
+async function engineReady(controller: PromptController): Promise<void> {
+  await vi.waitFor(() => expect(controller.completion).not.toBeNull());
+}
+
+describe('the input', () => {
+  it('is a labelled combobox that never fills itself in, for password managers or autocorrect', () => {
+    const { input } = setup();
+    expect(input.getAttribute('role')).toBe('combobox');
+    expect(input.getAttribute('aria-label')).toBe('Terminal command');
+    expect(input.getAttribute('aria-expanded')).toBe('false');
+    expect(input.type).toBe('text');
+    for (const [name, value] of [
+      ['autocomplete', 'off'],
+      ['autocapitalize', 'none'],
+      ['autocorrect', 'off'],
+      ['spellcheck', 'false'],
+      ['enterkeyhint', 'go'],
+      ['data-1p-ignore', ''],
+      ['data-lpignore', 'true'],
+      ['writingsuggestions', 'false'],
+    ]) {
+      expect(input.getAttribute(name as string), name).toBe(value);
+    }
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('waits for a tap on touch, and shows the native input with no mirror', () => {
+    const { input, view } = setup({ touch: true });
+    expect(document.activeElement).not.toBe(input);
+    expect(view.container.querySelector('.mirror')).toBeNull();
+    expect(input.getAttribute('placeholder')).toBe('Type a command…');
+  });
+
+  it('draws the line in the mirror, with a block cursor on the character under the caret', async () => {
+    const { input, view } = setup();
+    await type(input, 'echo hi', 2);
+    const mirror = view.container.querySelector('.mirror');
+    expect(mirror?.getAttribute('aria-hidden')).toBe('true');
+    expect(mirror?.textContent).toBe('echo hi');
+    expect(mirror?.querySelector('.cursor')?.textContent).toBe('h');
+    expect(mirror?.querySelector('.cursor')?.classList.contains('steady')).toBe(true);
+    input.blur();
+    await tick();
+    expect(mirror?.querySelector('.cursor')?.classList.contains('hollow')).toBe(true);
+  });
+
+  it('straightens typed smart quotes and dashes, keeping the caret after them', async () => {
+    const { input, controller } = setup();
+    await type(input, 'echo “hi” —n');
+    expect(input.value).toBe('echo "hi" --n');
+    expect(controller.cursor).toBe(input.value.length);
+  });
+
+  it('makes a pasted block one line that never runs by itself', async () => {
+    const { input, h } = setup();
+    const paste = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+    Object.defineProperty(paste, 'clipboardData', { value: { getData: () => '$ cd docs\n$ ls\n' } });
+    input.dispatchEvent(paste);
+    await tick();
+    expect(paste.defaultPrevented).toBe(true);
+    expect(input.value).toBe('cd docs; ls');
+    expect(h.commits).toEqual([]);
+  });
+});
+
+describe('a running command', () => {
+  it('never disables the input: what is typed waits as type-ahead, and Enter rings the bell', async () => {
+    const { input, controller, view } = setup();
+    await type(input, 'hang');
+    press(input, 'Enter');
+    await tick();
+    expect(controller.mode).toBe('busy');
+    expect(view.container.querySelector('.running-line')?.textContent).toBe('hang');
+    expect(input.disabled).toBe(false);
+    expect(input.readOnly).toBe(false);
+    expect(document.activeElement).toBe(input);
+    expect(input.value).toBe('');
+
+    await type(input, 'ls -a');
+    const enter = press(input, 'Enter');
+    expect(enter.defaultPrevented).toBe(true);
+    expect(controller.bell).toBe(true);
+    expect(input.value).toBe('ls -a');
+    expect(controller.running?.line).toBe('hang');
+  });
+
+  it('gives the prompt back at once on ^C, though the command ignores it, keeping the type-ahead', async () => {
+    const { input, controller, h } = setup();
+    await type(input, 'hang');
+    press(input, 'Enter');
+    await type(input, 'next');
+    const ctrlC = press(input, 'c', { ctrlKey: true });
+    // At once: nothing waits on the command.
+    expect(ctrlC.defaultPrevented).toBe(true);
+    expect(controller.running).toBeNull();
+    expect(controller.mode).toBe('edit');
+    expect(input.value).toBe('next');
+    await vi.waitFor(() => expect(h.commits[h.commits.length - 1]).toMatchObject({ line: 'hang', status: 130, interrupted: true }));
+  });
+
+  it('stops on ^C or Escape pressed with focus elsewhere on the page, and leaves other keys alone', async () => {
+    const { input, controller } = setup();
+    await type(input, 'hang');
+    press(input, 'Enter');
+    input.blur();
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    document.body.dispatchEvent(enter);
+    expect(enter.defaultPrevented).toBe(false);
+    expect(controller.running).not.toBeNull();
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    document.body.dispatchEvent(escape);
+    expect(escape.defaultPrevented).toBe(true);
+    expect(controller.running).toBeNull();
+    expect(document.activeElement).not.toBe(input);
+  });
+
+  it('stops on Escape, and on a tap of the status line', async () => {
+    const { input, controller, view } = setup();
+    await type(input, 'hang');
+    press(input, 'Enter');
+    press(input, 'Escape');
+    expect(controller.running).toBeNull();
+
+    await type(input, 'hang');
+    press(input, 'Enter');
+    await tick();
+    const status = view.getByRole('button', { name: 'Cancel running command' });
+    expect(status.textContent).toMatch(/Processing… \(Ctrl\+C to cancel\)$/);
+    await fireEvent.click(status);
+    expect(controller.running).toBeNull();
+  });
+});
+
+describe('Tab and the chips', () => {
+  it('a tapped chip puts the same line on the prompt as choosing it in the Tab menu', async () => {
+    const { input, controller } = setup();
+    await engineReady(controller);
+    for (const index of [0, 1, 2]) {
+      await type(input, 'cat ');
+      const chip = controller.chipList.chips[index];
+      if (chip === undefined) throw new Error(`no chip ${index}`);
+      controller.choose(chip);
+      const tapped = input.value;
+      expect(document.activeElement).toBe(input);
+
+      await type(input, 'cat ');
+      press(input, 'Tab');
+      for (let i = 0; i <= index; i += 1) press(input, 'Tab');
+      press(input, 'Enter');
+      expect(input.value, chip.label).toBe(tapped);
+    }
+  });
+
+  it('offers the folder’s entries as chips while typing', async () => {
+    const { input, controller } = setup();
+    await engineReady(controller);
+    await type(input, 'cat ');
+    expect(controller.chipList.chips.map((chip) => chip.label)).toEqual(['a.txt', 'b.txt', 'docs/']);
+  });
+
+  it('asks before listing over 100, and the answer is the next key', async () => {
+    const { input, controller, h } = setup();
+    await engineReady(controller);
+    h.fs.mkdir('/home/guest/many');
+    for (let i = 1; i <= 120; i += 1) h.fs.writeFile(`/home/guest/many/f${String(i).padStart(3, '0')}`, '');
+    await type(input, 'cat many/f');
+    press(input, 'Tab');
+    await tick();
+    expect(controller.question).toBe('Display all 120 possibilities? (y or n)');
+    expect(press(input, 'n').defaultPrevented).toBe(true);
+    expect(controller.question).toBeNull();
+    expect(controller.listed).toBe(false);
+    press(input, 'Tab');
+    press(input, 'y');
+    await tick();
+    expect(controller.listed).toBe(true);
+    expect(controller.chipList.chips).toHaveLength(120);
+    expect(input.value).toBe('cat many/f');
+  });
+
+  it('holds composition edits until the input method is done', async () => {
+    const { input, controller } = setup();
+    await engineReady(controller);
+    await type(input, 'ca');
+    input.dispatchEvent(new CompositionEvent('compositionstart'));
+    controller.pressTab();
+    expect(input.value).toBe('ca');
+    input.dispatchEvent(new CompositionEvent('compositionend'));
+    expect(input.value).toBe('cat ');
+  });
+});
+
+describe('the ghost', () => {
+  it('offers the rest of a matching line from history, under the cursor, and Right takes it', async () => {
+    const { input, controller, view, h } = setup();
+    await engineReady(controller);
+    await h.run('echo hello');
+    await type(input, 'ec');
+    expect(controller.ghost).toMatchObject({ text: 'ho hello', source: 'history', acceptable: true });
+    const mirror = view.container.querySelector('.mirror');
+    expect(mirror?.querySelector('.cursor')?.textContent).toBe('h');
+    expect(mirror?.querySelector('.ghost')?.textContent).toBe('o hello');
+    expect(press(input, 'ArrowRight').defaultPrevented).toBe(true);
+    expect(input.value).toBe('echo hello');
+    expect(controller.ghost).toBeNull();
+  });
+
+  it('Alt+F takes one word of it, and the ghost is gone mid-line', async () => {
+    const { input, controller, h } = setup();
+    await engineReady(controller);
+    await h.run('echo hello world');
+    await type(input, 'echo');
+    press(input, 'f', { altKey: true });
+    expect(input.value).toBe('echo hello');
+    await type(input, 'echo hello', 2);
+    expect(controller.ghost).toBeNull();
+    expect(press(input, 'ArrowRight').defaultPrevented).toBe(false);
+  });
+
+  it('is never drawn on touch, where there is no mirror', async () => {
+    const { input, controller, h } = setup({ touch: true });
+    await engineReady(controller);
+    await h.run('echo hello');
+    await type(input, 'ec');
+    expect(controller.ghost).toBeNull();
+  });
+});
+
+describe('readline keys', () => {
+  it('cut and paste through the kill ring', async () => {
+    const { input, controller } = setup();
+    await type(input, 'echo hello world');
+    press(input, 'Backspace', { altKey: true });
+    expect(input.value).toBe('echo hello ');
+    press(input, 'u', { ctrlKey: true });
+    expect(input.value).toBe('');
+    expect(controller.ring.entries).toEqual(['echo hello world']);
+    press(input, 'y', { ctrlKey: true });
+    expect(input.value).toBe('echo hello world');
+    press(input, 'a', { ctrlKey: true });
+    expect(controller.cursor).toBe(0);
+    press(input, 'k', { ctrlKey: true });
+    expect(input.value).toBe('');
+  });
+
+  it('Ctrl+W cuts back to a space on a Mac, and is the browser’s elsewhere', async () => {
+    const mac = setup({ platform: 'mac' });
+    await type(mac.input, 'cd /home/guest/docs');
+    expect(press(mac.input, 'w', { ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(mac.input.value).toBe('cd ');
+    mac.view.unmount();
+    const other = setup({ platform: 'other' });
+    await type(other.input, 'cd /home/guest/docs');
+    expect(press(other.input, 'w', { ctrlKey: true }).defaultPrevented).toBe(false);
+  });
+
+  it('Up steps back through lines starting with what is typed, and Down brings the draft back', async () => {
+    const { input, h } = setup();
+    for (const line of ['echo one', 'pwd', 'echo two']) await h.run(line);
+    await type(input, 'echo');
+    press(input, 'ArrowUp');
+    expect(input.value).toBe('echo two');
+    press(input, 'ArrowUp');
+    expect(input.value).toBe('echo one');
+    press(input, 'ArrowDown');
+    press(input, 'ArrowDown');
+    expect(input.value).toBe('echo');
+  });
+
+  it('Alt+. inserts the last word of the line before', async () => {
+    const { input, h } = setup();
+    await h.run('cat a.txt b.txt');
+    await type(input, 'ls ');
+    press(input, '.', { altKey: true, key: '≥' } as KeyboardEventInit);
+    expect(input.value).toBe('ls b.txt');
+  });
+
+  it('Ctrl+R searches back through history; Ctrl+R again goes older; Enter runs; failure is said', async () => {
+    const { input, controller, h, view } = setup();
+    for (const line of ['echo alpha', 'pwd', 'echo beta']) await h.run(line);
+    const before = h.commits.length;
+    await type(input, 'draft');
+    expect(press(input, 'r', { ctrlKey: true }).defaultPrevented).toBe(true);
+    await type(input, 'echo');
+    expect(controller.searchView).toMatchObject({ label: '(reverse-i-search)', line: 'echo beta' });
+    await tick();
+    expect(view.container.querySelector('.edit-row .read-prompt')?.textContent).toBe('(reverse-i-search)`');
+    // The query, then the line found, with the block cursor on the quote that closes the query.
+    expect(view.container.querySelector('.mirror')?.textContent).toBe("echo': echo beta");
+    expect(view.container.querySelector('.mirror .cursor')?.textContent).toBe("'");
+    press(input, 'r', { ctrlKey: true });
+    expect(controller.searchView?.line).toBe('echo alpha');
+    await type(input, 'echoz');
+    expect(controller.searchView?.label).toBe('(failed reverse-i-search)');
+    press(input, 'Escape');
+    expect(controller.search).toBeNull();
+    expect(input.value).toBe('draft');
+
+    press(input, 'r', { ctrlKey: true });
+    await type(input, 'alp');
+    press(input, 'Enter');
+    await vi.waitFor(() => expect(h.commits.length).toBe(before + 1));
+    expect(h.commits[h.commits.length - 1]?.line).toBe('echo alpha');
+  });
+
+  it('a moving key in a search puts the line found on the prompt to edit', async () => {
+    const { input, controller, h } = setup();
+    await h.run('echo found');
+    press(input, 'r', { ctrlKey: true });
+    await type(input, 'fou');
+    press(input, 'ArrowRight');
+    expect(controller.search).toBeNull();
+    expect(input.value).toBe('echo found');
+  });
+
+  it('Ctrl+L clears the screen and keeps the line', async () => {
+    const { input, screen } = setup();
+    screen.push({ prompt: [], line: 'old', blocks: [] });
+    await type(input, 'echo kept');
+    expect(press(input, 'l', { ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(screen.entries()).toEqual([]);
+    expect(input.value).toBe('echo kept');
+  });
+
+  it('Ctrl+C prints the line with ^C at an idle prompt, and copies a selection instead', async () => {
+    const { input, screen } = setup();
+    await type(input, 'echo hello');
+    input.setSelectionRange(0, 4);
+    expect(press(input, 'c', { ctrlKey: true }).defaultPrevented).toBe(false);
+    expect(screen.entries()).toEqual([]);
+
+    const text = document.createElement('p');
+    text.dataset.testText = '';
+    text.textContent = 'some earlier output';
+    document.body.append(text);
+    input.setSelectionRange(10, 10);
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    window.getSelection()?.addRange(range);
+    expect(press(input, 'c', { ctrlKey: true }).defaultPrevented).toBe(false);
+    window.getSelection()?.removeAllRanges();
+
+    expect(press(input, 'c', { ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(screen.entries()[0]).toMatchObject({ line: 'echo hello^C', status: 130 });
+    expect(input.value).toBe('');
+  });
+
+  it('Ctrl+D on an empty line runs exit', async () => {
+    const { input, h } = setup();
+    press(input, 'd', { ctrlKey: true });
+    await vi.waitFor(() => expect(h.commits[h.commits.length - 1]?.line).toBe('exit'));
+  });
+
+  it('Escape then Tab within a second leaves the terminal; later, Tab completes again', async () => {
+    let now = 10_000;
+    const { input } = setup({ now: () => now });
+    press(input, 'Escape');
+    expect(press(input, 'Shift', { shiftKey: true }).defaultPrevented).toBe(false);
+    expect(press(input, 'Tab', { shiftKey: true }).defaultPrevented).toBe(false);
+    press(input, 'Escape');
+    now += ESCAPE_TAB_MS + 1;
+    expect(press(input, 'Tab').defaultPrevented).toBe(true);
+    press(input, 'Escape');
+    press(input, 'a');
+    expect(press(input, 'Tab').defaultPrevented).toBe(true);
+  });
+});
+
+describe('the > continuation', () => {
+  it('collects lines until the quote closes, then runs them as one', async () => {
+    const { input, controller, h, view } = setup();
+    await type(input, "echo 'one");
+    press(input, 'Enter');
+    await tick();
+    expect(controller.ps2).toMatchObject({ reason: 'quote', lines: ["echo 'one"] });
+    expect(view.container.querySelector('.edit-row .ps2')?.textContent).toBe('> ');
+    expect(h.commits).toEqual([]);
+    await type(input, "two'");
+    press(input, 'Enter');
+    await vi.waitFor(() => expect(h.commits).toHaveLength(1));
+    expect(h.commits[0]?.line).toBe("echo 'one\ntwo'");
+    expect(controller.ps2).toBeNull();
+  });
+
+  it('joins a trailing pipe with a space and a backslash with nothing', async () => {
+    const { input, h } = setup();
+    await type(input, 'echo a |');
+    press(input, 'Enter');
+    await type(input, 'cat');
+    press(input, 'Enter');
+    await vi.waitFor(() => expect(h.commits).toHaveLength(1));
+    expect(h.commits[0]?.line).toBe('echo a | cat');
+    await type(input, 'ec\\');
+    press(input, 'Enter');
+    await type(input, 'ho b');
+    press(input, 'Enter');
+    await vi.waitFor(() => expect(h.commits).toHaveLength(2));
+    expect(h.commits[1]?.line).toBe('echo b');
+  });
+});
+
+describe('a command reading a line', () => {
+  it('asks rm -i’s question at the prompt, keeping the type-ahead for afterwards', async () => {
+    const { input, controller, h, view } = setup();
+    await type(input, 'rm -i a.txt');
+    press(input, 'Enter');
+    await vi.waitFor(() => expect(controller.read).not.toBeNull());
+    await tick();
+    expect(view.container.querySelector('.read-prompt')?.textContent).toBe("rm: remove regular file 'a.txt'? ");
+    expect(input.getAttribute('aria-label')).toBe("rm: remove regular file 'a.txt'?");
+    await type(input, 'y');
+    press(input, 'Enter');
+    await vi.waitFor(() => expect(h.commits).toHaveLength(1));
+    expect(h.fs.exists('/home/guest/a.txt')).toBe(false);
+  });
+});
+
+describe('sudo’s password', () => {
+  it('is masked, and reaches no history, screen, storage or kill ring', async () => {
+    const { input, controller, h, view } = setup();
+    await type(input, 'sudo ls');
+    press(input, 'Enter');
+    await vi.waitFor(() => expect(controller.mode).toBe('secret'));
+    await tick();
+    expect(view.container.textContent).toContain('[sudo] password for guest:');
+    expect(view.container.querySelector('.hint')?.textContent).toBe(SUDO_HINT);
+    expect(input.type).toBe('text');
+    expect(input.closest('.input-box')?.classList.contains('secret')).toBe(true);
+    expect(controller.chipList.chips.map((chip) => chip.label)).toEqual(['Cancel']);
+
+    await type(input, SECRET);
+    // The mirror draws the cursor alone; nothing typed is shown.
+    expect(view.container.querySelector('.mirror')?.textContent).toBe(' ');
+    press(input, 'u', { ctrlKey: true });
+    expect(controller.ring.entries).toEqual([]);
+    press(input, 'y', { ctrlKey: true });
+    expect(input.value).toBe('');
+    await type(input, SECRET);
+    press(input, 'Enter');
+    await vi.waitFor(() => expect(h.commits).toHaveLength(1));
+    await tick();
+
+    expect(h.commits[0]?.status).toBe(1);
+    expect(JSON.stringify(h.commits)).not.toContain(SECRET);
+    expect(JSON.stringify(h.shell.history.list())).not.toContain(SECRET);
+    expect(JSON.stringify(controller.history)).not.toContain(SECRET);
+    expect(JSON.stringify({ ...localStorage })).not.toContain(SECRET);
+    expect(JSON.stringify({ ...sessionStorage })).not.toContain(SECRET);
+    expect(controller.ring.entries.join('')).not.toContain(SECRET);
+    expect(input.value).toBe('');
+    expect(controller.text).toBe('');
+    expect(document.body.innerHTML).not.toContain(SECRET);
+  });
+
+  it('is emptied when the prompt loses focus or the page is hidden', async () => {
+    const { input, controller } = setup();
+    await type(input, 'sudo ls');
+    press(input, 'Enter');
+    await vi.waitFor(() => expect(controller.mode).toBe('secret'));
+    await type(input, SECRET);
+    input.blur();
+    expect(input.value).toBe('');
+    expect(controller.text).toBe('');
+    input.focus();
+    await type(input, SECRET);
+    window.dispatchEvent(new Event('pagehide'));
+    expect(input.value).toBe('');
+    expect(controller.mode).toBe('secret');
+  });
+
+  it('Cancel gives back the prompt, with what was typed ahead', async () => {
+    const { input, controller, h } = setup();
+    await type(input, 'sudo ls');
+    press(input, 'Enter');
+    await vi.waitFor(() => expect(controller.mode).toBe('secret'));
+    const cancel = controller.chipList.chips[0];
+    if (cancel === undefined) throw new Error('no Cancel chip');
+    controller.choose(cancel);
+    await vi.waitFor(() => expect(h.commits).toHaveLength(1));
+    expect(h.commits[0]).toMatchObject({ status: 130, interrupted: true });
+    expect(controller.mode).toBe('edit');
+  });
+});

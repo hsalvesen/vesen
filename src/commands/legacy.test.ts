@@ -164,13 +164,13 @@ function fakeSource(): LegacySource & { calls: string[] } {
 }
 
 describe('the legacy table', () => {
-  it('wraps the 11 commands not yet ported, each once, with a category and a summary', () => {
+  it('wraps the 10 commands not yet ported, each once, with a category and a summary', () => {
     const specs = legacySpecs(fakeSource());
-    expect(specs).toHaveLength(11);
-    expect(new Set(specs.map((spec) => spec.name)).size).toBe(11);
+    expect(specs).toHaveLength(10);
+    expect(new Set(specs.map((spec) => spec.name)).size).toBe(10);
     // Ported to src/commands: the file and text core, history, clear, cd, pwd, reset, help, theme,
-    // cathode and banner.
-    for (const ported of ['cd', 'ls', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'history', 'clear', 'help', 'theme', 'cathode', 'banner']) {
+    // cathode, banner and sudo.
+    for (const ported of ['cd', 'ls', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'history', 'clear', 'help', 'theme', 'cathode', 'banner', 'sudo']) {
       expect(specs.map((spec) => spec.name)).not.toContain(ported);
     }
     const registry = new CommandRegistry(specs);
@@ -195,7 +195,6 @@ describe('the legacy table', () => {
   it('describes arguments for completion', () => {
     const registry = new CommandRegistry(legacySpecs(fakeSource()));
     expect(registry.get('weather')?.args?.[0]?.source).toEqual({ kind: 'examples', caseInsensitive: true, fromHistory: true });
-    expect(registry.get('sudo')?.args?.[0]?.source).toEqual({ kind: 'commandLine' });
   });
 
   it('passes every word, unparsed, to the legacy function', async () => {

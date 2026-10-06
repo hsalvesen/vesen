@@ -466,6 +466,11 @@ export class TtySink {
     this.sealed = true;
   }
 
+  /** The output so far, as it would show now: what a command reading a line shows above its prompt. */
+  snapshot(): Block[] {
+    return this.items.map((block) => (block.type === 'lines' ? { ...block, lines: [...block.lines] } : block));
+  }
+
   /** Ends the job's output and returns it. */
   finish(): { blocks: Block[]; screen: ScreenAction } {
     this.seal();

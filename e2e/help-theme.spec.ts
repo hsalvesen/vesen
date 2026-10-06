@@ -5,7 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 // what is already on the screen and moves the marker in an earlier theme ls; exit offers a new
 // session. Checked on a desktop and in Instagram's in-app browser on an iPhone.
 
-const prompt = (page: Page) => page.getByRole('textbox', { name: 'Terminal command' });
+const prompt = (page: Page) => page.getByRole('combobox', { name: 'Terminal command' });
 const lastEntry = (page: Page) => page.locator('[role="log"] .entry').last();
 
 /** Runs a line at the prompt and waits until it is in the transcript and nothing runs. */

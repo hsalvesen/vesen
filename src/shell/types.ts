@@ -378,9 +378,15 @@ export interface Tty {
   readonly inApp: InAppBrowser | null;
   /** The status line label while the command runs; null clears it. */
   status(text: string | null): void;
-  /** Reads one line at a prompt; null on ^C or ^D. Secret input is masked and never stored. */
-  readLine(options: { prompt: string; secret?: boolean }): Promise<string | null>;
-  /** Asks yes or no, with chips on touch; null on ^C. */
+  /**
+   * Reads one line at a prompt; null on ^C or ^D. The terminal echoes the prompt and the answer
+   * into the output, as a terminal does, except a secret answer, which is masked as it is typed
+   * and never echoed or stored. `hint` is a dim line above the prompt; `opens` is a URL opened
+   * inside the key press that answers, as `opens()` is inside the Enter that runs a line, for
+   * tty.open to report.
+   */
+  readLine(options: { prompt: string; secret?: boolean; hint?: string; opens?: string }): Promise<string | null>;
+  /** Asks yes or no at the prompt; null on ^C. */
   confirm(message: string, options?: { defaultAnswer?: boolean }): Promise<boolean | null>;
   /**
    * Prints a link card with Copy, and reports whether the preflight already opened the URL

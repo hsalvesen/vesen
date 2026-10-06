@@ -1,5 +1,5 @@
 // Sets --input-scale on <html>: the terminal font size over 16px. On touch the command input is
-// really 16px, so iOS never zooms in when it takes focus, and components/Input.svelte draws it
+// really 16px, so iOS never zooms in when it takes focus, and ui/prompt/LineEditor.svelte draws it
 // at the terminal's size with this scale. It is measured when it starts, when the page has
 // loaded, on resize, and when web fonts finish loading. The kill switch, ?input=plain or
 // `--input-scale-off: 1` in CSS, keeps a plain 16px input (scale 1, and the class input-plain).

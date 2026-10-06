@@ -1,0 +1,917 @@
+// The prompt (docs/plan/designs/terminal-input.md, "DOM STRATEGY", "EVENT ROUTING", "BUSY AND
+// INTERRUPT"; 02, sections 5 and 12). One rune class owns the line being edited and everything
+// around it: the Tab state, history stepping, reverse-i-search, the kill ring, the `> `
+// continuation, a command reading a line (rm -i, sudo's password), and the running line. The
+// completion result, the grey ghost and the chips are derived from it. The pure parts live in
+// src/shell/editor and src/shell/complete; this class turns key presses into their actions and
+// their results into writes to the real <input>, which stays the editing surface everywhere.
+//
+// - The input is never disabled. While a command runs, what is typed stays in it as type-ahead,
+//   and Enter rings the bell instead of running it.
+// - Enter commits the line at once: it leaves the input and shows frozen at the prompt, then
+//   preflight runs inside the key press (so a URL can open) and the shell starts the line.
+// - ^C, Escape and the status line interrupt; the prompt returns at once, and the job's entry,
+//   ending in ^C, follows.
+// - Edits made here wait while an input method is composing, except a tapped chip.
+// - A secret (sudo's password) is masked as it is typed, never reaches history, the screen,
+//   storage or the kill ring, and is emptied when the prompt loses focus or the page is hidden.
+
+import type { Block, Line } from '../../output/model';
+import { TAB_IDLE, type Chip, type ChipList, type Completion, type CompletionResult, type EditState, type Ghost, type PromptMode, type TabState, type TabStep } from '../../shell/complete/types';
+import { joinContinuation, type ContinuationReason } from '../../shell/editor/continuation';
+import { NAV_IDLE, searchLabel, searchResult, startSearch, stepHistory, stepSearch, updateSearch, type HistoryNav, type SearchState } from '../../shell/editor/history';
+import { chordOf, isModifierKey, resolveKey, type Action, type KeyCtx, type KeyPlatform } from '../../shell/editor/keymap';
+import { normalizePaste, normalizeTyped } from '../../shell/editor/normalize';
+import { EMPTY_RING, applyOp, replaceRange, settleRing, yankLastArg, type EditOp, type KillRing, type LastArgState } from '../../shell/editor/readline';
+import type { JobOrigin, ReadRequest, ShellPort } from '../../shell/index';
+import type { ExitCode, JobInfo } from '../../shell/types';
+import type { ScreenStore } from '../../stores/screen';
+import { writeInput } from './inputDom';
+
+/** Escape, then Tab within this long, leaves the terminal (F095). */
+export const ESCAPE_TAB_MS = 1000;
+/** The visual bell: the prompt's underline flashes this long. */
+export const BELL_MS = 150;
+/** The cursor holds still this long after an edit, then blinks. */
+export const STEADY_MS = 600;
+
+/** The id of a read the prompt asks itself: the Tab list's `Display all N possibilities?`. */
+const OWN_READ = -1;
+
+export interface PromptDeps {
+  readonly shell: ShellPort;
+  /** The transcript: an empty Enter and an abandoned line go here, and Ctrl+L clears it. */
+  readonly screen: Pick<ScreenStore, 'push' | 'clear'>;
+  /** Which readline keys are free: Ctrl+W and friends only on a Mac. */
+  readonly platform: KeyPlatform;
+  /** A touch screen: the native input shows, with no mirror, and focus waits for a tap. */
+  readonly touch: boolean;
+  readonly now?: () => number;
+}
+
+/** A line a command, or the prompt itself, is waiting for. */
+export interface PromptRead {
+  readonly id: number;
+  /** Where PS1 would be: `[sudo] password for guest: `. */
+  readonly prompt: string;
+  readonly secret: boolean;
+  /** A dim line above the prompt. */
+  readonly hint: string | null;
+  /** What the command printed before it asked. */
+  readonly before: readonly Block[];
+  /** The first key answers: `Display all N possibilities? (y or n)`. */
+  readonly oneKey: boolean;
+  /** The line being edited stays, and the question shows under it. */
+  readonly keepLine: boolean;
+}
+
+interface ActiveRead extends PromptRead {
+  readonly answer: (text: string | null) => void;
+  /** What was on the prompt when the read began, put back when it ends. */
+  readonly stash: EditState | null;
+}
+
+/** The line that is running, frozen at the prompt it was typed at. */
+export interface RunningLine {
+  readonly line: string;
+  readonly prompt: Line;
+}
+
+/** Lines collected at the `> ` prompt until the whole is complete. */
+export interface Continuation {
+  /** The lines so far, joined as the shell will run them. */
+  readonly text: string;
+  readonly reason: ContinuationReason;
+  /** The lines as typed, for the screen. */
+  readonly lines: readonly string[];
+  /** The prompt the first line was typed at. */
+  readonly prompt: Line;
+}
+
+interface WriteOptions {
+  /** A Tab press made this edit: its state stays. */
+  readonly keepTab?: boolean;
+  /** A history step made it: stepping goes on from there. */
+  readonly keepNav?: boolean;
+  /** Alt+. made it: pressing it again swaps in an older argument. */
+  readonly keepLastArg?: boolean;
+  /** Undo cannot bring it back, and the browser's undo history goes: a secret, a submitted line. */
+  readonly replace?: boolean;
+  /** Even mid-composition: a tapped chip commits what the keyboard was composing. */
+  readonly force?: boolean;
+}
+
+export class PromptController {
+  // ── State ────────────────────────────────────────────────────────────────────────────────
+  text = $state('');
+  cursor = $state(0);
+  /** The other end of the selection; equal to cursor when nothing is selected. */
+  selEnd = $state(0);
+  focused = $state(false);
+  // Raw: each is replaced, never changed in place, and output blocks must keep their identity,
+  // which is how OutputView knows a tappable action was made by trusted code.
+  tab = $state.raw<TabState>(TAB_IDLE);
+  nav = $state.raw<HistoryNav>(NAV_IDLE);
+  search = $state.raw<SearchState | null>(null);
+  ps2 = $state.raw<Continuation | null>(null);
+  running = $state.raw<RunningLine | null>(null);
+  job = $state.raw<JobInfo | null>(null);
+  read = $state.raw<ActiveRead | null>(null);
+  completion = $state.raw<Completion | null>(null);
+  history = $state.raw<readonly string[]>([]);
+  lastStatus = $state<ExitCode>(0);
+  /** The visual bell is showing. */
+  bell = $state(false);
+  /** For the polite live region; a no-break space alternates so a repeat is announced again. */
+  announce = $state('');
+  /** When the line last changed, for the cursor that holds still while typing. */
+  editedAt = $state(0);
+
+  readonly platform: KeyPlatform;
+  readonly touch: boolean;
+  /** The kill ring; never holds a secret. */
+  ring: KillRing = EMPTY_RING;
+  /** The mirror's ghost, for a tap on it; LineEditor sets it. */
+  ghostElement: HTMLElement | null = null;
+
+  private readonly shell: ShellPort;
+  private readonly screen: PromptDeps['screen'];
+  private readonly now: () => number;
+  private input: HTMLInputElement | null = null;
+  private suppress = false;
+  private composing = false;
+  private pendingWrite: { state: EditState; options: WriteOptions } | null = null;
+  private escapedAt = Number.NEGATIVE_INFINITY;
+  private lastArg: LastArgState | null = null;
+  private runs = 0;
+  private announced = 0;
+  private bellTimer: ReturnType<typeof setTimeout> | undefined;
+  private readonly stops: (() => void)[] = [];
+
+  constructor(deps: PromptDeps) {
+    this.shell = deps.shell;
+    this.screen = deps.screen;
+    this.platform = deps.platform;
+    this.touch = deps.touch;
+    this.now = deps.now ?? (() => (typeof performance === 'undefined' ? Date.now() : performance.now()));
+    this.stops.push(
+      deps.shell.completion.subscribe((value) => (this.completion = value)),
+      deps.shell.lastStatus.subscribe((value) => (this.lastStatus = value)),
+      deps.shell.historyLines.subscribe((value) => (this.history = value)),
+      // The prompt is idle again the moment the job ends, in the same update as its entry.
+      deps.shell.job.subscribe((value) => {
+        this.job = value;
+        if (value === null) this.running = null;
+      }),
+      deps.shell.reads.subscribe((request) => this.onShellRead(request)),
+    );
+  }
+
+  // ── Derived ──────────────────────────────────────────────────────────────────────────────
+
+  /** What the prompt is doing: typing, a command running, a password, a history search. */
+  get mode(): PromptMode {
+    if (this.read?.secret === true) return 'secret';
+    if (this.search !== null) return 'search';
+    if (this.running !== null && this.read === null) return 'busy';
+    return 'edit';
+  }
+
+  /** The line and cursor. */
+  get state(): EditState {
+    return { text: this.text, cursor: Math.min(this.cursor, this.text.length) };
+  }
+
+  /** The completion of the line, while it is being typed. */
+  readonly result = $derived.by((): CompletionResult | null => {
+    const completion = this.completion;
+    if (completion === null || this.mode !== 'edit' || this.read !== null || this.ps2 !== null) return null;
+    return completion.engine.complete(this.state, completion.env);
+  });
+
+  /** The grey text after the cursor: the rest of a history line, or of the completion. */
+  readonly ghost = $derived.by((): Ghost | null => {
+    const completion = this.completion;
+    if (completion === null || this.touch || this.mode !== 'edit' || this.read !== null || this.ps2 !== null) return null;
+    return completion.engine.ghostFor(this.state, this.result, this.history, {
+      selection: this.selEnd !== this.cursor,
+      menuOpen: this.tab.phase === 'menu',
+    });
+  });
+
+  /** The chips under the prompt: completions, the Tab list, starters, did-you-mean, Cancel. */
+  readonly chipList = $derived.by((): ChipList => {
+    const completion = this.completion;
+    if (completion === null || this.ps2 !== null || (this.read !== null && !this.read.secret && !this.read.keepLine)) return { chips: [], more: 0 };
+    const list = completion.engine.chipsFor({
+      mode: this.mode,
+      state: this.state,
+      result: this.result,
+      tab: this.tab,
+      touch: this.touch,
+      registry: completion.env.registry,
+      history: this.history,
+      max: this.touch ? 24 : 8,
+      lastStatus: this.lastStatus,
+    });
+    // The status line under the prompt already stops a running command.
+    return { chips: list.chips.filter((chip) => chip.action.kind !== 'interrupt'), more: list.more };
+  });
+
+  /** What the status line shows while a line runs: the line, its label, when it started. */
+  readonly status = $derived.by((): { line: string; label: string | null; startedAt: number } | null => {
+    const running = this.running;
+    if (running === null || this.read !== null) return null;
+    return { line: running.line, label: this.job?.label ?? null, startedAt: this.job?.startedAt ?? 0 };
+  });
+
+  /** The Tab list is open, rather than the quiet row shown while typing. */
+  readonly listed = $derived(this.completion?.engine.tabView(this.tab).result != null);
+
+  /** `Display all N possibilities? (y or n)` while it waits for an answer. */
+  readonly question = $derived(this.read?.keepLine === true ? this.read.prompt : null);
+
+  /** What the search shows: `(reverse-i-search)`, the query, then the line found. */
+  readonly searchView = $derived.by(() => {
+    const search = this.search;
+    if (search === null) return null;
+    const hit = search.hit;
+    return { label: searchLabel(search), line: hit?.line ?? '', at: hit?.at ?? 0, length: hit === null ? 0 : search.query.length };
+  });
+
+  // ── The input ────────────────────────────────────────────────────────────────────────────
+
+  /** Wires the prompt to its input. Returns a function that unwires it. */
+  attach(input: HTMLInputElement): () => void {
+    this.input = input;
+    writeInput(input, this.state, { undoable: false });
+    this.focused = input.ownerDocument.activeElement === input;
+    const win = input.ownerDocument.defaultView;
+    const off: (() => void)[] = [];
+    const on = <K extends keyof HTMLElementEventMap>(type: K, listener: (event: HTMLElementEventMap[K]) => void): void => {
+      input.addEventListener(type, listener);
+      off.push(() => input.removeEventListener(type, listener));
+    };
+    on('keydown', (event) => this.onKeydown(event));
+    on('beforeinput', (event) => this.onBeforeInput(event));
+    on('input', () => this.onInput());
+    on('paste', (event) => this.onPaste(event));
+    on('compositionstart', () => {
+      this.composing = true;
+    });
+    on('compositionend', () => this.onCompositionEnd());
+    on('select', () => this.syncSelection());
+    // Where the browser sends selectionchange to the input itself; keyup and pointerup cover the rest.
+    input.addEventListener('selectionchange', this.onSelectionChange);
+    off.push(() => input.removeEventListener('selectionchange', this.onSelectionChange));
+    on('keyup', () => this.syncSelection());
+    on('pointerup', (event) => this.onPointerUp(event));
+    on('focus', () => {
+      this.focused = true;
+      this.syncSelection();
+    });
+    on('blur', () => {
+      this.focused = false;
+      // A password typed and left is not left lying in the page.
+      if (this.mode === 'secret') this.write({ text: '', cursor: 0 }, { replace: true, force: true });
+    });
+    if (win) {
+      const onPageHide = (): void => {
+        if (this.mode === 'secret') this.write({ text: '', cursor: 0 }, { replace: true, force: true });
+      };
+      const onWindowKey = (event: KeyboardEvent): void => this.onWindowKey(event);
+      win.addEventListener('pagehide', onPageHide);
+      win.addEventListener('keydown', onWindowKey);
+      off.push(() => {
+        win.removeEventListener('pagehide', onPageHide);
+        win.removeEventListener('keydown', onWindowKey);
+      });
+    }
+    const detach = (): void => {
+      for (const stop of off.splice(0)) stop();
+      if (this.input === input) this.input = null;
+    };
+    this.stops.push(detach);
+    return detach;
+  }
+
+  /** The input, for the focus policy. */
+  get element(): HTMLInputElement | null {
+    return this.input;
+  }
+
+  /**
+   * Focuses the prompt without scrolling: on a desktop always; on touch, where focus opens the
+   * keyboard, only with `keyboard`. Call it inside the tap, the only time iOS lets focus open it.
+   */
+  focus(options: { keyboard?: boolean } = {}): void {
+    if (options.keyboard === true || !this.touch) this.input?.focus({ preventScroll: true });
+  }
+
+  destroy(): void {
+    for (const stop of this.stops.splice(0)) stop();
+    clearTimeout(this.bellTimer);
+    this.input = null;
+  }
+
+  private onSelectionChange = (): void => this.syncSelection();
+
+  /** Reads the caret and selection back from the input after the browser moved them. */
+  private syncSelection(): void {
+    const input = this.input;
+    if (input === null || this.suppress) return;
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? start;
+    const backward = input.selectionDirection === 'backward';
+    this.cursor = backward ? start : end;
+    this.selEnd = backward ? end : start;
+  }
+
+  private adopt(): void {
+    const input = this.input;
+    if (input === null) return;
+    this.text = input.value;
+    this.syncSelection();
+  }
+
+  /** Puts a line on the prompt: into the input, and into the state. */
+  private write(next: EditState, options: WriteOptions = {}): void {
+    if (this.composing && options.force !== true) {
+      this.pendingWrite = { state: next, options };
+      return;
+    }
+    if (options.force === true) this.composing = false;
+    const input = this.input;
+    if (input !== null) {
+      this.suppress = true;
+      try {
+        writeInput(input, next, { undoable: options.replace !== true && this.mode !== 'secret' });
+      } finally {
+        this.suppress = false;
+      }
+    }
+    this.text = next.text;
+    this.cursor = Math.min(next.cursor, next.text.length);
+    this.selEnd = this.cursor;
+    this.changed(options);
+  }
+
+  /** What follows any change to the line, typed or made here. */
+  private changed(options: WriteOptions): void {
+    if (options.keepTab !== true && this.tab.phase !== 'idle') this.tab = TAB_IDLE;
+    if (options.keepNav !== true) this.nav = NAV_IDLE;
+    if (options.keepLastArg !== true) this.lastArg = null;
+    if (this.search !== null) this.search = updateSearch(this.history, this.search, this.text);
+    this.editedAt = this.now();
+  }
+
+  private onInput(): void {
+    if (this.suppress || this.input === null) return;
+    this.adopt();
+    this.ring = settleRing(this.ring);
+    if (!this.composing && this.mode !== 'secret') {
+      const plain = normalizeTyped(this.text);
+      if (plain !== this.text) {
+        this.write({ text: plain, cursor: normalizeTyped(this.text.slice(0, this.cursor)).length });
+        return;
+      }
+    }
+    this.changed({});
+  }
+
+  private onCompositionEnd(): void {
+    this.composing = false;
+    const pending = this.pendingWrite;
+    this.pendingWrite = null;
+    this.onInput();
+    if (pending !== null) this.write(pending.state, pending.options);
+  }
+
+  private onBeforeInput(event: InputEvent): void {
+    // A soft keyboard answers `Display all N possibilities?` by typing, with no usable keydown.
+    if (this.read?.oneKey === true && event.inputType === 'insertText' && event.data) {
+      event.preventDefault();
+      this.answerQuestion(event.data.charAt(0), true);
+      return;
+    }
+    // Some Android keyboards send Enter only as a line break.
+    if (event.inputType === 'insertLineBreak' || event.inputType === 'insertParagraph') {
+      event.preventDefault();
+      this.submit();
+      return;
+    }
+    if (event.inputType === 'insertFromPaste' && event.dataTransfer) {
+      const pasted = event.dataTransfer.getData('text/plain');
+      if (pasted !== '') {
+        event.preventDefault();
+        this.paste(pasted);
+      }
+    }
+  }
+
+  private onPaste(event: ClipboardEvent): void {
+    const pasted = event.clipboardData?.getData('text/plain');
+    if (pasted === undefined || pasted === '') return;
+    event.preventDefault();
+    this.paste(pasted);
+  }
+
+  /** Pasted text, made one line that never runs by itself, at the selection. */
+  private paste(pasted: string): void {
+    const text = this.mode === 'secret' ? pasted.replace(/[\r\n]+/g, '') : normalizePaste(pasted);
+    const from = Math.min(this.cursor, this.selEnd);
+    const to = Math.max(this.cursor, this.selEnd);
+    this.ring = settleRing(this.ring);
+    this.write(replaceRange(this.state, from, to, text));
+  }
+
+  private onPointerUp(event: PointerEvent): void {
+    this.syncSelection();
+    // A tap or click on the grey ghost takes it. The input lies over the mirror, so the ghost is
+    // found by where the pointer was.
+    const ghost = this.ghost;
+    const element = this.ghostElement;
+    if (ghost === null || !ghost.acceptable || element === null) return;
+    const box = element.getBoundingClientRect();
+    if (event.clientX >= box.left && event.clientX <= box.right && event.clientY >= box.top && event.clientY <= box.bottom) {
+      this.acceptGhost('all');
+    }
+  }
+
+  /** ^C or Escape while a command runs, with focus somewhere else on the page. */
+  private onWindowKey(event: KeyboardEvent): void {
+    if (event.target === this.input || event.defaultPrevented) return;
+    if (this.running === null && this.read === null) return;
+    const ctrlC = chordOf(event) === 'C-c';
+    if (event.key === 'Escape' || (ctrlC && !this.hasSelection())) {
+      event.preventDefault();
+      this.interrupt();
+    }
+  }
+
+  /** Text is selected, in the prompt or in the page: Ctrl+C copies it. */
+  hasSelection(): boolean {
+    const input = this.input;
+    const doc = input?.ownerDocument;
+    if ((doc?.defaultView?.getSelection()?.toString() ?? '') !== '') return true;
+    return input !== null && doc?.activeElement === input && input.selectionStart !== null && input.selectionStart !== input.selectionEnd;
+  }
+
+  // ── Keys ─────────────────────────────────────────────────────────────────────────────────
+
+  private context(): KeyCtx {
+    return {
+      mode: this.mode,
+      platform: this.platform,
+      atEnd: this.cursor >= this.text.length && this.selEnd === this.cursor,
+      empty: this.text === '',
+      hasGhost: this.ghost?.acceptable === true,
+      hasSelection: this.hasSelection(),
+      escArmed: this.now() - this.escapedAt <= ESCAPE_TAB_MS,
+    };
+  }
+
+  private onKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented) return;
+    if (this.read?.oneKey === true && !event.isComposing && event.keyCode !== 229 && !isModifierKey(event.key)) {
+      const consumed = this.answerQuestion(event.key, false, chordOf(event));
+      if (consumed) {
+        event.preventDefault();
+        return;
+      }
+    }
+    this.syncSelection();
+    const ctx = this.context();
+    if (!isModifierKey(event.key)) this.escapedAt = Number.NEGATIVE_INFINITY;
+    const action = resolveKey(event, ctx);
+
+    // In the Tab menu, a key other than Tab or Escape keeps the choice on the line and carries
+    // on; Enter takes the choice without running it.
+    if (this.tab.phase === 'menu' && action.a !== 'tab' && action.a !== 'escape' && action.a !== 'leave' && !isModifierKey(event.key)) {
+      const engine = this.completion?.engine;
+      if (engine !== undefined) this.applyTab(engine.menuKey(this.tab, action.a === 'submit' ? 'enter' : 'commit'));
+      if (action.a === 'submit') {
+        event.preventDefault();
+        return;
+      }
+    }
+    this.perform(action, event);
+  }
+
+  private perform(action: Action, event: KeyboardEvent): void {
+    switch (action.a) {
+      case 'native':
+        return;
+      case 'leave':
+        // Focus moves on to the rest of the page, as Tab does anywhere else.
+        this.resetTab();
+        return;
+      case 'submit':
+        event.preventDefault();
+        this.submit();
+        return;
+      case 'tab':
+        // Held even while a command runs, so focus stays in the prompt.
+        event.preventDefault();
+        this.pressTab(action.reverse);
+        return;
+      case 'op':
+        event.preventDefault();
+        this.editOp(action.op);
+        return;
+      case 'acceptGhost':
+        event.preventDefault();
+        this.acceptGhost(action.unit);
+        return;
+      case 'history':
+        event.preventDefault();
+        this.stepHistory(action.dir);
+        return;
+      case 'search':
+        event.preventDefault();
+        this.stepSearch(action.dir);
+        return;
+      case 'searchAccept':
+        event.preventDefault();
+        this.searchAccept();
+        return;
+      case 'searchExit': {
+        this.searchExit();
+        // Then the key does what it does on the line found.
+        const next = resolveKey(event, this.context());
+        if (next.a !== 'searchExit') this.perform(next, event);
+        return;
+      }
+      case 'searchCancel':
+        event.preventDefault();
+        this.searchCancel();
+        return;
+      case 'yankLastArg':
+        event.preventDefault();
+        this.insertLastArg();
+        return;
+      case 'interrupt':
+        event.preventDefault();
+        this.interrupt();
+        return;
+      case 'clearScreen':
+        event.preventDefault();
+        this.clearScreen();
+        return;
+      case 'escape':
+        this.escape(event);
+        return;
+      case 'eof':
+        event.preventDefault();
+        this.eof();
+        return;
+    }
+  }
+
+  private escape(event: KeyboardEvent): void {
+    const engine = this.completion?.engine;
+    if (this.tab.phase === 'menu' && engine !== undefined) {
+      // The menu closes and what was typed before it comes back.
+      event.preventDefault();
+      this.applyTab(engine.menuKey(this.tab, 'escape'));
+      return;
+    }
+    if (this.tab.phase === 'listed') {
+      event.preventDefault();
+      this.resetTab();
+      return;
+    }
+    if (this.running !== null || this.read !== null) {
+      event.preventDefault();
+      this.interrupt();
+      return;
+    }
+    // Tab within a second leaves the terminal.
+    this.escapedAt = this.now();
+  }
+
+  // ── Editing ──────────────────────────────────────────────────────────────────────────────
+
+  private editOp(op: EditOp): void {
+    // A secret never enters the kill ring, and nothing comes out of it into a secret.
+    const secret = this.mode === 'secret';
+    const { state, ring } = applyOp(this.state, op, secret ? EMPTY_RING : this.ring);
+    if (!secret) this.ring = ring;
+    this.write(state);
+  }
+
+  /** Right or End at the end of the line: the grey text, all of it or its next word. */
+  acceptGhost(unit: 'all' | 'word' = 'all'): void {
+    const ghost = this.ghost;
+    const engine = this.completion?.engine;
+    if (ghost === null || engine === undefined) return;
+    this.ring = settleRing(this.ring);
+    this.write(engine.applyGhost(this.state, ghost, unit));
+  }
+
+  private stepHistory(dir: -1 | 1): void {
+    // A command's own prompt has no history.
+    if (this.read !== null) return;
+    const step = stepHistory(this.history, this.nav, this.state, dir);
+    if (step === null) return;
+    this.ring = settleRing(this.ring);
+    this.write(step.state, { keepNav: true, replace: true });
+    this.nav = step.nav;
+  }
+
+  private insertLastArg(): void {
+    if (this.read !== null) return;
+    const inserted = yankLastArg(this.state, this.history, this.lastArg);
+    if (inserted === null) return;
+    this.write(inserted.state, { keepLastArg: true });
+    this.lastArg = inserted.inserted;
+  }
+
+  // ── Reverse-i-search ─────────────────────────────────────────────────────────────────────
+
+  private stepSearch(dir: -1 | 1): void {
+    if (this.read !== null) return;
+    const search = this.search;
+    if (search === null) {
+      if (dir === 1) return;
+      this.resetTab();
+      // The input holds the query from here; the line typed so far is kept to come back to.
+      const saved = this.state;
+      this.search = startSearch(saved);
+      this.write({ text: '', cursor: 0 }, { replace: true });
+      return;
+    }
+    this.search = stepSearch(this.history, search, dir);
+  }
+
+  /** Enter in a search: the line found runs. */
+  private searchAccept(): void {
+    const search = this.search;
+    if (search === null) return;
+    this.search = null;
+    this.write(searchResult(search), { replace: true });
+    this.submit();
+  }
+
+  /** A moving key in a search: the line found goes on the prompt to be edited. */
+  private searchExit(): void {
+    const search = this.search;
+    if (search === null) return;
+    this.search = null;
+    this.write(searchResult(search), { replace: true });
+    // Up and Down go on from the line found.
+    if (search.hit !== null) this.nav = { index: search.hit.index, prefix: '', draft: search.saved };
+  }
+
+  private searchCancel(): void {
+    const search = this.search;
+    if (search === null) return;
+    this.search = null;
+    this.write(search.saved, { replace: true });
+  }
+
+  // ── Tab and the chips ────────────────────────────────────────────────────────────────────
+
+  /** Tab, or Shift+Tab: extend, then list, then a menu that cycles (02, section 5). */
+  pressTab(reverse = false): void {
+    const completion = this.completion;
+    if (completion === null || this.read !== null || this.search !== null || this.running !== null) return;
+    this.applyTab(completion.engine.pressTab(this.tab, this.state, completion.env, reverse));
+  }
+
+  private resetTab(): void {
+    if (this.tab.phase !== 'idle') this.tab = TAB_IDLE;
+  }
+
+  private applyTab(step: TabStep): void {
+    this.tab = step.tab;
+    const effect = step.effect;
+    if (effect.edit !== undefined) this.write(effect.edit, { keepTab: true });
+    if (effect.bell === true) this.ringBell();
+    if (effect.announce !== undefined) this.say(effect.announce);
+    const asking = step.tab;
+    if (asking.phase === 'asking') {
+      const engine = this.completion?.engine;
+      this.beginRead(
+        { id: OWN_READ, prompt: effect.question ?? '', secret: false, hint: null, before: [], oneKey: true, keepLine: true },
+        (answer) => {
+          if (engine !== undefined) this.applyTab(engine.answer(asking, answer === 'y'));
+        },
+      );
+    }
+  }
+
+  /**
+   * A tapped or clicked chip: an edit goes on the line exactly as Tab would put it there, and
+   * focus stays on the prompt, so a phone's keyboard stays up; a starter runs; Stop and Cancel
+   * interrupt.
+   */
+  choose(chip: Chip): void {
+    const action = chip.action;
+    if (action.kind === 'apply') {
+      const edit = this.completion?.engine.applyChip(chip) ?? null;
+      this.resetTab();
+      if (edit !== null) this.write(edit, { force: true });
+      this.input?.focus({ preventScroll: true });
+    } else if (action.kind === 'run') {
+      this.resetTab();
+      this.submit(action.line, 'chip');
+      this.focus();
+    } else {
+      this.interrupt();
+    }
+  }
+
+  /** Puts text at the prompt, for a tapped name that inserts rather than runs. */
+  insert(text: string): void {
+    this.resetTab();
+    this.search = null;
+    this.write({ text, cursor: text.length }, { force: true });
+    // As if typed: the transcript brings the prompt into view (ui/actions/stickToBottom.ts).
+    this.input?.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // ── Reads ────────────────────────────────────────────────────────────────────────────────
+
+  private onShellRead(request: ReadRequest | null): void {
+    if (request === null) {
+      // Answered, or the command was interrupted while it waited.
+      if (this.read !== null && this.read.id !== OWN_READ) this.endRead();
+      return;
+    }
+    if (this.read?.id === request.id) return;
+    this.beginRead(
+      { id: request.id, prompt: request.prompt, secret: request.secret, hint: request.hint, before: request.before, oneKey: false, keepLine: false },
+      (text) => this.shell.answerRead(request.id, text),
+    );
+  }
+
+  private beginRead(read: PromptRead, answer: (text: string | null) => void): void {
+    if (this.read !== null) this.finishRead(null);
+    this.search = null;
+    if (!read.keepLine) this.resetTab();
+    // What was typed ahead waits, and comes back when the command has its answer.
+    const stash = read.keepLine ? null : this.state;
+    this.read = { ...read, answer, stash };
+    if (!read.keepLine) this.write({ text: '', cursor: 0 }, { replace: true, force: true });
+  }
+
+  /** Ends the read on the prompt without answering it: the command answered or was stopped. */
+  private endRead(): void {
+    const read = this.read;
+    if (read === null) return;
+    this.read = null;
+    if (!read.keepLine) this.write(read.stash ?? { text: '', cursor: 0 }, { replace: true, force: true });
+  }
+
+  /** Answers the read on the prompt: what was typed, or null for ^D and ^C. */
+  private finishRead(text: string | null): void {
+    const read = this.read;
+    if (read === null) return;
+    this.endRead();
+    read.answer(text);
+  }
+
+  /**
+   * A key while `Display all N possibilities? (y or n)` waits: y or a space lists them; n,
+   * Escape, Enter or ^C does not. Any other key says no and then does what it does. Returns
+   * whether the key was used up.
+   */
+  private answerQuestion(key: string, typed: boolean, chord = key): boolean {
+    if (key === 'y' || key === 'Y' || key === ' ' || key === 'Tab') {
+      this.finishRead('y');
+      return true;
+    }
+    const no = key === 'n' || key === 'N' || key === 'Escape' || key === 'Enter' || chord === 'C-c' || chord === 'C-g';
+    this.finishRead('n');
+    return no || typed;
+  }
+
+  // ── Running ──────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Enter, or a tapped line. Typed: answers a read, runs the search's line, or runs the line; an
+   * unfinished line (an open quote, a trailing |) goes on at the `> ` prompt. While a command
+   * runs, Enter only rings the bell and the line stays as type-ahead. A `line` is run as if
+   * typed, interrupting anything running.
+   */
+  submit(line?: string, origin: JobOrigin = 'keyboard'): void {
+    if (line !== undefined) {
+      this.startLine(line, origin);
+      return;
+    }
+    const read = this.read;
+    if (read !== null) {
+      if (!read.oneKey) this.finishRead(this.text);
+      return;
+    }
+    if (this.search !== null) {
+      this.searchAccept();
+      return;
+    }
+    if (this.running !== null) {
+      this.ringBell();
+      return;
+    }
+    const typed = this.text;
+    const ps2 = this.ps2;
+    if (ps2 === null && typed.trim() === '') {
+      // A fresh prompt under the old one, as a terminal gives.
+      this.screen.push({ prompt: this.shell.renderPrompt(), line: '', blocks: [] });
+      this.write({ text: '', cursor: 0 }, { replace: true });
+      return;
+    }
+    const joined = ps2 === null ? typed : joinContinuation(ps2.text, typed, ps2.reason);
+    const reason = this.shell.incomplete(joined);
+    if (reason !== null) {
+      this.ps2 = { text: joined, reason, lines: [...(ps2?.lines ?? []), typed], prompt: ps2?.prompt ?? this.shell.renderPrompt() };
+      this.resetTab();
+      this.write({ text: '', cursor: 0 }, { replace: true });
+      return;
+    }
+    this.startLine(joined, origin);
+  }
+
+  private startLine(line: string, origin: JobOrigin): void {
+    this.resetTab();
+    this.search = null;
+    this.ring = settleRing(this.ring);
+    const prompt = this.ps2?.prompt ?? this.shell.renderPrompt();
+    this.ps2 = null;
+    // Committed at once: the line leaves the input and shows frozen at the prompt.
+    this.write({ text: '', cursor: 0 }, { replace: true, force: true });
+    this.running = { line, prompt };
+    // Inside the key press or tap: a command that opens a URL opens it now, while it may.
+    this.shell.preflight(line);
+    const run = ++this.runs;
+    const handle = this.shell.start(line, origin);
+    const settle = (): void => {
+      if (run === this.runs && this.job === null) this.running = null;
+    };
+    handle.done.then(settle, settle);
+  }
+
+  /**
+   * ^C: with a command running or reading, interrupts it and gives the prompt back at once;
+   * otherwise prints the line with ^C under a fresh prompt, as bash does, and keeps it out of
+   * history.
+   */
+  interrupt(): void {
+    this.resetTab();
+    if (this.read?.id === OWN_READ) {
+      this.finishRead(null);
+      return;
+    }
+    const search = this.search;
+    if (search !== null) {
+      this.search = null;
+      this.write(search.saved, { replace: true });
+    }
+    if (this.running !== null || this.read !== null) {
+      this.shell.abort();
+      this.running = null;
+      return;
+    }
+    const typed = this.text;
+    const ps2 = this.ps2;
+    this.ps2 = null;
+    const shown = ps2 === null ? typed : [...ps2.lines, typed].join('\n> ');
+    this.screen.push({ prompt: ps2?.prompt ?? this.shell.renderPrompt(), line: `${shown}^C`, blocks: [], status: 130 });
+    this.write({ text: '', cursor: 0 }, { replace: true });
+  }
+
+  /** Ctrl+D: no answer to a command's prompt; on an empty line, `exit`. */
+  private eof(): void {
+    if (this.read !== null) {
+      this.finishRead(null);
+      return;
+    }
+    if (this.running !== null) return;
+    const ps2 = this.ps2;
+    if (ps2 !== null) {
+      // The shell says what was left open, as bash does at the end of input.
+      this.startLine(ps2.text, 'keyboard');
+      return;
+    }
+    this.startLine('exit', 'keyboard');
+  }
+
+  /** Ctrl+L: the screen clears and the line stays. */
+  clearScreen(): void {
+    this.screen.clear();
+  }
+
+  // ── Feedback ─────────────────────────────────────────────────────────────────────────────
+
+  /** The visual bell: the prompt's underline flashes; nothing beeps. */
+  ringBell(): void {
+    this.bell = true;
+    clearTimeout(this.bellTimer);
+    this.bellTimer = setTimeout(() => (this.bell = false), BELL_MS);
+  }
+
+  private say(text: string): void {
+    this.announced += 1;
+    this.announce = this.announced % 2 === 0 ? text : `${text} `;
+  }
+}

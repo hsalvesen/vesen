@@ -5,7 +5,7 @@
 // status 130, and it never runs.
 
 import type { Line } from '../output/model';
-import type { Completion, JobHandle, JobOrigin, JobResult, PreflightResult, ScreenSink, ShellPort } from '../shell/index';
+import type { Completion, JobHandle, JobOrigin, JobResult, PreflightResult, ReadRequest, ScreenSink, ShellPort } from '../shell/index';
 import { readonly, writable, type Readable } from '../shell/observable';
 import { promptLine } from '../shell/prompt';
 import { GUEST, type ExitCode, type JobInfo } from '../shell/types';
@@ -44,6 +44,8 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
   const lastStatus = writable<ExitCode>(0);
   const job = writable<JobInfo | null>(null);
   const completion = writable<Completion | null>(null);
+  const historyLines = writable<readonly string[]>([]);
+  const reads = writable<ReadRequest | null>(null);
   let shell: ShellPort | null = null;
   /** Lines to remember once the shell is here. */
   const remembered: string[] = [];
@@ -77,6 +79,8 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
       forward(loaded.cwd, cwd);
       forward(loaded.lastStatus, lastStatus);
       forward(loaded.job, job);
+      forward(loaded.historyLines, historyLines);
+      forward(loaded.reads, reads);
       // Subscribing starts the engine's chunk loading, now the kernel is here.
       forward(loaded.completion, completion);
       return loaded;
@@ -165,6 +169,11 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
       if (shell !== null) shell.remember(line);
       else remembered.push(line);
     },
+    historyLines: readonly(historyLines),
+    reads: readonly(reads),
+    answerRead: (id, text) => shell?.answerRead(id, text),
+    // Before the kernel is here nothing can tell: the line runs, and the kernel says what is wrong.
+    incomplete: (line) => shell?.incomplete(line) ?? null,
     renderPrompt,
   };
 }

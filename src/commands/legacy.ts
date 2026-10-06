@@ -11,8 +11,11 @@ import type { RawArgsSpec } from '../shell/flags';
 import { writeLegacyHtml } from '../shell/streams';
 import type { CommandContext, CommandSpec, Example, ExitCode } from '../shell/types';
 
-/** A legacy command: words in, HTML out. The signal aborts on ^C and when the budget runs out. */
-export type LegacyFn = (args: string[], signal?: AbortSignal) => string | Promise<string>;
+/**
+ * A legacy command: words in, HTML out. The signal aborts on ^C and when the budget runs out;
+ * `status` sets what the status line says while it runs (speedtest's phase).
+ */
+export type LegacyFn = (args: string[], signal?: AbortSignal, status?: (text: string | null) => void) => string | Promise<string>;
 
 /** What the adapter adds to a legacy function to make it a command. */
 export interface LegacyMeta
@@ -99,7 +102,7 @@ export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpe
       else ctx.signal.addEventListener('abort', onAbort, { once: true });
       let html: string;
       try {
-        html = await fn([...(argsFor?.(ctx) ?? ctx.args)], controller.signal);
+        html = await fn([...(argsFor?.(ctx) ?? ctx.args)], controller.signal, (text) => ctx.tty.status(text));
       } finally {
         ctx.signal.removeEventListener('abort', onAbort);
       }
@@ -119,7 +122,7 @@ export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpe
 
 /** The legacy command names, in the order help lists them today. */
 export const LEGACY_NAMES = [
-  'curl', 'email', 'fastfetch', 'poweroff', 'qr', 'repo', 'speedtest', 'stock', 'sudo', 'weather', 'whoami',
+  'curl', 'email', 'fastfetch', 'poweroff', 'qr', 'repo', 'speedtest', 'stock', 'weather', 'whoami',
 ] as const;
 export type LegacyName = (typeof LEGACY_NAMES)[number];
 
@@ -182,12 +185,6 @@ const TABLE: Readonly<Record<LegacyName, StaticMeta>> = {
     loadingLabel: (argv) => `fetching ${argv[1]?.toUpperCase() ?? 'the quote'}…`,
     args: [{ name: 'TICKER', source: { kind: 'examples', caseInsensitive: true } }],
     examples: examples('stock AAPL', 'stock TEAM'),
-  },
-  sudo: {
-    category: 'shell',
-    summary: 'run a command as the superuser',
-    args: [{ name: 'COMMAND', source: { kind: 'commandLine' }, optional: true }],
-    examples: examples('sudo ls'),
   },
   weather: {
     category: 'network',

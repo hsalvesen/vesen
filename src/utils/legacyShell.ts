@@ -13,7 +13,6 @@ import type { VirtualFile } from '../vfs/types';
 import type { Vfs } from '../vfs/vfs';
 import { commands, emailHref, legacyHelpHtml } from './commands';
 import { LINKEDIN_URL } from './commands/system';
-import { commandHistory } from './legacyStores';
 import { bindLegacyVfs, mirrorCwd, virtualFileSystem } from './virtualFileSystem';
 
 export interface LegacyBindings {
@@ -55,7 +54,6 @@ export function legacyBindings(): LegacyBindings {
         shell.cwd.subscribe((cwd) => mirrorCwd(cwd)),
         // A reset puts the seed back under the same cwd; the mirror resolves it again.
         vfs.onChange(() => mirrorCwd(shell.cwd.get())),
-        shell.history.subscribe((entries) => commandHistory.set(entries.map((entry) => entry.line))),
       ];
       return () => {
         for (const stop of stops) stop();

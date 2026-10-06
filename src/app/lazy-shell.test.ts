@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Completion, JobResult, ScreenCommit, ShellPort } from '../shell/index';
+import type { Completion, JobResult, ReadRequest, ScreenCommit, ShellPort } from '../shell/index';
 import { writable, type Writable } from '../shell/observable';
 import type { JobInfo } from '../shell/types';
 import { lazyShell } from './lazy-shell';
@@ -32,6 +32,10 @@ function fakeShell() {
     run: (line) => shell.start(line).done,
     abort: () => false,
     remember: (line) => remembered.push(line),
+    historyLines: writable<readonly string[]>([]),
+    reads: writable<ReadRequest | null>(null),
+    answerRead: () => {},
+    incomplete: () => null,
     completion: writable<Completion | null>(null),
     renderPrompt: () => [{ text: 'from the shell' }],
   };

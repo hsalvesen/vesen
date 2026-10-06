@@ -7,7 +7,6 @@ import { whenAborted } from '../lib/signals';
 import type { Block, Line } from '../output/model';
 import type { Appearance, Bell, Clipboard, Clock, KV, Net, Opener, SysInfo } from '../services/types';
 import { expandAliases } from './alias';
-import type { SimpleCommand } from './ast';
 import { createCompletionEnv } from './complete/env';
 import type { Completion, CompletionEnv } from './complete/types';
 import {
@@ -22,16 +21,20 @@ import {
   type ShellFs,
   type TerminalInfo,
 } from './executor';
+import type { IncompleteReason, SimpleCommand } from './ast';
 import { expandHistory, type HistoryState } from './histexpand';
 import { readonly, writable, type Readable } from './observable';
 import { parse } from './parser';
 import { promptLine } from './prompt';
+import { createLineReader, type ReadRequest } from './reader';
 import { Session, type HistoryStore, type JobState } from './session';
 import { JobDetached, NullOut, StringIn, TtyIn, TtyOut, TtySink, vfsWriteTarget, type ScreenAction, type WriteTarget } from './streams';
 import { EXIT, ExitRequest, type CommandSpec, type Env, type ExitCode, type JobInfo, type Registry, type User } from './types';
 
 export type { Completion, CompletionEnv } from './complete/types';
 export type { ShellFs, TerminalInfo } from './executor';
+export type { ReadRequest } from './reader';
+export type { IncompleteReason } from './ast';
 export type { ScreenAction, WriteTarget } from './streams';
 
 /** Where a line came from. */
@@ -99,8 +102,22 @@ export interface ShellPort {
   run(line: string, origin?: JobOrigin): Promise<JobResult>;
   /** ^C: interrupts the running job. Returns whether there was one. */
   abort(): boolean;
-  /** Adds a line to history without running it, as the sudo password prompt does. */
+  /** Adds a line to history without running it: a line ^C ended before the kernel arrived. */
   remember(line: string): void;
+  /** Command history, oldest first, for Up, Down, Ctrl+R, Alt+. and the ghost. */
+  readonly historyLines: Readable<readonly string[]>;
+  /** A running command waiting for a line at the prompt (rm -i, sudo's password), or null. */
+  readonly reads: Readable<ReadRequest | null>;
+  /**
+   * The prompt's answer to read `id`: what was typed, or null for ^D. Call it synchronously
+   * inside the key press, so a URL the command opens on the answer may open.
+   */
+  answerRead(id: number, text: string | null): void;
+  /**
+   * Why `line` is not finished (an open quote, a trailing | or &&, a backslash at the end), or
+   * null when it is. Enter on an unfinished line shows the `> ` prompt for the rest. Never throws.
+   */
+  incomplete(line: string): IncompleteReason | null;
   /** The prompt as it looks now, for a line the UI records itself (an empty line, ^C). */
   renderPrompt(): Line;
   /**
@@ -191,6 +208,22 @@ function literalWord(parts: SimpleCommand['words'][number]['parts'], home: strin
 export function createShell(deps: ShellDeps): Shell {
   const terminal = deps.terminal ?? DEFAULT_TERMINAL;
   const session = new Session({ storage: deps.storage ?? null, ...(deps.user ? { user: deps.user } : {}), size: () => terminal.size() });
+  // A command reading a line waits on the prompt, unless the terminal answers reads itself.
+  const reader = createLineReader((url) => deps.opener?.preflight(url) ?? 'skipped');
+  const tty: TerminalInfo = {
+    size: () => terminal.size(),
+    get touch() {
+      return terminal.touch;
+    },
+    get inApp() {
+      return terminal.inApp;
+    },
+    readLine: terminal.readLine ?? ((options) => reader.read(options)),
+  };
+  const historyLines: Readable<readonly string[]> = {
+    subscribe: (run) => session.history.subscribe((entries) => run(entries.map((entry) => entry.line))),
+    get: () => session.history.list().map((entry) => entry.line),
+  };
   const executor = new Executor({
     session,
     registry: deps.registry,
@@ -200,7 +233,7 @@ export function createShell(deps: ShellDeps): Shell {
     clock: deps.clock,
     sys: deps.sys,
     appearance: deps.appearance,
-    terminal,
+    terminal: tty,
     opener: deps.opener,
     clipboard: deps.clipboard,
     bell: deps.bell,
@@ -401,6 +434,17 @@ export function createShell(deps: ShellDeps): Shell {
     run: (line, origin) => start(line, origin).done,
     abort: () => session.jobs.abort(),
     remember: (line) => session.history.add(line),
+    historyLines,
+    reads: reader.request,
+    answerRead: (id, text) => reader.answer(id, text),
+    incomplete: (line) => {
+      try {
+        const parsed = parse(line);
+        return parsed.ok !== true && parsed.incomplete === true ? parsed.reason : null;
+      } catch {
+        return null;
+      }
+    },
     reset: (options) => executor.reset(null, options),
     renderPrompt,
     source: async (path, options = {}) => {

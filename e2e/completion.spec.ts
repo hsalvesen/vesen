@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 // Tab completion on a keyboard (docs/plan/03-terminal-input.md, acceptance checks; 02, section 5):
 // extend, then list, then a menu that Tab and Shift+Tab cycle and Escape undoes.
 
-const prompt = (page: Page) => page.getByRole('textbox', { name: 'Terminal command' });
+const prompt = (page: Page) => page.getByRole('combobox', { name: 'Terminal command' });
 
 /** Opens the terminal and waits for the completion engine's chunk. */
 async function open(page: Page): Promise<void> {

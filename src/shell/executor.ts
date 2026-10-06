@@ -24,6 +24,7 @@ import { FlagError, parseFlags, takesRawArgs, tryHelp, wantsLegacyHelp, type Par
 import { createFmt } from './fmt';
 import { createGlobber, type GlobFs } from './glob';
 import { describeIncomplete, parse } from './parser';
+import type { ReadOptions } from './reader';
 import { loginFiles, type Scope, type Session } from './session';
 import {
   AsyncPipe,
@@ -104,10 +105,10 @@ export interface TerminalInfo {
   readonly touch: boolean;
   readonly inApp: InAppBrowser | null;
   /**
-   * Reads one line typed at `prompt`, for `rm -i` and `read`; null on ^C or ^D. Until the line
-   * editor provides it (docs/plan/03-terminal-input.md), every read gets null: no answer.
+   * Reads one line typed at `prompt`, for `rm -i` and sudo; null on ^C or ^D. The shell answers
+   * it from the prompt (src/shell/reader.ts); without it, every read gets null: no answer.
    */
-  readLine?(options: { prompt: string; secret?: boolean }): Promise<string | null>;
+  readLine?(options: ReadOptions): Promise<string | null>;
 }
 
 export interface ExecutorDeps {
@@ -819,9 +820,13 @@ export class Executor {
       touch: terminal.touch,
       inApp: terminal.inApp,
       status: (text) => job.describe(spec.name, text),
-      // Reading from the terminal arrives with the line editor (docs/plan/03-terminal-input.md).
-      readLine: (options) => terminal.readLine?.(options) ?? Promise.resolve(null),
-      confirm: () => Promise.resolve(null),
+      readLine: (options) => this.readLine(job, options),
+      confirm: async (message, options = {}) => {
+        const yes = options.defaultAnswer === true;
+        const answer = await this.readLine(job, { prompt: `${message} ${yes ? '[Y/n]' : '[y/N]'} ` });
+        if (answer === null) return null;
+        return answer.trim() === '' ? yes : /^\s*[yY]/.test(answer);
+      },
       open: (url) => {
         // Preflight ran the command's opens() inside the gesture; the URL may differ slightly
         // (email's subject carries the time), but it is the same open, so it is not repeated.
@@ -835,6 +840,37 @@ export class Executor {
       clear: () => job.sink.clear(),
       fullscreen: () => Promise.reject(new Error('full-screen apps are not available yet')),
     };
+  }
+
+  /**
+   * Reads a line at the prompt for a running command, then echoes it into the job's output as a
+   * terminal does: the hint, the prompt and what was typed, or for a secret the prompt alone.
+   */
+  private async readLine(job: Job, options: { prompt: string; secret?: boolean; hint?: string; opens?: string }): Promise<string | null> {
+    const read = this.deps.terminal.readLine;
+    if (read === undefined || job.signal.aborted || job.sink.ended) return null;
+    const url = options.opens;
+    const answer = await read({
+      prompt: options.prompt,
+      ...(options.secret === true ? { secret: true } : {}),
+      ...(options.hint === undefined ? {} : { hint: options.hint }),
+      before: job.sink.snapshot(),
+      signal: job.signal,
+      ...(url === undefined
+        ? {}
+        : {
+            opens: url,
+            // tty.open takes this, as it takes what preflight opened for the line.
+            opened: (result) => {
+              job.preflight.current = { url, result };
+            },
+          }),
+    });
+    if (job.signal.aborted || job.sink.ended) return null;
+    if (options.hint !== undefined) await job.sink.line('stdout', [span(options.hint, MUTED)]);
+    const echoed = options.secret === true || answer === null ? '' : answer;
+    await job.sink.line('stdout', [span(options.prompt + echoed)]);
+    return answer;
   }
 
   private shellApi(job: Job, io: Io, frame: Frame): ShellApi {

@@ -6,7 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 const PHONES = ['iphone-instagram', 'pixel-7'];
 const isPhone = () => PHONES.includes(test.info().project.name);
 
-const prompt = (page: Page) => page.getByRole('textbox', { name: 'Terminal command' });
+const prompt = (page: Page) => page.getByRole('combobox', { name: 'Terminal command' });
 
 /** Runs a line at the prompt and waits until its output is in the transcript. */
 async function run(page: Page, line: string): Promise<void> {

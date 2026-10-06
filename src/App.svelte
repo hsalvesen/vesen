@@ -5,47 +5,42 @@
   the visible viewport by styles/shell.css and platform/viewport.ts.
 -->
 <script lang="ts">
-  import Input, { type CompletionView } from './components/Input.svelte';
+  import { onDestroy } from 'svelte';
   import Cathode from './components/Cathode.svelte';
   import type { Action } from './output/model';
+  import { coarsePointer, keyPlatform } from './platform/env';
   import type { ShellPort } from './shell/index';
+  import { screen as transcript } from './stores/screen';
   import CompletionRow from './ui/CompletionRow.svelte';
-  import Prompt from './ui/Prompt.svelte';
+  import PromptLine from './ui/prompt/PromptLine.svelte';
+  import { PromptController } from './ui/prompt/promptController.svelte';
   import Transcript from './ui/Transcript.svelte';
   import { focusPolicy } from './ui/actions/focusPolicy';
   import { scrollToEnd, stickToBottom } from './ui/actions/stickToBottom';
 
   let { shell }: { shell: ShellPort } = $props();
 
-  let prompt: ReturnType<typeof Input> | undefined = $state();
-  let isPasswordMode = $state(false);
-  let isProcessing = $state(false);
-  let loadingText = $state('');
-  let command = $state('');
-  let completion: CompletionView | undefined = $state();
+  const win = typeof window === 'undefined' ? undefined : window;
+  // The prompt: the line being typed, its keys, the running line and everything Tab offers.
+  // svelte-ignore state_referenced_locally
+  const prompt = new PromptController({ shell, screen: transcript, platform: keyPlatform(win?.navigator), touch: coarsePointer(win) });
+  onDestroy(() => prompt.destroy());
+
   let screen: HTMLElement | undefined = $state();
   let newOutput = $state(false);
-
-  // Phones get a tap target; keyboards get the shortcut. Both can click the line.
-  const cancelHint =
-    typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches
-      ? 'tap to cancel'
-      : 'Ctrl+C to cancel';
-
-  const commandInput = (): HTMLInputElement | null => screen?.querySelector('input.command-input') ?? null;
 
   /** A tap on a trusted action in the output: a did-you-mean, a chip, a link card. */
   function onaction(action: Action): void {
     switch (action.kind) {
       case 'run':
-        void prompt?.submit(action.line);
-        prompt?.focusPrompt();
+        prompt.submit(action.line, 'chip');
+        prompt.focus();
         break;
       case 'insert':
         // The text is at the prompt to be finished: bring the prompt into view, and on a phone
         // open the keyboard now, inside the tap, with the text ready.
-        prompt?.insert(action.text);
-        prompt?.focusPrompt({ keyboard: true });
+        prompt.insert(action.text);
+        prompt.focus({ keyboard: true });
         if (screen) scrollToEnd(screen);
         break;
       case 'open':
@@ -61,7 +56,7 @@
   }
 </script>
 
-<div class="shell" use:focusPolicy={{ input: commandInput }}>
+<div class="shell" use:focusPolicy={{ input: () => prompt.element }}>
   <div class="screen-frame">
     <main
       bind:this={screen}
@@ -72,55 +67,22 @@
         <h1 class="sr-only">Vesen terminal</h1>
 
         <!-- Announced politely as entries are added; held back while a command is still running. -->
-        <div role="log" aria-live="polite" aria-relevant="additions" aria-busy={isProcessing} aria-label="Terminal output">
+        <div role="log" aria-live="polite" aria-relevant="additions" aria-busy={prompt.running !== null} aria-label="Terminal output">
           <Transcript {onaction} />
         </div>
 
         <div class="prompt-area" data-prompt-area>
-          <!--
-            The prompt takes what it needs and may wrap; the input always keeps 10 cells, so the row
-            never overflows at 320px, however long the folder name.
-          -->
-          <div class="grid items-center gap-x-1" style="grid-template-columns: minmax(0, max-content) minmax(10ch, 1fr);">
-            <div class="flex items-center min-w-0">
-              <Prompt cwd={shell.cwd} status={shell.lastStatus} secret={isPasswordMode} />
-            </div>
-            <div class="min-w-0">
-              <Input
-                bind:this={prompt}
-                {shell}
-                bind:command
-                bind:isPasswordMode
-                bind:isProcessing
-                bind:loadingText
-                bind:completionView={completion}
-              />
-            </div>
-          </div>
+          <PromptLine controller={prompt} {shell} {onaction} />
 
           <!-- Tab's list, the chips while typing, and the starters on an empty phone prompt. -->
           <CompletionRow
-            chips={completion?.chips}
-            more={completion?.more}
-            listed={completion?.listed}
-            question={completion?.question}
-            announce={completion?.announce}
-            onchoose={(chip) => prompt?.choose(chip)}
+            chips={prompt.chipList.chips}
+            more={prompt.chipList.more}
+            listed={prompt.listed}
+            question={prompt.question}
+            announce={prompt.announce}
+            onchoose={(chip) => prompt.choose(chip)}
           />
-
-          {#if isProcessing && loadingText}
-            <!--
-              mousedown is cancelled so the tap does not take focus, and the keyboard, from the prompt.
-              Not pointerdown: WebKit on iOS drops the whole tap, click included, when pointerdown is cancelled.
-            -->
-            <button
-              type="button"
-              class="processing mt-1"
-              aria-label="Cancel running command"
-              onmousedown={(event) => event.preventDefault()}
-              onclick={() => shell.abort()}
-            >{loadingText} ({cancelHint})</button>
-          {/if}
         </div>
       </div>
 
@@ -146,28 +108,6 @@
 </div>
 
 <style>
-  .processing {
-    display: block;
-    width: 100%;
-    padding: 0;
-    border: 0;
-    background: none;
-    text-align: left;
-    color: var(--role-accent);
-    cursor: pointer;
-  }
-
-  @media (pointer: coarse) {
-    .processing {
-      min-height: 44px;
-    }
-  }
-
-  /* Feedback for a tap, in place of the tap highlight styles/shell.css turns off. */
-  .processing:active {
-    opacity: 0.6;
-  }
-
   .new-output {
     position: absolute;
     z-index: 3;
