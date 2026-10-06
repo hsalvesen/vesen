@@ -91,6 +91,11 @@ export interface TerminalInfo {
   size(): { readonly cols: number; readonly rows: number };
   readonly touch: boolean;
   readonly inApp: InAppBrowser | null;
+  /**
+   * Reads one line typed at `prompt`, for `rm -i` and `read`; null on ^C or ^D. Until the line
+   * editor provides it (docs/plan/03-terminal-input.md), every read gets null: no answer.
+   */
+  readLine?(options: { prompt: string; secret?: boolean }): Promise<string | null>;
 }
 
 export interface ExecutorDeps {
@@ -623,7 +628,7 @@ export class Executor {
       inApp: terminal.inApp,
       status: (text) => job.describe(spec.name, text),
       // Reading from the terminal arrives with the line editor (docs/plan/03-terminal-input.md).
-      readLine: () => Promise.resolve(null),
+      readLine: (options) => terminal.readLine?.(options) ?? Promise.resolve(null),
       confirm: () => Promise.resolve(null),
       open: (url) => {
         // Preflight ran the command's opens() inside the gesture; the URL may differ slightly

@@ -240,8 +240,10 @@ export function wantsLegacyHelp(words: readonly string[]): boolean {
 }
 
 /**
- * Migration only: the legacy adapter's specs take their words unparsed, as the legacy commands
- * read their own flags; wantsLegacyHelp decides when they asked for help.
+ * A spec that takes its words unparsed and reads its own options: echo, whose options are only
+ * leading words such as -n or -neE (anything else is text to print, as in bash), and, until they
+ * are ported, the legacy adapter's commands. Without handlesHelp, wantsLegacyHelp decides when
+ * such a command asked for help.
  */
 export interface RawArgsSpec {
   readonly rawArgs?: boolean;

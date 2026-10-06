@@ -1,0 +1,63 @@
+# cp: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ cp README.md copy.md
+? 0
+$ cp -v history.txt .bashrc documents/
+'history.txt' -> 'documents/history.txt'
+'.bashrc' -> 'documents/.bashrc'
+? 0
+$ cp -rv projects/vesen backup
+'projects/vesen' -> 'backup'
+'projects/vesen/info.txt' -> 'backup/info.txt'
+? 0
+$ cp documents d2
+! cp: -r not specified; omitting directory 'documents'
+? 1
+$ cp nope x
+! cp: cannot stat 'nope': No such file or directory
+? 1
+$ cp README.md README.md
+! cp: 'README.md' and 'README.md' are the same file
+? 1
+$ cp /etc/shadow x
+! cp: cannot open '/etc/shadow' for reading: Permission denied
+? 1
+$ ls
+[terminal at 40 columns]
+backup       bin          config
+copy.md      desktop      documents
+downloads    history.txt  music
+pictures     projects     public
+README.md    scripts      src
+templates    videos
+? 0
+[terminal at 80 columns]
+backup       bin          config       copy.md      desktop      documents
+downloads    history.txt  music        pictures     projects     public
+README.md    scripts      src          templates    videos
+? 0
+[terminal at 120 columns]
+backup       bin          config       copy.md      desktop      documents    downloads    history.txt  music
+pictures     projects     public       README.md    scripts      src          templates    videos
+? 0
+[pipe]
+backup
+bin
+config
+copy.md
+desktop
+documents
+downloads
+history.txt
+music
+pictures
+projects
+public
+README.md
+scripts
+src
+templates
+videos
+? 0

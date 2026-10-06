@@ -160,6 +160,10 @@ export class PipeIn implements InStream {
     return splitLines(() => this.pipe.read());
   }
 
+  async *chunks(): AsyncGenerator<string, void, undefined> {
+    for (let chunk = await this.pipe.read(); chunk !== null; chunk = await this.pipe.read()) yield chunk;
+  }
+
   close(): void {
     this.pipe.closeRead();
   }
@@ -188,6 +192,11 @@ export class StringIn implements InStream {
     return splitLines(() => this.take());
   }
 
+  async *chunks(): AsyncGenerator<string, void, undefined> {
+    const text = await this.take();
+    if (text !== null && text !== '') yield text;
+  }
+
   close(): void {
     this.rest = null;
   }
@@ -203,6 +212,10 @@ export class TtyIn implements InStream {
 
   lines(): AsyncIterable<string> {
     return splitLines(() => Promise.resolve(null));
+  }
+
+  async *chunks(): AsyncGenerator<string, void, undefined> {
+    // Nothing can be typed to a running command yet.
   }
 
   close(): void {}

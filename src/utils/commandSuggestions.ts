@@ -149,13 +149,18 @@ export function getCommandSuggestions(input: string, commandNames: string[]): st
     const arg1 = parts[1] ?? '';
 
     if (arg1.startsWith('-')) {
+      // Folders need -r (F017): -r and -rf are offered with folders, -f with files.
+      const options = ['-r', '-rf', '-f'];
       if (parts.length === 2 && !endsWithSpace) {
-        if (arg1 === '-f') return [];
-        return ['-f'].filter((opt) => opt.startsWith(arg1)).map((opt) => `rm ${opt}`);
+        if (options.includes(arg1)) return [];
+        return options.filter((opt) => opt.startsWith(arg1)).map((opt) => `rm ${opt}`);
       }
 
+      if (/^-[rRf]*[rR][rRf]*$/.test(arg1)) {
+        return capped(getCurrentDirectoryEntries('directories', parts[2] ?? '').map((name) => `rm ${arg1} ${name}`));
+      }
       if (arg1 === '-f') {
-        return capped(getCurrentDirectoryEntries('directories', parts[2] ?? '').map((name) => `rm -f ${name}`));
+        return capped(getCurrentDirectoryEntries('files', parts[2] ?? '').map((name) => `rm -f ${name}`));
       }
 
       return [];

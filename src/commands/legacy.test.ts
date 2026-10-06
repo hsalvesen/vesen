@@ -95,13 +95,6 @@ describe('the adapter', () => {
     expect(texts(result.blocks)).toEqual(['weather: timed out after 25 s']);
   });
 
-  it('turns clear into a shell effect', async () => {
-    const legacyFn = vi.fn(() => '');
-    const { run } = harness({ specs: [legacy('clear', legacyFn, { category: 'shell', summary: 'x', effect: 'clearScreen' })] });
-    expect((await run('echo a; clear')).screen).toBe('clear');
-    expect(legacyFn).not.toHaveBeenCalled();
-  });
-
   it('prints a link when its opener did not open, and nothing more when it did', async () => {
     const spec = legacy('whoami', () => 'Opening...', { category: 'portfolio', summary: 'x', opens: () => 'https://www.linkedin.com/in/harrysalvesen/' });
     const opened: string[] = [];
@@ -143,8 +136,8 @@ function fakeSource(): LegacySource & { calls: string[] } {
   return {
     calls,
     commands,
-    help: (name) => (name === 'ls' ? '<div>ls help</div>' : undefined),
-    descriptions: { ls: 'List files', theme: 'Change theme' },
+    help: (name) => (name === 'theme' ? '<div>theme help</div>' : undefined),
+    descriptions: { theme: 'Change theme' },
     opens: { repo: () => 'https://github.com/hsalvesen/vesen' },
     themes: () => [{ value: 'swamphen' }, { value: 'wombat' }],
     cathodeModes: () => [{ value: 'vintage' }],
@@ -153,22 +146,24 @@ function fakeSource(): LegacySource & { calls: string[] } {
 }
 
 describe('the legacy table', () => {
-  it('wraps the 23 commands not yet ported, each once, with a category and a summary', () => {
+  it('wraps the 15 commands not yet ported, each once, with a category and a summary', () => {
     const specs = legacySpecs(fakeSource());
-    expect(specs).toHaveLength(23);
-    expect(new Set(specs.map((spec) => spec.name)).size).toBe(23);
-    // Ported to src/commands: cd and pwd (files) and reset (shell).
-    expect(specs.map((spec) => spec.name)).not.toContain('cd');
+    expect(specs).toHaveLength(15);
+    expect(new Set(specs.map((spec) => spec.name)).size).toBe(15);
+    // Ported to src/commands: the file and text core, history, clear, cd, pwd and reset.
+    for (const ported of ['cd', 'ls', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'history', 'clear']) {
+      expect(specs.map((spec) => spec.name)).not.toContain(ported);
+    }
     const registry = new CommandRegistry(specs);
     expect(registry.validate()).toEqual([]);
     expect(specs.every((spec) => takesRawArgs(spec))).toBe(true);
-    expect(registry.get('ls')).toMatchObject({ category: 'files', summary: 'List files', legacyHelp: '<div>ls help</div>' });
+    expect(registry.get('theme')).toMatchObject({ category: 'portfolio', summary: 'Change theme', legacyHelp: '<div>theme help</div>' });
     expect(registry.get('whoami')?.category).toBe('portfolio');
     expect(registry.get('weather')).toMatchObject({ network: true, budgetMs: 25_000 });
     expect(registry.get('stock')).toMatchObject({ network: true, budgetMs: 10_000 });
     expect(registry.get('curl')?.network).toBe(true);
     expect(registry.get('repo')?.opens?.(['repo'])).toBe('https://github.com/hsalvesen/vesen');
-    expect(registry.get('rm')?.summary).toBe('rm');
+    expect(registry.get('poweroff')?.summary).toBe('poweroff');
   });
 
   it('describes arguments and subcommands for completion', () => {
@@ -177,7 +172,7 @@ describe('the legacy table', () => {
     expect(Object.keys(theme?.subcommands ?? {})).toEqual(['ls', 'set']);
     const source = theme?.subcommands?.set?.args?.[0]?.source;
     expect(source?.kind === 'enum' && source.values().map((value) => value.value)).toEqual(['swamphen', 'wombat']);
-    expect(registry.get('ls')?.args?.[0]?.source).toEqual({ kind: 'path', accept: 'dir', includeParent: true });
+    expect(registry.get('weather')?.args?.[0]?.source).toEqual({ kind: 'examples', caseInsensitive: true, fromHistory: true });
     expect(registry.get('help')?.args?.[0]?.source).toEqual({ kind: 'command' });
   });
 
@@ -188,33 +183,6 @@ describe('the legacy table', () => {
     expect(source.calls).toEqual(['theme set wombat']);
   });
 
-  it('clears history with history -c, and copies stdin for cat', async () => {
-    const source = fakeSource();
-    const { run, shell } = harness({ specs: legacySpecs(source) });
-    await run('echo one');
-    expect(shell.history.list().length).toBeGreaterThan(0);
-    await run('history -c');
-    expect(shell.history.list()).toEqual([]);
-    expect((await run('cat a.txt | cat')).stdout).toBe('cat:a.txt');
-    expect(source.calls.filter((call) => call.startsWith('cat'))).toEqual(['cat a.txt']);
-    expect((await run('cat README.md')).blocks).toEqual([{ type: 'legacyHtml', html: 'cat:README.md' }]);
-  });
-
-  it('draws an owner document on a terminal from its styled lines, and gives a pipe its text', async () => {
-    const source = fakeSource();
-    const h = harness({ specs: legacySpecs(source) });
-    const node = h.tree.children?.home?.children?.guest?.children?.['a.txt'];
-    if (node === undefined) throw new Error('no a.txt');
-    node.styled = [[{ text: 'alpha', style: { fg: 'yellow', bold: true } }]];
-    const result = await h.run('cat a.txt');
-    expect(result.blocks).toEqual([{ type: 'lines', stream: 'stdout', lines: [[{ text: 'alpha', style: { fg: 'yellow', bold: true } }]] }]);
-    expect(source.calls).toEqual([]);
-    // Piped, or with more than one file, the legacy cat prints the plain text.
-    await h.run('cat a.txt | cat');
-    await h.run('cat a.txt b.txt');
-    expect(source.calls).toEqual(['cat a.txt', 'cat a.txt b.txt']);
-  });
-
   it('answers help NAME for a ported command from its spec', async () => {
     const source = fakeSource();
     const pwd = { name: 'pwd', category: 'files' as const, summary: 'print the working directory', run: () => 0 };
@@ -222,8 +190,8 @@ describe('the legacy table', () => {
     const result = await run('help pwd');
     expect(result.stdout).toContain('print the working directory');
     expect(source.calls).toEqual([]);
-    await run('help ls');
-    expect(source.calls).toEqual(['help ls']);
+    await run('help theme');
+    expect(source.calls).toEqual(['help theme']);
   });
 
   it('prints guest for whoami in a pipe, as the Linux command does', async () => {

@@ -121,7 +121,9 @@ export interface HistoryStore extends HistoryApi {
 /**
  * Command history, as bash keeps it with HISTCONTROL=ignoreboth: a line starting with a space,
  * a blank line and a repeat of the line before are not kept. The newest 500 lines are kept and
- * saved under `vesen:history:v1` when storage allows; numbers keep counting up, as `!n` expects.
+ * saved under `vesen:history:v1` when storage allows. Numbers are bash's, so `!n` and `history`
+ * agree: they keep counting up as old lines fall off, the lines after one removed with
+ * `history -d` move up a number, and `history -c` starts again from the first number.
  */
 export function createHistory(options: { storage?: KV<'local'> | null; size?: number } = {}): HistoryStore {
   const size = Math.max(1, options.size ?? STORAGE_LIMITS.historyLines);
@@ -171,12 +173,14 @@ export function createHistory(options: { storage?: KV<'local'> | null; size?: nu
       return undefined;
     },
     remove(n: number): void {
-      const kept = entries.filter((entry) => entry.n !== n);
-      if (kept.length === entries.length) return;
-      entries = kept;
+      const index = entries.findIndex((entry) => entry.n === n);
+      if (index === -1) return;
+      entries = [...entries.slice(0, index), ...entries.slice(index + 1).map((entry) => ({ n: entry.n - 1, line: entry.line }))];
+      next -= 1;
       save();
     },
     clear(): void {
+      next = entries[0]?.n ?? next;
       entries = [];
       save();
     },

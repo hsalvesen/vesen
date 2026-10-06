@@ -1,0 +1,21 @@
+# rmdir: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ mkdir empty; rmdir -v empty
+rmdir: removing directory, 'empty'
+? 0
+$ rmdir -pv .local/share/applications
+rmdir: removing directory, '.local/share/applications'
+rmdir: removing directory, '.local/share'
+rmdir: removing directory, '.local'
+? 0
+$ rmdir videos
+! rmdir: failed to remove 'videos': Directory not empty
+? 1
+$ rmdir nope
+! rmdir: failed to remove 'nope': No such file or directory
+? 1
+$ rmdir .
+! rmdir: failed to remove '.': Invalid argument
+? 1

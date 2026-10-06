@@ -4,6 +4,14 @@ These files record what the legacy terminal does: the output of each line typed 
 
 Lines run through the shell kernel (`src/shell`), as `Input.svelte` runs them, and the legacy commands through the legacy adapter (`src/commands/legacy.ts`). A legacy command's output is its HTML exactly as the adapter hands it to the screen, so these goldens prove the adapter renders every legacy command as before.
 
+## Ported commands
+
+A command ported to a spec in `src/commands` keeps its cases here, recording what the port prints: `cat`, `echo`, `history`, `ls`, `mkdir`, `rm` and `touch` (step 2.3a). Their own, fuller transcripts, at 40, 80 and 120 columns on the terminal and into a pipe, are in `tests/transcripts`. The legacy output these cases first recorded remains in git history at commit `afed6a8`, for comparison:
+
+```sh
+git show afed6a8:tests/golden/__snapshots__/legacy/ls/680.html
+```
+
 ## Changing a golden
 
 A golden diff is either a regression or an intentional change. Nothing else.
@@ -23,13 +31,13 @@ On CI (`CI=true`) a missing golden fails instead of being written.
 
 `__snapshots__/legacy/<case>/<variant>.html` and `.txt`, where `<case>` is a slug from `CASES` in `legacy.test.ts`.
 
-- **Variant `360`, `680`, `1000`:** the window width, for output that depends on it. The legacy code turns width into columns as `floor((innerWidth - 40) / 8)`, so these widths give exactly the plan's 40, 80 and 120 columns. (`history` clamps columns to 100, so it lays out its 120-column golden at 100.) Only `help`, `ls` and `history` still lay out columns from the width; weather, stock, curl and fastfetch wrap with CSS instead, so they are recorded once.
+- **Variant `360`, `680`, `1000`:** the window width, for output that depends on it. The legacy code turns width into columns as `floor((innerWidth - 40) / 8)`, so these widths give exactly the plan's 40, 80 and 120 columns. Only the legacy `help` still lays out columns from the width. The ported `ls` draws a grid that the page lays out (recorded once, its items two spaces apart on one line), and `history` lines wrap with CSS, as weather, stock, curl and fastfetch do, so they are recorded once.
 - **Variant `all`:** the output is identical at all three widths, and the test asserts that. If a change makes such a case width-dependent on purpose, mark it `responsive: true`.
-- **`rendered-session/<width>.html`:** the markup `Transcript.svelte` renders after boot, `ls`, `cd documents` and `pwd`, one entry per line, each with the prompt it was typed at. Svelte's comment anchors and scoped `svelte-<hash>` classes are stripped.
+- **`rendered-session/<width>.html`:** the markup `Transcript.svelte` renders after boot, `ls`, `cd documents` and `pwd`, one entry per line, each with the prompt it was typed at, once the layout renderer (`RichBlock.svelte`, loaded on first use) has drawn `ls`'s grid. Svelte's comment anchors and scoped `svelte-<hash>` classes are stripped.
 
 ## Format
 
-- **`.html`:** for each line typed, a marker line `<!-- $ <line> -->`, then the output, then one newline. A legacy command's output is its exact HTML. Output the shell writes itself, such as `command not found`, is written as the equivalent styled spans by `blocksToGoldenHtml` in `format.ts`; tap actions have no HTML form and are left out. `parseHtmlTranscript` in `format.ts` is the reference parser, and the test checks that every golden round-trips through it.
+- **`.html`:** for each line typed, a marker line `<!-- $ <line> -->`, then the output, then one newline. A legacy command's output is its exact HTML. Output the shell and the ported commands write, such as `command not found` or `ls`, is written as the equivalent styled spans by `blocksToGoldenHtml` in `format.ts`, a grid's items two spaces apart; tap actions have no HTML form and are left out. `parseHtmlTranscript` in `format.ts` is the reference parser, and the test checks that every golden round-trips through it.
 - **`.txt`:** the same session as a reader sees it: `$ <line>`, then the output as plain text (`<br>` and block elements become newlines, trailing spaces trimmed). `[bell]` marks a line that rang the terminal bell.
 
 ## What keeps them deterministic

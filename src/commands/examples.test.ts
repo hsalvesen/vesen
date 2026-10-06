@@ -1,23 +1,28 @@
-// Every spec file's offline examples run with status 0 on a fresh session, so the examples help,
-// man and the starter chips show always work (docs/plan/08-shell-and-commands.md, acceptance).
+// Every spec file's offline examples run with status 0 on a fresh VFS, on the terminal and into a
+// pipe, so the examples help, man and the starter chips show always work
+// (docs/plan/08-shell-and-commands.md, acceptance).
 import { describe, expect, it } from 'vitest';
-import { createAppShell } from '../app/shell';
-import { createScreen } from '../stores/screen';
-import { stubCommands } from '../testing/shell-harness';
+import { runLine } from '../../tests/harness';
 import { specFiles } from './index';
 
 const examples = specFiles().flatMap((spec) => (spec.examples ?? []).filter((example) => example.offline).map((example) => [spec.name, example.line] as const));
 
 describe('offline examples', () => {
-  it('exist', () => {
-    expect(examples.length).toBeGreaterThan(5);
+  it('exist for every spec file', () => {
+    const without = specFiles()
+      .filter((spec) => !(spec.examples ?? []).some((example) => example.offline))
+      .map((spec) => spec.name);
+    expect(without).toEqual([]);
+    expect(examples.length).toBeGreaterThan(40);
   });
 
-  it.each(examples)('%s: %s exits 0', async (_name, line) => {
-    const app = createAppShell({ banner: () => '', specs: stubCommands(), screen: createScreen(), version: '0.0.0', yieldToHost: () => Promise.resolve() });
-    await app.boot();
-    const result = await app.shell.run(line);
-    app.stop();
-    expect(result.status, JSON.stringify(result.blocks)).toBe(0);
+  it.each(examples)('%s: %s exits 0 on the terminal', async (_name, line) => {
+    const result = await runLine(line, { cols: 80, tty: true });
+    expect(result.status, result.stderrPlain).toBe(0);
+  });
+
+  it.each(examples)('%s: %s exits 0 into a pipe', async (_name, line) => {
+    const result = await runLine(line, { cols: 80, tty: false });
+    expect(result.status, result.stderrPlain).toBe(0);
   });
 });

@@ -1,0 +1,27 @@
+# mkdir: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ mkdir notes
+? 0
+$ mkdir -pv a/b/c
+mkdir: created directory 'a'
+mkdir: created directory 'a/b'
+mkdir: created directory 'a/b/c'
+? 0
+$ mkdir a
+! mkdir: cannot create directory 'a': File exists
+? 1
+$ mkdir -m 700 private
+? 0
+$ ls -ld notes private
+drwxr-xr-x 2 guest guest 4096 Oct  6 20:01 notes
+drwx------ 2 guest guest 4096 Oct  6 20:04 private
+? 0
+$ mkdir
+! mkdir: missing operand
+! Try 'mkdir --help' for more information.
+? 2
+$ mkdir /etc/x
+! mkdir: cannot create directory '/etc/x': Permission denied
+? 1

@@ -41,7 +41,7 @@ export default defineConfig({
         test: {
           name: 'node',
           environment: 'node',
-          include: ['src/**/*.test.ts', 'scripts/**/*.test.ts', 'tests/hosting/**/*.test.ts'],
+          include: ['src/**/*.test.ts', 'scripts/**/*.test.ts', 'tests/hosting/**/*.test.ts', 'tests/transcripts/**/*.test.ts'],
           exclude: [...configDefaults.exclude, ...domTests],
         },
       },

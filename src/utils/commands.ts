@@ -1,5 +1,4 @@
 import themes from '../../themes.json';
-import { commandHistory } from './legacyStores';
 import { systemCommands } from './commands/system';
 import { fileSystemCommands } from './commands/fileSystem';
 import type { networkCommands as NetworkCommands } from './commands/network';
@@ -52,56 +51,6 @@ const terminalCommands = {
 
     // Should the font be wider than measured, the grid scrolls rather than being cut off.
     return `<div style="white-space: pre; overflow-x: auto;">${lines.join('\n')}</div>`;
-  },
-
-  history: (args: string[]) => {
-    const commandHistoryData: string[] = get(commandHistory);
-
-    if (commandHistoryData.length === 0) {
-      return 'No commands in history.';
-    }
-
-    // Calculate responsive width for history display
-    const terminalWidth = transcriptColumns(window);
-    const minWidth = 30; // Minimum width for history
-    const maxWidth = 100; // Maximum width for history
-    const responsiveWidth = Math.min(maxWidth, Math.max(minWidth, terminalWidth));
-
-    // Format history with line numbers and handle overflow
-    const historyLines: string[] = [];
-
-    commandHistoryData.forEach((cmd: string, index: number) => {
-      const lineNumber = (index + 1).toString().padStart(4, ' ');
-      // Numbers in the accent role, commands in strong text.
-      const prefix = `<span class="out-accent">${lineNumber}</span>  `;
-
-      // Check if the line is too long and needs wrapping
-      const totalLength = lineNumber.length + 2 + cmd.length; // +2 for spacing
-
-      if (totalLength > responsiveWidth) {
-        // Split long commands across multiple lines
-        const commandMaxWidth = responsiveWidth - 6; // Account for line number and spacing
-        const chunks: string[] = [];
-
-        for (let i = 0; i < cmd.length; i += commandMaxWidth) {
-          chunks.push(cmd.substring(i, i + commandMaxWidth));
-        }
-
-        // First line with line number. Chunks are cut from the typed text, then escaped.
-        historyLines.push(prefix + `<span class="out-strong">${escapeHtml(chunks[0])}</span>`);
-
-        // Continuation lines with proper indentation
-        for (let i = 1; i < chunks.length; i++) {
-          const indent = '      '; // 6 spaces to align with command text
-          historyLines.push(`${indent}<span class="out-strong">${escapeHtml(chunks[i])}</span>`);
-        }
-      } else {
-        // Command fits on one line
-        historyLines.push(prefix + `<span class="out-strong">${escapeHtml(cmd)}</span>`);
-      }
-    });
-
-    return historyLines.join('\n');
   },
 
   sudo: (args: string[]) => {

@@ -48,6 +48,10 @@ describe('file and folder suggestions in the home folder', () => {
     expect(suggest('cd do')).toEqual(['cd documents', 'cd downloads']);
     expect(suggest('cat R')).toEqual(['cat README.md']);
     expect(suggest('rm h')).toEqual(['rm history.txt']);
+    // Folders come with -r, which rm needs for them (F017); -f comes with files.
+    expect(suggest('rm -')).toEqual(['rm -r', 'rm -rf', 'rm -f']);
+    expect(suggest('rm -rf do')).toEqual(['rm -rf documents', 'rm -rf downloads']);
+    expect(suggest('rm -f h')).toEqual(['rm -f history.txt']);
   });
 });
 

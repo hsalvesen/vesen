@@ -1,0 +1,225 @@
+# ls: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ ls
+[terminal at 40 columns]
+bin          config       desktop
+documents    downloads    history.txt
+music        pictures     projects
+public       README.md    scripts
+src          templates    videos
+? 0
+[terminal at 80 columns]
+bin          config       desktop      documents    downloads    history.txt
+music        pictures     projects     public       README.md    scripts
+src          templates    videos
+? 0
+[terminal at 120 columns]
+bin          config       desktop      documents    downloads    history.txt  music        pictures     projects
+public       README.md    scripts      src          templates    videos
+? 0
+[pipe]
+bin
+config
+desktop
+documents
+downloads
+history.txt
+music
+pictures
+projects
+public
+README.md
+scripts
+src
+templates
+videos
+? 0
+$ ls -a
+[terminal at 40 columns]
+.              ..
+.bash_history  .bashrc
+.gitconfig     .local
+.profile       .ssh
+.vimrc         bin
+config         desktop
+documents      downloads
+history.txt    music
+pictures       projects
+public         README.md
+scripts        src
+templates      videos
+? 0
+[terminal at 80 columns]
+.              ..             .bash_history  .bashrc        .gitconfig
+.local         .profile       .ssh           .vimrc         bin
+config         desktop        documents      downloads      history.txt
+music          pictures       projects       public         README.md
+scripts        src            templates      videos
+? 0
+[terminal at 120 columns]
+.              ..             .bash_history  .bashrc        .gitconfig     .local         .profile       .ssh
+.vimrc         bin            config         desktop        documents      downloads      history.txt    music
+pictures       projects       public         README.md      scripts        src            templates      videos
+? 0
+[pipe]
+.
+..
+.bash_history
+.bashrc
+.gitconfig
+.local
+.profile
+.ssh
+.vimrc
+bin
+config
+desktop
+documents
+downloads
+history.txt
+music
+pictures
+projects
+public
+README.md
+scripts
+src
+templates
+videos
+? 0
+$ ls -la ~
+total 92
+drwxr-xr-x 17 guest guest 4096 Oct  6 11:00 .
+drwxr-xr-x  4 root  root  4096 Oct  6 11:00 ..
+-rw-------  1 guest guest    0 Oct  6 11:00 .bash_history
+-rw-r--r--  1 guest guest  236 Oct  6 11:00 .bashrc
+-rw-r--r--  1 guest guest  130 Oct  6 11:00 .gitconfig
+drwxr-xr-x  3 guest guest 4096 Oct  6 11:00 .local
+-rw-r--r--  1 guest guest  220 Oct  6 11:00 .profile
+drwx------  2 guest guest 4096 Oct  6 11:00 .ssh
+-rw-r--r--  1 guest guest  159 Oct  6 11:00 .vimrc
+drwxr-xr-x  2 guest guest 4096 Oct  6 11:00 bin
+drwxr-xr-x  2 guest guest 4096 Oct  6 11:00 config
+drwxr-xr-x  2 guest guest 4096 Oct  6 11:00 desktop
+drwxr-xr-x  2 guest guest 4096 Oct  6 11:00 documents
+drwxr-xr-x  2 guest guest 4096 Oct  6 11:00 downloads
+-rw-r--r--  1 guest guest 1623 Oct  6 11:00 history.txt
+drwxr-xr-x  2 guest guest 4096 Oct  6 11:00 music
+drwxr-xr-x  2 guest guest 4096 Oct  6 11:00 pictures
+drwxr-xr-x  5 guest guest 4096 Oct  6 11:00 projects
+drwxr-xr-x  2 guest guest 4096 Oct  6 11:00 public
+-rw-r--r--  1 guest guest  850 Oct  6 11:00 README.md
+drwxr-xr-x  2 guest guest 4096 Oct  6 11:00 scripts
+drwxr-xr-x  2 guest guest 4096 Oct  6 11:00 src
+drwxr-xr-x  2 guest guest 4096 Oct  6 11:00 templates
+drwxr-xr-x  2 guest guest 4096 Oct  6 11:00 videos
+? 0
+$ ls -lh /etc
+total 40K
+-rw-r--r-- 1 root root    84 Oct  6 11:00 group
+-rw-r--r-- 1 root root     6 Oct  6 11:00 hostname
+-rw-r--r-- 1 root root    78 Oct  6 11:00 hosts
+-rw-r--r-- 1 root root    92 Oct  6 11:00 motd
+-rw-r--r-- 1 root root   217 Oct  6 11:00 os-release
+-rw-r--r-- 1 root root   186 Oct  6 11:00 passwd
+-rw-r--r-- 1 root root    92 Oct  6 11:00 profile
+-rw-r----- 1 root shadow 106 Oct  6 11:00 shadow
+-rw-r--r-- 1 root root    52 Oct  6 11:00 shells
+-rw-r--r-- 1 root root    17 Oct  6 11:00 timezone
+? 0
+$ ls /
+[terminal at 40 columns]
+bin    boot   dev    etc    home
+lib    media  mnt    opt    proc
+root   sys    tmp    usr    var
+? 0
+[terminal at 80 columns]
+bin    boot   dev    etc    home   lib    media  mnt    opt    proc   root
+sys    tmp    usr    var
+? 0
+[terminal at 120 columns]
+bin    boot   dev    etc    home   lib    media  mnt    opt    proc   root   sys    tmp    usr    var
+? 0
+[pipe]
+bin
+boot
+dev
+etc
+home
+lib
+media
+mnt
+opt
+proc
+root
+sys
+tmp
+usr
+var
+? 0
+$ ls -F ~/bin /home
+[terminal]
+/home:
+guest/  has/    user@
+
+/home/guest/bin:
+deploy*     my-script*
+? 0
+[pipe]
+/home:
+guest/
+has/
+user@
+
+/home/guest/bin:
+deploy*
+my-script*
+? 0
+$ ls -R projects
+[terminal]
+projects:
+learning   portfolio  vesen
+
+projects/learning:
+javascript-basics.js
+
+projects/portfolio:
+index.html
+
+projects/vesen:
+info.txt
+? 0
+[pipe]
+projects:
+learning
+portfolio
+vesen
+
+projects/learning:
+javascript-basics.js
+
+projects/portfolio:
+index.html
+
+projects/vesen:
+info.txt
+? 0
+$ ls -C documents projects
+documents:
+linux.txt
+
+projects:
+learning   portfolio  vesen
+? 0
+$ ls nope
+! ls: cannot access 'nope': No such file or directory
+? 2
+$ ls /root
+! ls: cannot open directory '/root': Permission denied
+? 2
+$ ls -z
+! ls: invalid option -- 'z'
+! Try 'ls --help' for more information.
+? 2

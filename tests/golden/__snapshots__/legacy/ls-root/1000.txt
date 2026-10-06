@@ -1,2 +1,0 @@
-$ ls /
-bin/  usr/  var/  tmp/  opt/  lib/  boot/  dev/  proc/  sys/  mnt/  media/  root/  home/  etc/

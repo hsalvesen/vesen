@@ -23,6 +23,8 @@
     "scripts/**/*.mjs",
     "scripts/**/*.ts",
     "tests/hosting/**/*.ts",
+    "tests/harness.ts",
+    "tests/transcripts/**/*.ts",
     "tests/support/**/*.ts",
     "tests/golden/format.ts",
     "tests/golden/html-to-text.test.ts",

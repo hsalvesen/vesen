@@ -130,6 +130,18 @@ describe('in streams', () => {
     expect(tty.isTTY).toBe(true);
     expect(await tty.text()).toBe('');
     expect(await collect(tty.lines())).toEqual([]);
+    expect(await collect(tty.chunks())).toEqual([]);
+  });
+
+  it('hands over chunks as written, so a missing final newline stays missing', async () => {
+    const pipe = new AsyncPipe();
+    const chunks = collect(new PipeIn(pipe).chunks());
+    await pipe.write('one\ntw');
+    await pipe.write('o');
+    pipe.closeWrite();
+    expect(await chunks).toEqual(['one\ntw', 'o']);
+    expect(await collect(new StringIn('no end').chunks())).toEqual(['no end']);
+    expect(await collect(new StringIn('').chunks())).toEqual([]);
   });
 });
 

@@ -1,32 +1,24 @@
 // @vitest-environment happy-dom
-// The legacy shim over the VFS, through the legacy commands that still use it. They lay out
-// output with window, so they need a DOM.
+// The legacy shim over the VFS, beside the file commands, which are specs now and share the VFS
+// with what is left of the legacy code. The legacy modules lay out output with window, so they
+// need a DOM.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Shell } from '../shell/index';
-
-/** The visible text of legacy HTML output. */
-function text(html: string): string {
-  const template = document.createElement('template');
-  template.innerHTML = html;
-  return template.content.textContent ?? '';
-}
+import { screenText } from '../testing/shell-harness';
 
 let shell: Shell;
 let shim: typeof import('./virtualFileSystem');
 
-/** A fresh page load with the shell built; `run` calls a legacy command directly: `ls -a ~` is ls with -a and ~. */
+/** A fresh page load with the shell built; `run` runs a line and gives what it printed, stdout then stderr. */
 async function freshTerminal() {
   vi.resetModules();
   vi.stubGlobal('AudioContext', undefined);
   const { legacyAppShell } = await import('./legacyShell');
   shell = legacyAppShell({ banner: () => '', yieldToHost: () => Promise.resolve() }).shell;
   shim = await import('./virtualFileSystem');
-  const { commands } = await import('./commands');
   return async (line: string) => {
-    const [name = '', ...args] = line.split(' ');
-    const fn = commands[name];
-    if (!fn) throw new Error(`no legacy command ${name}`);
-    return text(String(await fn(args)));
+    const { blocks } = await shell.run(line);
+    return [screenText(blocks, 'stdout'), screenText(blocks, 'stderr')].filter((text) => text !== '').join('\n');
   };
 }
 
@@ -40,13 +32,11 @@ describe('the home folder (F003)', () => {
   it('holds the dotfiles, so ls -a ~ lists .bashrc', async () => {
     const listing = await run('ls -a ~');
 
-    expect(listing).toContain('.bashrc');
-    expect(listing).toContain('.ssh/');
-    expect(listing).toContain('projects/');
+    expect(listing.split('\n')).toEqual(expect.arrayContaining(['.bashrc', '.ssh', 'projects']));
   });
 
   it('is /home/guest, beside the owner\'s home and the /home/user link to it', async () => {
-    expect((await run('ls /home')).trim()).toBe('guest/  has/  user/');
+    expect(await run('ls /home')).toBe('guest\nhas\nuser');
     expect(await run('ls /home/user')).toBe(await run('ls ~'));
   });
 
@@ -84,7 +74,7 @@ describe('the shim', () => {
   });
 });
 
-describe('the legacy commands over the VFS', () => {
+describe('the file commands over the VFS', () => {
   let run: (line: string) => Promise<string>;
 
   beforeEach(async () => {

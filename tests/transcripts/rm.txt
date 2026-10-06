@@ -1,0 +1,68 @@
+# rm: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ rm README.md
+? 0
+$ rm -rv projects
+removed 'projects/learning/javascript-basics.js'
+removed directory 'projects/learning'
+removed 'projects/portfolio/index.html'
+removed directory 'projects/portfolio'
+removed 'projects/vesen/info.txt'
+removed directory 'projects/vesen'
+removed directory 'projects'
+? 0
+$ rm documents
+! rm: cannot remove 'documents': Is a directory
+? 1
+$ rm -dv .local/share/applications
+removed directory '.local/share/applications'
+? 0
+$ rm nope
+! rm: cannot remove 'nope': No such file or directory
+? 1
+$ rm -f nope
+? 0
+$ rm -r .
+! rm: refusing to remove '.' or '..' directory: skipping '.'
+? 1
+$ rm -r /
+! rm: it is dangerous to operate recursively on '/'
+! rm: use --no-preserve-root to override this failsafe
+? 1
+$ rm /etc/passwd
+! rm: cannot remove '/etc/passwd': Permission denied
+? 1
+$ ls
+[terminal at 40 columns]
+bin          config       desktop
+documents    downloads    history.txt
+music        pictures     public
+scripts      src          templates
+videos
+? 0
+[terminal at 80 columns]
+bin          config       desktop      documents    downloads    history.txt
+music        pictures     public       scripts      src          templates
+videos
+? 0
+[terminal at 120 columns]
+bin          config       desktop      documents    downloads    history.txt  music        pictures     public
+scripts      src          templates    videos
+? 0
+[pipe]
+bin
+config
+desktop
+documents
+downloads
+history.txt
+music
+pictures
+public
+scripts
+src
+templates
+videos
+? 0

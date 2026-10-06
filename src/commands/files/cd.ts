@@ -2,42 +2,14 @@
 // $OLDPWD (printing it), and a near miss offers the folder that was probably meant (F023).
 
 import { out, type Line } from '../../output/model';
-import { editDistance } from '../../shell/registry';
 import { defineCommand, type CommandContext, type ExitCode } from '../../shell/types';
 import { strerror } from '../../vfs/errors';
-import { basename, dirname } from '../../vfs/path';
 import { VfsError } from '../../vfs/types';
+import { nearMiss } from '../lib/files';
 
 /** A folder next to the one asked for that was probably meant: same name in another case, a prefix, or one or two typos away. */
 export function nearMissFolder(ctx: CommandContext, typed: string): string | null {
-  const resolved = ctx.resolve(typed);
-  const parent = dirname(resolved);
-  const wanted = basename(resolved);
-  let names: string[];
-  try {
-    names = ctx.fs.readdir(parent, { all: wanted.startsWith('.') });
-  } catch {
-    return null;
-  }
-  const folders = names.filter((name) => {
-    try {
-      return ctx.fs.stat(`${parent === '/' ? '' : parent}/${name}`).type === 'directory';
-    } catch {
-      return false;
-    }
-  });
-  const lower = wanted.toLowerCase();
-  const pick =
-    folders.find((name) => name.toLowerCase() === lower) ??
-    folders.find((name) => lower.length >= 2 && name.toLowerCase().startsWith(lower)) ??
-    folders
-      .map((name) => ({ name, distance: editDistance(lower, name.toLowerCase()) }))
-      .filter(({ distance }) => distance <= (lower.length <= 3 ? 1 : 2))
-      .sort((a, b) => a.distance - b.distance || (a.name < b.name ? -1 : 1))[0]?.name;
-  if (pick === undefined) return null;
-  // The suggestion keeps what was typed before the last name: `cd docs/Linux` offers docs/linux.
-  const slash = typed.replace(/\/+$/, '').lastIndexOf('/');
-  return slash === -1 ? pick : `${typed.slice(0, slash + 1)}${pick}`;
+  return nearMiss(ctx, typed, 'dir');
 }
 
 /** Words safe to put in a tappable suggestion as they are. */

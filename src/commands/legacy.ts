@@ -36,8 +36,6 @@ export interface LegacyMeta
   readonly help?: string;
   /** A URL the command opens: opened inside the Enter gesture on a desktop, and linked otherwise. */
   readonly opens?: (argv: readonly string[]) => string | null;
-  /** Commands that only change the screen become shell effects. */
-  readonly effect?: 'clearScreen';
   /** Runs first; a status ends the command there, without the legacy function. */
   readonly prelude?: (ctx: CommandContext) => ExitCode | undefined | Promise<ExitCode | undefined>;
   /** The words the legacy function gets, when they differ from the operands. */
@@ -59,7 +57,7 @@ export function legacyStatus(html: string): ExitCode {
 
 /** Wraps one legacy function as a command spec. */
 export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpec {
-  const { help, opens, effect, prelude, argsFor, ...shown } = meta;
+  const { help, opens, prelude, argsFor, ...shown } = meta;
   const spec: CommandSpec & RawArgsSpec = {
     name,
     ...shown,
@@ -67,10 +65,6 @@ export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpe
     ...(help === undefined ? {} : { legacyHelp: help }),
     ...(opens === undefined ? {} : { opens }),
     async run(ctx) {
-      if (effect === 'clearScreen') {
-        ctx.tty.clear();
-        return 0;
-      }
       const early = await prelude?.(ctx);
       if (early !== undefined) return early;
 
@@ -106,8 +100,8 @@ export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpe
 
 /** The legacy command names, in the order help lists them today. */
 export const LEGACY_NAMES = [
-  'banner', 'cat', 'cathode', 'clear', 'curl', 'echo', 'email', 'fastfetch', 'help', 'history', 'ls', 'mkdir',
-  'poweroff', 'qr', 'repo', 'rm', 'speedtest', 'stock', 'sudo', 'theme', 'touch', 'weather', 'whoami',
+  'banner', 'cathode', 'curl', 'email', 'fastfetch', 'help', 'poweroff', 'qr', 'repo', 'speedtest', 'stock', 'sudo',
+  'theme', 'weather', 'whoami',
 ] as const;
 export type LegacyName = (typeof LEGACY_NAMES)[number];
 
@@ -125,34 +119,8 @@ export interface LegacySource {
   readonly crtQualities: () => readonly EnumValue[];
 }
 
-const path = (name: string, accept: 'any' | 'file' | 'dir', optional = true, variadic = false): ArgSpec => ({
-  name,
-  source: accept === 'dir' ? { kind: 'path', accept, includeParent: true } : { kind: 'path', accept },
-  optional,
-  variadic,
-});
-
 const examples = (...lines: string[]): Example[] => lines.map((line) => ({ line }));
 const offline = (...lines: string[]): Example[] => lines.map((line) => ({ line, offline: true }));
-
-/** Copies stdin to stdout, for `cat` with no files in a pipe. */
-async function copyStdin(ctx: CommandContext): Promise<ExitCode> {
-  for await (const line of ctx.stdin.lines()) await ctx.stdout.write(`${line}\n`);
-  return 0;
-}
-
-/**
- * `cat` of one of the owner's styled documents on a terminal: its styled lines, in their exact
- * colours (F093). Anywhere else, and for any other file, the legacy cat prints the plain text.
- */
-async function catStyled(ctx: CommandContext): Promise<ExitCode | undefined> {
-  const [file, ...rest] = ctx.args;
-  if (!ctx.stdout.isTTY || file === undefined || rest.length > 0 || file.startsWith('-')) return undefined;
-  const styled = ctx.fs.readStyled(ctx.resolve(file));
-  if (styled === null) return undefined;
-  for (const line of styled) await ctx.stdout.line(...line);
-  return 0;
-}
 
 /** `help NAME` for a command that has been ported: the help its spec generates. */
 async function specHelp(ctx: CommandContext): Promise<ExitCode | undefined> {
@@ -170,13 +138,6 @@ function tableFor(source: LegacySource): Record<LegacyName, StaticMeta> {
   const subcommand = (summary: string, args?: ArgSpec[]): SubcommandSpec => (args ? { summary, args } : { summary });
   return {
     banner: { category: 'portfolio', examples: offline('banner') },
-    cat: {
-      category: 'files',
-      args: [path('FILE', 'file', false, true)],
-      examples: offline('cat README.md', 'cat documents/linux.txt'),
-      // With no files in a pipe, cat copies its input, so `help | cat` works before cat is ported.
-      prelude: (ctx) => (ctx.args.length === 0 && !ctx.stdin.isTTY ? copyStdin(ctx) : catStyled(ctx)),
-    },
     cathode: {
       category: 'portfolio',
       subcommands: {
@@ -189,18 +150,12 @@ function tableFor(source: LegacySource): Record<LegacyName, StaticMeta> {
       },
       examples: offline('cathode ls', 'cathode set vintage', 'cathode off'),
     },
-    clear: { category: 'shell', effect: 'clearScreen', examples: offline('clear') },
     curl: {
       category: 'network',
       network: true,
       loadingLabel: (argv) => `fetching ${argv[1] ?? 'the page'}…`,
       args: [{ name: 'URL', source: { kind: 'url' } }],
       examples: examples('curl https://httpbin.org/get', 'curl explainshell.com'),
-    },
-    echo: {
-      category: 'text',
-      args: [{ name: 'TEXT', source: { kind: 'free', placeholder: 'text' }, optional: true, variadic: true }],
-      examples: offline('echo hello', 'echo "hi there" > note.txt'),
     },
     email: { category: 'portfolio', examples: examples('email') },
     fastfetch: {
@@ -216,18 +171,6 @@ function tableFor(source: LegacySource): Record<LegacyName, StaticMeta> {
       examples: offline('help', 'help ls'),
       prelude: specHelp,
     },
-    history: {
-      category: 'shell',
-      examples: offline('history', 'history -c'),
-      // History is the shell's now, and kept across reloads, so it can be cleared.
-      prelude: (ctx) => {
-        if (ctx.args[0] !== '-c') return undefined;
-        ctx.shell.history.clear();
-        return 0;
-      },
-    },
-    ls: { category: 'files', args: [path('DIR', 'dir')], examples: offline('ls', 'ls -a', 'ls /') },
-    mkdir: { category: 'files', args: [path('DIR', 'any', false)], examples: offline('mkdir notes') },
     poweroff: { category: 'system', examples: examples('poweroff') },
     qr: {
       category: 'portfolio',
@@ -235,7 +178,6 @@ function tableFor(source: LegacySource): Record<LegacyName, StaticMeta> {
       examples: offline('qr https://tldr.sh', 'qr explainshell.com', 'qr https://shellcheck.net'),
     },
     repo: { category: 'portfolio', examples: examples('repo') },
-    rm: { category: 'files', args: [path('FILE', 'any', false, true)], examples: offline('rm notes.txt', 'rm -r notes') },
     speedtest: {
       category: 'network',
       network: true,
@@ -265,7 +207,6 @@ function tableFor(source: LegacySource): Record<LegacyName, StaticMeta> {
       },
       examples: offline('theme ls', 'theme set swamphen'),
     },
-    touch: { category: 'files', args: [path('FILE', 'any', false, true)], examples: offline('touch notes.txt') },
     weather: {
       category: 'network',
       network: true,

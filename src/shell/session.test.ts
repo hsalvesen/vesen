@@ -105,10 +105,19 @@ describe('history', () => {
     const history = createHistory();
     history.add('a');
     history.add('b');
+    history.add('c');
     history.remove(1);
-    expect(history.list()).toEqual([{ n: 2, line: 'b' }]);
+    // As bash renumbers after history -d, so !n and the listing agree.
+    expect(history.list()).toEqual([
+      { n: 1, line: 'b' },
+      { n: 2, line: 'c' },
+    ]);
+    history.add('d');
+    expect(history.list().map((entry) => entry.n)).toEqual([1, 2, 3]);
     history.clear();
     expect(history.list()).toEqual([]);
+    history.add('e');
+    expect(history.list()).toEqual([{ n: 1, line: 'e' }]);
   });
 
   it('survives a reload under vesen:history:v1, and ignores what it cannot read', () => {

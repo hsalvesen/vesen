@@ -131,8 +131,9 @@ describe('typed and file text shows exactly as written', () => {
     await session.run('echo "<i>a</i>" > a.txt');
     await session.run('echo b>b.txt');
     await session.run("echo '<b>c</b>' >> a.txt");
-    expect(await session.run('cat a.txt')).toBe('&lt;i&gt;a&lt;/i&gt;<br>&lt;b&gt;c&lt;/b&gt;<br>');
-    expect(await session.run('cat b.txt')).toBe('b<br>');
+    // cat prints text lines, which the golden form writes as escaped text.
+    expect(await session.run('cat a.txt')).toBe('&lt;i&gt;a&lt;/i&gt;\n&lt;b&gt;c&lt;/b&gt;');
+    expect(await session.run('cat b.txt')).toBe('b');
   });
 
   it('an unquoted < or > is a redirection, never markup', async () => {

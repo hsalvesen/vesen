@@ -48,10 +48,11 @@ interface GoldenCase {
 const CASES: GoldenCase[] = [
   { slug: 'banner', lines: ['banner'] },
   { slug: 'help', lines: ['help'], responsive: true },
-  { slug: 'ls', lines: ['ls'], responsive: true },
-  { slug: 'ls-a', lines: ['ls -a'], responsive: true },
-  { slug: 'ls-root', lines: ['ls /'], responsive: true },
-  { slug: 'ls-home', lines: ['ls /home'], responsive: true },
+  // ls is ported: a grid the page lays out to its width, so one golden serves every width.
+  { slug: 'ls', lines: ['ls'] },
+  { slug: 'ls-a', lines: ['ls -a'] },
+  { slug: 'ls-root', lines: ['ls /'] },
+  { slug: 'ls-home', lines: ['ls /home'] },
   { slug: 'cat-readme', lines: ['cat README.md'] },
   { slug: 'cat-history', lines: ['cat history.txt'] },
   { slug: 'cat-linux', lines: ['cat documents/linux.txt'] },
@@ -59,9 +60,8 @@ const CASES: GoldenCase[] = [
   { slug: 'cathode-ls', lines: ['cathode ls'] },
   {
     slug: 'history',
-    // The long echo is wider than a phone's 40 columns, so history wraps it there.
+    // The long echo is wider than a phone's 40 columns; the page wraps it, so history no longer does.
     lines: ['pwd', 'cd documents', 'echo the quick brown fox jumps over the lazy dog, twice over', 'cd ..', 'history'],
-    responsive: true,
   },
   { slug: 'echo-hello', lines: ['echo hello'] },
   { slug: 'echo-quoted', lines: ['echo "a" "b"'] },
@@ -174,9 +174,14 @@ async function boot(viewport: Viewport): Promise<LegacyTerminal> {
       // Imported after the reset so the component shares this boot's stores.
       const { mount, unmount, flushSync } = await import('svelte');
       const { default: Transcript } = await import('../../src/ui/Transcript.svelte');
+      // Layout blocks (ls's grid) are drawn by RichBlock, which OutputView loads on first use:
+      // loaded here first, it arrives a tick after mounting, as it does in the page.
+      await import('../../src/ui/RichBlock.svelte');
       const target = document.createElement('div');
       document.body.append(target);
       const component = mount(Transcript, { target });
+      flushSync();
+      await new Promise((resolve) => setTimeout(resolve, 0));
       flushSync();
       const entries = Array.from(target.children, (entry) => normaliseSvelteMarkup(entry.outerHTML));
       unmount(component);

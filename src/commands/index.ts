@@ -6,7 +6,8 @@
 import { CommandRegistry } from '../shell/registry';
 import type { CommandSpec } from '../shell/types';
 
-const modules = import.meta.glob<{ default?: CommandSpec }>(['./*/*.ts', '!./*/*.test.ts'], { eager: true });
+// lib/ holds what the commands share, not commands.
+const modules = import.meta.glob<{ default?: CommandSpec }>(['./*/*.ts', '!./*/*.test.ts', '!./lib/*.ts'], { eager: true });
 
 /** The specs exported by default from the spec files, in path order. */
 export function specFiles(): CommandSpec[] {

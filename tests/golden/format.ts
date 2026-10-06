@@ -111,6 +111,7 @@ interface GoldenSpan {
 type GoldenBlock =
   | { readonly type: 'legacyHtml'; readonly html: string }
   | { readonly type: 'lines'; readonly lines: readonly (readonly GoldenSpan[])[] }
+  | { readonly type: 'grid'; readonly items: readonly GoldenSpan[] }
   | { readonly type: string };
 
 const ROLES = new Set([
@@ -140,14 +141,17 @@ function spanHtml(span: GoldenSpan): string {
 }
 
 /**
- * A step's output for the golden: a legacy command's HTML exactly as it rendered, and the
- * shell's own lines (command not found, say) as the equivalent spans, with tap actions left out.
+ * A step's output for the golden: a legacy command's HTML exactly as it rendered, a ported
+ * command's lines (and the shell's own, such as command not found) as the equivalent spans, and
+ * a grid (ls) as its items' spans two spaces apart on one line, since the page lays the columns
+ * out to its width. Tap actions have no HTML form and are left out.
  */
 export function blocksToGoldenHtml(blocks: readonly GoldenBlock[]): string {
   return blocks
     .map((block) => {
       if ('html' in block) return block.html;
       if ('lines' in block) return block.lines.map((line) => line.map(spanHtml).join('')).join('\n');
+      if ('items' in block) return block.items.map(spanHtml).join('  ');
       throw new Error(`no golden form for a ${block.type} block`);
     })
     .join('\n');

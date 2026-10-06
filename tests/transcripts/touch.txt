@@ -1,0 +1,21 @@
+# touch: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ touch a.txt b.txt
+? 0
+$ ls -l a.txt b.txt
+-rw-r--r-- 1 guest guest 0 Oct  6 20:01 a.txt
+-rw-r--r-- 1 guest guest 0 Oct  6 20:01 b.txt
+? 0
+$ touch -c ghost; ls ghost
+! ls: cannot access 'ghost': No such file or directory
+? 2
+$ touch /etc/x /etc/passwd
+! touch: cannot touch '/etc/x': Permission denied
+! touch: setting times of '/etc/passwd': Permission denied
+? 1
+$ touch
+! touch: missing file operand
+! Try 'touch --help' for more information.
+? 2

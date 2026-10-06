@@ -237,6 +237,8 @@ export interface InStream {
   /** Everything until end of input. */
   text(): Promise<string>;
   lines(): AsyncIterable<string>;
+  /** The input as it arrives, unchanged, for commands that copy it exactly, such as cat. */
+  chunks(): AsyncIterable<string>;
   close(): void;
 }
 

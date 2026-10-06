@@ -1,0 +1,29 @@
+# echo: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ echo hello   world
+hello world
+? 0
+$ echo "a  b" c
+a  b c
+? 0
+$ echo -n no newline; echo
+no newline
+? 0
+$ echo -e 'one\ttwo\nthree'
+one	two
+three
+? 0
+$ echo 'a\tb'
+a\tb
+? 0
+$ echo -x -- -n
+-x -- -n
+? 0
+$ echo "5 > 3" | cat
+5 > 3
+? 0
+$ echo $HOME $?
+/home/guest 0
+? 0

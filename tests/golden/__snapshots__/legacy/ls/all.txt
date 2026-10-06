@@ -1,0 +1,2 @@
+$ ls
+bin  config  desktop  documents  downloads  history.txt  music  pictures  projects  public  README.md  scripts  src  templates  videos

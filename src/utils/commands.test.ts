@@ -132,8 +132,10 @@ describe('errors', () => {
 describe('help', () => {
   it('lays out each legacy help text as panels, for the shell to show on --help', async () => {
     const { legacyHelpHtml } = await import('./commands');
-    expect(legacyHelpHtml('ls')).toContain('<div class="out-panel tone-link"><div class="out-panel-title">Usage:</div>');
+    expect(legacyHelpHtml('theme')).toContain('<div class="out-panel tone-link"><div class="out-panel-title">Usage:</div>');
     expect(legacyHelpHtml('constructor')).toBeUndefined();
+    // A ported command's help comes from its spec, so its legacy help text is gone.
+    expect(legacyHelpHtml('ls')).toBeUndefined();
   });
 });
 

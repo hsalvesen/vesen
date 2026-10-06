@@ -89,6 +89,10 @@ src/
 │                                 # reloads as an overlay on the seed), identity.ts (guest@vesen)
 ├── content/                      # The owner's styled documents (README, history, linux notes) in {colour}
 │                                 # markup, converted once from HTML by scripts/convert-content.mjs
+├── commands/                     # One CommandSpec per file, DOM-free, by category: files/ (ls, cat, cp,
+│                                 # mv, rm, rmdir, mkdir, touch, ln, stat, cd, pwd), text/ (echo, printf),
+│                                 # shell/ (history, clear, alias, export, reset); lib/ is what they share;
+│                                 # legacy.ts wraps the commands not yet ported
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette
 │                                 # where themes.json does not set them, and the contrast each must meet);
@@ -121,9 +125,10 @@ src/
 │   └── components/registry.ts    # Rich cards a component block may name (none yet)
 ├── testing/                      # Test setup
 └── utils/
-    ├── commands.ts               # Command table and dispatcher; the network commands load on first use
-    ├── commands/                 # Commands: file system, network, system, QR; fastfetch and the network
+    ├── commands.ts               # The legacy command table (help, theme, cathode, sudo); the network
     │                             # commands load on first use
+    ├── commands/                 # Legacy commands not yet ported: network, system, QR, poweroff;
+    │                             # fastfetch and the network commands load on first use
     ├── virtualFileSystem.ts      # A shim over the VFS for the legacy commands not yet ported
     ├── helpTexts.ts              # Help for each command
     ├── commandSuggestions.ts     # Suggestions while typing

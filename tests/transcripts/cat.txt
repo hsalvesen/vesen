@@ -1,0 +1,86 @@
+# cat: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ cat .bashrc
+# ~/.bashrc: executed by bash(1) for non-login shells
+
+# User specific aliases and functions
+alias ll="ls -la"
+alias la="ls -A"
+alias l="ls -CF"
+
+# Add ~/bin to PATH
+export PATH="$HOME/bin:$PATH"
+
+# Custom prompt
+export PS1="\u@\h:\w$ "
+? 0
+$ cat -n .profile
+     1	# ~/.profile: executed by the command interpreter for login shells
+     2
+     3	# Set PATH to include user's private bin if it exists
+     4	if [ -d "$HOME/bin" ] ; then
+     5	    PATH="$HOME/bin:$PATH"
+     6	fi
+     7
+     8	# Set default editor
+     9	export EDITOR=vim
+? 0
+$ cat nope readme.md documents /etc/shadow
+[terminal]
+! cat: nope: No such file or directory
+! cat: readme.md: No such file or directory
+! Did you mean README.md?
+! cat: documents: Is a directory
+! cat: /etc/shadow: Permission denied
+? 1
+[pipe]
+! cat: nope: No such file or directory
+! cat: readme.md: No such file or directory
+! cat: documents: Is a directory
+! cat: /etc/shadow: Permission denied
+? 1
+$ printf 'a\n\n\n\tb\n' > f; cat -sA f
+a$
+$
+^Ib$
+? 0
+$ echo piped | cat - .vimrc
+piped
+" ~/.vimrc: Vim configuration
+
+set number
+set tabstop=4
+set shiftwidth=4
+set expandtab
+set autoindent
+set hlsearch
+set incsearch
+
+syntax on
+colorscheme default
+? 0
+$ cat README.md
+
+This webapp replicates a Unix-like terminal environment in your web browser.
+It simulates the experience of using a command-line interface, complete with a
+virtual file system, various commands, and interactive features.
+
+The Terminal
+A terminal (also called a command line, shell, or console) is a text-based
+interface for interacting with a computer's operating system. Unlike graphical
+user interfaces (GUIs) that use windows, icons, and menus, terminals rely on
+typed commands.  Try running `cat history.txt` to discover more.
+
+Terminals have been the primary way to interact with computers since the early
+days of computing.
+
+Tips for Getting Started
+
+1. Type help to see all available commands
+2. Type ls to explore the file system
+3. Type theme ls to see available color themes
+4. Type fastfetch for system information with ASCII art
+
+? 0

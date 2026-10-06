@@ -154,8 +154,9 @@ test.describe('theming', { tag: '@smoke' }, () => {
     );
     expect(baked).toEqual([]);
 
+    // ls draws files in the strong text role, so the colour follows the theme.
     const fileColour = () =>
-      page.locator('[role="log"] .out-strong', { hasText: 'README.md' }).first().evaluate((el) => getComputedStyle(el).color);
+      page.locator('[role="log"] .grid span', { hasText: /^README\.md$/ }).first().evaluate((el) => getComputedStyle(el).color);
     const before = await fileColour();
     await run(page, 'theme set cockatoo');
     const after = await fileColour();

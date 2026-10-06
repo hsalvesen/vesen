@@ -1,0 +1,27 @@
+# ln: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ ln -s documents/linux.txt linux
+? 0
+$ ln -sv /etc/hostname
+'hostname' -> '/etc/hostname'
+? 0
+$ ls -l linux hostname
+lrwxrwxrwx 1 guest guest 13 Oct  6 20:02 hostname -> /etc/hostname
+lrwxrwxrwx 1 guest guest 19 Oct  6 20:01 linux -> documents/linux.txt
+? 0
+$ ln -s x linux
+! ln: failed to create symbolic link 'linux': File exists
+? 1
+$ ln README.md hard
+[terminal]
+! ln: failed to create hard link 'hard' => 'README.md': Operation not permitted
+! vesen has symbolic links only: try ln -s
+? 1
+[pipe]
+! ln: failed to create hard link 'hard' => 'README.md': Operation not permitted
+? 1
+$ ln -s y /etc/z
+! ln: failed to create symbolic link '/etc/z': Permission denied
+? 1

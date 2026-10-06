@@ -1,2 +1,1 @@
 $ mkdir -p a/b
-mkdir: created directory '-p'

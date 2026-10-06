@@ -1,0 +1,32 @@
+# stat: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ stat .bashrc
+  File: .bashrc
+  Size: 236       	Blocks: 8          IO Block: 4096   regular file
+Device: 8,1	Inode: 5123542     Links: 1
+Access: (0644/-rw-r--r--)  Uid: ( 1000/   guest)   Gid: ( 1000/   guest)
+Access: 2026-10-06 11:00:00.000000000 +1100
+Modify: 2026-10-06 11:00:00.000000000 +1100
+Change: 2026-10-06 11:00:00.000000000 +1100
+ Birth: -
+? 0
+$ stat /home/user
+  File: /home/user -> guest
+  Size: 5         	Blocks: 0          IO Block: 4096   symbolic link
+Device: 8,1	Inode: 3803773     Links: 1
+Access: (0777/lrwxrwxrwx)  Uid: (    0/    root)   Gid: (    0/    root)
+Access: 2026-10-06 11:00:00.000000000 +1100
+Modify: 2026-10-06 11:00:00.000000000 +1100
+Change: 2026-10-06 11:00:00.000000000 +1100
+ Birth: -
+? 0
+$ stat -c '%A %a %U:%G %s %F %n' .bashrc /etc /dev/null
+-rw-r--r-- 644 guest:guest 236 regular file .bashrc
+drwxr-xr-x 755 root:root 4096 directory /etc
+crw-rw-rw- 666 root:root 0 character special file /dev/null
+? 0
+$ stat nope
+! stat: cannot statx 'nope': No such file or directory
+? 1

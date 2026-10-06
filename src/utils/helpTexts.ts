@@ -1,17 +1,7 @@
 export const commandHelp = {
   // System commands
   help: `<span style="color: var(--theme-cyan); font-weight: bold;">help</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Shows a list of all available commands organised by category.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> help`,
-  clear: `<span style="color: var(--theme-cyan); font-weight: bold;">clear</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Clears all previous output from the terminal screen.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> clear`,
-  echo: `<span style="color: var(--theme-cyan); font-weight: bold;">echo</span> : Display text or write to file<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span> > <span style="color: var(--theme-green);">[filename]</span><br>&nbsp;&nbsp;echo <span style="color: var(--theme-green);">[text]</span> >> <span style="color: var(--theme-green);">[filename]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;echo "Hello World"<br>&nbsp;&nbsp;echo "Content" > file.txt<br>&nbsp;&nbsp;echo "More content" >> file.txt`,
   poweroff: `<span style="color: var(--theme-cyan); font-weight: bold;">poweroff</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Closes the terminal session. Attempts to close window, then triggers shutdown sequence.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> poweroff`,
-  history: `<span style="color: var(--theme-cyan); font-weight: bold;">history</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Displays a numbered list of previously executed commands.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> history<br><span style="color: var(--theme-magenta); font-weight: bold;">Note:</span> <span style="word-wrap: break-word; overflow-wrap: break-word;">History is kept across reloads. history -c clears it; reset clears it too.</span>`,
-
-  // File system commands
-  ls: `<span style="color: var(--theme-cyan); font-weight: bold;">ls</span> : Lists files and directories in the current or specified directory.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> ls <span style="color: var(--theme-green);">[directory]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;ls<br>&nbsp;&nbsp;ls documents<br>&nbsp;&nbsp;ls /home/user`,
-  cat: `<span style="color: var(--theme-cyan); font-weight: bold;">cat</span> : Displays the contents of the specified file.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> cat <span style="color: var(--theme-green);">[filename]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;cat experience.md<br>&nbsp;&nbsp;cat documents/README.md`,
-  touch: `<span style="color: var(--theme-cyan); font-weight: bold;">touch</span> : Creates a new empty file with the specified name.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> touch <span style="color: var(--theme-green);">[filename]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;touch newfile.txt<br>&nbsp;&nbsp;touch documents/notes.md<br>&nbsp;&nbsp;touch script.js`,
-  rm: `<span style="color: var(--theme-cyan); font-weight: bold;">rm</span> : Removes the specified file or directory.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> rm <span style="color: var(--theme-green);">[options] [filename/directory]</span><br><span style="color: var(--theme-green); font-weight: bold;">Options:</span><br>&nbsp;&nbsp;-r, --recursive  remove directories and their contents recursively<br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;rm has.txt<br>&nbsp;&nbsp;rm -r documents<br>&nbsp;&nbsp;rm script.js`,
-  mkdir: `<span style="color: var(--theme-cyan); font-weight: bold;">mkdir</span> : Creates a new directory with the specified name.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> mkdir <span style="color: var(--theme-green);">[directory_name]</span><br><span style="color: var(--theme-red); font-weight: bold;">Examples:</span><br>&nbsp;&nbsp;mkdir new_folder<br>&nbsp;&nbsp;mkdir projects/myapp<br>&nbsp;&nbsp;mkdir temp`,
 
   // System info commands
   whoami: `<span style="color: var(--theme-cyan); font-weight: bold;">whoami</span> : Displays developer.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> whoami`,
@@ -79,15 +69,7 @@ stock MSFT`,
 // Short descriptions for the help command
 export const commandDescriptions = {
   'help': 'Show commands',
-  'clear': 'Clear screen',
-  'echo': 'Write text',
   'poweroff': 'Shut down terminal',
-  'history': 'Show command history',
-  'ls': 'List files',
-  'cat': 'Show file contents',
-  'touch': 'Create file',
-  'rm': 'Remove file',
-  'mkdir': 'Make directory',
   'fastfetch': 'System info',
   'whoami': 'Developer info',
   'sudo': 'Elevate privileges',

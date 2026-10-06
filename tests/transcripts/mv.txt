@@ -1,0 +1,58 @@
+# mv: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ mv -v README.md readme.md
+renamed 'README.md' -> 'readme.md'
+? 0
+$ mv history.txt documents/
+? 0
+$ mv projects projects/sub
+! mv: cannot move 'projects' to a subdirectory of itself, 'projects/sub'
+? 1
+$ mv nope x
+! mv: cannot stat 'nope': No such file or directory
+? 1
+$ mv readme.md /etc/
+! mv: cannot move 'readme.md' to '/etc/readme.md': Permission denied
+? 1
+$ ls
+[terminal at 40 columns]
+bin        config     desktop
+documents  downloads  music
+pictures   projects   public
+readme.md  scripts    src
+templates  videos
+? 0
+[terminal at 80 columns]
+bin        config     desktop    documents  downloads  music      pictures
+projects   public     readme.md  scripts    src        templates  videos
+? 0
+[terminal at 120 columns]
+bin        config     desktop    documents  downloads  music      pictures   projects   public     readme.md
+scripts    src        templates  videos
+? 0
+[pipe]
+bin
+config
+desktop
+documents
+downloads
+music
+pictures
+projects
+public
+readme.md
+scripts
+src
+templates
+videos
+? 0
+$ ls documents
+[terminal]
+history.txt  linux.txt
+? 0
+[pipe]
+history.txt
+linux.txt
+? 0

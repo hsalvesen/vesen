@@ -1,0 +1,41 @@
+# history: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ pwd
+/home/guest
+? 0
+$ cd documents
+? 0
+$ echo the quick brown fox jumps over the lazy dog, twice over
+the quick brown fox jumps over the lazy dog, twice over
+? 0
+$ cd ..
+? 0
+$ history
+    1  pwd
+    2  cd documents
+    3  echo the quick brown fox jumps over the lazy dog, twice over
+    4  cd ..
+    5  history
+? 0
+$ history 2
+    5  history
+    6  history 2
+? 0
+$ history -d 1
+? 0
+$ history
+    1  cd documents
+    2  echo the quick brown fox jumps over the lazy dog, twice over
+    3  cd ..
+    4  history
+    5  history 2
+    6  history -d 1
+    7  history
+? 0
+$ history -c
+? 0
+$ history
+    1  history
+? 0
