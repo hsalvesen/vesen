@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { STORAGE_KEYS } from '../services/storage-keys';
 import { createStorage } from '../services/storage';
 import type { KV } from '../services/types';
-import { applyOverlay, createPersistence, diffOverlay, MEMORY_NOTICE, readPersisted, type Timers } from './persist';
+import { applyOverlay, createPersistence, diffOverlay, MEMORY_NOTICE, readPersisted, TOO_LARGE_NOTICE, type Timers } from './persist';
 import { seedTree, seedVersion } from './seed';
 import type { PersistedFs, VirtualFile } from './types';
 import { adopt, Vfs } from './vfs';
@@ -138,6 +138,29 @@ describe('the overlay', () => {
       })?.overlay,
     ).toEqual({ '/home/guest/a': { type: 'file', mode: 420, mtime: 1, content: 'ok' }, '/home/guest/c': { whiteout: true } });
   });
+
+  it('drops values Date and the permission bits cannot hold, and never lets a file replace ~', () => {
+    const entry = (extra: Record<string, unknown>) => ({ type: 'file', mode: 420, mtime: 1, content: 'x', ...extra });
+    const read = readPersisted({
+      v: 1,
+      seedVersion: 'a',
+      savedAt: 1,
+      overlay: {
+        '/home/guest/ok': entry({}),
+        '/home/guest/far': entry({ mtime: 1e20 }),
+        '/home/guest/nan': entry({ mtime: Number.NaN }),
+        '/home/guest/mode': entry({ mode: 0o70000 }),
+        '/home/guest/half': entry({ mode: 4.5 }),
+      },
+    });
+    expect(Object.keys(read?.overlay ?? {})).toEqual(['/home/guest/ok']);
+
+    const tree = seedTree(SEED_OPTIONS);
+    applyOverlay(tree, { '/home/guest': { type: 'file', mode: 420, mtime: 1, content: 'x' } }, '/home/guest');
+    const fs = new Vfs({ seed: () => tree, now: () => NOW });
+    expect(fs.stat('/home/guest').type).toBe('directory');
+    expect(fs.exists('/home/guest/README.md')).toBe(true);
+  });
 });
 
 describe('persistence across reloads', () => {
@@ -265,6 +288,59 @@ describe('persistence across reloads', () => {
     full.fs.writeFile('/home/guest/big2', 'y');
     full.timers.run();
     expect(full.notices).toEqual([MEMORY_NOTICE]);
+  });
+
+  it('tries every save again after one fails, so freeing space saves again', () => {
+    const { kv, items } = fakeStorage({ quotaChars: 4000 });
+    const session = boot(kv);
+    session.fs.writeFile('/home/guest/one', '1');
+    session.timers.run();
+    expect(items.get(KEY)).toContain('/home/guest/one');
+    session.fs.writeFile('/home/guest/big', 'x'.repeat(5000));
+    session.timers.run();
+    expect(items.get(KEY)).not.toContain('/home/guest/big');
+    expect(kv.persistent).toBe(true);
+    session.fs.rm('/home/guest/big');
+    session.fs.writeFile('/home/guest/two', '2');
+    session.timers.run();
+    expect(items.get(KEY)).toContain('/home/guest/two');
+    expect(boot(kv).fs.readFile('/home/guest/two')).toBe('2');
+    expect(session.notices).toEqual([MEMORY_NOTICE]);
+  });
+
+  it('says the files are too large, not that storage is missing, when the overlay outgrows the cap', () => {
+    const { kv, items } = fakeStorage();
+    const fs = new Vfs({ seed: () => seedTree(SEED_OPTIONS), now: () => NOW });
+    const notices: string[] = [];
+    const seed = () => seedTree(SEED_OPTIONS);
+    const persist = createPersistence({ vfs: fs, storage: kv, seed, seedVersion: seedVersion(seed()), now: () => NOW, timers: manualTimers(), maxBytes: 2000, onNotice: (m) => notices.push(m) });
+    persist.load();
+    persist.start();
+    fs.writeFile('/home/guest/big', 'x'.repeat(3000));
+    persist.flush();
+    expect(notices).toEqual([TOO_LARGE_NOTICE]);
+    expect(items.has(KEY)).toBe(false);
+  });
+
+  it('keeps what another tab saved: each tab replaces only the paths it changed', () => {
+    const { kv } = fakeStorage();
+    const a = boot(kv);
+    const b = boot(kv);
+    a.fs.writeFile('/home/guest/a.txt', 'from a');
+    a.persist.flush();
+    b.fs.writeFile('/home/guest/b.txt', 'from b');
+    b.fs.rm('/home/guest/history.txt');
+    b.persist.flush();
+    a.fs.writeFile('/home/guest/a.txt', 'from a, again');
+    a.persist.flush();
+    const c = boot(kv);
+    expect(c.fs.readFile('/home/guest/a.txt')).toBe('from a, again');
+    expect(c.fs.readFile('/home/guest/b.txt')).toBe('from b');
+    expect(c.fs.exists('/home/guest/history.txt')).toBe(false);
+    // A file a tab removes goes from storage too, even one another tab made.
+    c.fs.rm('/home/guest/b.txt');
+    c.persist.flush();
+    expect(boot(kv).fs.exists('/home/guest/b.txt')).toBe(false);
   });
 
   it('keeps the 512 KB cap: a write past it fails with ENOSPC, and the save still fits', () => {

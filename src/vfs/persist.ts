@@ -7,7 +7,11 @@
 // - the save is small, and the VFS quota (512 KB) keeps it so;
 // - it is written through the storage service under `vesen:fs:v1`, 300 ms after the last change;
 // - when storage is blocked or full, everything keeps working in memory, and the visitor is told
-//   once per session.
+//   once per session; every later save still tries, so freeing space starts saving again;
+// - two tabs do not overwrite each other: a save reads what is stored, and replaces only the
+//   paths this tab changed since it loaded;
+// - stored values are checked before they are believed: an mtime out of Date's range, a mode
+//   that is not a permission, or a file where the home folder should be are dropped.
 
 import { STORAGE_KEYS } from '../services/storage-keys';
 import type { KV } from '../services/types';
@@ -24,6 +28,15 @@ export const MAX_PERSISTED_BYTES = 512 * 1024;
 
 /** Said once per session when nothing can be saved. */
 export const MEMORY_NOTICE = 'vesen: storage is unavailable here, so your files and history last for this session only.';
+
+/** Said once per session when the files under ~ are too big to save. */
+export const TOO_LARGE_NOTICE = 'vesen: the files under ~ are too large to keep across reloads; remove some and they will be saved again.';
+
+/** The latest time Date can hold, in milliseconds either side of 1970. */
+const MAX_TIME = 8.64e15;
+
+/** A changed path list longer than this is treated as a change to everything. */
+const MAX_TRACKED_CHANGES = 1000;
 
 type Entry = PersistedFs['overlay'][string];
 type NodeEntry = Exclude<Entry, { readonly whiteout: true }>;
@@ -133,6 +146,8 @@ export function applyOverlay(tree: VirtualFile, overlay: Readonly<Overlay>, unde
       if (parent?.children !== undefined && child(parent, name) !== undefined && path !== root) delete parent.children[name];
       continue;
     }
+    // The home folder itself is always a folder: a stored file or link there is corrupt.
+    if (path === root && entry.type !== 'directory') continue;
     const parent = ensureDirectory(tree, fromSegments(parts), entry.mtime);
     const children = (parent.children ??= Object.create(null) as Record<string, VirtualFile>);
     const existing = child(parent, name);
@@ -155,7 +170,8 @@ function isEntry(value: unknown): value is Entry {
   const entry = value as Record<string, unknown>;
   if (entry.whiteout === true) return true;
   if (typeof entry.type !== 'string' || !SAVED_TYPES.has(entry.type as NodeType)) return false;
-  if (typeof entry.mode !== 'number' || typeof entry.mtime !== 'number') return false;
+  if (typeof entry.mode !== 'number' || !Number.isInteger(entry.mode) || entry.mode < 0 || entry.mode > 0o7777) return false;
+  if (typeof entry.mtime !== 'number' || !Number.isFinite(entry.mtime) || Math.abs(entry.mtime) > MAX_TIME) return false;
   if (entry.content !== undefined && typeof entry.content !== 'string') return false;
   if (entry.target !== undefined && typeof entry.target !== 'string') return false;
   return true;
@@ -222,15 +238,33 @@ export function createPersistence(options: PersistenceOptions): Persistence {
   // The seed as the VFS holds it, with every default filled in, so only real changes differ.
   const base = (): VirtualFile => adopt(options.seed(), 0);
   let timer: unknown = null;
-  let noticed = false;
+  const noticed = new Set<string>();
   let unsubscribe: (() => void) | null = null;
   /** Set while load() replaces the tree, which is not a change to save. */
   let loading = false;
+  /** The paths this tab changed since it loaded, or 'all' after a reset. */
+  let changed: Set<string> | 'all' = new Set();
 
-  const notice = (): void => {
-    if (noticed) return;
-    noticed = true;
-    options.onNotice?.(MEMORY_NOTICE);
+  const notice = (message: string): void => {
+    if (noticed.has(message)) return;
+    noticed.add(message);
+    options.onNotice?.(message);
+  };
+
+  /**
+   * What to store: this tab's changes, on top of what another tab may have stored since this
+   * one loaded. A path this tab changed comes from this tab; any other comes from storage.
+   */
+  const merged = (mine: Overlay): Overlay => {
+    if (changed === 'all' || storage === null) return mine;
+    const stored = storage.getJson(key, readPersisted);
+    if (stored === undefined || stored.seedVersion !== options.seedVersion) return mine;
+    const touched = [...changed];
+    const ours = (path: string): boolean => touched.some((root) => isWithin(path, root));
+    const overlay: Overlay = {};
+    for (const [path, entry] of Object.entries(stored.overlay)) if (!ours(path)) overlay[path] = entry;
+    for (const [path, entry] of Object.entries(mine)) if (ours(path)) overlay[path] = entry;
+    return overlay;
   };
 
   const save = (): void => {
@@ -238,17 +272,31 @@ export function createPersistence(options: PersistenceOptions): Persistence {
       timers.clear(timer);
       timer = null;
     }
-    if (storage === null || !storage.persistent) {
-      notice();
+    if (storage === null) {
+      notice(MEMORY_NOTICE);
       return;
     }
-    const overlay = diffOverlay(base(), vfs.root, under);
+    // Tried every time, even after a failure: space may have been freed since.
+    const overlay = merged(diffOverlay(base(), vfs.root, under));
     if (Object.keys(overlay).length === 0) {
       storage.remove(key);
       return;
     }
     const value: PersistedFs = { v: 1, seedVersion: options.seedVersion, savedAt: options.now?.() ?? Date.now(), overlay };
-    if (JSON.stringify(value).length > maxBytes || !storage.setJson(key, value)) notice();
+    if (JSON.stringify(value).length > maxBytes) notice(TOO_LARGE_NOTICE);
+    else if (!storage.setJson(key, value)) notice(MEMORY_NOTICE);
+  };
+
+  const track = (paths: readonly string[]): void => {
+    if (changed === 'all') return;
+    for (const path of paths) {
+      if (path === '/') {
+        changed = 'all';
+        return;
+      }
+      if (isWithin(path, under)) changed.add(path);
+    }
+    if (changed.size > MAX_TRACKED_CHANGES) changed = 'all';
   };
 
   return {
@@ -275,6 +323,7 @@ export function createPersistence(options: PersistenceOptions): Persistence {
         if (loading) return;
         // Only changes that can reach the overlay: under ~, or the whole tree (reset).
         if (!paths.some((path) => path === '/' || isWithin(path, under))) return;
+        track(paths);
         if (timer !== null) timers.clear(timer);
         timer = timers.set(() => {
           timer = null;

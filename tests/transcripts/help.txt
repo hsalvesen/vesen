@@ -9,75 +9,14 @@ banner   show the welcome banner
 cathode  trial a retro CRT display
          effect
 theme    change the colour theme
-Files
-cat    concatenate files and print
-       them
-cd     change the working directory
-cp     copy files and directories
-ln     make links between files
-ls     list directory contents
-mkdir  make directories
-mv     move or rename files
-pwd    print the working directory
-rm     remove files or directories
-rmdir  remove empty directories
-stat   display file status
-touch  change file timestamps, or
-       create files
-Text
-echo    display a line of text
-head    output the first lines
-printf  format and print data
-wc      count lines, words and
-        characters
-yes     print y until stopped
-Shell
-alias     define or list aliases
-apropos   search the command summaries
-clear     clear the terminal screen
-command   run a command, or say what a
-          name runs
-env       run a command in a changed
-          environment
-exit      end the session
-export    give variables to the
-          commands you run
-fail      complain on stderr
-false     do nothing, unsuccessfully
-hang      never finish, and ignore ^C
-help      list the commands, or
-          explain one
-history   display or manipulate the
-          command history
-late      write once the line has been
-          interrupted
-man       show the manual page of a
-          command
-printenv  print all or part of the
-          environment
-reset     restore the terminal, its
-          files and history
-set       list variables, or set the
-          shell's options
-sleep     delay for a specified amount
-          of time
-source    run the lines of a file in
-          this shell
-test      check a condition: files,
-          strings, numbers
-true      do nothing, successfully
-type      describe what a command name
-          runs
-unalias   remove aliases
-unset     remove shell variables
-whatis    display one-line command
-          summaries
-which     locate a command on $PATH
-System
-date  print the date and time
-Network
-fetch  fetch a URL
 
+Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
+Text: echo head printf wc yes
+Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source test true type unalias unset whatis which
+System: date
+Network: fetch
+
+help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
 ? 0
 [terminal at 80 columns]
@@ -85,89 +24,28 @@ Portfolio
 banner   show the welcome banner        cathode  trial a retro CRT display
                                                  effect
 theme    change the colour theme
-Files
-cat    concatenate files and print      cd     change the working directory
-       them
-cp     copy files and directories       ln     make links between files
-ls     list directory contents          mkdir  make directories
-mv     move or rename files             pwd    print the working directory
-rm     remove files or directories      rmdir  remove empty directories
-stat   display file status              touch  change file timestamps, or
-                                               create files
-Text
-echo    display a line of text          head    output the first lines
-printf  format and print data           wc      count lines, words and
-                                                characters
-yes     print y until stopped
-Shell
-alias     define or list aliases        apropos   search the command summaries
-clear     clear the terminal screen     command   run a command, or say what a
-                                                  name runs
-env       run a command in a changed    exit      end the session
-          environment
-export    give variables to the         fail      complain on stderr
-          commands you run
-false     do nothing, unsuccessfully    hang      never finish, and ignore ^C
-help      list the commands, or         history   display or manipulate the
-          explain one                             command history
-late      write once the line has been  man       show the manual page of a
-          interrupted                             command
-printenv  print all or part of the      reset     restore the terminal, its
-          environment                             files and history
-set       list variables, or set the    sleep     delay for a specified amount
-          shell's options                         of time
-source    run the lines of a file in    test      check a condition: files,
-          this shell                              strings, numbers
-true      do nothing, successfully      type      describe what a command name
-                                                  runs
-unalias   remove aliases                unset     remove shell variables
-whatis    display one-line command      which     locate a command on $PATH
-          summaries
-System
-date  print the date and time
-Network
-fetch  fetch a URL
 
+Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
+Text: echo head printf wc yes
+Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source test true type unalias unset whatis which
+System: date
+Network: fetch
+
+help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
 ? 0
 [terminal at 120 columns]
 Portfolio
 banner   show the welcome banner        cathode  trial a retro CRT display      theme    change the colour theme
                                                  effect
-Files
-cat    concatenate files and print      cd     change the working directory     cp     copy files and directories
-       them
-ln     make links between files         ls     list directory contents          mkdir  make directories
-mv     move or rename files             pwd    print the working directory      rm     remove files or directories
-rmdir  remove empty directories         stat   display file status              touch  change file timestamps, or
-                                                                                       create files
-Text
-echo    display a line of text          head    output the first lines          printf  format and print data
-wc      count lines, words and          yes     print y until stopped
-        characters
-Shell
-alias     define or list aliases        apropos   search the command summaries  clear     clear the terminal screen
-command   run a command, or say what a  env       run a command in a changed    exit      end the session
-          name runs                               environment
-export    give variables to the         fail      complain on stderr            false     do nothing, unsuccessfully
-          commands you run
-hang      never finish, and ignore ^C   help      list the commands, or         history   display or manipulate the
-                                                  explain one                             command history
-late      write once the line has been  man       show the manual page of a     printenv  print all or part of the
-          interrupted                             command                                 environment
-reset     restore the terminal, its     set       list variables, or set the    sleep     delay for a specified amount
-          files and history                       shell's options                         of time
-source    run the lines of a file in    test      check a condition: files,     true      do nothing, successfully
-          this shell                              strings, numbers
-type      describe what a command name  unalias   remove aliases                unset     remove shell variables
-          runs
-whatis    display one-line command      which     locate a command on $PATH
-          summaries
-System
-date  print the date and time
-Network
-fetch  fetch a URL
 
+Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
+Text: echo head printf wc yes
+Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source test true type unalias unset whatis which
+System: date
+Network: fetch
+
+help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
 ? 0
 [pipe]
@@ -175,57 +53,14 @@ Portfolio
 banner   show the welcome banner
 cathode  trial a retro CRT display effect
 theme    change the colour theme
-Files
-cat    concatenate files and print them
-cd     change the working directory
-cp     copy files and directories
-ln     make links between files
-ls     list directory contents
-mkdir  make directories
-mv     move or rename files
-pwd    print the working directory
-rm     remove files or directories
-rmdir  remove empty directories
-stat   display file status
-touch  change file timestamps, or create files
-Text
-echo    display a line of text
-head    output the first lines
-printf  format and print data
-wc      count lines, words and characters
-yes     print y until stopped
-Shell
-alias     define or list aliases
-apropos   search the command summaries
-clear     clear the terminal screen
-command   run a command, or say what a name runs
-env       run a command in a changed environment
-exit      end the session
-export    give variables to the commands you run
-fail      complain on stderr
-false     do nothing, unsuccessfully
-hang      never finish, and ignore ^C
-help      list the commands, or explain one
-history   display or manipulate the command history
-late      write once the line has been interrupted
-man       show the manual page of a command
-printenv  print all or part of the environment
-reset     restore the terminal, its files and history
-set       list variables, or set the shell's options
-sleep     delay for a specified amount of time
-source    run the lines of a file in this shell
-test      check a condition: files, strings, numbers
-true      do nothing, successfully
-type      describe what a command name runs
-unalias   remove aliases
-unset     remove shell variables
-whatis    display one-line command summaries
-which     locate a command on $PATH
-System
-date  print the date and time
-Network
-fetch  fetch a URL
 
+Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
+Text: echo head printf wc yes
+Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source test true type unalias unset whatis which
+System: date
+Network: fetch
+
+help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
 ? 0
 $ help pwd cd
@@ -255,7 +90,7 @@ See also: cd, ls
     cd documents  go into a folder
     cd ..  up one level
     cd ~  home
-    cd -  back to the previous folder
+    cd /tmp; cd -  there, and back to the previous folder
 See also: pwd, ls
 ? 0
 [pipe]
@@ -284,7 +119,7 @@ Examples:
   cd documents  go into a folder
   cd ..  up one level
   cd ~  home
-  cd -  back to the previous folder
+  cd /tmp; cd -  there, and back to the previous folder
 See also: pwd, ls
 ? 0
 $ help keys

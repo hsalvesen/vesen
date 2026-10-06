@@ -26,7 +26,7 @@ export default defineCommand({
   async run(ctx) {
     const [file, ...args] = ctx.args;
     if (file === undefined) {
-      await ctx.stderr.line(out.span(`${ctx.name}: filename argument required`, { fg: 'error' }));
+      await ctx.stderr.line(out.span(`vesen: ${ctx.name}: filename argument required`, { fg: 'error' }));
       await ctx.stderr.line(out.span(`${ctx.name}: usage: ${ctx.name} filename [arguments]`, { fg: 'muted' }));
       return 2;
     }

@@ -85,6 +85,29 @@ test.describe('the shell kernel', { tag: '@smoke' }, () => {
     await expect(lastEntry(page).locator('.command-output')).toHaveText(/^\s*1\s+ls\s+2\s+history\s*$/);
   });
 
+  test('^C on a line typed before the kernel arrives ends it at once', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-chrome', 'Ctrl+C on a hardware keyboard');
+    // Hold the kernel's chunk back, as a slow network would.
+    let release = (): void => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    await page.route(/\/assets\/shell-[\w-]+\.js$/, async (route) => {
+      await held;
+      await route.continue();
+    });
+    await page.goto('/');
+    await prompt(page).fill('help');
+    await prompt(page).press('Enter');
+    await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'true');
+    await prompt(page).press('Control+c');
+    await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
+    await expect(lastEntry(page)).toContainText('^C');
+    release();
+    // When the kernel arrives, the cancelled line does not run.
+    await run(page, 'echo after');
+    await expect(lastEntry(page).locator('.command-output')).toHaveText('after');
+    await expect(page.locator('[role="log"] .command-output').filter({ hasText: 'Portfolio' })).toHaveCount(0);
+  });
+
   test('history survives a reload', async ({ page }) => {
     test.skip(test.info().project.name !== 'desktop-chrome', 'arrow keys on a hardware keyboard');
     await page.goto('/');

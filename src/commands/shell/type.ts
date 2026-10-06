@@ -40,7 +40,7 @@ export default defineCommand({
       const found = lookup(ctx, name, { all });
       if (found.length === 0) {
         status = 1;
-        if (ctx.opts.t !== true && ctx.opts.p !== true) await ctx.stderr.line(out.span(`type: ${name}: not found`, { fg: 'error' }));
+        if (ctx.opts.t !== true && ctx.opts.p !== true) await ctx.stderr.line(out.span(`vesen: type: ${name}: not found`, { fg: 'error' }));
         continue;
       }
       for (const each of found) {

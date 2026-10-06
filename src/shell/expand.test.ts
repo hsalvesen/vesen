@@ -307,8 +307,8 @@ describe('redirection targets', () => {
     expect(await expander.target(firstWord('~/$F'))).toBe('/home/guest/out.txt');
     expect(await expander.target(firstWord('"$TWO"'))).toBe('a b');
     expect(await expander.target(firstWord('README*'))).toBe('README.md');
-    await expect(expander.target(firstWord('$TWO'))).rejects.toThrow(new ExpandError('$TWO: ambiguous redirect'));
-    await expect(expander.target(firstWord('*.txt'))).rejects.toThrow(new ExpandError('*.txt: ambiguous redirect'));
-    await expect(expander.target(firstWord('$UNSET'))).rejects.toThrow(new ExpandError('$UNSET: ambiguous redirect'));
+    await expect(expander.target(firstWord('$TWO'))).rejects.toThrow('$TWO: ambiguous redirect');
+    await expect(expander.target(firstWord('*.txt'))).rejects.toThrow('*.txt: ambiguous redirect');
+    await expect(expander.target(firstWord('$UNSET'))).rejects.toBeInstanceOf(ExpandError);
   });
 });

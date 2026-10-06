@@ -21,7 +21,8 @@ import {
 // ── Variables ──────────────────────────────────────────────────────────────────────────────
 
 interface Variable {
-  value: string;
+  /** Undefined for a name that is exported but not yet set: `export X` before `X=5`. */
+  value: string | undefined;
   exported: boolean;
 }
 
@@ -57,15 +58,35 @@ export class ShellEnv implements Env {
     return this.vars.get(name)?.exported ?? false;
   }
 
+  markExported(name: string, exported: boolean): void {
+    const before = this.vars.get(name);
+    if (before !== undefined) before.exported = exported;
+    else if (exported) this.vars.set(name, { value: undefined, exported: true });
+  }
+
   entries(exportedOnly = false): [string, string][] {
-    return [...this.vars]
-      .filter(([, variable]) => !exportedOnly || variable.exported)
-      .map(([name, variable]): [string, string] => [name, variable.value])
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    const listed: [string, string][] = [];
+    for (const [name, variable] of this.vars) {
+      if (variable.value === undefined || (exportedOnly && !variable.exported)) continue;
+      listed.push([name, variable.value]);
+    }
+    return listed.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
   }
 
   child(overrides: Readonly<Record<string, string>> = {}): ShellEnv {
-    const copy = new ShellEnv([...this.vars].map(([name, v]) => [name, v.value, v.exported] as const));
+    const copy = new ShellEnv();
+    for (const [name, v] of this.vars) copy.vars.set(name, { value: v.value, exported: v.exported });
+    for (const name of Object.keys(overrides)) {
+      const value = overrides[name];
+      if (value !== undefined) copy.set(name, value, { export: true });
+    }
+    return copy;
+  }
+
+  /** A new process's environment: only the exported variables, as a script sees them. */
+  exported(overrides: Readonly<Record<string, string>> = {}): ShellEnv {
+    const copy = new ShellEnv();
+    for (const [name, v] of this.vars) if (v.exported) copy.vars.set(name, { value: v.value, exported: true });
     for (const name of Object.keys(overrides)) {
       const value = overrides[name];
       if (value !== undefined) copy.set(name, value, { export: true });
@@ -76,12 +97,15 @@ export class ShellEnv implements Env {
   /** Replaces every variable, for `reset`. */
   replace(from: ShellEnv): void {
     this.vars.clear();
-    for (const [name, value] of from.entries()) this.vars.set(name, { value, exported: from.isExported(name) });
+    for (const [name, v] of from.vars) this.vars.set(name, { value: v.value, exported: v.exported });
   }
 }
 
-/** The PATH a new session starts with: the visitor's own bin, then the system's. */
-export const DEFAULT_PATH = `${GUEST.home}/bin:/usr/local/bin:/usr/bin:/bin`;
+/**
+ * The PATH a new session starts with: the system's. ~/.bashrc puts ~/bin in front, so it is
+ * there once, as on Linux, where ~/.profile adds it.
+ */
+export const DEFAULT_PATH = '/usr/local/bin:/usr/bin:/bin';
 
 export const DEFAULT_PS1 = '\\u@\\h:\\w\\$ ';
 
@@ -101,7 +125,6 @@ export function defaultEnv(options: { user?: User; cwd?: string; columns?: numbe
     ['HOSTNAME', PROMPT_HOST, false],
     ['PATH', DEFAULT_PATH, true],
     ['PWD', cwd, true],
-    ['OLDPWD', cwd, true],
     ['SHELL', '/bin/vesh', true],
     ['TERM', 'xterm-256color', true],
     ['LANG', 'en_US.UTF-8', true],
@@ -134,26 +157,68 @@ export interface HistoryStore extends HistoryApi {
 }
 
 /**
+ * The lines worth saving: none longer than STORAGE_LIMITS.historyLineChars, and only the newest
+ * that fit in STORAGE_LIMITS.historyChars, so one pasted megabyte cannot fill the quota.
+ */
+export function savedHistoryLines(lines: readonly string[]): string[] {
+  const kept: string[] = [];
+  let total = 0;
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    const line = lines[i] ?? '';
+    if (line.length > STORAGE_LIMITS.historyLineChars) continue;
+    total += line.length + 1;
+    if (total > STORAGE_LIMITS.historyChars) break;
+    kept.push(line);
+  }
+  return kept.reverse();
+}
+
+/**
  * Command history, as bash keeps it with HISTCONTROL=ignoreboth: a line starting with a space,
  * a blank line and a repeat of the line before are not kept. The newest 500 lines are kept and
  * saved under `vesen:history:v1` when storage allows. Numbers are bash's, so `!n` and `history`
  * agree: they keep counting up as old lines fall off, the lines after one removed with
- * `history -d` move up a number, and `history -c` starts again from the first number.
+ * `history -d` move up a number, and `history -c` starts again from the first number. With
+ * `from`, it starts as a copy of those entries, numbers and all, as a subshell's does.
  */
-export function createHistory(options: { storage?: KV<'local'> | null; size?: number } = {}): HistoryStore {
+export function createHistory(
+  options: { storage?: KV<'local'> | null; size?: number; from?: readonly HistoryEntry[] } = {},
+): HistoryStore {
   const size = Math.max(1, options.size ?? STORAGE_LIMITS.historyLines);
   const storage = options.storage ?? null;
   let entries: HistoryEntry[] = [];
   let next = 1;
 
-  const stored = storage?.getJson(STORAGE_KEYS.history.key, readStored);
-  for (const line of stored?.lines.slice(-size) ?? []) entries.push({ n: next++, line });
+  if (options.from !== undefined) {
+    entries = [...options.from];
+    next = (entries[entries.length - 1]?.n ?? 0) + 1;
+  } else {
+    const stored = storage?.getJson(STORAGE_KEYS.history.key, readStored);
+    for (const line of stored?.lines.slice(-size) ?? []) entries.push({ n: next++, line });
+  }
 
   const store: Writable<readonly HistoryEntry[]> = writable<readonly HistoryEntry[]>(entries);
 
+  const write = (lines: readonly string[]): void => {
+    storage?.setJson(STORAGE_KEYS.history.key, { v: 1, lines: savedHistoryLines(lines) } satisfies StoredHistory);
+  };
+
+  /** Saves the whole list: after history -c or -d, which change what is there. */
   const save = (): void => {
     store.set(entries);
-    storage?.setJson(STORAGE_KEYS.history.key, { v: 1, lines: entries.map((entry) => entry.line) } satisfies StoredHistory);
+    write(entries.map((entry) => entry.line));
+  };
+
+  /**
+   * Saves one new line on the end of what is stored, so a line typed in another tab since this
+   * one loaded is kept rather than overwritten.
+   */
+  const append = (line: string): void => {
+    store.set(entries);
+    if (storage === null) return;
+    const stored = storage.getJson(STORAGE_KEYS.history.key, readStored)?.lines ?? [];
+    const lines = stored[stored.length - 1] === line ? [...stored] : [...stored, line];
+    write(lines.slice(-size));
   };
 
   return {
@@ -164,7 +229,7 @@ export function createHistory(options: { storage?: KV<'local'> | null; size?: nu
       if (entries[entries.length - 1]?.line === line) return;
       entries = [...entries, { n: next++, line }];
       if (entries.length > size) entries = entries.slice(entries.length - size);
-      save();
+      append(line);
     },
     get(n: number): string | undefined {
       return entries.find((entry) => entry.n === n)?.line;
@@ -273,8 +338,114 @@ export interface SessionOptions {
   readonly size?: () => { readonly cols: number; readonly rows: number };
 }
 
+/**
+ * What a shell keeps for itself: variables, aliases, options, history, the folder and $?. The
+ * interactive shell's is the Session. `$( )`, backticks and each stage of a pipeline with more
+ * than one command run in a fork, a copy thrown away when they end, so nothing they change
+ * reaches the prompt, as in bash, where they are subshells. A script runs as its own process:
+ * a fork with only the exported variables. The files are shared by all of them.
+ */
+export interface Scope {
+  readonly env: ShellEnv;
+  readonly aliases: Map<string, string>;
+  readonly options: ShellOptions;
+  /** The session's history, or in a fork a copy of it, so `history -c | cat` clears nothing. */
+  readonly history: HistoryApi;
+  /** False for the interactive shell; true for a subshell or a script. */
+  readonly forked: boolean;
+  readonly user: User;
+  /** $HOME, or the user's home folder when it is unset. */
+  readonly home: string;
+  readonly currentDir: string;
+  /** $?. */
+  readonly status: ExitCode;
+  setStatus(status: ExitCode): void;
+  /** Moves to `path` (absolute, already checked): PWD and OLDPWD follow. */
+  moveTo(path: string): void;
+  /**
+   * A subshell's copy of this scope. With `process`, a new program's instead: only the exported
+   * variables (and `env`, exported), no aliases and the default options.
+   */
+  fork(options?: { readonly process?: boolean; readonly env?: Readonly<Record<string, string>> }): Scope;
+  /** Back to a new session's variables, aliases and options, in the home folder. */
+  reset(): void;
+}
+
+/** The moves every scope makes on `cd`: OLDPWD on every successful change, as bash sets it. */
+function move(env: ShellEnv, before: string, path: string): void {
+  env.set('OLDPWD', before, { export: true });
+  env.set('PWD', path, { export: true });
+}
+
+/** A subshell's or a script's scope. */
+class ForkedScope implements Scope {
+  readonly forked = true;
+  readonly history: HistoryApi;
+  private dir: string;
+  private last: ExitCode;
+
+  constructor(
+    readonly user: User,
+    readonly env: ShellEnv,
+    readonly aliases: Map<string, string>,
+    readonly options: ShellOptions,
+    from: Scope,
+    private readonly fresh: () => ShellEnv,
+  ) {
+    this.dir = from.currentDir;
+    this.last = from.status;
+    this.history = createHistory({ from: from.history.list() });
+  }
+
+  get home(): string {
+    return this.env.get('HOME') ?? this.user.home;
+  }
+
+  get currentDir(): string {
+    return this.dir;
+  }
+
+  get status(): ExitCode {
+    return this.last;
+  }
+
+  setStatus(status: ExitCode): void {
+    this.last = status;
+  }
+
+  moveTo(path: string): void {
+    move(this.env, this.dir, path);
+    this.dir = path;
+  }
+
+  fork(options: { readonly process?: boolean; readonly env?: Readonly<Record<string, string>> } = {}): Scope {
+    return forkScope(this, this.fresh, options);
+  }
+
+  reset(): void {
+    this.env.replace(this.fresh());
+    this.aliases.clear();
+    Object.assign(this.options, DEFAULT_OPTIONS);
+    this.dir = this.user.home;
+    this.last = 0;
+  }
+}
+
+function forkScope(
+  from: Scope,
+  fresh: () => ShellEnv,
+  options: { readonly process?: boolean; readonly env?: Readonly<Record<string, string>> },
+): Scope {
+  const overrides = options.env ?? {};
+  if (options.process === true) {
+    return new ForkedScope(from.user, from.env.exported(overrides), new Map(), { ...DEFAULT_OPTIONS }, from, fresh);
+  }
+  return new ForkedScope(from.user, from.env.child(overrides), new Map(from.aliases), { ...from.options }, from, fresh);
+}
+
 /** Everything one session remembers. The executor reads and changes it; the UI subscribes. */
-export class Session {
+export class Session implements Scope {
+  readonly forked = false;
   readonly user: User;
   readonly env: ShellEnv;
   readonly aliases = new Map<string, string>();
@@ -313,10 +484,12 @@ export class Session {
 
   /** Moves to `path` (absolute, already checked): PWD, OLDPWD and the cwd store follow. */
   moveTo(path: string): void {
-    const before = this.cwdStore.get();
-    if (path !== before) this.env.set('OLDPWD', before, { export: true });
-    this.env.set('PWD', path, { export: true });
+    move(this.env, this.cwdStore.get(), path);
     this.cwdStore.set(path);
+  }
+
+  fork(options: { readonly process?: boolean; readonly env?: Readonly<Record<string, string>> } = {}): Scope {
+    return forkScope(this, () => this.freshEnv(), options);
   }
 
   /** Keeps $COLUMNS and $LINES in step with the terminal. */

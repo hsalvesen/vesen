@@ -1,7 +1,8 @@
 // The shell as the UI sees it while the kernel's chunk loads. The kernel (parser, executor,
 // streams, the legacy adapter) is the largest part of the app, so it loads right after the first
 // paint instead of before it: the banner and the prompt appear at once, and a line typed before
-// the chunk arrives runs as soon as it does. ^C still works on such a line.
+// the chunk arrives runs as soon as it does. ^C on such a line ends it at once, with ^C and
+// status 130, and it never runs.
 
 import type { Line } from '../output/model';
 import type { JobHandle, JobOrigin, JobResult, PreflightResult, ScreenSink, ShellPort } from '../shell/index';
@@ -18,10 +19,10 @@ export interface LazyShell extends ShellPort {
 interface Waiting {
   readonly line: string;
   readonly origin: JobOrigin | undefined;
-  /** ^C came while it waited. */
-  cancelled: boolean;
   started(handle: JobHandle): void;
   failed(error: unknown): void;
+  /** ^C came while it waited: it ends now, and never runs. */
+  cancel(): void;
 }
 
 /** Copies a store's values into another, from now on. */
@@ -71,11 +72,7 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
       for (const line of remembered.splice(0)) loaded.remember(line);
       // The waiting lines start before the stores are forwarded, so the job never reads as idle
       // in between. Each one interrupts the one before, as lines typed at a busy shell do.
-      for (const entry of waiting.splice(0)) {
-        const handle = loaded.start(entry.line, entry.origin);
-        if (entry.cancelled) handle.abort();
-        entry.started(handle);
-      }
+      for (const entry of waiting.splice(0)) entry.started(loaded.start(entry.line, entry.origin));
       forward(loaded.cwd, cwd);
       forward(loaded.lastStatus, lastStatus);
       forward(loaded.job, job);
@@ -90,6 +87,22 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
   // A failed load is reported to the lines that wait for it.
   ready.catch(() => {});
 
+  /**
+   * ^C on a line still waiting for the kernel: it ends at once with ^C and status 130, as the
+   * kernel would end it, is kept in history, and never runs.
+   */
+  const interrupted = (line: string, origin: JobOrigin | undefined, id: number, prompt: Line, startedAt: number): JobResult => {
+    const result: JobResult = {
+      status: 130,
+      interrupted: true,
+      screen: 'keep',
+      blocks: [{ type: 'lines', stream: 'stdout', lines: [[{ text: '^C' }]] }],
+    };
+    if (origin !== 'boot') remembered.push(line);
+    options.screen?.commit({ ...result, id, line, origin: origin ?? 'keyboard', prompt, startedAt, endedAt: now() });
+    return result;
+  };
+
   const start = (line: string, origin?: JobOrigin): JobHandle => {
     if (shell !== null) return shell.start(line, origin);
     nextId -= 1;
@@ -99,12 +112,24 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
     job.set({ name: line.trim().split(/\s+/)[0] ?? '', label: null, startedAt });
     let entry: Waiting | undefined;
     const done = new Promise<JobResult>((resolve) => {
+      let settled = false;
+      const settle = (result: JobResult | Promise<JobResult>): void => {
+        if (settled) return;
+        settled = true;
+        resolve(result);
+      };
       entry = {
         line,
         origin,
-        cancelled: false,
-        started: (handle) => resolve(handle.done),
-        failed: (error) => resolve(failure(line, origin, id, error, prompt, startedAt)),
+        started: (handle) => settle(handle.done),
+        failed: (error) => settle(failure(line, origin, id, error, prompt, startedAt)),
+        cancel: () => {
+          const at = waiting.indexOf(entry as Waiting);
+          if (at === -1) return;
+          waiting.splice(at, 1);
+          settle(interrupted(line, origin, id, prompt, startedAt));
+          if (waiting.length === 0) job.set(null);
+        },
       };
     });
     const waits = entry as Waiting;
@@ -113,7 +138,7 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
       id,
       done,
       abort: () => {
-        waits.cancelled = true;
+        if (shell === null) waits.cancel();
       },
     };
   };
@@ -129,7 +154,7 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
     abort: () => {
       if (shell !== null) return shell.abort();
       if (waiting.length === 0) return false;
-      for (const entry of waiting) entry.cancelled = true;
+      for (const entry of [...waiting]) entry.cancel();
       return true;
     },
     remember: (line) => {

@@ -11,7 +11,9 @@
 // - Symbolic links, followed up to 40 times before ELOOP; devices (/dev); generated files (/proc,
 //   made on every read); builtin stubs (/usr/bin).
 // - A quota on the visitor's files (512 KB), past which writes fail with ENOSPC, so the
-//   persisted overlay always fits in storage.
+//   persisted overlay fits in storage. It counts each node's full path and a fixed overhead as
+//   well as its content, so a pile of empty folders or a deep chain of them is bounded too, and
+//   names longer than 255 bytes or paths longer than 4096 fail with ENAMETOOLONG, as on Linux.
 // Errors are VfsErrors with Linux codes; commands word them (vfs/errors.ts).
 
 import { glob as globPaths, type GlobFs } from '../shell/glob';
@@ -22,6 +24,15 @@ import { VfsError, type BoundVfs, type GenerateContext, type NodeType, type Stat
 
 /** The most bytes the visitor's files may hold, so the overlay fits in localStorage. */
 export const DEFAULT_QUOTA = 512 * 1024;
+
+/** Linux's longest file name, in UTF-8 bytes. */
+export const NAME_MAX = 255;
+
+/** Linux's longest path, in UTF-8 bytes. */
+export const PATH_MAX = 4096;
+
+/** What the quota charges each node besides its path and content: the overlay's JSON around it. */
+export const NODE_OVERHEAD = 64;
 
 /** New files are 644 and folders 755, as with a umask of 022. */
 export const UMASK = 0o022;
@@ -100,11 +111,12 @@ export function byteLength(text: string): number {
   return count;
 }
 
-/** Rejects names no file may have: '', '.', '..' and anything with a '/'. */
+/** Rejects names no file may have: '', '.', '..', anything with a '/', and over NAME_MAX bytes. */
 export function validateName(name: string, path: string = name): void {
   if (name === '' || name === '.' || name === '..' || name.includes('/') || name.includes('\0')) {
     throw new VfsError('EINVAL', path, 'validate');
   }
+  if (byteLength(name) > NAME_MAX) throw new VfsError('ENAMETOOLONG', path, 'validate');
 }
 
 function defaultMode(type: NodeType): number {
@@ -193,6 +205,25 @@ export class Vfs implements BoundVfs {
   /** `reset`: the seed files again. */
   restore(): void {
     this.replace(this.options.seed());
+  }
+
+  /** Every path in the seed, built the first time seeded() is asked. */
+  private seedPaths: Set<string> | null = null;
+
+  seeded(path: string): boolean {
+    if (this.seedPaths === null) {
+      const paths = new Set<string>();
+      const visit = (at: string, node: VirtualFile): void => {
+        paths.add(at);
+        for (const name of Object.keys(node.children ?? {})) {
+          const child = own(node.children, name);
+          if (child !== undefined) visit(at === '/' ? `/${name}` : `${at}/${name}`, child);
+        }
+      };
+      visit('/', this.options.seed());
+      this.seedPaths = paths;
+    }
+    return this.seedPaths.has(path);
   }
 
   private install(tree: VirtualFile): void {
@@ -303,6 +334,7 @@ export class Vfs implements BoundVfs {
     if (existing === undefined) {
       this.checkCreate(slot.dir, path);
       validateName(slot.name, path);
+      const cost = this.creationCost(full, 0, path);
       const file: VirtualFile = {
         name: slot.name,
         type: 'file',
@@ -314,6 +346,7 @@ export class Vfs implements BoundVfs {
       };
       this.setContent(file, data, path);
       this.children(slot.dir)[slot.name] = file;
+      this.charge(cost);
       slot.dir.mtime = this.now();
       this.emit([full]);
       return;
@@ -406,6 +439,7 @@ export class Vfs implements BoundVfs {
     if (target === source.path) return;
     if (source.node.type === 'directory' && isWithin(target, source.path)) throw new VfsError('EINVAL', to, 'rename');
     validateName(slot.name, to);
+    if (byteLength(target) > PATH_MAX) throw new VfsError('ENAMETOOLONG', to, 'rename');
     const existing = slot.node;
     if (existing !== undefined) {
       if (existing.type === 'directory') {
@@ -443,8 +477,9 @@ export class Vfs implements BoundVfs {
     }
     this.checkCreate(slot.dir, to);
     validateName(slot.name, to);
+    if (byteLength(target) > PATH_MAX) throw new VfsError('ENAMETOOLONG', to, 'copy');
     const clone = this.cloneTree(source.node, slot.name, source.path);
-    const added = this.countedBytes(clone);
+    const added = this.countedBytes(clone, byteLength(target));
     if (added > 0 && this.usage().used + added > this.quota) throw new VfsError('ENOSPC', to, 'write');
     this.children(slot.dir)[slot.name] = clone;
     slot.dir.mtime = this.now();
@@ -457,6 +492,8 @@ export class Vfs implements BoundVfs {
     if (slot.node !== undefined) throw new VfsError('EEXIST', path, 'symlink');
     this.checkCreate(slot.dir, path);
     validateName(slot.name, path);
+    const cost = this.creationCost(join(slot.dirPath, slot.name), byteLength(target), path);
+    this.charge(cost);
     this.children(slot.dir)[slot.name] = {
       name: slot.name,
       type: 'symlink',
@@ -558,7 +595,7 @@ export class Vfs implements BoundVfs {
   }
 
   usage(): { used: number; quota: number } {
-    if (this.used === null) this.used = this.countedBytes(this.root);
+    if (this.used === null) this.used = this.countedBytes(this.root, 0);
     return { used: this.used, quota: this.quota };
   }
 
@@ -687,6 +724,7 @@ export class Vfs implements BoundVfs {
     const slot = this.slotFor(path, 'mkdir', false);
     this.checkCreate(slot.dir, shown);
     validateName(slot.name, shown);
+    this.charge(this.creationCost(join(slot.dirPath, slot.name), 0, shown));
     this.children(slot.dir)[slot.name] = {
       name: slot.name,
       type: 'directory',
@@ -745,13 +783,36 @@ export class Vfs implements BoundVfs {
     return node.type === 'file' && node.generate === undefined && this.ownerUid(node) === this.credentials.uid;
   }
 
-  private countedBytes(node: VirtualFile): number {
-    let total = this.counts(node) ? this.sizeOf(node) : 0;
+  /** True for the visitor's own nodes that the overlay would save: files, folders and links. */
+  private owned(node: VirtualFile): boolean {
+    return node.type !== 'device' && node.generate === undefined && node.builtin === undefined && this.ownerUid(node) === this.credentials.uid;
+  }
+
+  /** What the quota counts for a node at a path `pathBytes` long, and everything under it. */
+  private countedBytes(node: VirtualFile, pathBytes: number): number {
+    let total = this.owned(node) ? this.sizeOf(node) + pathBytes + NODE_OVERHEAD + byteLength(node.target ?? '') : 0;
     for (const name of Object.keys(node.children ?? {})) {
       const child = own(node.children, name);
-      if (child !== undefined) total += this.countedBytes(child);
+      if (child !== undefined) total += this.countedBytes(child, pathBytes + 1 + byteLength(name));
     }
     return total;
+  }
+
+  /**
+   * What creating a node at `full` will cost the quota, checked: ENAMETOOLONG past PATH_MAX, and
+   * ENOSPC when it does not fit. `extra` is a link's target.
+   */
+  private creationCost(full: string, extra: number, shown: string): number {
+    const pathBytes = byteLength(full);
+    if (pathBytes > PATH_MAX) throw new VfsError('ENAMETOOLONG', shown, 'create');
+    const cost = pathBytes + NODE_OVERHEAD + extra;
+    if (this.usage().used + cost > this.quota) throw new VfsError('ENOSPC', shown, 'write');
+    return cost;
+  }
+
+  /** Adds a created node's cost to the running total. */
+  private charge(cost: number): void {
+    if (this.used !== null) this.used += cost;
   }
 
   /** Sets a file's content within the quota. `appended` is the bytes added, when known. */

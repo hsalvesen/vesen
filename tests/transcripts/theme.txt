@@ -36,8 +36,8 @@ $ theme set nope
 $ theme set
 ! theme: set: missing theme name
 ! Try 'theme --help' for more information.
-? 2
+? 1
 $ theme a b
 ! theme: extra operand 'b'
 ! Try 'theme --help' for more information.
-? 2
+? 1

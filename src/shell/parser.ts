@@ -2,13 +2,15 @@
 //
 //   list     := NL* [ andor ( (';' | '&' | NL) NL* [ andor ] )* ]
 //   andor    := pipeline ( ('&&' | '||') NL* pipeline )*
-//   pipeline := '!'* command ( '|' NL* command )*
+//   pipeline := '!'* command ( ('|' | '|&') NL* command )*
 //   command  := ( assignment | redirection )* ( word | redirection )*
 //
 // parse() never throws. It returns the tree, or `incomplete` with a reason when more input
 // could finish the line (the editor then shows `> `), or an error in bash's wording. Compound
-// commands are reported plainly as `<word>: not supported in vesen`. Command substitutions are
-// parsed too, so `echo $(|)` is a syntax error before anything runs.
+// commands, subshells `( … )` and process substitution `<( … )` are reported plainly as
+// `<word>: not supported in vesen`, and so is a file descriptor other than 0, 1 and 2. `a |& b`
+// is `a 2>&1 | b`. Command substitutions are parsed too, so `echo $(|)` is a syntax error
+// before anything runs.
 
 import type {
   AndOr,
@@ -137,7 +139,7 @@ class Parser {
       items.push({ node, background: t.value === '&' && !this.isNewline(t) });
       if (!this.isNewline(t)) {
         const next = this.peek();
-        if (this.isOp(next, ';', '&', '&&', '||', '|')) throw syntaxError(this.src, next, this.peek(1), t);
+        if (this.isOp(next, ';', '&', '&&', '||', '|', '|&')) throw syntaxError(this.src, next, this.peek(1), t);
       }
       this.skipNewlines();
     }
@@ -180,12 +182,17 @@ class Parser {
     if (negate && (next === undefined || next.kind === 'op')) {
       // A lone `!` negates an empty command, so its status is 1, as in bash.
       const at = this.toks[this.p - 1]?.end ?? start;
-      if (this.isOp(next, '|')) throw syntaxError(this.src, next);
+      if (this.isOp(next, '|', '|&')) throw syntaxError(this.src, next);
       cmds.push({ type: 'cmd', start: at, end: at, assigns: [], words: [], redirects: [] });
       return { type: 'pipe', start, end: at, negate, cmds };
     }
     cmds.push(this.command());
-    while (this.isOp(this.peek(), '|')) {
+    for (let t = this.peek(); this.isOp(t, '|', '|&'); t = this.peek()) {
+      if (t?.value === '|&') {
+        // `a |& b` is `a 2>&1 | b`: stderr joins stdout after a's own redirections.
+        const left = cmds.pop();
+        if (left !== undefined) cmds.push({ ...left, redirects: [...left.redirects, { start: t.start, end: t.end, op: '2>&1' }] });
+      }
       this.p += 1;
       this.skipNewlines();
       if (this.p >= this.toks.length) throw incomplete('pipe');
@@ -208,6 +215,18 @@ class Parser {
         const next = this.peek(1);
         if (t.value === '<' && next?.kind === 'redir' && next.value === '<' && next.start === t.end) {
           throw notSupported('<<', { start: t.start, end: next.end });
+        }
+        if (t.unsupportedFd !== undefined) {
+          throw new Stop({
+            ok: false,
+            incomplete: false,
+            message: `${t.unsupportedFd}: file descriptors other than 0, 1 and 2 are not supported`,
+            at: { start: t.start, end: t.end },
+          });
+        }
+        // Process substitution: `cat <(ls)`.
+        if (next?.kind === 'word' && !next.quoted && next.raw.startsWith('(') && (t.raw === '<' || t.raw === '>')) {
+          throw notSupported(`${t.raw}(`, { start: t.start, end: next.end });
         }
         this.p += 1;
         if (!takesTarget(t.value)) {
@@ -247,6 +266,8 @@ class Parser {
     if (UNEXPECTED.has(t.raw)) throw syntaxError(this.src, t);
     if (t.raw.startsWith('((')) throw notSupported('((', t);
     if (FUNCTION_DEFINITION.test(t.raw)) throw notSupported('function', t);
+    // A subshell: `(cd /tmp; pwd)`. Elsewhere a parenthesis is text, so `echo :)` is a smiley.
+    if (t.raw.startsWith('(')) throw notSupported('(', t);
   }
 
   /** Parses the command substitutions inside a word, so their syntax errors surface now. */

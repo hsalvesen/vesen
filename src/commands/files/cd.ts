@@ -5,7 +5,7 @@ import { out, type Line } from '../../output/model';
 import { defineCommand, type CommandContext, type ExitCode } from '../../shell/types';
 import { strerror } from '../../vfs/errors';
 import { VfsError } from '../../vfs/types';
-import { nearMiss } from '../lib/files';
+import { nearMiss, suggestRestore } from '../lib/files';
 
 /** A folder next to the one asked for that was probably meant: same name in another case, a prefix, or one or two typos away. */
 export function nearMissFolder(ctx: CommandContext, typed: string): string | null {
@@ -16,12 +16,13 @@ export function nearMissFolder(ctx: CommandContext, typed: string): string | nul
 const PLAIN = /^[\w.,:@%+=/~-]+$/;
 
 async function failed(ctx: CommandContext, typed: string, error: VfsError): Promise<ExitCode> {
-  const lines: Line[] = [[out.span(`cd: ${typed}: ${strerror(error.code)}`, { fg: 'error' })]];
+  const lines: Line[] = [[out.span(`vesen: cd: ${typed}: ${strerror(error.code)}`, { fg: 'error' })]];
   const near = error.code === 'ENOENT' ? nearMissFolder(ctx, typed) : null;
   if (near !== null && PLAIN.test(near)) {
     lines.push([out.span('Did you mean ', { fg: 'muted' }), out.run(near, `cd ${near}`, { fg: 'accent' }), out.span('?', { fg: 'muted' })]);
   }
   for (const line of lines) await ctx.stderr.line(...line);
+  if (near === null && error.code === 'ENOENT') await suggestRestore(ctx, typed);
   return 1;
 }
 
@@ -43,7 +44,7 @@ export default defineCommand({
     { line: 'cd documents', note: 'go into a folder', offline: true },
     { line: 'cd ..', note: 'up one level', offline: true },
     { line: 'cd ~', note: 'home', offline: true },
-    { line: 'cd -', note: 'back to the previous folder', offline: true },
+    { line: 'cd /tmp; cd -', note: 'there, and back to the previous folder', offline: true },
   ],
   seeAlso: ['pwd', 'ls'],
   async run(ctx) {

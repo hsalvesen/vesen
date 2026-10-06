@@ -20,6 +20,7 @@
   import LineView from './LineView.svelte';
   import OutputView from './OutputView.svelte';
   import { lookupComponent } from './components/registry';
+  import { hangingIndent } from './hang';
   import { cssColour } from './span-style';
 
   let { block, onaction }: { block: Block; onaction?: (action: Action) => void } = $props();
@@ -46,7 +47,11 @@
 
 {#if block.type === 'grid'}
   {@const notes = block.notes}
-  <div class="grid" style={notes === undefined ? `--min-col: ${gridMinCh(block)}ch` : `--min-col: ${gridMinCh(block)}ch; --item-col: ${itemCh(block)}ch`}>
+  <div
+    class="grid"
+    class:by-column={block.order === 'columns' && notes === undefined}
+    style={notes === undefined ? `--min-col: ${gridMinCh(block)}ch` : `--min-col: ${gridMinCh(block)}ch; --item-col: ${itemCh(block)}ch`}
+  >
     {#each block.items as item, i}
       {#if notes !== undefined}
         <!-- An item in a column of its own, and its note wrapping beside it. -->
@@ -86,7 +91,9 @@
       <div class="text out-panel-title">{block.title}</div>
     {/if}
     {#each block.body as line}
-      <div class="text">{#if line.length === 0}<br />{:else}<LineView {line} {onaction} />{/if}</div>
+      {@const hang = hangingIndent(line)}
+      <!-- A label row's description wraps under itself, not under the label. -->
+      <div class="text" style={hang > 0 ? `padding-left: ${hang}ch; text-indent: -${hang}ch` : undefined}>{#if line.length === 0}<br />{:else}<LineView {line} {onaction} />{/if}</div>
     {/each}
   </div>
 {:else if block.type === 'chips'}
@@ -141,6 +148,19 @@
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(var(--min-col), 100%), 1fr));
+  }
+
+  /* ls's order: as many columns as fit, each filled top to bottom before the next, with the
+     rows balanced, as ls -C lays names out. Multi-column layout does this with no script, and
+     reflows when the width changes. */
+  .grid.by-column {
+    display: block;
+    column-width: min(var(--min-col), 100%);
+    column-gap: 0;
+  }
+
+  .grid.by-column > .text {
+    break-inside: avoid;
   }
 
   .cell {

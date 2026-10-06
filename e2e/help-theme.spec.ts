@@ -48,6 +48,26 @@ test.describe('help and theme', { tag: '@smoke' }, () => {
     await expect(prompt(page)).toHaveValue('theme ');
   });
 
+  test('help fits the screen, with the portfolio heading in view, and a tapped name brings the prompt into view', async ({ page, hasTouch }) => {
+    await page.goto('/');
+    await run(page, 'help');
+    const output = lastEntry(page).locator('.command-output');
+    // The portfolio comes first, and the short index keeps it on screen rather than scrolled off.
+    const heading = output.getByText('Portfolio', { exact: true });
+    await expect(heading).toBeInViewport();
+    await expect(output.getByRole('button', { name: 'help --all', exact: true })).toBeVisible();
+
+    // Scroll the prompt out of sight, then tap a name: the prompt comes back with the name in it.
+    await page.locator('main').evaluate((main) => main.scrollTo({ top: 0 }));
+    const name = output.getByRole('button', { name: 'ls', exact: true });
+    if (hasTouch) await name.tap();
+    else await name.click();
+    await expect(prompt(page)).toHaveValue('ls ');
+    await expect(prompt(page)).toBeInViewport();
+    await expect(prompt(page)).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Scroll to new output' })).toHaveCount(0);
+  });
+
   test('theme set cockatoo recolours earlier output, and moves the marker in an earlier theme ls', async ({ page }) => {
     await page.goto('/');
     await run(page, 'help');

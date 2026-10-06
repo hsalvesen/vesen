@@ -8,8 +8,10 @@
 // What it recognises:
 // - blanks (space, tab, carriage return) separate words; an unquoted newline separates commands
 //   and comes back as a `;` operator token whose source character is '\n';
-// - the operators | || && ; & and the redirections < > >> 2> 2>> &> 2>&1 >&2 <<<, where the 2 of
-//   2> counts only at the start of a token, as in bash (`a2>f` is the word a2 and `>`);
+// - the operators | |& || && ; & and the redirections < > >> >| 2> 2>> &> &>> 2>&1 >&2 >&1 <<<,
+//   with an optional file descriptor in front (0< 1> 1>> 1>&2 2>&1); a digit counts only at the
+//   start of a token, as in bash (`a2>f` is the word a2 and `>`), and a descriptor other than
+//   0, 1 and 2 is marked for the parser to refuse; `>& file` is `&> file`;
 // - single quotes, double quotes, $'…' (ANSI-C escapes), $"…" (a plain double-quoted string),
 //   backslash escapes, and backslash-newline line continuation;
 // - $NAME, ${NAME}, ${NAME:-word} ${NAME-word} ${NAME:=word} ${NAME:+word}, ${#NAME}, the specials
@@ -109,13 +111,25 @@ function controlOp(value: ControlOp, start: number, end: number): OpToken {
   return { kind: 'op', raw: value, value, start, end };
 }
 
-function redirOp(value: RedirOp, start: number): RedirToken {
-  return { kind: 'redir', raw: value, value, start, end: start + value.length };
+function redirOp(value: RedirOp, start: number, raw: string = value): RedirToken {
+  return { kind: 'redir', raw, value, start, end: start + raw.length };
 }
 
-/** True for redirections that take a target word; 2>&1 and >&2 do not. */
+/** True for redirections that take a target word; 2>&1, >&2 and >&1 do not. */
 export function takesTarget(op: RedirOp): boolean {
-  return op !== '2>&1' && op !== '>&2';
+  return op !== '2>&1' && op !== '>&2' && op !== '>&1';
+}
+
+/** The operator a file descriptor in front of a redirection makes, or null for one vesen lacks. */
+function withFd(fd: string, op: RedirOp): RedirOp | null {
+  if (fd === '0') return op === '<' || op === '<<<' ? op : null;
+  if (fd === '1') return op === '>' || op === '>>' || op === '>|' || op === '>&2' || op === '>&1' ? op : null;
+  if (fd === '2') {
+    if (op === '>' || op === '>|') return '2>';
+    if (op === '>>') return '2>>';
+    if (op === '>&1') return '2>&1';
+  }
+  return null;
 }
 
 /** True for an operator token that came from a newline rather than a typed `;`. */
@@ -180,26 +194,50 @@ class Scanner {
     const c = this.at();
     const n = this.at(1);
     let token: OpToken | RedirToken | null = null;
-    if (c === '2' && n === '>') {
-      if (this.at(2) === '&' && this.at(3) === '1') token = redirOp('2>&1', s);
-      else if (this.at(2) === '>') token = redirOp('2>>', s);
-      else token = redirOp('2>', s);
-    } else if (c === '<') {
-      token = n === '<' && this.at(2) === '<' ? redirOp('<<<', s) : redirOp('<', s);
-    } else if (c === '>') {
-      if (n === '&' && this.at(2) === '2') token = redirOp('>&2', s);
-      else token = n === '>' ? redirOp('>>', s) : redirOp('>', s);
+    if (isDigit(c)) {
+      // A file descriptor: digits right before < or >, at the start of a token.
+      let k = 0;
+      while (isDigit(this.at(k))) k += 1;
+      const after = this.at(k);
+      if (after !== '<' && after !== '>') return null;
+      const fd = this.src.slice(s, s + k);
+      const op = this.redirection(s + k);
+      const mapped = withFd(fd, op.value);
+      const raw = this.src.slice(s, op.end);
+      token = mapped === null ? { ...redirOp(op.value, s, raw), unsupportedFd: fd } : redirOp(mapped, s, raw);
+    } else if (c === '<' || c === '>') {
+      token = this.redirection(s);
     } else if (c === '&') {
       if (n === '&') token = controlOp('&&', s, s + 2);
-      else if (n === '>') token = redirOp('&>', s);
+      else if (n === '>') token = this.at(2) === '>' ? redirOp('&>>', s) : redirOp('&>', s);
       else token = controlOp('&', s, s + 1);
     } else if (c === '|') {
-      token = n === '|' ? controlOp('||', s, s + 2) : controlOp('|', s, s + 1);
+      if (n === '|') token = controlOp('||', s, s + 2);
+      else if (n === '&') token = controlOp('|&', s, s + 2);
+      else token = controlOp('|', s, s + 1);
     } else if (c === ';') {
       token = controlOp(';', s, s + 1);
     }
     if (token !== null) this.i = token.end;
     return token;
+  }
+
+  /** The redirection operator starting with the < or > at `at`. */
+  private redirection(at: number): RedirToken {
+    const char = (k: number): string => (at + k < this.end ? this.src.charAt(at + k) : '');
+    if (char(0) === '<') return char(1) === '<' && char(2) === '<' ? redirOp('<<<', at) : redirOp('<', at);
+    if (char(1) === '>') return redirOp('>>', at);
+    if (char(1) === '|') return redirOp('>|', at);
+    if (char(1) === '&') {
+      const ends = (k: number): boolean => char(k) === '' || WORD_BREAKS.has(char(k));
+      if (char(2) === '2' && ends(3)) return redirOp('>&2', at);
+      if (char(2) === '1' && ends(3)) return redirOp('>&1', at);
+      // `>&3`: a descriptor vesen does not have, refused by the parser.
+      if (isDigit(char(2)) && ends(3)) return { ...redirOp('>&1', at, `>&${char(2)}`), unsupportedFd: char(2) };
+      // `>& file` is `&> file`, as in bash.
+      return redirOp('&>', at, '>&');
+    }
+    return redirOp('>', at);
   }
 
   private word(): WordToken {

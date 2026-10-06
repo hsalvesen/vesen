@@ -192,9 +192,13 @@
     historyIndex = -1;
   }
 
-  /** Focuses the prompt without scrolling, on a desktop; on touch it would open the keyboard. */
-  export function focusPrompt(): void {
-    if (!window.matchMedia?.("(pointer: coarse)").matches) input?.focus({ preventScroll: true });
+  /**
+   * Focuses the prompt without scrolling, on a desktop; on touch it would open the keyboard, so
+   * only with `keyboard`, for a tap that put text at the prompt to be finished. Call it inside the
+   * tap, which is the only time iOS lets focus open the keyboard.
+   */
+  export function focusPrompt(options: { keyboard?: boolean } = {}): void {
+    if (options.keyboard || !window.matchMedia?.("(pointer: coarse)").matches) input?.focus({ preventScroll: true });
   }
 
   // A keyboard and mouse can start typing at once. On touch, focus opens the soft keyboard over

@@ -144,6 +144,14 @@ describe('OutputView: layout blocks', () => {
     expect(cells[0]?.querySelector('button')?.textContent).toBe('ls');
   });
 
+  it("fills ls's columns top to bottom, and other grids row by row", async () => {
+    const byColumn = (await view([out.grid([out.span('a'), out.span('b'), out.span('c')], undefined, undefined, 'columns')])).querySelector('.grid');
+    expect(byColumn?.classList.contains('by-column')).toBe(true);
+    expect(Array.from(byColumn?.children ?? []).map((child) => child.textContent)).toEqual(['a', 'b', 'c']);
+    const byRow = (await view([out.grid([out.span('a')])])).querySelector('.grid');
+    expect(byRow?.classList.contains('by-column')).toBe(false);
+  });
+
   it('lays a grid out in as many columns as fit', async () => {
     const grid = (await view([out.grid([out.span('README.md'), out.span('documents/', { fg: 'brightBlue' })])])).querySelector('.grid');
     expect(styleOf(grid)).toBe('--min-col: 12ch');

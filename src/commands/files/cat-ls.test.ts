@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isTrustedAction, type Block, type Span } from '../../output/model';
 import { runLine, session } from '../../../tests/harness';
+import { RESTORE_HINT } from '../lib/files';
 
 /** The lines of the first lines block, as spans. */
 function firstLines(blocks: readonly Block[]): readonly (readonly Span[])[] {
@@ -237,5 +238,22 @@ describe('ls', () => {
   it('answers --help from its spec, with -h meaning human sizes', async () => {
     expect((await runLine('ls --help')).stdoutPlain).toContain('ls - list directory contents');
     expect((await runLine('ls -lh documents')).stdoutPlain).toBe('total 4.0K\n-rw-r--r-- 1 guest guest 3.1K Oct  6 11:00 linux.txt');
+  });
+});
+
+describe('an original file the visitor removed', () => {
+  it("says that reset brings it back, for cat, ls and cd on a terminal", async () => {
+    const s = await session();
+    await s.run('rm -rf ~/*');
+    expect((await s.run('cat README.md')).stderrPlain).toBe(`cat: README.md: No such file or directory\n${RESTORE_HINT}`);
+    expect((await s.run('ls documents')).stderrPlain).toBe(`ls: cannot access 'documents': No such file or directory\n${RESTORE_HINT}`);
+    expect((await s.run('cd ~/projects')).stderrPlain).toBe(`vesen: cd: /home/guest/projects: No such file or directory\n${RESTORE_HINT}`);
+    // A name the seed never had gets no such line; nor does a pipe.
+    expect((await s.run('cat nope')).stderrPlain).toBe('cat: nope: No such file or directory');
+    s.stop();
+    const piped = await session({ tty: false });
+    await piped.run('rm README.md');
+    expect((await piped.run('cat README.md')).stderrPlain).toBe('cat: README.md: No such file or directory');
+    piped.stop();
   });
 });

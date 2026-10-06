@@ -6,6 +6,8 @@ import { defineCommand } from '../../shell/types';
 export default defineCommand({
   name: 'printenv',
   category: 'shell',
+  // A usage error exits 2, as GNU printenv does.
+  usageStatus: 2,
   summary: 'print all or part of the environment',
   synopsis: ['printenv [NAME]...'],
   description:

@@ -15,13 +15,8 @@
   <div class="entry">
     <!-- A line that cleared the screen keeps its output, not the prompt it was typed at. -->
     {#if entry.prompt !== null}
-      <div class="flex flex-row">
-        <Prompt line={entry.prompt} />
-
-        <div class="flex flex-1 min-w-0">
-          <span class="command-input-display" style="margin-left: 0.25rem;">{entry.line}</span>
-        </div>
-      </div>
+      <!-- Inline, so a long prompt and its line wrap as a terminal's do, never pushing the page sideways. -->
+      <div class="entry-line"><Prompt line={entry.prompt} /><span class="command-input-display">{entry.line}</span></div>
     {/if}
 
     {#if entry.blocks.length > 0}
@@ -38,10 +33,14 @@
   }
 
   /* Long commands wrap like a terminal line instead of being cut off with an ellipsis. */
-  .command-input-display {
+  .entry-line {
     min-width: 0;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+  }
+
+  .command-input-display {
+    margin-left: 0.25rem;
   }
 
   /* OutputView wraps text (pre-wrap, overflow-wrap: anywhere) at every width, and art scrolls

@@ -37,7 +37,7 @@ export default defineCommand({
         const [found] = lookup(ctx, name);
         if (found === undefined) {
           status = 1;
-          if (ctx.opts.V === true) await ctx.stderr.line(out.span(`command: ${name}: not found`, { fg: 'error' }));
+          if (ctx.opts.V === true) await ctx.stderr.line(out.span(`vesen: command: ${name}: not found`, { fg: 'error' }));
           continue;
         }
         await ctx.stdout.write(`${ctx.opts.V === true ? describe(name, found) : brief(name, found)}\n`);

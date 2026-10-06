@@ -6,7 +6,7 @@ import { out, type Line } from '../../output/model';
 import { editDistance } from '../../shell/registry';
 import type { CommandContext } from '../../shell/types';
 import { strerror } from '../../vfs/errors';
-import { basename, dirname } from '../../vfs/path';
+import { basename, dirname, isWithin } from '../../vfs/path';
 import { VfsError, type Stat, type VfsCode } from '../../vfs/types';
 
 /** The code of a VFS error; anything else is rethrown. */
@@ -104,12 +104,29 @@ export function nearMiss(ctx: CommandContext, typed: string, want: 'any' | 'dir'
   return slash === -1 ? pick : `${typed.slice(0, slash + 1)}${pick}`;
 }
 
+/** Said under "No such file or directory" for one of the original files the visitor removed. */
+export const RESTORE_HINT = "It was removed; 'reset' restores the original files.";
+
 /**
- * The muted "Did you mean X?" line under an error, with X a tappable `command X`. Only on a
- * terminal: a script or a file gets the error alone, as from coreutils.
+ * For a path under ~ that the seed has and that is gone, the muted line saying `reset` brings it
+ * back, since removals last across visits. Only on a terminal. True when it said so.
+ */
+export async function suggestRestore(ctx: CommandContext, typed: string): Promise<boolean> {
+  if (!ctx.stderr.isTTY) return false;
+  const path = ctx.resolve(typed);
+  if (!isWithin(path, ctx.user.home) || ctx.fs.seeded?.(path) !== true || ctx.fs.exists(path)) return false;
+  await ctx.stderr.line(out.span(RESTORE_HINT, { fg: 'muted' }));
+  return true;
+}
+
+/**
+ * The muted "Did you mean X?" line under an error, with X a tappable `command X`, or for an
+ * original file the visitor removed, how to get it back. Only on a terminal: a script or a file
+ * gets the error alone, as from coreutils.
  */
 export async function suggestNearMiss(ctx: CommandContext, typed: string, command: string, want: 'any' | 'dir' = 'any'): Promise<void> {
   if (!ctx.stderr.isTTY) return;
+  if (await suggestRestore(ctx, typed)) return;
   const near = nearMiss(ctx, typed, want);
   if (near === null || !PLAIN.test(near)) return;
   const line: Line = [out.span('Did you mean ', { fg: 'muted' }), out.run(near, `${command} ${near}`, { fg: 'accent' }), out.span('?', { fg: 'muted' })];

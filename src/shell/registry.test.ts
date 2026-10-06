@@ -89,9 +89,52 @@ describe('CommandRegistry', () => {
       expect(registry.suggest('constructor')).toEqual({ near: [] });
     });
 
+    it('never guesses a command that opens a page, takes over the page or ends the session', () => {
+      const risky = new CommandRegistry([
+        spec('repo', { category: 'portfolio', opens: () => 'https://github.com' }),
+        spec('email', { category: 'portfolio', opens: () => 'mailto:a@b.c' }),
+        spec('whoami', { category: 'portfolio', opens: () => 'https://www.linkedin.com' }),
+        spec('poweroff', { category: 'system', interactiveOnly: true }),
+        spec('reset'),
+        spec('exit', { aliases: ['logout'] }),
+        spec('help'),
+        spec('ls'),
+        spec('true', { aliases: [':'] }),
+      ]);
+      expect(risky.suggest('repoo').near).toEqual([]);
+      expect(risky.suggest('emial').near).toEqual([]);
+      expect(risky.suggest('who').near).toEqual([]);
+      expect(risky.suggest('powerof').near).toEqual([]);
+      expect(risky.suggest('rest').near).toEqual([]);
+      expect(risky.suggest('exti').near).toEqual([]);
+      expect(risky.suggest('e').near).toEqual([]);
+      // Typed in another case, they are still found.
+      expect(risky.suggest('Repo').near).toEqual(['repo']);
+      expect(risky.suggest('EXIT').near).toEqual(['exit']);
+    });
+
+    it('takes a distance of 2 only for five letters or more, with the same first letter', () => {
+      const real = new CommandRegistry(['repo', 'email', 'help', 'ls', 'set', 'man', 'qr', 'cat', 'history', 'theme'].map((name) => spec(name)));
+      for (const typo of ['grep', 'tail', 'head', 'less', 'sort', 'cut', 'tr', 'ps']) {
+        expect(real.suggest(typo).near, typo).toEqual([]);
+      }
+      expect(real.suggest('hstory').near).toEqual(['history']);
+      expect(real.suggest('histry').near).toEqual(['history']);
+      expect(real.suggest('hxxxory').near).toEqual([]);
+      expect(real.suggest('xistory').near).toEqual(['history']);
+      expect(real.suggest('xestory').near).toEqual([]);
+    });
+
+    it("says plainly that common Linux commands aren't in vesen yet", () => {
+      for (const name of ['grep', 'head', 'tail', 'less', 'more', 'wc', 'sort', 'uniq', 'cut', 'tr', 'sed', 'awk', 'ps', 'top']) {
+        expect(registry.suggest(name)).toEqual({ near: [], hint: `${name} isn't in vesen yet.` });
+      }
+      expect(registry.suggest('nano').hint).toContain('no editor');
+    });
+
     it('points to what vesen has instead of commands from elsewhere', () => {
-      expect(registry.suggest('vim')).toEqual({ near: ['nano'] });
-      expect(registry.suggest('vi')).toEqual({ near: ['nano'] });
+      expect(registry.suggest('vim')).toMatchObject({ near: ['nano'] });
+      expect(registry.suggest('vi')).toMatchObject({ near: ['nano'] });
       expect(registry.suggest('cls')).toEqual({ near: ['clear'] });
       for (const name of ['apt', 'apt-get', 'yum', 'brew']) {
         expect(registry.suggest(name)).toEqual({ near: [], hint: 'vesen has no package manager.' });
@@ -100,7 +143,7 @@ describe('CommandRegistry', () => {
 
     it('suggests an alternative only once it exists', () => {
       const bare = new CommandRegistry([spec('ls')]);
-      expect(bare.suggest('vim')).toEqual({ near: [] });
+      expect(bare.suggest('vim')).toMatchObject({ near: [], hint: expect.stringContaining('no editor') });
     });
   });
 

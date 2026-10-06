@@ -67,6 +67,11 @@ export const STORAGE_KEYS = {
     area: 'session',
     holds: 'The build that last reloaded because of a stale lazy chunk',
   },
+  boot: {
+    key: 'vesen:boot:v1',
+    area: 'session',
+    holds: 'Set while ~/.bashrc is read at boot; still set at the next load means that read never finished',
+  },
 } as const satisfies Record<string, StorageKeySpec>;
 
 export type StorageKeyName = keyof typeof STORAGE_KEYS;
@@ -84,6 +89,10 @@ export const DROPPED_LEGACY_KEYS: readonly LegacyKey[] = ['history', 'commandHis
 export const STORAGE_LIMITS = {
   /** Lines kept in `vesen:history:v1`. */
   historyLines: 500,
+  /** A history line longer than this stays for the session but is not saved. */
+  historyLineChars: 4 * 1024,
+  /** The most the saved history may hold, in characters; the oldest lines go first. */
+  historyChars: 256 * 1024,
   /** Transcript entries kept in `vesen:session:v1`. */
   sessionEntries: 50,
   /** A snapshot older than this is not restored. */

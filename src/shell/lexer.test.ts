@@ -97,6 +97,36 @@ describe('lex: tokens and source ranges', () => {
   });
 });
 
+describe('lex: file descriptors and the bash 4 redirections', () => {
+  /** `raw→value` for each redirection token, and `!fd` for one vesen refuses. */
+  const redirs = (line: string): string[] =>
+    lex(line).tokens.flatMap((t) => (t.kind === 'redir' ? [`${t.raw}→${t.value}${t.unsupportedFd === undefined ? '' : `!${t.unsupportedFd}`}`] : []));
+
+  it.each([
+    ['a 1>f', ['1>→>']],
+    ['a 1>>f', ['1>>→>>']],
+    ['a 1>&2', ['1>&2→>&2']],
+    ['a 2>|f', ['2>|→2>']],
+    ['a 0<f', ['0<→<']],
+    ['a >|f', ['>|→>|']],
+    ['a &>>f', ['&>>→&>>']],
+    ['a >& f', ['>&→&>']],
+    ['a >&f', ['>&→&>']],
+    ['a >&1', ['>&1→>&1']],
+    ['a 3>f', ['3>→>!3']],
+    ['a 10>f', ['10>→>!10']],
+    ['a >&3', ['>&3→>&1!3']],
+    ['a 1<f', ['1<→<!1']],
+  ])('%s', (line, expected) => {
+    expect(redirs(line)).toEqual(expected);
+  });
+
+  it('reads |& as a pipe of both streams, and a digit inside a word as text', () => {
+    expect(summary('a|&b')).toEqual(['a@0-1', '|&@1-3', 'b@3-4']);
+    expect(summary('a1>f')).toEqual(['a1@0-2', '>@2-3', 'f@3-4']);
+  });
+});
+
 describe('lex: word parts and quote levels', () => {
   it('splits a word into literal runs by quote level', () => {
     expect(parts('a\\ b')).toEqual([

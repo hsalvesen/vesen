@@ -61,7 +61,7 @@ describe('theme set', () => {
       stderrPlain: "theme: nope: no such theme\nTry 'theme ls' to see all available themes.",
     });
     expect(await runLine('theme nope')).toMatchObject({ status: 1 });
-    expect(await runLine('theme set')).toMatchObject({ status: 2, stderrPlain: "theme: set: missing theme name\nTry 'theme --help' for more information." });
+    expect(await runLine('theme set')).toMatchObject({ status: 1, stderrPlain: "theme: set: missing theme name\nTry 'theme --help' for more information." });
     expect(get(theme).name).toBe('swamphen');
   });
 

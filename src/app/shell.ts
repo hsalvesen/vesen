@@ -8,6 +8,7 @@ import type { Block, Line } from '../output/model';
 import { createAppearance } from '../services/appearance';
 import { createClock } from '../services/clock';
 import { createNet } from '../services/net';
+import { STORAGE_KEYS } from '../services/storage-keys';
 import { createSysInfoStub } from '../services/sysinfo';
 import type { Bell, Clipboard, Clock, KV, Net, Opener, SysInfo } from '../services/types';
 import { createShell, type ScreenSink, type Shell, type TerminalInfo } from '../shell/index';
@@ -25,6 +26,10 @@ import { Vfs } from '../vfs/vfs';
 /** Run at boot, quietly, as a login shell reads them: aliases such as ll, and exports (F072). */
 export const BOOT_FILES = loginFiles(GUEST.home);
 
+/** Said when the last load never finished reading ~/.bashrc, so this one skips it. */
+export const SAFE_MODE_NOTICE =
+  "vesen: ~/.bashrc did not finish loading last time, so it was skipped. Fix it with 'cat ~/.bashrc', run it with 'source ~/.bashrc', or put the original files back with 'reset'.";
+
 export interface AppShellOptions {
   /** The welcome banner, which `reset` puts back. */
   readonly banner: () => CommandOutput;
@@ -36,6 +41,11 @@ export interface AppShellOptions {
   readonly bind?: (parts: { readonly vfs: Vfs; readonly shell: Shell }) => () => void;
   /** Keeps files under ~ and command history across reloads; null keeps them for the session. */
   readonly storage?: KV<'local'> | null;
+  /**
+   * The tab's session storage, for boot's safe mode: a marker set while ~/.bashrc is read, which
+   * a load that finds it still set takes to mean the last one never finished, and skips it.
+   */
+  readonly sessionStorage?: KV<'session'> | null;
   /** The app's version, for /etc/os-release; defaults to the build's. */
   readonly version?: string;
   /** Where entries go; the app's transcript by default. */
@@ -56,6 +66,11 @@ export interface AppShell {
   readonly persistence: Persistence;
   /** Sources /etc/profile and ~/.bashrc, then starts saving changes under ~. */
   boot(): Promise<void>;
+  /**
+   * Loads the bodies of the commands that load lazily, so none of them waits for the network
+   * the first time it runs. Settles when all have loaded or failed.
+   */
+  prefetch(): Promise<void>;
   /** Disconnects the stores the shell keeps in step, and stops saving. */
   stop(): void;
 }
@@ -147,8 +162,24 @@ export function createAppShell(options: AppShellOptions): AppShell {
     vfs,
     persistence,
     async boot() {
-      for (const file of BOOT_FILES) await built.source(file, { quiet: true });
+      const marker = options.sessionStorage ?? null;
+      const key = STORAGE_KEYS.boot.key;
+      // Still set: the last load froze or crashed while reading ~/.bashrc, so this one skips it.
+      const safeMode = marker?.get(key) !== null && marker !== null;
+      marker?.set(key, String(clock.now()));
+      for (const file of BOOT_FILES) {
+        if (safeMode && file !== '/etc/profile') {
+          screen.push({ prompt: null, line: '', blocks: noticeBlocks(SAFE_MODE_NOTICE), origin: 'boot' });
+          continue;
+        }
+        await built.source(file, { quiet: true });
+      }
+      marker?.remove(key);
       persistence.start();
+    },
+    async prefetch() {
+      const loads = registry.list({ includeHidden: true }).flatMap((spec) => (spec.load === undefined ? [] : [spec.load()]));
+      await Promise.allSettled(loads);
     },
     stop() {
       unbind();

@@ -41,8 +41,11 @@
         prompt?.focusPrompt();
         break;
       case 'insert':
+        // The text is at the prompt to be finished: bring the prompt into view, and on a phone
+        // open the keyboard now, inside the tap, with the text ready.
         prompt?.insert(action.text);
-        prompt?.focusPrompt();
+        prompt?.focusPrompt({ keyboard: true });
+        if (screen) scrollToEnd(screen);
         break;
       case 'open':
         window.open(action.href, '_blank', 'noopener');
@@ -73,9 +76,12 @@
         </div>
 
         <div class="prompt-area" data-prompt-area>
-          <!-- minmax(0, 1fr) and min-w-0 let the input shrink, so the row never overflows at 320px. -->
-          <div class="grid items-center gap-x-1" style="grid-template-columns: max-content minmax(0, 1fr);">
-            <div class="flex items-center">
+          <!--
+            The prompt takes what it needs and may wrap; the input always keeps 10 cells, so the row
+            never overflows at 320px, however long the folder name.
+          -->
+          <div class="grid items-center gap-x-1" style="grid-template-columns: minmax(0, max-content) minmax(10ch, 1fr);">
+            <div class="flex items-center min-w-0">
               <Prompt cwd={shell.cwd} status={shell.lastStatus} secret={isPasswordMode} />
             </div>
             <div class="min-w-0">

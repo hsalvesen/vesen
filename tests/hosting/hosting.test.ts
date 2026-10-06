@@ -1,5 +1,6 @@
 // Checks the Firebase Hosting config and the two standalone pages it serves next to the app:
-// public/404.html and the device probe at public/probe/index.html.
+// public/404.html and the device probe at public/probe/index.html; and the owner's documents
+// that tabs opened before the bundled seed still fetch.
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -167,5 +168,13 @@ describe('standalone pages', () => {
       ...walk('public').filter((path) => /\.(md|txt)$/.test(path)),
     ];
     for (const path of shipped) expect(read(path), path).not.toMatch(/\/probe\b/);
+  });
+});
+
+describe('the owner documents an older build fetches', () => {
+  // A tab opened before the documents moved into the bundle reads them from the site, so they
+  // stay in public/ for one release; Phase 5 deletes them with the legacy code.
+  it.each(['README.md', 'history.txt', 'linux.txt'])('public/%s is still served', (name) => {
+    expect(statSync(join(ROOT, 'public', name)).size).toBeGreaterThan(0);
   });
 });

@@ -7,7 +7,7 @@ ll is aliased to `ls -la'
 cd is a shell builtin
 ls is /usr/bin/ls
 if is a shell keyword
-! type: nope: not found
+! vesen: type: nope: not found
 ? 1
 $ which cat nope
 /usr/bin/cat

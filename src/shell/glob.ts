@@ -25,6 +25,20 @@ export interface GlobFs {
 /** Expands one pattern to the sorted paths it matches, or none. Built by createGlobber. */
 export type GlobMatcher = (pattern: string) => readonly string[];
 
+/**
+ * The most paths one pattern may match. Matching is synchronous, so ^C cannot stop it, and a
+ * folder of symbolic links to itself makes `*\/*\/*\/…` grow fourfold a level.
+ */
+export const MAX_GLOB_MATCHES = 10_000;
+
+/** Thrown when a pattern would match more than MAX_GLOB_MATCHES paths. */
+export class GlobTooLarge extends Error {
+  constructor(readonly pattern: string) {
+    super(`${pattern}: argument list too long`);
+    this.name = 'GlobTooLarge';
+  }
+}
+
 type ClassItem =
   | { readonly t: 'char'; readonly c: string }
   | { readonly t: 'range'; readonly from: number; readonly to: number }
@@ -275,6 +289,7 @@ export function glob(pattern: string, cwd: string, fs: GlobFs): string[] {
         const abs = joinPath(at.abs, name);
         if (!last && !fs.isDirectory(abs)) continue;
         next.push({ shown: joinShown(at.shown, name), abs });
+        if (next.length > MAX_GLOB_MATCHES) throw new GlobTooLarge(pattern);
       }
     }
     found = next;

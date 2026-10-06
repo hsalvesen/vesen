@@ -153,6 +153,12 @@ export interface GridBlock {
    * a column of their own, and a note wraps beside its item.
    */
   readonly notes?: readonly Line[];
+  /**
+   * 'columns' fills each column top to bottom before the next, as `ls -C` orders names, so a
+   * column reads in order; 'rows', the default, fills each row left to right. Either way the
+   * number of columns follows the width.
+   */
+  readonly order?: 'rows' | 'columns';
 }
 
 /** Rows of cells; each cell is a Line. */
@@ -362,12 +368,13 @@ export const out = {
 
   lines: (lines: readonly Line[], stream: Stream = 'stdout'): LinesBlock => ({ type: 'lines', lines, stream }),
 
-  /** A grid; `notes`, by index, put text after each item in its cell. */
-  grid: (items: readonly Span[], minCh?: number, notes?: readonly Line[]): GridBlock => ({
+  /** A grid; `notes`, by index, put text after each item in its cell; `order` as GridBlock says. */
+  grid: (items: readonly Span[], minCh?: number, notes?: readonly Line[], order?: GridBlock['order']): GridBlock => ({
     type: 'grid',
     items,
     ...(minCh === undefined ? {} : { minCh }),
     ...(notes === undefined ? {} : { notes }),
+    ...(order === undefined ? {} : { order }),
   }),
 
   /** A span whose text or colour the renderer reads from the stores; see LiveBinding. */

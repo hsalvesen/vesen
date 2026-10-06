@@ -211,6 +211,26 @@ describe('bootstrap', () => {
     expect(JSON.parse(localStorage.getItem('vesen:history:v1') ?? '')).toEqual({ v: 1, lines: ['lss'] });
   });
 
+  it('fetches the layout renderer beside the kernel, and the lazy commands once the page is idle', async () => {
+    const richBlock = vi.fn(() => Promise.resolve({}));
+    vi.doMock('../ui/rich-block', () => ({ loadRichBlock: richBlock }));
+    const idle: (() => void)[] = [];
+    vi.stubGlobal('requestIdleCallback', (run: () => void) => idle.push(run));
+    try {
+      const { boot } = await load();
+      const booted = boot();
+      expect(richBlock).toHaveBeenCalledTimes(1);
+      const before = idle.length;
+      await booted?.shell.run('true');
+      // Queued for when the page is idle, once the kernel has booted.
+      expect(idle).toHaveLength(before + 1);
+      for (const run of idle.splice(before)) run();
+    } finally {
+      vi.doUnmock('../ui/rich-block');
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('runs the legacy commands main.ts hands in, and binds them to the VFS and the shell', async () => {
     const { boot } = await load();
     const spec = { name: 'hello', category: 'fun' as const, summary: 'say hello', run: () => 3 };

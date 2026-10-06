@@ -41,9 +41,11 @@
 {/if}
 
 <style>
-  /* Inline, so the prompt copies as one line of text: guest@vesen:~$ */
+  /* Inline, so the prompt copies as one line of text: guest@vesen:~$. It may wrap, anywhere, so
+     a long folder name on a narrow screen never pushes the page sideways. */
   .prompt {
-    white-space: pre;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 
   .punct {

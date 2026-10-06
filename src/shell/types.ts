@@ -144,6 +144,21 @@ export interface CommandSpec {
   readonly numericShortcut?: string;
   /** The command reads --help itself instead of the kernel printing the spec's help. */
   readonly handlesHelp?: boolean;
+  /**
+   * The status of a usage error (an unknown option, a missing operand): 2 for builtins, as in
+   * bash, and 1 otherwise, as GNU coreutils exit; ls and a few others say 2 here.
+   */
+  readonly usageStatus?: ExitCode;
+  /**
+   * A declaration builtin (export): an argument shaped NAME=value expands as an assignment does,
+   * with no word splitting or globbing, so `export X=$Y` keeps the spaces in $Y.
+   */
+  readonly assignmentArgs?: boolean;
+  /**
+   * Changes the page itself (poweroff, speedtest): runs only at the prompt, never from a pipe,
+   * `$( )`, a script or a sourced file such as ~/.bashrc.
+   */
+  readonly interactiveOnly?: boolean;
 
   /** A URL to open synchronously inside the Enter or tap gesture, before the job starts. */
   opens?(argv: readonly string[]): string | null;
@@ -281,6 +296,12 @@ export interface Env {
   set(name: string, value: string, options?: { export?: boolean }): void;
   unset(name: string): void;
   isExported(name: string): boolean;
+  /**
+   * Marks NAME for export, or stops exporting it, keeping its value. An unset NAME marked for
+   * export is remembered, so a later `NAME=value` lands in the environment (`export X; X=5`).
+   */
+  markExported(name: string, exported: boolean): void;
+  /** The variables that have a value, sorted by name. */
   entries(exportedOnly?: boolean): [string, string][];
   /** A copy for a child command, with `overrides` exported in it. */
   child(overrides?: Readonly<Record<string, string>>): Env;

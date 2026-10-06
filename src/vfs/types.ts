@@ -75,7 +75,8 @@ export type VfsCode =
   | 'ENOTEMPTY'
   | 'ELOOP'
   | 'EINVAL'
-  | 'ENOSPC';
+  | 'ENOSPC'
+  | 'ENAMETOOLONG';
 
 /** A failed file operation, worded by the caller the way coreutils would word it. */
 export class VfsError extends Error {
@@ -119,6 +120,8 @@ export interface Vfs {
   usage(): { used: number; quota: number };
   /** Calls `listener` with the changed paths after each write; returns an unsubscribe function. */
   onChange(listener: (paths: readonly string[]) => void): () => void;
+  /** True when the seed has something at `path` (absolute): `reset` would bring it back. */
+  seeded?(path: string): boolean;
 }
 
 /** The file system as one user sees it: every call is checked against that user's permissions. */

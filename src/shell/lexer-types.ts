@@ -16,11 +16,15 @@ export type Quote = '"' | "'";
  */
 export type QuoteLevel = 0 | 1 | 2;
 
-/** Operators that separate commands. */
-export type ControlOp = '|' | '||' | '&&' | ';' | '&';
+/** Operators that separate commands. `|&` is a pipe that carries stderr too. */
+export type ControlOp = '|' | '|&' | '||' | '&&' | ';' | '&';
 
-/** Redirection operators; the target, if any, is the next word token. */
-export type RedirOp = '<' | '>' | '>>' | '2>' | '2>>' | '&>' | '2>&1' | '>&2' | '<<<';
+/**
+ * Redirection operators, as the shell applies them; the target, if any, is the next word token.
+ * `1>` lexes as `>`, `0<` as `<`, and `>& file` as `&>`; the token's raw keeps what was typed.
+ * `>|` writes even under noclobber, `&>>` appends both streams, and `>&1` changes nothing.
+ */
+export type RedirOp = '<' | '>' | '>>' | '>|' | '2>' | '2>>' | '&>' | '&>>' | '2>&1' | '>&2' | '>&1' | '<<<';
 
 /** `${NAME:-word}` and friends. */
 export type ParamOp = ':-' | '-' | ':=' | ':+';
@@ -74,8 +78,14 @@ export interface OpToken extends SourceRange {
 
 export interface RedirToken extends SourceRange {
   readonly kind: 'redir';
-  readonly raw: RedirOp;
+  /** Exactly what was typed: `1>`, `>&`. */
+  readonly raw: string;
   readonly value: RedirOp;
+  /**
+   * Set for a redirection of a file descriptor vesen does not have, such as `3>`: the parser
+   * reports it rather than running the line.
+   */
+  readonly unsupportedFd?: string;
 }
 
 export type Token = WordToken | OpToken | RedirToken;

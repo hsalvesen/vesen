@@ -26,21 +26,21 @@ $ cp /etc/shadow x
 ? 1
 $ ls
 [terminal at 40 columns]
-backup       bin          config
-copy.md      desktop      documents
-downloads    history.txt  music
-pictures     projects     public
-README.md    scripts      src
-templates    videos
+backup       downloads    README.md
+bin          history.txt  scripts
+config       music        src
+copy.md      pictures     templates
+desktop      projects     videos
+documents    public
 ? 0
 [terminal at 80 columns]
-backup       bin          config       copy.md      desktop      documents
-downloads    history.txt  music        pictures     projects     public
-README.md    scripts      src          templates    videos
+backup       copy.md      downloads    pictures     README.md    templates
+bin          desktop      history.txt  projects     scripts      videos
+config       documents    music        public       src
 ? 0
 [terminal at 120 columns]
-backup       bin          config       copy.md      desktop      documents    downloads    history.txt  music
-pictures     projects     public       README.md    scripts      src          templates    videos
+backup       config       desktop      downloads    music        projects     README.md    src          videos
+bin          copy.md      documents    history.txt  pictures     public       scripts      templates
 ? 0
 [pipe]
 backup

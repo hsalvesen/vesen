@@ -190,9 +190,16 @@ describe('statuses and errors', () => {
     expect((await run('__proto__')).status).toBe(127);
   });
 
-  it('words an unknown option as coreutils does, with status 2', async () => {
-    const { run } = harness();
-    expect(await run('wc -z')).toMatchObject({ status: 2, stderr: "wc: invalid option -- 'z'\nTry 'wc --help' for more information." });
+  it('words an unknown option as coreutils does, with status 1, or 2 for a builtin or a spec that says so', async () => {
+    const { run } = harness({
+      specs: [
+        defineCommand({ name: 'bi', category: 'shell', summary: 'x', builtin: true, run: () => 0 }),
+        defineCommand({ name: 'two', category: 'files', summary: 'x', usageStatus: 2, run: () => 0 }),
+      ],
+    });
+    expect(await run('wc -z')).toMatchObject({ status: 1, stderr: "wc: invalid option -- 'z'\nTry 'wc --help' for more information." });
+    expect(await run('bi -z')).toMatchObject({ status: 2, stderr: "vesen: bi: invalid option -- 'z'\nTry 'bi --help' for more information." });
+    expect(await run('two -z')).toMatchObject({ status: 2, stderr: "two: invalid option -- 'z'\nTry 'two --help' for more information." });
   });
 
   it('answers --help from the spec, and -h too when the spec has no h flag', async () => {
@@ -204,7 +211,7 @@ describe('statuses and errors', () => {
     expect((await run('wc -h')).blocks[0]?.type).toBe('panel');
   });
 
-  it('maps a UsageError to 2, a VfsError to its strerror text and other errors to 1', async () => {
+  it('maps a UsageError to 1 (2 for a builtin), a VfsError to its strerror text and other errors to 1', async () => {
     const { UsageError } = await import('./types');
     const { VfsError } = await import('../vfs/types');
     const { run } = harness({
@@ -214,7 +221,7 @@ describe('statuses and errors', () => {
         defineCommand({ name: 'boom', category: 'shell', summary: 'x', run: () => { throw new Error('kaput'); } }),
       ],
     });
-    expect(await run('usage')).toMatchObject({ status: 2, stderr: "usage: missing operand\nTry 'usage --help' for more information." });
+    expect(await run('usage')).toMatchObject({ status: 1, stderr: "usage: missing operand\nTry 'usage --help' for more information." });
     expect(await run('vfs')).toMatchObject({ status: 1, stderr: 'vfs: /etc/shadow: Permission denied' });
     expect(await run('boom')).toMatchObject({ status: 1, stderr: 'boom: kaput' });
   });
@@ -451,7 +458,9 @@ describe('scripts', () => {
     expect(await h.run('./plain.txt')).toMatchObject({ status: 126, stderr: 'vesen: ./plain.txt: Permission denied' });
     h.fs.mkdir('/home/guest/bin');
     script(h, '/home/guest/bin/hi', "#!/bin/vesh\necho 'multi\nline'\n");
-    expect((await h.run('hi')).stdout).toBe('multi\nline');
+    // ~/bin is on PATH once ~/.bashrc puts it there, as on Linux.
+    expect((await h.run('hi')).status).toBe(127);
+    expect((await h.run('PATH=~/bin:$PATH; hi')).stdout).toBe('multi\nline');
   });
 
   it(`stop at a depth of ${MAX_SCRIPT_DEPTH}`, async () => {

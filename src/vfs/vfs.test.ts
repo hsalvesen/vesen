@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { rmRefusal, strerror } from './errors';
 import { seedTree } from './seed';
 import { VfsError, type GenerateContext, type VfsCode, type VirtualFile } from './types';
-import { DEFAULT_QUOTA, Vfs, validateName, type Credentials } from './vfs';
+import { DEFAULT_QUOTA, NODE_OVERHEAD, Vfs, validateName, type Credentials } from './vfs';
 
 const NOW = Date.UTC(2026, 9, 6, 9, 0, 0);
 const ROOT: Credentials = { name: 'root', uid: 0, gid: 0, group: 'root', groups: [0] };
@@ -326,6 +326,9 @@ describe('the quota', () => {
     expect(seedBytes).toBeGreaterThan(0);
     const chunk = 'x'.repeat(64 * 1024);
     const out = fs.openWrite('/home/guest/big', { append: false, noclobber: false });
+    // A new file costs its path and a fixed overhead, as well as its content.
+    const created = '/home/guest/big'.length + NODE_OVERHEAD;
+    expect(fs.usage().used).toBe(seedBytes + created);
     let written = 0;
     expect(
       code(() => {
@@ -335,12 +338,31 @@ describe('the quota', () => {
         }
       }),
     ).toBe('ENOSPC');
-    expect(fs.usage().used).toBe(seedBytes + written);
+    expect(fs.usage().used).toBe(seedBytes + created + written);
     expect(fs.usage().used).toBeLessThanOrEqual(DEFAULT_QUOTA);
     expect(code(() => fs.copy('/home/guest/big', '/home/guest/big2'))).toBe('ENOSPC');
     fs.rm('/home/guest/big');
     expect(fs.usage().used).toBe(seedBytes);
     expect(code(() => fs.writeFile('/home/guest/small', 'ok'))).toBe('ok');
+  });
+
+  it('counts names and paths too, and refuses names and paths longer than Linux allows', () => {
+    const fs = seeded({ quota: 64 * 1024 });
+    expect(code(() => fs.writeFile(`/home/guest/${'n'.repeat(256)}`, ''))).toBe('ENAMETOOLONG');
+    expect(code(() => fs.writeFile(`/home/guest/${'n'.repeat(255)}`, ''))).toBe('ok');
+    // A deep chain of folders costs its paths: the quota stops it long before PATH_MAX would.
+    expect(code(() => fs.mkdir(`/home/guest/${'d/'.repeat(2100)}`, { parents: true }))).toBe('ENOSPC');
+    const roomy = seeded({ quota: 64 * 1024 * 1024 });
+    expect(code(() => roomy.mkdir(`/home/guest/${'d/'.repeat(2100)}`, { parents: true }))).toBe('ENAMETOOLONG');
+    fs.rm('/home/guest/d', { recursive: true });
+    // Empty folders are not free: enough of them fill the quota.
+    let made = 0;
+    const result = code(() => {
+      for (;;) fs.mkdir(`/home/guest/folder-${made++}`);
+    });
+    expect(result).toBe('ENOSPC');
+    expect(made).toBeLessThan(1000);
+    expect(fs.usage().used).toBeLessThanOrEqual(64 * 1024);
   });
 
   it('counts bytes, not characters', () => {

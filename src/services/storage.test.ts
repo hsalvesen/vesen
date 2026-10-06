@@ -108,7 +108,8 @@ describe('createStorage', () => {
     expect(storage.local.set(THEME, 'cockatoo')).toBe(false);
     expect(storage.local.get(THEME)).toBe('cockatoo');
     expect(storage.local.get(CATHODE)).toBe('{"mode":"vintage"}');
-    expect(storage.local.persistent).toBe(false);
+    // One failed write (over quota) does not give up on the area: the next may fit.
+    expect(storage.local.persistent).toBe(true);
 
     // Once a write succeeds again, the browser holds the value.
     local.failSet = false;

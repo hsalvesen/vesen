@@ -18,4 +18,4 @@ $ touch /etc/x /etc/passwd
 $ touch
 ! touch: missing file operand
 ! Try 'touch --help' for more information.
-? 2
+? 1

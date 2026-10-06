@@ -77,15 +77,45 @@ describe('lazyShell', () => {
     expect(seen).toEqual([null, 'one', 'two', 'two']);
   });
 
-  it('interrupts a waiting line as soon as the kernel can run it', async () => {
+  it('ends a waiting line at once on ^C, with ^C and status 130, and never runs it', async () => {
+    const fake = fakeShell();
+    const loading = deferred<ShellPort>();
+    const commits: ScreenCommit[] = [];
+    const lazy = lazyShell(() => loading.promise, { screen: { commit: (entry) => commits.push(entry) }, now: () => 5 });
+    const handle = lazy.start('stock AAPL');
+    const other = lazy.start('help');
+    expect(lazy.abort()).toBe(true);
+    // Before the kernel has arrived: the prompt is back, and the transcript has both lines.
+    const result = await handle.done;
+    expect(result).toMatchObject({ status: 130, interrupted: true, blocks: [{ type: 'lines', lines: [[{ text: '^C' }]] }] });
+    expect((await other.done).status).toBe(130);
+    expect(lazy.job.get()).toBeNull();
+    expect(commits.map((commit) => [commit.line, commit.status, commit.endedAt])).toEqual([
+      ['stock AAPL', 130, 5],
+      ['help', 130, 5],
+    ]);
+    expect(lazy.abort()).toBe(false);
+
+    loading.resolve(fake.shell);
+    await lazy.ready;
+    expect(fake.started).toEqual([]);
+    // They are in history, as an interrupted line is.
+    expect(fake.remembered).toEqual(['stock AAPL', 'help']);
+  });
+
+  it('ends one waiting line on its own handle, leaving the others to run', async () => {
     const fake = fakeShell();
     const loading = deferred<ShellPort>();
     const lazy = lazyShell(() => loading.promise);
-    const handle = lazy.start('stock AAPL');
-    expect(lazy.abort()).toBe(true);
+    const first = lazy.start('sleep 5');
+    const second = lazy.start('ls');
+    first.abort();
+    expect((await first.done).status).toBe(130);
+    // The other line still waits, so the job is not over.
+    expect(lazy.job.get()).toMatchObject({ name: 'ls' });
     loading.resolve(fake.shell);
-    expect((await handle.done).status).toBe(130);
-    expect(fake.aborted).toEqual(['stock AAPL']);
+    expect((await second.done).status).toBe(0);
+    expect(fake.started).toEqual(['ls']);
   });
 
   it('remembers lines for history until the kernel arrives', async () => {

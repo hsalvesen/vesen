@@ -8,14 +8,18 @@ import { defineCommand } from '../../shell/types';
 export default defineCommand({
   name: 'help',
   category: 'shell',
+  // A usage error exits 2, as bash builtins do.
+  usageStatus: 2,
   summary: 'list the commands, or explain one',
-  synopsis: ['help', 'help COMMAND...', 'help keys'],
+  synopsis: ['help [-a]', 'help COMMAND...', 'help keys'],
   description:
-    "With no COMMAND, lists every command by category, each with what it does; tap a name to put it at the prompt. With a COMMAND, shows its options and examples, as 'COMMAND --help' does. 'help keys' lists the keys the terminal answers to.",
+    "With no COMMAND, lists the portfolio commands with what each does, then the names of the rest by category; with -a, every command with what it does. Tap a name to put it at the prompt. With a COMMAND, shows its options and examples, as 'COMMAND --help' does. 'help keys' lists the keys the terminal answers to.",
   featured: true,
+  flags: [{ short: 'a', long: 'all', description: 'list every command, each with what it does' }],
   args: [{ name: 'COMMAND', source: { kind: 'command' }, optional: true, variadic: true }],
   examples: [
-    { line: 'help', note: 'every command', offline: true, starter: 1 },
+    { line: 'help', note: 'the commands', offline: true, starter: 1 },
+    { line: 'help --all', note: 'every command, with what it does', offline: true },
     { line: 'help ls', note: "one command's options and examples", offline: true },
     { line: 'help keys', note: 'the keys', offline: true },
   ],
@@ -23,7 +27,7 @@ export default defineCommand({
   async run(ctx) {
     const help = await import('../../shell/help');
     if (ctx.args.length === 0) {
-      for (const block of help.helpIndex(ctx.shell.registry)) await ctx.stdout.block(block);
+      for (const block of help.helpIndex(ctx.shell.registry, { all: ctx.opts.all === true })) await ctx.stdout.block(block);
       return 0;
     }
     let status = 0;

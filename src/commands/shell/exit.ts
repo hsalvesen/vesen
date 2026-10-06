@@ -4,9 +4,11 @@
 // aliases start again from /etc/profile and ~/.bashrc. In a script, exit ends the script.
 
 import { out } from '../../output/model';
-import { defineCommand, ExitRequest } from '../../shell/types';
+import type { RawArgsSpec } from '../../shell/flags';
+import { ExitRequest, type CommandSpec, type RunnerChoice } from '../../shell/types';
 
-export default defineCommand({
+// Its words are taken as they are, so `exit -1` is status 255, as in bash.
+const spec: CommandSpec & RawArgsSpec & RunnerChoice = {
   name: 'exit',
   aliases: ['logout'],
   category: 'shell',
@@ -15,7 +17,7 @@ export default defineCommand({
   description:
     'Ends the session with status N, or the status of the last command. A new session starts at the tap of a chip, or with the next line typed: files, history and the theme stay, and variables and aliases start again. In a script, ends the script.',
   builtin: true,
-  posixArgs: true,
+  rawArgs: true,
   args: [{ name: 'N', source: { kind: 'int' }, optional: true }],
   examples: [
     { line: 'exit', offline: true },
@@ -40,4 +42,6 @@ export default defineCommand({
     }
     throw new ExitRequest(status);
   },
-});
+};
+
+export default spec;

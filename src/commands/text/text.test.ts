@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { runLine, session } from '../../../tests/harness';
-import { format, parseFormat, readFloat, readInteger } from './printf';
+import { format, MAX_FIELD, parseFormat, readFloat, readInteger } from './printf.run';
 
 /** printf's output for a format and arguments, without a shell. */
 function printf(fmt: string, ...args: string[]): { text: string; errors: readonly string[] } {
@@ -55,6 +55,14 @@ describe('echo', () => {
 });
 
 describe('printf', () => {
+  it(`stops widths and precisions at ${MAX_FIELD}, so one line cannot fill the memory`, async () => {
+    expect(printf('%150000000s|', 'x').text).toHaveLength(MAX_FIELD + 1);
+    expect(printf('%.150000000d|', '7').text).toHaveLength(MAX_FIELD + 1);
+    expect(printf('%*s|', '150000000', 'x').text).toHaveLength(MAX_FIELD + 1);
+    expect(printf('%-*s|', '-150000000', 'x').text).toHaveLength(MAX_FIELD + 1);
+    expect((await runLine("printf '%99999999s|\\n' x | wc -c", { tty: false })).stdoutPlain).toBe(String(MAX_FIELD + 2));
+  });
+
   it('reuses the format until the arguments run out', () => {
     expect(printf('%s\\n', 'a', 'b', 'c').text).toBe('a\nb\nc\n');
     expect(printf('%s %s\\n', 'a', 'b', 'c').text).toBe('a b\nc \n');
@@ -103,9 +111,9 @@ describe('printf', () => {
   });
 
   it('runs with GNU exit statuses and messages', async () => {
-    expect(await runLine("printf '%d\\n' abc")).toMatchObject({ status: 1, stdoutPlain: '0', stderrPlain: "printf: 'abc': expected a numeric value" });
-    expect(await runLine("printf '%z'")).toMatchObject({ status: 1, stderrPlain: 'printf: %z: invalid conversion specification' });
-    expect(await runLine('printf')).toMatchObject({ status: 2, stderrPlain: "printf: missing operand\nTry 'printf --help' for more information." });
+    expect(await runLine("printf '%d\\n' abc")).toMatchObject({ status: 1, stdoutPlain: '0', stderrPlain: "vesen: printf: 'abc': expected a numeric value" });
+    expect(await runLine("printf '%z'")).toMatchObject({ status: 1, stderrPlain: 'vesen: printf: %z: invalid conversion specification' });
+    expect(await runLine('printf')).toMatchObject({ status: 2, stderrPlain: "vesen: printf: missing operand\nTry 'printf --help' for more information." });
     expect(await runLine("printf -- '-%s-\\n' x")).toMatchObject({ status: 0, stdoutPlain: '-x-' });
     expect((await runLine("printf '%s' no-newline", { tty: false })).stdoutPlain).toBe('no-newline');
   });

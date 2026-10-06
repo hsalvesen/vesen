@@ -7,6 +7,8 @@ import { VfsError } from '../../vfs/types';
 export default defineCommand({
   name: 'pwd',
   category: 'files',
+  // A usage error exits 2, as bash builtins do.
+  usageStatus: 2,
   summary: 'print the working directory',
   synopsis: ['pwd [-L|-P]'],
   description: 'Prints the full path of the working directory: the one the prompt shows, with ~ written out.',

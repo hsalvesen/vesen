@@ -12,9 +12,10 @@
 // tests/fixtures/content/legacy-colours.json, which src/output/markup.test.ts compares the
 // converted documents against, so `cat` keeps their exact colours.
 //
-// It was run once, when the documents moved into the bundle, and the public/ copies were then
-// deleted; it refuses to run without them. To convert a document again, put its HTML back in
-// public/ and run:
+// It was run once, when the documents moved into the bundle. The public/ copies stay for one
+// release, because a tab opened before then still fetches them, and are deleted in Phase 5 with
+// the legacy code; it refuses to run without them. To convert a document again, put its HTML
+// back in public/ and run:
 //   node scripts/convert-content.mjs
 // Zero dependencies.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';

@@ -23,6 +23,12 @@ export const PIPE_HIGH_WATER = 64 * 1024;
 /** Lines one job may put on the screen; past it the rest is dropped with a notice. */
 export const MAX_SCREEN_LINES = 20_000;
 
+/**
+ * Characters one job may put on the screen, counted over all its lines; past it the rest is
+ * dropped with the same notice. One line of `printf '%99999999s'` would otherwise freeze the tab.
+ */
+export const MAX_SCREEN_CHARS = 2_000_000;
+
 /** Characters written to the screen between yields to the browser, so ^C is always heard. */
 const YIELD_EVERY = 32 * 1024;
 
@@ -362,6 +368,7 @@ export interface TtySinkOptions {
   /** Lets the browser run between large writes. Defaults to a zero-delay timer. */
   yieldToHost?: () => Promise<void>;
   maxLines?: number;
+  maxChars?: number;
 }
 
 type OpenLines = { type: 'lines'; lines: Line[]; stream: Stream };
@@ -381,6 +388,7 @@ export class TtySink {
   private action: ScreenAction = 'keep';
   private sealed = false;
   private lines = 0;
+  private chars = 0;
   private truncated = false;
   private sinceYield = 0;
 
@@ -394,37 +402,51 @@ export class TtySink {
     if (this.sealed) return Promise.reject(new JobDetached());
     if (text === '') return Promise.resolve();
     if (stream === 'stderr') this.options.onStderr?.();
+    // Past the budget nothing more is kept, not even an unfinished line.
+    if (this.truncated) return this.counted(text.length);
     if (this.partialStream !== null && this.partialStream !== stream) this.endPartial(this.partialStream);
     for (const event of this.parsers[stream].feed(text)) {
       if (event.kind === 'clear') this.clearAll('clear');
       else this.push(stream, event.line);
     }
-    this.partialStream = this.parsers[stream].partial().length > 0 ? stream : null;
-    this.sinceYield += text.length;
-    if (this.sinceYield < YIELD_EVERY) return Promise.resolve();
-    this.sinceYield = 0;
-    return (this.options.yieldToHost ?? defaultYield)().then(() => {
-      if (this.sealed) throw new JobDetached();
-    });
+    const partial = this.parsers[stream].partial();
+    this.partialStream = partial.length > 0 ? stream : null;
+    // What is still unfinished counts too, so one endless line cannot slip past the budget.
+    const unfinished = partial.reduce((sum, span) => sum + span.text.length, 0);
+    if (!this.truncated && this.chars + unfinished > (this.options.maxChars ?? MAX_SCREEN_CHARS)) {
+      this.parsers[stream].end();
+      this.partialStream = null;
+      this.truncate(stream);
+    }
+    return this.counted(text.length);
   }
 
   line(stream: Stream, parts: readonly (string | Span)[]): Promise<void> {
     if (this.sealed) return Promise.reject(new JobDetached());
     if (stream === 'stderr') this.options.onStderr?.();
     this.endPartials();
-    this.push(
-      stream,
-      parts.map((part) => (typeof part === 'string' ? { text: part } : part)).filter((span) => span.text !== ''),
-    );
-    return Promise.resolve();
+    const spans = parts.map((part) => (typeof part === 'string' ? { text: part } : part)).filter((span) => span.text !== '');
+    this.push(stream, spans);
+    return this.counted(spans.reduce((sum, span) => sum + span.text.length, 1));
   }
 
   block(block: Block): Promise<void> {
     if (this.sealed) return Promise.reject(new JobDetached());
     this.endPartials();
     this.open = null;
-    this.items.push(block);
-    return Promise.resolve();
+    if (!this.truncated) this.items.push(block);
+    // A block's size is not worth measuring here; it counts as a line of average length.
+    return this.counted(256);
+  }
+
+  /** Adds to what was written since the browser last had a turn, and gives it one when due. */
+  private counted(size: number): Promise<void> {
+    this.sinceYield += size;
+    if (this.sinceYield < YIELD_EVERY) return Promise.resolve();
+    this.sinceYield = 0;
+    return (this.options.yieldToHost ?? defaultYield)().then(() => {
+      if (this.sealed) throw new JobDetached();
+    });
   }
 
   /** The `clear` effect. */
@@ -454,8 +476,16 @@ export class TtySink {
     this.items = [];
     this.open = null;
     this.lines = 0;
+    this.chars = 0;
     this.truncated = false;
     this.action = action;
+  }
+
+  /** Stops taking output, with a notice where it stopped. */
+  private truncate(stream: Stream): void {
+    this.truncated = true;
+    this.open = null;
+    this.items.push({ type: 'lines', lines: [[{ text: '[output truncated]', style: { fg: 'muted' } }]], stream });
   }
 
   private endPartials(): void {
@@ -471,14 +501,13 @@ export class TtySink {
 
   private push(stream: Stream, line: Line): void {
     if (this.truncated) return;
-    const max = this.options.maxLines ?? MAX_SCREEN_LINES;
-    if (this.lines >= max) {
-      this.truncated = true;
-      this.open = null;
-      this.items.push({ type: 'lines', lines: [[{ text: '[output truncated]', style: { fg: 'muted' } }]], stream });
+    const size = line.reduce((sum, span) => sum + span.text.length, 0);
+    if (this.lines >= (this.options.maxLines ?? MAX_SCREEN_LINES) || this.chars + size > (this.options.maxChars ?? MAX_SCREEN_CHARS)) {
+      this.truncate(stream);
       return;
     }
     this.lines += 1;
+    this.chars += size;
     if (this.open === null || this.open.stream !== stream) {
       this.open = { type: 'lines', lines: [], stream };
       this.items.push(this.open);

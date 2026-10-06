@@ -17,8 +17,16 @@ describe('legacyStatus', () => {
     expect(legacyStatus('<span class="out-error">cat: x: No such file or directory</span>')).toBe(1);
     expect(legacyStatus('<span style="color: var(--role-error);">no</span>')).toBe(1);
     expect(legacyStatus('<span style="color: var(--theme-red); font-weight: bold;">qr: Failed to generate QR code</span>')).toBe(1);
-    expect(legacyStatus("rm: cannot remove 'x': No such file or directory")).toBe(1);
-    expect(legacyStatus('help: no help available for x: not found')).toBe(1);
+    expect(legacyStatus('<div class="out-panel tone-error">x</div>')).toBe(1);
+  });
+
+  it('reads only the markup the legacy code puts first, never the text it shows', () => {
+    // qr echoes its input, and curl prints a page: neither decides the status.
+    expect(legacyStatus("rm: cannot remove 'x': No such file or directory")).toBe(0);
+    expect(legacyStatus('QR Code <span>cannot</span>')).toBe(0);
+    expect(legacyStatus('<span style="color: var(--theme-cyan);">QR Code</span> <span>not found</span>')).toBe(0);
+    expect(legacyStatus('<pre>&lt;span class="out-error"&gt;</pre> <span class="out-error">late</span>')).toBe(0);
+    expect(legacyStatus('body { color: var(--role-error) }')).toBe(0);
   });
 
   it('does not read colourful success as failure', () => {
@@ -95,6 +103,19 @@ describe('the adapter', () => {
     expect(texts(result.blocks)).toEqual(['weather: timed out after 25 s']);
   });
 
+  it('runs a command that takes over the page only at the prompt: never in a pipe, $( ), a script or a sourced file', async () => {
+    const fn = vi.fn(() => '<div>System Shutdown Complete</div>');
+    const { run, fs } = harness({ specs: [legacy('poweroff', fn, { category: 'system', summary: 'x', interactiveOnly: true })] });
+    expect(await run('poweroff | cat')).toMatchObject({ status: 0, stderr: 'poweroff: only at the prompt' });
+    expect(await run('X=$(poweroff); echo $?')).toMatchObject({ stdout: '1', stderr: 'poweroff: only at the prompt' });
+    fs.writeFile('/home/guest/rc', 'poweroff\n', { mode: 0o755 });
+    expect(await run('./rc')).toMatchObject({ status: 1, stderr: 'poweroff: only at the prompt' });
+    expect(await run('poweroff > out.txt')).toMatchObject({ status: 1, stderr: 'poweroff: only at the prompt' });
+    expect(fn).not.toHaveBeenCalled();
+    expect((await run('poweroff')).status).toBe(0);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
   it('prints a link when its opener did not open, and nothing more when it did', async () => {
     const spec = legacy('whoami', () => 'Opening...', { category: 'portfolio', summary: 'x', opens: () => 'https://www.linkedin.com/in/harrysalvesen/' });
     const opened: string[] = [];
@@ -118,8 +139,9 @@ describe('the adapter', () => {
     const inApp = harness({ specs: [spec], opener: { ...opener, autoOpen: false, preflight: () => 'skipped' as const } });
     inApp.shell.preflight('whoami');
     const result = await inApp.shell.run('whoami');
-    expect(texts(result.blocks)).toEqual(['<html>Opening...', 'https://www.linkedin.com/in/harrysalvesen/']);
-    const link = result.blocks[1]?.type === 'lines' ? result.blocks[1].lines[0]?.[0] : undefined;
+    // Nothing opened, so it does not say 'Opening...': one readable link instead.
+    expect(texts(result.blocks)).toEqual(['linkedin.com/in/harrysalvesen']);
+    const link = result.blocks[0]?.type === 'lines' ? result.blocks[0].lines[0]?.[0] : undefined;
     expect(link?.href).toBe('https://www.linkedin.com/in/harrysalvesen/');
   });
 });

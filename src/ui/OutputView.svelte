@@ -2,37 +2,16 @@
   Renders output blocks with text interpolation only. Legacy HTML is the one exception, and it
   goes through the sanitising use:legacyHtml action. Lines, legacy HTML and art (the banner, which
   boot shows before anything has loaded) are drawn here; the layout blocks are drawn by
-  RichBlock, loaded the first time one appears.
+  RichBlock, loaded the first time one appears (or sooner: bootstrap fetches it beside the kernel).
 
   Markup inside text containers is written without whitespace between tags on purpose: those
   containers preserve whitespace, so any space Svelte kept there would show.
 -->
-<script module lang="ts">
-  import type { Component } from 'svelte';
-  import type { Action, Block } from '../output/model';
-
-  type RichBlockComponent = Component<{ block: Block; onaction?: (action: Action) => void }>;
-
-  let richBlock: Promise<RichBlockComponent> | undefined;
-
-  /** The layout-block renderer, loaded once, the first time a layout block is drawn. */
-  function loadRichBlock(): Promise<RichBlockComponent> {
-    if (richBlock === undefined) {
-      const loading = import('./RichBlock.svelte').then((module) => module.default);
-      // A failed load is tried again the next time a layout block is drawn.
-      loading.catch(() => {
-        if (richBlock === loading) richBlock = undefined;
-      });
-      richBlock = loading;
-    }
-    return richBlock;
-  }
-</script>
-
 <script lang="ts">
-  import { textWidth } from '../output/model';
+  import { textWidth, type Action, type Block } from '../output/model';
   import LineView from './LineView.svelte';
   import { legacyHtml } from './legacy-html';
+  import { loadRichBlock } from './rich-block';
   import { spanClasses, spanCss } from './span-style';
 
   let { blocks, onaction }: { blocks: readonly Block[]; onaction?: (action: Action) => void } = $props();

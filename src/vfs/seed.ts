@@ -74,12 +74,11 @@ export PATH="$HOME/bin:$PATH"
 # Custom prompt
 export PS1="\\u@\\h:\\w$ "`;
 
+// No if: vesen's shell has none, and `source ~/.profile` must work.
 const PROFILE = `# ~/.profile: executed by the command interpreter for login shells
 
 # Set PATH to include user's private bin if it exists
-if [ -d "$HOME/bin" ] ; then
-    PATH="$HOME/bin:$PATH"
-fi
+[ -d "$HOME/bin" ] && PATH="$HOME/bin:$PATH"
 
 # Set default editor
 export EDITOR=vim`;

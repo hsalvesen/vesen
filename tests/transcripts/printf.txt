@@ -22,13 +22,13 @@ $ printf '%e %g %g\n' 12345.678 0.0001 123456789
 $ printf '%d\n' abc 12x
 0
 12
-! printf: 'abc': expected a numeric value
-! printf: '12x': value not completely converted
+! vesen: printf: 'abc': expected a numeric value
+! vesen: printf: '12x': value not completely converted
 ? 1
 $ printf '%z'
-! printf: %z: invalid conversion specification
+! vesen: printf: %z: invalid conversion specification
 ? 1
 $ printf
-! printf: missing operand
+! vesen: printf: missing operand
 ! Try 'printf --help' for more information.
 ? 2

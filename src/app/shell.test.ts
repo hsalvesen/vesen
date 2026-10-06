@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { lineText, out, type Line } from '../output/model';
 import { createStorage } from '../services/storage';
 import { STORAGE_KEYS } from '../services/storage-keys';
@@ -6,7 +6,10 @@ import { promptText } from '../shell/prompt';
 import { stubCommands } from '../testing/shell-harness';
 import { createScreen, type ScreenEntry } from '../stores/screen';
 import { MEMORY_NOTICE } from '../vfs/persist';
-import { createAppShell, transcriptScreen } from './shell';
+import { legacy } from '../commands/legacy';
+import type { KV } from '../services/types';
+import { MAX_SCRIPT_DEPTH } from '../shell/executor';
+import { createAppShell, SAFE_MODE_NOTICE, transcriptScreen } from './shell';
 
 const PROMPT: Line = [{ text: 'guest@vesen:~$' }];
 
@@ -18,7 +21,8 @@ function memoryStorage() {
     setItem: (key: string, value: string) => void items.set(key, value),
     removeItem: (key: string) => void items.delete(key),
   } as unknown as Storage;
-  return { local: createStorage({ localStorage: area, sessionStorage: area }).local, items };
+  const storage = createStorage({ localStorage: area, sessionStorage: area });
+  return { local: storage.local, session: storage.session, items };
 }
 
 /** What an entry shows: its prompt and line, then its output's text. */
@@ -154,6 +158,27 @@ describe('createAppShell', () => {
     second.app.stop();
   });
 
+  it('loads the bodies of lazy commands ahead of their first run, and survives one that fails', async () => {
+    const load = vi.fn(async () => ({ run: () => 0 }));
+    const broken = vi.fn(() => Promise.reject(new Error('offline')));
+    const app = createAppShell({
+      banner: () => '',
+      specs: [
+        ...stubCommands(),
+        { name: 'lazy', category: 'shell', summary: 'x', load },
+        { name: 'broken', category: 'shell', summary: 'x', load: broken },
+      ],
+      screen: createScreen(),
+      version: '0.0.0',
+      yieldToHost: () => Promise.resolve(),
+    });
+    await app.prefetch();
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(broken).toHaveBeenCalledTimes(1);
+    expect((await app.shell.run('lazy')).status).toBe(0);
+    app.stop();
+  });
+
   it('says once, dimly, that nothing is kept when there is no storage', async () => {
     const { app, screen } = build(null);
     await app.boot();
@@ -180,6 +205,84 @@ describe('boot', () => {
     expect(app.shell.aliases.get('before')).toBe('1');
     expect(app.shell.aliases.has('after')).toBe(false);
     expect((await app.shell.run('alias before')).status).toBe(0);
+    app.stop();
+  });
+});
+
+describe('boot safety', () => {
+  /** A shell that yields to real timers, as the browser's does. */
+  const real = (sessionStorage: KV<'session'> | null = null, extra: ReturnType<typeof stubCommands> = []) => {
+    const screen = createScreen();
+    const app = createAppShell({ banner: () => '', specs: [...stubCommands(), ...extra], screen, version: '0.0.0', sessionStorage });
+    return { app, screen };
+  };
+
+  it('stops a ~/.bashrc that sources itself at the nesting limit', async () => {
+    const { app } = real();
+    app.vfs.writeFile('/home/guest/.bashrc', 'X=$((X+1))\nsource ~/.bashrc\nalias after=1\n');
+    const status = await app.shell.source('~/.bashrc', { quiet: true, timeoutMs: 5000 });
+    expect(status).toBe(0);
+    expect(app.shell.env.get('X')).toBe(String(MAX_SCRIPT_DEPTH));
+    expect(app.shell.aliases.get('after')).toBe('1');
+    expect((await app.shell.run('source ~/.bashrc')).blocks).toContainEqual(
+      expect.objectContaining({ type: 'lines', stream: 'stderr', lines: [[expect.objectContaining({ text: 'vesen: source: /home/guest/.bashrc: maximum nesting level exceeded' })]] }),
+    );
+    app.stop();
+  });
+
+  it('gives timers, ^C and the boot deadline a turn while a script runs itself over and over', async () => {
+    const { app } = real();
+    // Three calls a level, sixteen levels deep: 3^16 runs, far too many to finish.
+    app.vfs.writeFile('/home/guest/bin/s', 's\ns\ns\n', { mode: 0o755 });
+    let ticks = 0;
+    const timer = setInterval(() => (ticks += 1), 5);
+    try {
+      const handle = app.shell.start('PATH=~/bin:$PATH; s');
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      expect(ticks).toBeGreaterThan(0);
+      handle.abort();
+      expect((await handle.done).status).toBe(130);
+
+      // At boot, the deadline stops it.
+      app.vfs.writeFile('/home/guest/.bashrc', 'PATH=~/bin:$PATH\ns\n');
+      const started = Date.now();
+      expect(await app.shell.source('~/.bashrc', { quiet: true, timeoutMs: 100 })).toBe(130);
+      expect(Date.now() - started).toBeLessThan(2000);
+    } finally {
+      clearInterval(timer);
+      app.stop();
+    }
+  });
+
+  it('skips ~/.bashrc, and says so, when the last load never finished reading it', async () => {
+    const { session } = memoryStorage();
+    const first = real(session);
+    first.app.vfs.writeFile('/home/guest/.bashrc', 'alias mine=1\n');
+    await first.app.boot();
+    // A boot that finishes leaves no marker, so the next one reads ~/.bashrc as usual.
+    expect(session.get(STORAGE_KEYS.boot.key)).toBeNull();
+    expect(first.app.shell.aliases.get('mine')).toBe('1');
+    first.app.stop();
+
+    // A load that froze in ~/.bashrc left the marker behind.
+    session.set(STORAGE_KEYS.boot.key, '1');
+    const second = real(session);
+    second.app.vfs.writeFile('/home/guest/.bashrc', 'alias mine=1\n');
+    await second.app.boot();
+    expect(second.app.shell.aliases.has('mine')).toBe(false);
+    expect(second.app.shell.env.get('EDITOR')).toBe('nano');
+    expect(second.screen.entries().map(shown)).toEqual([[SAFE_MODE_NOTICE]]);
+    expect(session.get(STORAGE_KEYS.boot.key)).toBeNull();
+    second.app.stop();
+  });
+
+  it('never runs a command that takes over the page from ~/.bashrc', async () => {
+    const poweroff = vi.fn(() => '<div>System Shutdown Complete</div>');
+    const { app } = real(null, [legacy('poweroff', poweroff, { category: 'system', summary: 'x', interactiveOnly: true })]);
+    app.vfs.writeFile('/home/guest/.bashrc', 'alias before=1\npoweroff\nalias after=1\n');
+    await app.boot();
+    expect(poweroff).not.toHaveBeenCalled();
+    expect(app.shell.aliases.get('after')).toBe('1');
     app.stop();
   });
 });

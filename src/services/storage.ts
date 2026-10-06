@@ -76,11 +76,11 @@ function safeArea<A extends StorageArea>(host: StorageHost | null, area: A): Saf
         memory.delete(key);
         return true;
       } catch {
-        // Over quota, or blocked after all: keep the value for this session only.
+        // Over quota, or blocked after all: keep the value for this session only. The area
+        // stays in use: one value too big says nothing about the next, smaller one.
       }
     }
     memory.set(key, value);
-    persistent = false;
     return false;
   };
 

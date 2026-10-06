@@ -3,10 +3,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { runLine, session } from '../../../tests/harness';
 import { isTrustedAction, type Block } from '../../output/model';
-import { formatDate, zoneName } from '../system/date';
-import { setValue } from './set';
+import { formatDate, zoneName } from '../system/date.run';
+import { setValue } from './set.run';
 import { interval } from './sleep';
-import { evaluate, TestError, type TestWorld } from './test';
+import { evaluate, TestError, type TestWorld } from './test.run';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -25,7 +25,7 @@ describe('aliases', () => {
     const s = await session();
     expect(await s.run('unalias ll')).toMatchObject({ status: 0, stdoutPlain: '' });
     expect(await s.run('ll')).toMatchObject({ status: 127 });
-    expect(await s.run('unalias ll')).toMatchObject({ status: 1, stderrPlain: 'unalias: ll: not found' });
+    expect(await s.run('unalias ll')).toMatchObject({ status: 1, stderrPlain: 'vesen: unalias: ll: not found' });
     await s.run('unalias -a');
     expect(s.app.shell.aliases.size).toBe(0);
     expect(await s.run('unalias')).toMatchObject({ status: 2 });
@@ -38,7 +38,7 @@ describe('variables', () => {
     const s = await session({ tty: false });
     await s.run('export NAME=Has');
     expect(await s.run('unset NAME; echo "[$NAME]"')).toMatchObject({ status: 0, stdoutPlain: '[]' });
-    expect(await s.run('unset 1x')).toMatchObject({ status: 1, stderrPlain: "unset: `1x': not a valid identifier" });
+    expect(await s.run('unset 1x')).toMatchObject({ status: 1, stderrPlain: "vesen: unset: `1x': not a valid identifier" });
     s.stop();
   });
 
@@ -88,9 +88,9 @@ describe('set -o', () => {
   });
 
   it('refuses what it does not know, and positional parameters', async () => {
-    expect(await runLine('set -o nope')).toMatchObject({ status: 2, stderrPlain: 'set: nope: invalid option name\nset: usage: set [-Cf] [-o option-name] [--] [arg ...]' });
-    expect(await runLine('set -e')).toMatchObject({ status: 1, stderrPlain: 'set: -e: not supported in vesen' });
-    expect(await runLine('set -- a b')).toMatchObject({ status: 1, stderrPlain: 'set: positional parameters are not supported in vesen' });
+    expect(await runLine('set -o nope')).toMatchObject({ status: 2, stderrPlain: 'vesen: set: nope: invalid option name\nset: usage: set [-Cf] [-o option-name] [--] [arg ...]' });
+    expect(await runLine('set -e')).toMatchObject({ status: 1, stderrPlain: 'vesen: set: -e: not supported in vesen' });
+    expect(await runLine('set -- a b')).toMatchObject({ status: 1, stderrPlain: 'vesen: set: positional parameters are not supported in vesen' });
   });
 });
 
@@ -117,7 +117,7 @@ describe('type, which and command -v', () => {
     expect((await s.run('type ll cd if')).stdoutPlain).toBe("ll is aliased to `ls -la'\ncd is a shell builtin\nif is a shell keyword");
     expect((await s.run('type -t ll cd ls if')).stdoutPlain).toBe('alias\nbuiltin\nfile\nkeyword');
     expect((await s.run('type -a ls')).stdoutPlain).toBe('ls is /usr/bin/ls\nls is /bin/ls');
-    expect(await s.run('type nope')).toMatchObject({ status: 1, stderrPlain: 'type: nope: not found' });
+    expect(await s.run('type nope')).toMatchObject({ status: 1, stderrPlain: 'vesen: type: nope: not found' });
     s.stop();
   });
 
@@ -224,8 +224,8 @@ describe('exit and logout', () => {
     const s = await session({ tty: false });
     expect((await s.run('exit 3')).status).toBe(3);
     expect((await s.run('false; exit')).status).toBe(1);
-    expect(await s.run('exit 1 2')).toMatchObject({ status: 1, stderrPlain: 'exit: too many arguments' });
-    expect(await s.run('exit nope')).toMatchObject({ status: 2, stderrPlain: 'exit: nope: numeric argument required' });
+    expect(await s.run('exit 1 2')).toMatchObject({ status: 1, stderrPlain: 'vesen: exit: too many arguments' });
+    expect(await s.run('exit nope')).toMatchObject({ status: 2, stderrPlain: 'vesen: exit: nope: numeric argument required' });
     s.stop();
   });
 
@@ -233,7 +233,8 @@ describe('exit and logout', () => {
     const s = await session();
     await s.run('export NAME=Has; cd /etc');
     await s.run('logout');
-    expect(s.app.shell.renderPrompt().map((span) => span.text).join('')).toContain(':/etc');
+    // The live prompt is already the next session's, so it says where the next line runs.
+    expect(s.app.shell.renderPrompt().map((span) => span.text).join('')).toBe('guest@vesen:~$');
     expect((await s.run('echo "[$NAME] $PWD"')).stdoutPlain).toBe('[] /home/guest');
     expect((await s.run('alias ll')).status).toBe(0);
     s.stop();
@@ -292,6 +293,16 @@ describe('date', () => {
     expect(formatDate('%a %b %e %j %u %s %Z %%', now, 'UTC')).toBe(`Tue Oct  6 279 2 ${now / 1000} UTC %`);
     expect(formatDate('%A %B %y %z %:z %F %T %Q', now, 'Australia/Sydney')).toBe('Tuesday October 26 +1100 +11:00 2026-10-06 20:00:00 %Q');
     expect(formatDate('%u', Date.UTC(2026, 9, 4, 12), 'UTC')).toBe('7');
+  });
+
+  it("reads GNU's padding and case flags, widths, and the C locale's conversions", () => {
+    expect(formatDate('%-d/%-m %_H|%^a|%#Z|%P|%k|%l|%C|%g|%G|%V|%U|%W', now, 'Australia/Sydney')).toBe('6/10 20|TUE|aedt|pm|20| 8|20|26|2026|41|40|40');
+    expect(formatDate('%c|%x|%X|%r', now, 'Australia/Sydney')).toBe('Tue Oct  6 20:00:00 2026|10/06/26|20:00:00|08:00:00 PM');
+    expect(formatDate('%N %3N %-N', now + 123, 'UTC')).toBe('123000000 123 123000000');
+    expect(formatDate('%12s|%_5d|%05e|%3e', now, 'UTC')).toBe(`${String(now / 1000).padStart(12, '0')}|    6|00006|  6`);
+    // ISO weeks: 1 January 2027 is a Friday, so it belongs to 2026's week 53.
+    expect(formatDate('%G-W%V-%u', Date.UTC(2027, 0, 1, 12), 'UTC')).toBe('2026-W53-5');
+    expect(formatDate('%-q %Ey', now, 'UTC')).toBe('%-q 26');
   });
 
   it('names zones as tzdata does, numerically where a zone has no letters', () => {

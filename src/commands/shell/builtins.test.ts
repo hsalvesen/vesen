@@ -18,8 +18,8 @@ describe('alias', () => {
 
   it('fails for an unknown or invalid name', async () => {
     const { run } = ported();
-    expect(await run('alias nope')).toMatchObject({ status: 1, stderr: 'alias: nope: not found' });
-    expect(await run("alias 'a/b=x'")).toMatchObject({ status: 1, stderr: "alias: `a/b': invalid alias name" });
+    expect(await run('alias nope')).toMatchObject({ status: 1, stderr: 'vesen: alias: nope: not found' });
+    expect(await run("alias 'a/b=x'")).toMatchObject({ status: 1, stderr: "vesen: alias: `a/b': invalid alias name" });
   });
 
   it("quotes values with ' in them", () => {
@@ -43,7 +43,7 @@ describe('export', () => {
 
   it('refuses a name that is not an identifier', async () => {
     const { run } = ported();
-    expect(await run('export 1x=2')).toMatchObject({ status: 1, stderr: "export: `1x=2': not a valid identifier" });
+    expect(await run('export 1x=2')).toMatchObject({ status: 1, stderr: "vesen: export: `1x=2': not a valid identifier" });
   });
 });
 

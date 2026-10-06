@@ -37,17 +37,17 @@ describe('cd', () => {
 
   it('says why it cannot, in bash words, with status 1', async () => {
     const { run, shell } = ported();
-    expect(await run('cd nope')).toMatchObject({ status: 1, stderr: 'cd: nope: No such file or directory' });
-    expect(await run('cd a.txt')).toMatchObject({ status: 1, stderr: 'cd: a.txt: Not a directory' });
-    expect(await run('cd a b')).toMatchObject({ status: 1, stderr: 'cd: too many arguments' });
+    expect(await run('cd nope')).toMatchObject({ status: 1, stderr: 'vesen: cd: nope: No such file or directory' });
+    expect(await run('cd a.txt')).toMatchObject({ status: 1, stderr: 'vesen: cd: a.txt: Not a directory' });
+    expect(await run('cd a b')).toMatchObject({ status: 1, stderr: 'vesen: cd: too many arguments' });
     expect(shell.cwd.get()).toBe('/home/guest');
-    expect(await run('HOME= cd')).toMatchObject({ status: 1, stderr: 'cd: HOME not set' });
+    expect(await run('HOME= cd')).toMatchObject({ status: 1, stderr: 'vesen: cd: HOME not set' });
   });
 
   it('offers a near-miss folder as a tappable cd', async () => {
     const { run } = ported();
     const wrongCase = await run('cd Docs');
-    expect(wrongCase.stderr).toBe('cd: Docs: No such file or directory\nDid you mean docs?');
+    expect(wrongCase.stderr).toBe('vesen: cd: Docs: No such file or directory\nDid you mean docs?');
     expect(runs(wrongCase.blocks)).toEqual(['cd docs']);
     expect(runs((await run('cd dcs')).blocks)).toEqual(['cd docs']);
     // The shell expands ~ before cd sees it, as bash does.

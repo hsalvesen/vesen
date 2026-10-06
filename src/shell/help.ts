@@ -1,7 +1,8 @@
 // Help generated from command specs (docs/plan/02-architecture-and-contracts.md, section 11):
 //
-// - the help index: every visible command by category, the portfolio first, each name tappable
-//   (it inserts itself at the prompt) with its summary beside it, in a grid that reflows;
+// - the help index: the portfolio commands with their summaries in a grid that reflows, then a
+//   row of names for each other category; with --all, every category's grid. Each name is
+//   tappable (it inserts itself at the prompt);
 // - the `<cmd> --help` panels in the callout style the legacy help used (what it does, Usage,
 //   Options, Examples as run chips, See also);
 // - man pages: NAME, SYNOPSIS, DESCRIPTION, OPTIONS, EXAMPLES and SEE ALSO, laid out to the width
@@ -41,37 +42,58 @@ const SUMMARY_CH = 26;
 
 // ── The index ──────────────────────────────────────────────────────────────────────────────
 
+/** A category's commands as one row: its title, then each name, tappable. */
+function namesRow(category: Category, specs: readonly CommandSpec[]): Span[] {
+  const row: Span[] = [out.span(CATEGORY_TITLES[category], HEADING), out.span(': ', HEADING)];
+  specs.forEach((spec, i) => {
+    if (i > 0) row.push(out.span(' '));
+    row.push(out.insert(spec.name, `${spec.name} `, STRONG));
+  });
+  return row;
+}
+
+/** A category's heading and a grid of its names, each with its summary beside it. */
+function categoryTable(category: Category, specs: readonly CommandSpec[], minCh: number): Block[] {
+  return [
+    out.lines([[out.span(CATEGORY_TITLES[category], HEADING)]]),
+    out.grid(
+      specs.map((spec) => out.insert(spec.name, `${spec.name} `, STRONG)),
+      minCh,
+      specs.map((spec) => [out.span(spec.summary)]),
+    ),
+  ];
+}
+
+const MORE_HELP: Line = [
+  out.span("Type 'help <command>' for its options, 'man <command>' for its manual, ", MUTED),
+  out.span("and 'help keys' for the keys.", MUTED),
+];
+
 /**
- * Every visible command, by category, portfolio first: a heading, then a grid of names, each
- * with its summary. A name inserts itself at the prompt when tapped; in a pipe the index is a
- * plain list, one `name  summary` per line.
+ * The help index. By default it is short enough to read on a phone without scrolling: the
+ * portfolio commands, the reason the site exists, each with its summary, then one row of names
+ * for every other category. With `all`, every category gets the table. A name inserts itself
+ * at the prompt when tapped; in a pipe the index is plain text.
  */
-export function helpIndex(registry: Registry): Block[] {
+export function helpIndex(registry: Registry, options: { readonly all?: boolean } = {}): Block[] {
   const blocks: Block[] = [];
   const widest = Math.max(1, ...registry.list().map((spec) => textWidth(spec.name)));
   // One column on a phone, two at 80 columns, three at 120.
   const minCh = widest + 2 + SUMMARY_CH;
+  const rows: Line[] = [];
   for (const category of CATEGORY_ORDER) {
     const specs = registry.list({ category });
     if (specs.length === 0) continue;
-    blocks.push(out.lines([[out.span(CATEGORY_TITLES[category], HEADING)]]));
-    blocks.push(
-      out.grid(
-        specs.map((spec) => out.insert(spec.name, `${spec.name} `, STRONG)),
-        minCh,
-        specs.map((spec) => [out.span(spec.summary)]),
-      ),
-    );
+    if (options.all === true || category === 'portfolio') blocks.push(...categoryTable(category, specs, minCh));
+    else rows.push(namesRow(category, specs));
   }
-  blocks.push(
-    out.lines([
-      [],
-      [
-        out.span("Type 'help <command>' for its options, 'man <command>' for its manual, ", MUTED),
-        out.span("and 'help keys' for the keys.", MUTED),
-      ],
-    ]),
-  );
+  if (rows.length > 0) blocks.push(out.lines([[], ...rows]));
+  const more: Line[] = [[]];
+  if (options.all !== true) {
+    more.push([out.run('help --all', 'help --all', STRONG), out.span(' lists every command with what it does.', MUTED)]);
+  }
+  more.push(MORE_HELP);
+  blocks.push(out.lines(more));
   return blocks;
 }
 
@@ -150,7 +172,10 @@ export function commandHelp(spec: CommandSpec): Block[] {
   const subs = visibleSubcommands(spec);
   if (subs.length > 0) {
     usage.push([], [out.span('Commands:', HEADING)]);
-    for (const [name, sub] of subs) usage.push([out.span(`  ${name}  `, STRONG), out.span(sub.summary)]);
+    // Summaries line up, as the options' descriptions do; the renderer hangs a wrapped one
+    // under its own column.
+    const width = Math.max(...subs.map(([name]) => textWidth(name)));
+    for (const [name, sub] of subs) usage.push([out.span(`  ${name.padEnd(width)}  `, STRONG), out.span(sub.summary)]);
   }
   blocks.push(out.panel('link', usage, 'Usage:'));
 

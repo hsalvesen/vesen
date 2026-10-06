@@ -19,9 +19,29 @@ function legacyTable() {
 }
 
 describe('help', () => {
-  it('lists every visible command in the registry, by category, each with its summary', async () => {
-    const s = await session();
+  it('is short: the portfolio commands with their summaries, then one row of names for each other category', async () => {
+    const s = await session({ cols: 40 });
     const result = await s.run('help');
+    expect(result.status).toBe(0);
+    const listed = text(result.blocks);
+    expect(listed.indexOf('Portfolio')).toBe(0);
+    for (const spec of s.app.shell.registry.list({ category: 'portfolio' })) {
+      expect(listed, spec.name).toMatch(new RegExp(`^${literal(spec.name)} +${literal(spec.summary)}$`, 'm'));
+    }
+    const files = s.app.shell.registry.list({ category: 'files' }).map((spec) => spec.name);
+    expect(listed).toContain(`Files: ${files.join(' ')}`);
+    expect(listed).not.toContain('list directory contents');
+    expect(listed).toContain('help --all lists every command with what it does.');
+    // It fits a phone's screen: the portfolio is never scrolled out of sight by the rest.
+    expect(result.screen.length).toBeLessThan(40);
+    const more = result.blocks.flatMap((block) => (block.type === 'lines' ? block.lines.flat() : [])).find((span) => span.text === 'help --all');
+    expect(more?.action).toMatchObject({ kind: 'run', line: 'help --all' });
+    s.stop();
+  });
+
+  it('lists every visible command in the registry with --all, by category, each with its summary', async () => {
+    const s = await session();
+    const result = await s.run('help --all');
     expect(result.status).toBe(0);
     const listed = text(result.blocks);
     for (const spec of s.app.shell.registry.list()) {
@@ -42,9 +62,9 @@ describe('help', () => {
     expect(theme?.action).toMatchObject({ kind: 'insert', text: 'theme ' });
   });
 
-  it('is a plain list in a pipe', async () => {
-    const { stdoutPlain } = await runLine('help', { tty: false });
-    expect(stdoutPlain).toMatch(/^ls +list directory contents$/m);
+  it('is plain text in a pipe', async () => {
+    expect((await runLine('help -a', { tty: false })).stdoutPlain).toMatch(/^ls +list directory contents$/m);
+    expect((await runLine('help', { tty: false })).stdoutPlain).toMatch(/^Files: cat cd /m);
   });
 
   it("shows a command's panels for help NAME, and says so for a topic it does not know", async () => {

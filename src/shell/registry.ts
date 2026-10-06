@@ -11,21 +11,42 @@ export const CATEGORY_ORDER: readonly Category[] = ['portfolio', 'files', 'text'
 
 export const MAX_SUMMARY = 50;
 
+const NO_EDITOR = "vesen has no editor yet: 'cat FILE' shows a file, and 'echo TEXT > FILE' writes one.";
+const NO_PACKAGES = 'vesen has no package manager.';
+
+/** Linux commands visitors try that vesen does not have yet; each gets a plain hint. */
+const NOT_YET = [
+  'grep', 'egrep', 'head', 'tail', 'less', 'more', 'wc', 'sort', 'uniq', 'cut', 'tr', 'sed', 'awk',
+  'find', 'tree', 'diff', 'xargs', 'tee', 'chmod', 'chown', 'ps', 'top', 'htop', 'kill',
+];
+
 /** Commands people type from other systems, and what vesen has instead. */
 const ELSEWHERE: Readonly<Record<string, { readonly use?: string; readonly hint?: string }>> = {
-  vim: { use: 'nano' },
-  vi: { use: 'nano' },
-  nvim: { use: 'nano' },
-  emacs: { use: 'nano' },
+  ...Object.fromEntries(NOT_YET.map((name) => [name, { hint: `${name} isn't in vesen yet.` }])),
+  vim: { use: 'nano', hint: NO_EDITOR },
+  vi: { use: 'nano', hint: NO_EDITOR },
+  nvim: { use: 'nano', hint: NO_EDITOR },
+  emacs: { use: 'nano', hint: NO_EDITOR },
+  nano: { hint: NO_EDITOR },
   cls: { use: 'clear' },
-  apt: { hint: 'vesen has no package manager.' },
-  'apt-get': { hint: 'vesen has no package manager.' },
-  yum: { hint: 'vesen has no package manager.' },
-  dnf: { hint: 'vesen has no package manager.' },
-  brew: { hint: 'vesen has no package manager.' },
-  pacman: { hint: 'vesen has no package manager.' },
-  snap: { hint: 'vesen has no package manager.' },
+  apt: { hint: NO_PACKAGES },
+  'apt-get': { hint: NO_PACKAGES },
+  yum: { hint: NO_PACKAGES },
+  dnf: { hint: NO_PACKAGES },
+  brew: { hint: NO_PACKAGES },
+  pacman: { hint: NO_PACKAGES },
+  snap: { hint: NO_PACKAGES },
 };
+
+/**
+ * Commands a tap on a guess must never run: they open a page or a mail client, take over the
+ * page, or end the session. A name typed differently only in case still finds them.
+ */
+const NEVER_GUESSED = new Set(['reset', 'exit', 'logout', 'login']);
+
+function guessable(spec: CommandSpec): boolean {
+  return spec.opens === undefined && spec.interactiveOnly !== true && !NEVER_GUESSED.has(spec.name);
+}
 
 /**
  * The optimal string alignment distance (Damerau-Levenshtein with adjacent transpositions):
@@ -110,15 +131,21 @@ export class CommandRegistry implements Registry {
     const sameCase = candidates.filter((candidate) => candidate.toLowerCase() === lower);
     if (sameCase.length > 0) return { near: sameCase.slice(0, 3) };
 
-    // Short names would match nearly anything at distance 2.
-    const limit = Array.from(lower).length <= 3 ? 1 : 2;
-    const scored = candidates
+    // Short names would match nearly anything at distance 2, so it takes five letters and the
+    // same first letter: grep is not a typo of repo, nor tail of email.
+    const length = Array.from(lower).length;
+    // Only names that start with a letter: `e` is not a typo of `:`, nor `,` of `.`.
+    const fuzzy = candidates.filter((candidate) => {
+      const spec = this.lookup.get(candidate);
+      return spec !== undefined && guessable(spec) && /^[a-z]/i.test(candidate);
+    });
+    const scored = fuzzy
       .map((candidate) => ({ candidate, distance: editDistance(lower, candidate.toLowerCase()) }))
-      .filter(({ distance }) => distance <= limit)
+      .filter(({ candidate, distance }) => distance <= 1 || (distance === 2 && length >= 5 && candidate.toLowerCase().charAt(0) === lower.charAt(0)))
       .sort((a, b) => a.distance - b.distance || a.candidate.localeCompare(b.candidate));
     const near = scored.map(({ candidate }) => candidate);
-    if (near.length === 0 && Array.from(lower).length >= 2) {
-      for (const candidate of candidates) if (candidate.toLowerCase().startsWith(lower)) near.push(candidate);
+    if (near.length === 0 && length >= 2) {
+      for (const candidate of fuzzy) if (candidate.toLowerCase().startsWith(lower)) near.push(candidate);
     }
     return { near: near.slice(0, 3) };
   }

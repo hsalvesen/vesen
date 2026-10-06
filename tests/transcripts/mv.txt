@@ -18,19 +18,15 @@ $ mv readme.md /etc/
 ? 1
 $ ls
 [terminal at 40 columns]
-bin        config     desktop
-documents  downloads  music
-pictures   projects   public
-readme.md  scripts    src
-templates  videos
+bin        music      scripts
+config     pictures   src
+desktop    projects   templates
+documents  public     videos
+downloads  readme.md
 ? 0
-[terminal at 80 columns]
-bin        config     desktop    documents  downloads  music      pictures
-projects   public     readme.md  scripts    src        templates  videos
-? 0
-[terminal at 120 columns]
-bin        config     desktop    documents  downloads  music      pictures   projects   public     readme.md
-scripts    src        templates  videos
+[terminal at 80, 120 columns]
+bin        desktop    downloads  pictures   public     scripts    templates
+config     documents  music      projects   readme.md  src        videos
 ? 0
 [pipe]
 bin

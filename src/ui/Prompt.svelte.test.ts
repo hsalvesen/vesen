@@ -81,7 +81,21 @@ describe('promptPath', () => {
     ['/usr/share/man/man1', 40, '/.../man1'],
     ['/usr/share', 40, '/usr/share'],
     ['/', 40, '/'],
+    // A long folder name keeps its end, so the prompt takes at most 60% of a 320 px phone.
+    ['/home/guest/my-portfolio-website-2026', 37, '…ite-2026'],
+    ['/home/guest/projects/my-awesome-project', 44, '…some-project'],
+    ['/home/guest/projects/my-awesome-project', 80, '~/projects/my-awesome-project'],
+    ['/home/guest/a/very/deep/folder/tree/with/many/levels/inside', 80, '~/.../inside'],
+    ['/home/guest/x', 10, '~/x'],
+    ['/home/guest/abcdefghij', 10, '…fghij'],
   ])('%s at %i columns is %s', (cwd, cols, expected) => {
     expect(promptPath(cwd, cols)).toBe(expected);
+  });
+
+  it('keeps the whole prompt within 60% of the columns, whatever the folder', () => {
+    for (const cols of [37, 44, 60, 80, 120]) {
+      const line = promptLine({ cwd: `/home/guest/${'long-folder-name-'.repeat(8)}end`, status: 0, columns: cols });
+      expect(line.map((span) => span.text).join('').length, `${cols}`).toBeLessThanOrEqual(Math.floor(cols * 0.6));
+    }
   });
 });

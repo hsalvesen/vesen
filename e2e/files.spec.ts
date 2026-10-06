@@ -66,6 +66,23 @@ test.describe('files and the prompt', { tag: '@smoke' }, () => {
     await expect(lastEntry(page)).not.toContainText('note.txt');
   });
 
+  test('a long folder name never pushes the page sideways at 320 px, and the input keeps room', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.goto('/');
+    await run(page, 'mkdir -p ~/my-portfolio-website-2026 && cd ~/my-portfolio-website-2026');
+    await run(page, 'pwd');
+    await prompt(page).focus();
+    const sizes = await page.evaluate(() => {
+      const main = document.querySelector('main');
+      const input = document.querySelector('input.command-input');
+      return { overflow: main ? main.scrollWidth - main.clientWidth : Infinity, input: input?.getBoundingClientRect().width ?? 0 };
+    });
+    expect(sizes.overflow).toBeLessThanOrEqual(0);
+    // At least ten cells of room to type.
+    expect(sizes.input).toBeGreaterThan(70);
+    expect(await promptText(page.locator('[data-prompt-area] .prompt'))).toMatch(/^guest@vesen:…[\w-]+\$$/);
+  });
+
   test('system files are the system\'s: touch /etc/x is refused, and the $ turns red', async ({ page }) => {
     await page.goto('/');
     await run(page, 'touch /etc/x');

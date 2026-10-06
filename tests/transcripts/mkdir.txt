@@ -21,7 +21,7 @@ drwx------ 2 guest guest 4096 Oct  6 20:04 private
 $ mkdir
 ! mkdir: missing operand
 ! Try 'mkdir --help' for more information.
-? 2
+? 1
 $ mkdir /etc/x
 ! mkdir: cannot create directory '/etc/x': Permission denied
 ? 1

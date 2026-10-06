@@ -6,7 +6,6 @@
 // This module stays DOM-free: the legacy functions, their help and their descriptions live in
 // src/utils, which touches the page, so the app layer (src/app/legacy-commands.ts) hands them in.
 
-import { htmlToText } from '../output/html-to-text';
 import { out } from '../output/model';
 import type { RawArgsSpec } from '../shell/flags';
 import { writeLegacyHtml } from '../shell/streams';
@@ -30,6 +29,7 @@ export interface LegacyMeta
     | 'examples'
     | 'builtin'
     | 'loadingLabel'
+    | 'interactiveOnly'
   > {
   readonly summary: string;
   /** The legacy help, already laid out as panels; shown for --help and -h. */
@@ -40,24 +40,37 @@ export interface LegacyMeta
   readonly prelude?: (ctx: CommandContext) => ExitCode | undefined | Promise<ExitCode | undefined>;
   /** The words the legacy function gets, when they differ from the operands. */
   readonly argsFor?: (ctx: CommandContext) => readonly string[];
+  /**
+   * What the link is called when the URL could not open in the gesture (a phone, an in-app
+   * browser): `LinkedIn: linkedin.com/in/…` replaces the legacy `Opening…` line.
+   */
+  readonly linkLabel?: string;
 }
 
 /**
- * A legacy command's status. Legacy commands report failure only in their HTML, so their error
- * styles mean 1: the out-error class or the error role anywhere, a first line in the red palette
- * colour, or 'not found' or 'cannot' in the first line of text. Coloured text further in (a
- * stock's fall, fastfetch's palette, the owner's documents) is not a failure.
+ * A legacy command's status. Legacy commands report failure only in their HTML, so the error
+ * markup the legacy code itself puts first means 1: errorLine's out-error span, a span in the red
+ * palette colour or the error role, or an error-toned panel. Only the start counts, and never the
+ * text: qr echoes what it was given and curl prints a page, either of which may say 'cannot' or
+ * contain `out-error`. Coloured text further in (a stock's fall, fastfetch's palette) is not a
+ * failure either.
  */
 export function legacyStatus(html: string): ExitCode {
-  if (/\bout-error\b|var\(--role-error\)/.test(html)) return 1;
-  if (/^\s*<span style="color: var\(--theme-red\)/.test(html)) return 1;
-  const first = htmlToText(html).split('\n', 1)[0] ?? '';
-  return /not found|cannot/i.test(first) ? 1 : 0;
+  if (/^\s*<span class="out-error">/.test(html)) return 1;
+  if (/^\s*<span style="color: var\(--(?:theme-red|role-error)\)/.test(html)) return 1;
+  if (/^\s*<div class="out-panel tone-error\b/.test(html)) return 1;
+  return 0;
+}
+
+/** A URL as people read it: `linkedin.com/in/harrysalvesen`, `has@salvesen.app`. */
+export function readableUrl(url: string): string {
+  if (url.startsWith('mailto:')) return url.slice('mailto:'.length).split('?', 1)[0] ?? url;
+  return url.replace(/^https?:\/\/(?:www\.)?/, '').replace(/\/$/, '');
 }
 
 /** Wraps one legacy function as a command spec. */
 export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpec {
-  const { help, opens, prelude, argsFor, ...shown } = meta;
+  const { help, opens, prelude, argsFor, linkLabel, ...shown } = meta;
   const spec: CommandSpec & RawArgsSpec = {
     name,
     ...shown,
@@ -71,6 +84,13 @@ export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpe
       // The opener runs before the output, as the legacy command did; off the screen it does not.
       const url = ctx.stdout.isTTY ? (opens?.(ctx.argv) ?? null) : null;
       const opened = url === null ? null : await ctx.tty.open(url, name);
+      if (url !== null && opened !== 'opened') {
+        // Nothing opened (a phone, an in-app browser, a blocked pop-up), so the legacy
+        // `Opening…` line would be untrue: one readable link instead.
+        const label = linkLabel === undefined ? [] : [`${linkLabel}: `];
+        await ctx.stdout.line(...label, out.link(readableUrl(url), url));
+        return 0;
+      }
 
       // The legacy function gets its own controller, linked to the job's ^C and budget.
       const controller = new AbortController();
@@ -89,7 +109,6 @@ export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpe
       // A legacy error goes to stderr, so `2>/dev/null` hides it and a pipe does not carry it.
       const status = legacyStatus(html);
       await writeLegacyHtml(status === 0 ? ctx.stdout : ctx.stderr, html);
-      if (url !== null && opened !== 'opened') await ctx.stdout.line(out.link(url, url));
       return status;
     },
   };
@@ -128,7 +147,7 @@ const TABLE: Readonly<Record<LegacyName, StaticMeta>> = {
     args: [{ name: 'URL', source: { kind: 'url' } }],
     examples: examples('curl https://httpbin.org/get', 'curl explainshell.com'),
   },
-  email: { category: 'portfolio', summary: 'write an email to the developer', examples: examples('email') },
+  email: { category: 'portfolio', summary: 'write an email to the developer', examples: examples('email'), linkLabel: 'Email' },
   fastfetch: {
     category: 'system',
     summary: 'show information about this system',
@@ -136,19 +155,22 @@ const TABLE: Readonly<Record<LegacyName, StaticMeta>> = {
     loadingLabel: () => 'gathering system information…',
     examples: examples('fastfetch'),
   },
-  poweroff: { category: 'system', summary: 'shut down the terminal', examples: examples('poweroff') },
+  // It takes over the whole page, so only a line typed at the prompt may run it: never ~/.bashrc.
+  poweroff: { category: 'system', summary: 'shut down the terminal', examples: examples('poweroff'), interactiveOnly: true },
   qr: {
     category: 'portfolio',
     summary: 'draw a QR code for a URL or text',
     args: [{ name: 'TEXT', source: { kind: 'examples' }, variadic: true }],
     examples: offline('qr https://tldr.sh', 'qr explainshell.com', 'qr https://shellcheck.net'),
   },
-  repo: { category: 'portfolio', summary: "open this terminal's source code", examples: examples('repo') },
+  repo: { category: 'portfolio', summary: "open this terminal's source code", examples: examples('repo'), linkLabel: 'Source' },
   speedtest: {
     category: 'network',
     summary: 'measure the speed of the connection',
     network: true,
     budgetMs: 120_000,
+    // It downloads megabytes, so only a line typed at the prompt may start it.
+    interactiveOnly: true,
     loadingLabel: () => 'measuring the connection…',
     examples: examples('speedtest'),
   },
@@ -181,6 +203,7 @@ const TABLE: Readonly<Record<LegacyName, StaticMeta>> = {
     summary: 'meet the developer; in a pipe, your user name',
     featured: true,
     examples: examples('whoami'),
+    linkLabel: 'LinkedIn',
     // In a pipe whoami is the Linux command again.
     prelude: async (ctx) => {
       if (ctx.stdout.isTTY) return undefined;

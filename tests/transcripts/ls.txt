@@ -4,20 +4,20 @@
 
 $ ls
 [terminal at 40 columns]
-bin          config       desktop
-documents    downloads    history.txt
-music        pictures     projects
-public       README.md    scripts
-src          templates    videos
+bin          history.txt  README.md
+config       music        scripts
+desktop      pictures     src
+documents    projects     templates
+downloads    public       videos
 ? 0
 [terminal at 80 columns]
-bin          config       desktop      documents    downloads    history.txt
-music        pictures     projects     public       README.md    scripts
-src          templates    videos
+bin          documents    music        public       src
+config       downloads    pictures     README.md    templates
+desktop      history.txt  projects     scripts      videos
 ? 0
 [terminal at 120 columns]
-bin          config       desktop      documents    downloads    history.txt  music        pictures     projects
-public       README.md    scripts      src          templates    videos
+bin          desktop      downloads    music        projects     README.md    src          videos
+config       documents    history.txt  pictures     public       scripts      templates
 ? 0
 [pipe]
 bin
@@ -38,30 +38,30 @@ videos
 ? 0
 $ ls -a
 [terminal at 40 columns]
-.              ..
-.bash_history  .bashrc
-.gitconfig     .local
-.profile       .ssh
-.vimrc         bin
-config         desktop
-documents      downloads
-history.txt    music
-pictures       projects
-public         README.md
-scripts        src
-templates      videos
+.              documents
+..             downloads
+.bash_history  history.txt
+.bashrc        music
+.gitconfig     pictures
+.local         projects
+.profile       public
+.ssh           README.md
+.vimrc         scripts
+bin            src
+config         templates
+desktop        videos
 ? 0
 [terminal at 80 columns]
-.              ..             .bash_history  .bashrc        .gitconfig
-.local         .profile       .ssh           .vimrc         bin
-config         desktop        documents      downloads      history.txt
-music          pictures       projects       public         README.md
-scripts        src            templates      videos
+.              .local         config         music          scripts
+..             .profile       desktop        pictures       src
+.bash_history  .ssh           documents      projects       templates
+.bashrc        .vimrc         downloads      public         videos
+.gitconfig     bin            history.txt    README.md
 ? 0
 [terminal at 120 columns]
-.              ..             .bash_history  .bashrc        .gitconfig     .local         .profile       .ssh
-.vimrc         bin            config         desktop        documents      downloads      history.txt    music
-pictures       projects       public         README.md      scripts        src            templates      videos
+.              .bashrc        .profile       bin            documents      music          public         src
+..             .gitconfig     .ssh           config         downloads      pictures       README.md      templates
+.bash_history  .local         .vimrc         desktop        history.txt    projects       scripts        videos
 ? 0
 [pipe]
 .
@@ -97,7 +97,7 @@ drwxr-xr-x  4 root  root  4096 Oct  6 11:00 ..
 -rw-r--r--  1 guest guest  236 Oct  6 11:00 .bashrc
 -rw-r--r--  1 guest guest  130 Oct  6 11:00 .gitconfig
 drwxr-xr-x  3 guest guest 4096 Oct  6 11:00 .local
--rw-r--r--  1 guest guest  220 Oct  6 11:00 .profile
+-rw-r--r--  1 guest guest  206 Oct  6 11:00 .profile
 drwx------  2 guest guest 4096 Oct  6 11:00 .ssh
 -rw-r--r--  1 guest guest  159 Oct  6 11:00 .vimrc
 drwxr-xr-x  2 guest guest 4096 Oct  6 11:00 bin
@@ -131,13 +131,13 @@ total 40K
 ? 0
 $ ls /
 [terminal at 40 columns]
-bin    boot   dev    etc    home
-lib    media  mnt    opt    proc
-root   sys    tmp    usr    var
+bin    etc    media  proc   tmp
+boot   home   mnt    root   usr
+dev    lib    opt    sys    var
 ? 0
 [terminal at 80 columns]
-bin    boot   dev    etc    home   lib    media  mnt    opt    proc   root
-sys    tmp    usr    var
+bin    dev    home   media  opt    root   tmp    var
+boot   etc    lib    mnt    proc   sys    usr
 ? 0
 [terminal at 120 columns]
 bin    boot   dev    etc    home   lib    media  mnt    opt    proc   root   sys    tmp    usr    var

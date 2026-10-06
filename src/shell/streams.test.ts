@@ -306,6 +306,37 @@ describe('the screen', () => {
     expect(text).toEqual(['1', '2', '3', '[output truncated]']);
   });
 
+  it('stops after the character limit too, so one endless line cannot freeze the page', async () => {
+    const text = (sink: TtySink) => sink.finish().blocks.flatMap((block) => (block.type === 'lines' ? block.lines.map(lineText) : []));
+    const long = new TtySink({ maxChars: 10 });
+    const stdout = new TtyOut(long, 'stdout', cols);
+    await stdout.write('12345\n');
+    await stdout.write('x'.repeat(4));
+    await stdout.write('y'.repeat(100));
+    await stdout.write('more\n');
+    await stdout.line('and more');
+    expect(text(long)).toEqual(['12345', '[output truncated]']);
+
+    const lines = new TtySink({ maxChars: 10 });
+    await new TtyOut(lines, 'stdout', cols).line('123456');
+    await new TtyOut(lines, 'stderr', cols).line('7890ab');
+    expect(text(lines)).toEqual(['123456', '[output truncated]']);
+  });
+
+  it('lets the browser run between many small lines and blocks too', async () => {
+    let yields = 0;
+    const sink = new TtySink({
+      yieldToHost: () => {
+        yields += 1;
+        return Promise.resolve();
+      },
+    });
+    const stdout = new TtyOut(sink, 'stdout', cols);
+    for (let i = 0; i < 2000; i += 1) await stdout.line('y'.repeat(30));
+    for (let i = 0; i < 200; i += 1) await stdout.block(out.text('z'));
+    expect(yields).toBeGreaterThanOrEqual(3);
+  });
+
   it('tells the kernel about stderr writes, for the bell', async () => {
     let rings = 0;
     const sink = new TtySink({ onStderr: () => (rings += 1) });

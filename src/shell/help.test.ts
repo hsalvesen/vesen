@@ -45,8 +45,29 @@ describe('the help index', () => {
     { name: 'ls', category: 'files', summary: 'list a folder', run: () => 0 },
   ]);
 
-  it('groups the visible commands by category, the portfolio first, each with its summary', () => {
-    const blocks = helpIndex(registry);
+  it('is short: the portfolio with summaries, then a row of names for each other category', () => {
+    expect(text(helpIndex(registry))).toBe(
+      [
+        'Portfolio',
+        'theme   change the theme',
+        'whoami  about the developer',
+        '',
+        'Files: ls',
+        'Text: head',
+        '',
+        'help --all lists every command with what it does.',
+        "Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.",
+        '',
+      ].join('\n'),
+    );
+    const rows = helpIndex(registry).flatMap((block) => (block.type === 'lines' ? block.lines : []));
+    const files = rows.find((row) => row[0]?.text === 'Files');
+    expect(files?.[2]).toMatchObject({ text: 'ls', action: { kind: 'insert', text: 'ls ' } });
+    expect(isTrustedAction(files?.[2]?.action)).toBe(true);
+  });
+
+  it('groups every visible command by category with --all, the portfolio first, each with its summary', () => {
+    const blocks = helpIndex(registry, { all: true });
     expect(text(blocks)).toBe(
       [
         'Portfolio',
@@ -65,7 +86,7 @@ describe('the help index', () => {
   });
 
   it('lays each category out as a grid wide enough for a name and its summary', () => {
-    const grids = helpIndex(registry).filter((block) => block.type === 'grid');
+    const grids = helpIndex(registry, { all: true }).filter((block) => block.type === 'grid');
     expect(grids).toHaveLength(3);
     for (const grid of grids) {
       if (grid.type !== 'grid') continue;
@@ -135,7 +156,9 @@ describe('--help panels', () => {
     };
     expect(usageLines(theme)).toEqual(['theme {ls|set}']);
     const usage = commandHelp(theme)[1];
-    expect(usage?.type === 'panel' && usage.body.map(lineText)).toContain('  ls  list the themes');
+    expect(usage?.type === 'panel' && usage.body.map(lineText)).toContain('  ls   list the themes');
+    // The summaries line up, as the options' descriptions do.
+    expect(usage?.type === 'panel' && usage.body.map(lineText)).toContain('  set  switch theme');
     expect(usageLines({ ...theme, synopsis: ['theme ls', 'theme set NAME'] })).toEqual(['theme ls', 'theme set NAME']);
   });
 

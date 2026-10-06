@@ -17,6 +17,8 @@ export default defineCommand({
   description:
     'Marks each NAME for the environment of the commands the shell runs, setting it to VALUE first when one is given. With nothing, or -p, lists the exported variables.',
   builtin: true,
+  // `export X=$Y` keeps the spaces in $Y, as bash's declaration builtins do.
+  assignmentArgs: true,
   posixArgs: true,
   flags: [
     { short: 'p', description: 'list the exported variables' },
@@ -42,9 +44,12 @@ export default defineCommand({
         status = await ctx.fail(`\`${word}': not a valid identifier`);
         continue;
       }
-      const value = equals === -1 ? env.get(name) : word.slice(equals + 1);
-      if (value === undefined) continue;
-      env.set(name, value, { export: ctx.opts.n !== true });
+      if (equals === -1) {
+        // `export X` before X has a value: a later `X=5` lands in the environment.
+        env.markExported(name, ctx.opts.n !== true);
+        continue;
+      }
+      env.set(name, word.slice(equals + 1), { export: ctx.opts.n !== true });
     }
     return status;
   },

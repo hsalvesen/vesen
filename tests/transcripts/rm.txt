@@ -36,20 +36,20 @@ $ rm /etc/passwd
 ? 1
 $ ls
 [terminal at 40 columns]
-bin          config       desktop
-documents    downloads    history.txt
-music        pictures     public
-scripts      src          templates
-videos
+bin          history.txt  src
+config       music        templates
+desktop      pictures     videos
+documents    public
+downloads    scripts
 ? 0
 [terminal at 80 columns]
-bin          config       desktop      documents    downloads    history.txt
-music        pictures     public       scripts      src          templates
-videos
+bin          documents    music        scripts      videos
+config       downloads    pictures     src
+desktop      history.txt  public       templates
 ? 0
 [terminal at 120 columns]
-bin          config       desktop      documents    downloads    history.txt  music        pictures     public
-scripts      src          templates    videos
+bin          desktop      downloads    music        public       src          videos
+config       documents    history.txt  pictures     scripts      templates
 ? 0
 [pipe]
 bin

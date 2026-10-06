@@ -8,8 +8,19 @@ import type { Block, Line } from '../output/model';
 import type { Appearance, Bell, Clipboard, Clock, KV, Net, Opener, SysInfo } from '../services/types';
 import { expandAliases } from './alias';
 import type { SimpleCommand } from './ast';
-import { Executor, Interrupted, TOP_FRAME, failureMessage, type Io, type Job, type Preflighted, type ShellFs, type TerminalInfo } from './executor';
-import { expandHistory } from './histexpand';
+import {
+  Executor,
+  Interrupted,
+  LineAborted,
+  TOP_FRAME,
+  failureMessage,
+  type Io,
+  type Job,
+  type Preflighted,
+  type ShellFs,
+  type TerminalInfo,
+} from './executor';
+import { expandHistory, type HistoryState } from './histexpand';
 import { readonly, type Readable } from './observable';
 import { parse } from './parser';
 import { promptLine } from './prompt';
@@ -159,11 +170,14 @@ export function createShell(deps: ShellDeps): Shell {
     opener: deps.opener,
     clipboard: deps.clipboard,
     bell: deps.bell,
+    yieldToHost: deps.yieldToHost,
   });
   const renderPrompt = (): Line =>
     promptLine({ cwd: session.currentDir, status: session.status, columns: terminal.size().cols, home: session.user.home });
 
   let pending: (Preflighted & { readonly line: string }) | null = null;
+  /** The last :s replacement, for !!:& on a later line. */
+  const historyState: HistoryState = {};
   /** Set by `exit`: the next line starts a new login session before it runs. */
   let ended = false;
 
@@ -177,7 +191,7 @@ export function createShell(deps: ShellDeps): Shell {
     if (fresh) await executor.login(job);
     let text = line;
     if (origin !== 'boot') {
-      const history = expandHistory(line, session.history);
+      const history = expandHistory(line, session.history, historyState);
       if (history.ok !== true) {
         await io.stderr.line({ text: `vesen: ${history.error}`, style: { fg: 'error' } });
         return EXIT.error;
@@ -188,6 +202,8 @@ export function createShell(deps: ShellDeps): Shell {
         await io.stdout.line(text);
       }
       session.history.add(text);
+      // `!rm:p` only shows the line, so it can be checked before it is run.
+      if (history.printOnly === true) return EXIT.ok;
     }
     const parsed = parse(expandAliases(text, session.aliases).line);
     if (parsed.ok !== true) {
@@ -195,7 +211,13 @@ export function createShell(deps: ShellDeps): Shell {
       job.bell();
       return EXIT.usage;
     }
-    return executor.runList(parsed.ast, job, io, TOP_FRAME);
+    try {
+      return await executor.runList(parsed.ast, job, io, TOP_FRAME);
+    } catch (error) {
+      // An expansion error was said and abandoned the rest of the line.
+      if (error instanceof LineAborted) return EXIT.error;
+      throw error;
+    }
   }
 
   function start(line: string, origin: JobOrigin = 'keyboard'): JobHandle {
@@ -272,6 +294,8 @@ export function createShell(deps: ShellDeps): Shell {
       const caret: Line = [{ text: '^C' }];
       const shown: readonly Block[] = interrupted ? [...blocks, { type: 'lines', lines: [caret], stream: 'stdout' }] : blocks;
       session.setStatus(status);
+      // After `exit`, the live prompt is already the next session's: home, and a clean $.
+      if (ended) session.reset();
       session.jobs.end(id);
       const result: JobResult = { status, interrupted, blocks: shown, screen };
       deps.screen?.commit({ ...result, id, line, origin, prompt, startedAt, endedAt: deps.clock.now() });
@@ -290,8 +314,8 @@ export function createShell(deps: ShellDeps): Shell {
   function preflight(line: string): PreflightResult | null {
     pending = null;
     try {
-      const history = expandHistory(line, session.history);
-      if (history.ok !== true) return null;
+      const history = expandHistory(line, session.history, { ...historyState });
+      if (history.ok !== true || history.printOnly === true) return null;
       const parsed = parse(expandAliases(history.line, session.aliases).line);
       if (parsed.ok !== true || parsed.ast.items.length !== 1) return null;
       const node = parsed.ast.items[0]?.node;
@@ -355,7 +379,7 @@ export function createShell(deps: ShellDeps): Shell {
         work.catch(() => {});
         return await Promise.race([work, whenAborted(controller.signal).then(() => EXIT.interrupted)]);
       } catch (error) {
-        // An `exit` in a file read at boot ends only the reading of it.
+        // An `exit` in a file read at boot ends only the reading of it, as an expansion error does.
         if (error instanceof ExitRequest) return error.status;
         return EXIT.error;
       } finally {

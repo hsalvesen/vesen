@@ -9,7 +9,7 @@ import { createFmt } from '../../shell/fmt';
 import { defineCommand, type CommandContext, type EnumValue } from '../../shell/types';
 import { basename, dirname, join } from '../../vfs/path';
 import type { Stat } from '../../vfs/types';
-import { childPath, reason, tryStat } from '../lib/files';
+import { childPath, errorCode, reason, suggestRestore, tryStat } from '../lib/files';
 import { DEVICE_NUMBERS, classifySuffix, colourFor, humanSize, kibBlocks, lsDate, modeString, quoteName } from '../lib/listing';
 
 const COLOR_WHEN: readonly EnumValue[] = [
@@ -175,7 +175,8 @@ async function listing(ctx: CommandContext, entries: readonly Entry[], options: 
       const text = parts.map((part) => part.text).join('');
       return first === undefined ? out.span(text) : out.span(text, first.style);
     });
-    await ctx.stdout.block(out.grid(items));
+    // Down each column, then across, as ls -C on a terminal.
+    await ctx.stdout.block(out.grid(items, undefined, undefined, 'columns'));
     return;
   }
   if (!tty && options.columns) {
@@ -195,6 +196,8 @@ function entryAt(ctx: CommandContext, name: string, path: string, stat: Stat): E
 export default defineCommand({
   name: 'ls',
   category: 'files',
+  // A usage error exits 2, as GNU ls does.
+  usageStatus: 2,
   summary: 'list directory contents',
   synopsis: ['ls [OPTION]... [FILE]...'],
   description:
@@ -325,6 +328,7 @@ export default defineCommand({
         stat = ctx.fs.lstat(path);
       } catch (error) {
         await ctx.fail(`cannot access '${typed}': ${reason(error)}`);
+        if (errorCode(error) === 'ENOENT') await suggestRestore(ctx, typed);
         status = 2;
         continue;
       }

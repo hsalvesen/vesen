@@ -24,6 +24,7 @@ import { screen } from '../stores/screen';
 import { columns } from '../stores/term';
 import { DEFAULT_THEME_NAME, persistTheme, theme, themes } from '../stores/theme';
 import { markCurrentThemeName } from '../ui/legacy-highlights';
+import { loadRichBlock } from '../ui/rich-block';
 import { playBeep } from '../utils/beep';
 import { notice } from '../utils/notice';
 import { GUEST } from '../vfs/identity';
@@ -124,6 +125,7 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
   const services = {
     banner,
     storage: storage.local,
+    sessionStorage: storage.session,
     bell: createBell({ play: playBeep }),
     opener: createOpener(win, { inApp: inAppBrowser(win.navigator.userAgent), touch: coarsePointer(win) }),
     terminal: terminalInfo(win),
@@ -132,6 +134,10 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
   let stopped = false;
   const shell = lazyShell(
     async () => {
+      // What the first help or ls draws with comes down beside the kernel, rather than after the
+      // line has run: the help text and the layout-block renderer.
+      void import('../shell/help').catch(() => {});
+      void loadRichBlock().catch(() => {});
       const [{ createAppShell }, { createNet }, { createClock }, parts] = await Promise.all([
         import('./shell'),
         import('../services/net'),
@@ -156,6 +162,8 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
       else stops.push(stop);
       // ~/.bashrc first, so a line typed while the chunk loaded already has ll and la.
       await app.boot();
+      // Then, once the page is idle, the commands that load lazily, so none waits on first use.
+      idle(win, () => void app.prefetch());
       return app.shell;
     },
     {
@@ -185,6 +193,13 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
       for (const stop of stops) stop();
     },
   };
+}
+
+/** Runs `work` when the browser is idle, or after a second where it cannot say. */
+function idle(win: Window, work: () => void): void {
+  const request = (win as Window & { requestIdleCallback?: (run: () => void, options?: { timeout: number }) => number }).requestIdleCallback;
+  if (typeof request === 'function') request.call(win, work, { timeout: 3000 });
+  else win.setTimeout(work, 1000);
 }
 
 /** Keeps the columns store at the transcript's width, measured at most once a frame. */

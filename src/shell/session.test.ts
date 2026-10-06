@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createStorage } from '../services/storage';
-import { JobControl, Session, ShellEnv, createHistory, defaultEnv, isVariableName } from './session';
+import { STORAGE_LIMITS } from '../services/storage-keys';
+import { JobControl, Session, ShellEnv, createHistory, defaultEnv, isVariableName, savedHistoryLines } from './session';
 import { GUEST } from './types';
 
 function memoryStorage(seed: Record<string, string> = {}) {
@@ -59,14 +60,15 @@ describe('ShellEnv', () => {
       USER: 'guest',
       HOSTNAME: 'vesen',
       PWD: '/home/guest',
-      OLDPWD: '/home/guest',
       SHELL: '/bin/vesh',
       TERM: 'xterm-256color',
       COLUMNS: '46',
       LINES: '30',
       PS1: '\\u@\\h:\\w\\$ ',
-      PATH: '/home/guest/bin:/usr/local/bin:/usr/bin:/bin',
+      PATH: '/usr/local/bin:/usr/bin:/bin',
     });
+    // As in bash, OLDPWD is unset until the first cd, so `cd -` says so.
+    expect(env.get('OLDPWD')).toBeUndefined();
     expect(env.isExported('HOME')).toBe(true);
     expect(env.isExported('PS1')).toBe(false);
     expect(isVariableName('A_1')).toBe(true);
@@ -135,6 +137,38 @@ describe('history', () => {
     }
   });
 
+  it('saves no line too long to keep, and only the newest lines that fit', () => {
+    const long = 'x'.repeat(STORAGE_LIMITS.historyLineChars + 1);
+    expect(savedHistoryLines(['a', long, 'b'])).toEqual(['a', 'b']);
+    const line = 'y'.repeat(1000);
+    const many = Array.from({ length: 400 }, (_, i) => `${i} ${line}`);
+    const saved = savedHistoryLines(many);
+    expect(saved.join('\n').length).toBeLessThanOrEqual(STORAGE_LIMITS.historyChars);
+    expect(saved[saved.length - 1]).toBe(many[many.length - 1]);
+
+    const { storage, data } = memoryStorage();
+    const history = createHistory({ storage: storage.local });
+    history.add('echo kept');
+    history.add(long);
+    // The long line stays for this session, and is not saved.
+    expect(history.list().map((entry) => entry.line)).toEqual(['echo kept', long]);
+    expect(JSON.parse(data.get('vesen:history:v1') ?? '{}').lines).toEqual(['echo kept']);
+  });
+
+  it('adds to what another tab saved rather than replacing it', () => {
+    const { storage, data } = memoryStorage();
+    const a = createHistory({ storage: storage.local });
+    const b = createHistory({ storage: storage.local });
+    a.add('from a');
+    b.add('from b');
+    a.add('again a');
+    expect(JSON.parse(data.get('vesen:history:v1') ?? '{}').lines).toEqual(['from a', 'from b', 'again a']);
+    expect(createHistory({ storage: storage.local }).list().map((entry) => entry.line)).toEqual(['from a', 'from b', 'again a']);
+    // history -c in one tab clears what is saved.
+    b.clear();
+    expect(JSON.parse(data.get('vesen:history:v1') ?? '{}').lines).toEqual([]);
+  });
+
   it('is a store the UI can subscribe to', () => {
     const history = createHistory();
     const seen: number[] = [];
@@ -180,6 +214,39 @@ describe('JobControl', () => {
 });
 
 describe('Session', () => {
+  it('forks a subshell: its own variables, aliases, options, folder, status and history', () => {
+    const session = new Session();
+    session.env.set('A', '1');
+    session.aliases.set('ll', 'ls -la');
+    session.history.add('echo one');
+    const fork = session.fork();
+    fork.env.set('A', '2');
+    fork.env.set('B', '3');
+    fork.aliases.set('q', 'echo q');
+    fork.options.noclobber = true;
+    fork.moveTo('/tmp');
+    fork.setStatus(4);
+    fork.history.clear();
+    fork.reset();
+    expect(session.env.get('A')).toBe('1');
+    expect(session.env.get('B')).toBeUndefined();
+    expect([...session.aliases.keys()]).toEqual(['ll']);
+    expect(session.options.noclobber).toBe(false);
+    expect(session.currentDir).toBe(GUEST.home);
+    expect(session.status).toBe(0);
+    expect(session.history.list().map((entry) => entry.line)).toEqual(['echo one']);
+
+    // A new program's: the exported variables only, no aliases, the default options.
+    session.env.set('E', 'x', { export: true });
+    session.options.noclobber = true;
+    const program = session.fork({ process: true, env: { P: 'y' } });
+    expect(program.env.get('A')).toBeUndefined();
+    expect(program.env.get('E')).toBe('x');
+    expect(program.env.get('P')).toBe('y');
+    expect(program.aliases.size).toBe(0);
+    expect(program.options.noclobber).toBe(false);
+  });
+
   it('starts at home, follows moves with PWD and OLDPWD, and resets', () => {
     const session = new Session({ size: () => ({ cols: 50, rows: 20 }) });
     expect(session.currentDir).toBe(GUEST.home);

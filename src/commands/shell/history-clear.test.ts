@@ -20,8 +20,8 @@ describe('history', () => {
     for (const line of ['echo a', 'echo b', 'echo c']) await s.run(line);
     expect((await s.run('history 2')).stdoutPlain).toBe('    3  echo c\n    4  history 2');
     expect((await s.run('history 0')).stdoutPlain).toBe('');
-    expect(await s.run('history abc')).toMatchObject({ status: 1, stderrPlain: 'history: abc: numeric argument required' });
-    expect(await s.run('history 1 2')).toMatchObject({ status: 1, stderrPlain: 'history: too many arguments' });
+    expect(await s.run('history abc')).toMatchObject({ status: 1, stderrPlain: 'vesen: history: abc: numeric argument required' });
+    expect(await s.run('history 1 2')).toMatchObject({ status: 1, stderrPlain: 'vesen: history: too many arguments' });
     s.stop();
   });
 
@@ -32,7 +32,7 @@ describe('history', () => {
     expect((await s.run('history')).stdoutPlain).toBe('    1  echo b\n    2  echo c\n    3  history -d 1\n    4  history');
     await s.run('history -d -2');
     expect(s.app.shell.history.list().map((entry) => entry.line)).toEqual(['echo b', 'echo c', 'history -d 1', 'history -d -2']);
-    expect(await s.run('history -d 99')).toMatchObject({ status: 1, stderrPlain: 'history: 99: history position out of range' });
+    expect(await s.run('history -d 99')).toMatchObject({ status: 1, stderrPlain: 'vesen: history: 99: history position out of range' });
     expect(await s.run('history -d x')).toMatchObject({ status: 2 });
     s.stop();
   });

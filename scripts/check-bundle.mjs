@@ -36,6 +36,25 @@ export function initialChunks(html) {
   return { entry, preloads };
 }
 
+/**
+ * The kernel's budget in kB gzip: the lazy `shell-*.js` chunk and the chunks it imports that the
+ * page has not already loaded. Every line waits for it, so its growth is reported and capped.
+ */
+export const KERNEL_BUDGET_KB = 75;
+
+/**
+ * The chunks a chunk imports statically, by file name: `import{a}from"./x.js"`.
+ * @param {string} code
+ * @returns {string[]}
+ */
+export function staticImports(code) {
+  const found = new Set();
+  for (const match of code.matchAll(/\bimport\s*(?:[\w$*{}\s,]*?\s*from\s*)?["']\.\/([^"']+\.js)["']/g)) {
+    if (match[1]) found.add(match[1]);
+  }
+  return [...found];
+}
+
 /** @param {number} bytes */
 const kb = (bytes) => (bytes / 1000).toFixed(2).padStart(8);
 
@@ -80,6 +99,30 @@ function main() {
     process.exit(1);
   }
   console.log(`\ncheck-bundle: ok: ${verdict}`);
+
+  // The kernel: what the first command waits for once the page is up.
+  const kernel = chunks.find((chunk) => /^shell-[\w-]+\.js$/.test(chunk.name));
+  if (kernel === undefined) {
+    console.error('check-bundle: no shell-*.js kernel chunk found.');
+    process.exit(1);
+  }
+  const parts = new Set([kernel.name]);
+  const queue = [kernel.name];
+  while (queue.length > 0) {
+    const name = queue.shift() ?? '';
+    for (const imported of staticImports(readFileSync(join(ASSETS, name), 'utf8'))) {
+      if (initial.has(imported) || parts.has(imported)) continue;
+      parts.add(imported);
+      queue.push(imported);
+    }
+  }
+  const kernelGzip = chunks.filter((chunk) => parts.has(chunk.name)).reduce((sum, chunk) => sum + chunk.gzip, 0);
+  const kernelVerdict = `kernel ${kb(kernelGzip).trim()} kB gzip in ${[...parts].join(' + ')} (budget ${KERNEL_BUDGET_KB} kB)`;
+  if (kernelGzip > KERNEL_BUDGET_KB * 1000) {
+    console.error(`check-bundle: over budget: ${kernelVerdict}`);
+    process.exit(1);
+  }
+  console.log(`check-bundle: ok: ${kernelVerdict}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

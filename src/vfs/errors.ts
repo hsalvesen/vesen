@@ -13,6 +13,7 @@ const STRERROR: Readonly<Record<VfsCode, string>> = {
   ELOOP: 'Too many levels of symbolic links',
   EINVAL: 'Invalid argument',
   ENOSPC: 'No space left on device',
+  ENAMETOOLONG: 'File name too long',
 };
 
 /** The C library's message for an error code: ENOENT → "No such file or directory". */

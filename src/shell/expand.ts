@@ -1,9 +1,11 @@
-// Word expansion, in bash's order: tilde, parameters, command substitution and arithmetic (left
-// to right), then field splitting of unquoted expansions on IFS, then pathname expansion, then
-// quote removal (the lexer has already separated quoted from unquoted text, so quote removal is
-// simply joining the parts).
+// Word expansion, in bash's order: braces, then tilde, parameters, command substitution and
+// arithmetic (left to right), then field splitting of unquoted expansions on IFS, then pathname
+// expansion, then quote removal (the lexer has already separated quoted from unquoted text, so
+// quote removal is simply joining the parts).
 //
 // Supported:
+// - braces: a{b,c}d, nested {a,{b,c}}, and sequences {1..5} {01..10} {a..e} {1..10..2}, in
+//   unquoted text only; '{}', a lone '{' and ${…} are left alone, as in bash
 // - tilde: ~ ~/x ~user (through an injected lookup, for ~guest and ~has), ~+ ($PWD), ~- ($OLDPWD)
 // - parameters: $X ${X} ${X:-word} ${X-word} ${X:=word} ${X:+word} ${#X}, and the specials
 //   $? $$ $# $0 $1… $@ $* $RANDOM $PWD; other ${…} forms fail as unsupported or a bad substitution
@@ -14,7 +16,7 @@
 // Everything that can fail throws ExpandError with bash's wording, without the `vesen: ` prefix.
 
 import { ArithError, evaluateArith } from './arith';
-import { escapeGlob, hasGlob, type GlobMatcher } from './glob';
+import { escapeGlob, GlobTooLarge, hasGlob, type GlobMatcher } from './glob';
 import type { WordPart } from './lexer-types';
 import { lexText } from './lexer';
 
@@ -24,6 +26,17 @@ export class ExpandError extends Error {
     this.name = 'ExpandError';
   }
 }
+
+/** A redirection target that came out as more or fewer than one word; it fails only its command. */
+export class AmbiguousRedirect extends ExpandError {
+  constructor(raw: string) {
+    super(`${raw}: ambiguous redirect`);
+    this.name = 'AmbiguousRedirect';
+  }
+}
+
+/** The most words one command's expansion (braces and globs) may produce. */
+export const MAX_WORDS = 100_000;
 
 /** What a command substitution produced. */
 export interface SubstResult {
@@ -172,13 +185,18 @@ export class Expander {
     return this.lastSubstStatus;
   }
 
-  /** Expands command words into fields: split, globbed, quotes removed. */
+  /** Expands command words into fields: braces, then split, globbed, quotes removed. */
   async fields(words: readonly Expandable[]): Promise<string[]> {
     const result: string[] = [];
     for (const word of words) {
-      const fields = new Fields(this.ifs(), true);
-      await this.parts(word.parts, fields, false);
-      for (const chunks of fields.finish()) result.push(...this.pathnames(chunks));
+      for (const parts of expandBraces(word.parts)) {
+        const fields = new Fields(this.ifs(), true);
+        await this.parts(parts, fields, false);
+        for (const chunks of fields.finish()) {
+          for (const path of this.pathnames(chunks)) result.push(path);
+        }
+        if (result.length > MAX_WORDS) throw new ExpandError('argument list too long');
+      }
     }
     return result;
   }
@@ -197,7 +215,7 @@ export class Expander {
   async target(word: Expandable & { readonly raw: string }): Promise<string> {
     const fields = await this.fields([word]);
     const only = fields[0];
-    if (fields.length !== 1 || only === undefined) throw new ExpandError(`${word.raw}: ambiguous redirect`);
+    if (fields.length !== 1 || only === undefined) throw new AmbiguousRedirect(word.raw);
     return only;
   }
 
@@ -373,7 +391,143 @@ export class Expander {
     if (matcher === undefined || this.o.noglob === true) return [text];
     const pattern = chunks.map((c) => (c.active ? c.text : escapeGlob(c.text))).join('');
     if (!hasGlob(pattern)) return [text];
-    const matches = matcher(pattern);
+    let matches: readonly string[];
+    try {
+      matches = matcher(pattern);
+    } catch (error) {
+      if (error instanceof GlobTooLarge) throw new ExpandError('argument list too long');
+      throw error;
+    }
     return matches.length > 0 ? [...matches] : [text];
   }
+}
+
+// ── Braces ─────────────────────────────────────────────────────────────────────────────────
+
+/** One unquoted character, or a part brace expansion leaves whole (quoted text, $X, $( )). */
+type BraceAtom = { readonly c: string } | { readonly part: WordPart };
+
+/** The most words one brace expression may make; {1..1000000} is refused rather than built. */
+export const MAX_BRACE_WORDS = 10_000;
+
+const isChar = (atom: BraceAtom | undefined, c: string): boolean => atom !== undefined && 'c' in atom && atom.c === c;
+
+/** The text of atoms that are all unquoted characters, or null. */
+function plainText(atoms: readonly BraceAtom[]): string | null {
+  let text = '';
+  for (const atom of atoms) {
+    if (!('c' in atom)) return null;
+    text += atom.c;
+  }
+  return text;
+}
+
+const chars = (text: string): BraceAtom[] => Array.from(text, (c) => ({ c }));
+
+/** The words of a sequence expression {x..y[..step]}, or null when the text is not one. */
+function sequence(inner: readonly BraceAtom[]): string[] | null {
+  const text = plainText(inner);
+  if (text === null) return null;
+  const numeric = /^([+-]?\d+)\.\.([+-]?\d+)(?:\.\.([+-]?\d+))?$/.exec(text);
+  const letters = /^([A-Za-z])\.\.([A-Za-z])(?:\.\.([+-]?\d+))?$/.exec(text);
+  const match = numeric ?? letters;
+  if (match === null) return null;
+  const [, a = '', b = '', stepText] = match;
+  const step = Math.abs(stepText === undefined ? 1 : Number(stepText)) || 1;
+  const from = numeric ? Number(a) : a.charCodeAt(0);
+  const to = numeric ? Number(b) : b.charCodeAt(0);
+  if (!Number.isSafeInteger(from) || !Number.isSafeInteger(to)) return null;
+  const count = Math.floor(Math.abs(to - from) / step) + 1;
+  if (count > MAX_BRACE_WORDS) throw new ExpandError(`{${text}}: brace expansion makes too many words`);
+  // {01..10} pads to the wider end, as bash does when either end has a leading zero.
+  const padded = numeric !== null && (/^[+-]?0\d/.test(a) || /^[+-]?0\d/.test(b));
+  const width = padded ? Math.max(a.replace(/^[+-]/, '').length, b.replace(/^[+-]/, '').length) : 0;
+  const words: string[] = [];
+  const direction = to >= from ? 1 : -1;
+  for (let k = 0, n = from; k < count; k += 1, n += direction * step) {
+    if (!numeric) words.push(String.fromCharCode(n));
+    else words.push(n < 0 ? `-${String(-n).padStart(width, '0')}` : String(n).padStart(width, '0'));
+  }
+  return words;
+}
+
+/** Brace expansion over atoms: the first brace expression, then whatever follows it, recursively. */
+function braceAtoms(atoms: readonly BraceAtom[], budget: { left: number; expanded: boolean }): BraceAtom[][] {
+  for (let i = 0; i < atoms.length; i += 1) {
+    if (!isChar(atoms[i], '{')) continue;
+    // `${` never reaches here (the lexer reads it as a parameter); a quoted brace is a part.
+    let depth = 0;
+    let close = -1;
+    const commas: number[] = [];
+    for (let j = i + 1; j < atoms.length; j += 1) {
+      if (isChar(atoms[j], '{')) depth += 1;
+      else if (isChar(atoms[j], '}')) {
+        if (depth === 0) {
+          close = j;
+          break;
+        }
+        depth -= 1;
+      } else if (isChar(atoms[j], ',') && depth === 0) commas.push(j);
+    }
+    if (close === -1) continue;
+    let alternatives: BraceAtom[][];
+    if (commas.length > 0) {
+      alternatives = [];
+      let from = i + 1;
+      for (const comma of [...commas, close]) {
+        alternatives.push(atoms.slice(from, comma));
+        from = comma + 1;
+      }
+    } else {
+      const words = sequence(atoms.slice(i + 1, close));
+      if (words === null) continue;
+      alternatives = words.map(chars);
+    }
+    budget.expanded = true;
+    const before = atoms.slice(0, i);
+    const after = braceAtoms(atoms.slice(close + 1), budget);
+    const results: BraceAtom[][] = [];
+    for (const alternative of alternatives) {
+      for (const middle of braceAtoms(alternative, budget)) {
+        for (const rest of after) {
+          budget.left -= 1;
+          if (budget.left < 0) throw new ExpandError('brace expansion makes too many words');
+          results.push([...before, ...middle, ...rest]);
+        }
+      }
+    }
+    return results;
+  }
+  return [atoms.slice()];
+}
+
+/**
+ * Brace expansion of one word's parts: one list of parts per word it makes, in order. Only
+ * unquoted literal text takes part; everything else is carried along whole.
+ */
+export function expandBraces(parts: readonly WordPart[]): (readonly WordPart[])[] {
+  if (!parts.some((part) => part.kind === 'lit' && part.q === 0 && part.text.includes('{'))) return [parts];
+  const atoms: BraceAtom[] = [];
+  for (const part of parts) {
+    if (part.kind === 'lit' && part.q === 0) atoms.push(...chars(part.text));
+    else atoms.push({ part });
+  }
+  const budget = { left: MAX_BRACE_WORDS, expanded: false };
+  const words = braceAtoms(atoms, budget);
+  if (!budget.expanded) return [parts];
+  return words.map((word) => {
+    const out: WordPart[] = [];
+    let text = '';
+    for (const atom of word) {
+      if ('c' in atom) {
+        text += atom.c;
+        continue;
+      }
+      if (text !== '') out.push({ kind: 'lit', text, q: 0 });
+      text = '';
+      out.push(atom.part);
+    }
+    if (text !== '') out.push({ kind: 'lit', text, q: 0 });
+    return out;
+  });
 }
