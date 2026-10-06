@@ -124,10 +124,11 @@ See also: pwd, ls
 ? 0
 $ help keys
 Enter        run the line
-Tab          complete a command, file or theme name
+Tab          complete; again to list the choices, again to step through them
+Shift+Tab    step back through the choices
 ↑ ↓          step through the command history
 Ctrl+C       stop the running command; with text selected, copy it
-Escape       stop the running command
+Escape       stop the running command; in the choices, put back what you typed
 Ctrl+L       clear the screen
 Escape, Tab  leave the terminal for the rest of the page
 

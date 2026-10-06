@@ -438,11 +438,12 @@ test.describe('focus', { tag: '@smoke' }, () => {
     await page.clock.install();
     await page.goto('/');
     await expect(prompt(page)).toBeFocused();
+    await expect(page.locator('[data-completion="ready"]')).toHaveCount(1);
 
     // Tab alone completes, and keeps focus in the prompt.
     await page.keyboard.type('he');
     await page.keyboard.press('Tab');
-    await expect(prompt(page)).toHaveValue('help');
+    await expect(prompt(page)).toHaveValue('help ');
     await expect(prompt(page)).toBeFocused();
 
     // Tab leaves within a second of Escape. The clock stands still between the two presses, so a

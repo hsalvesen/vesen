@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { JobResult, ScreenCommit, ShellPort } from '../shell/index';
-import { writable } from '../shell/observable';
+import type { Completion, JobResult, ScreenCommit, ShellPort } from '../shell/index';
+import { writable, type Writable } from '../shell/observable';
 import type { JobInfo } from '../shell/types';
 import { lazyShell } from './lazy-shell';
 
@@ -32,6 +32,7 @@ function fakeShell() {
     run: (line) => shell.start(line).done,
     abort: () => false,
     remember: (line) => remembered.push(line),
+    completion: writable<Completion | null>(null),
     renderPrompt: () => [{ text: 'from the shell' }],
   };
   return { shell, started, aborted, remembered };
@@ -48,6 +49,18 @@ function deferred<T>() {
 }
 
 describe('lazyShell', () => {
+  it('has no completion until the kernel arrives, then forwards the kernel’s', async () => {
+    const fake = fakeShell();
+    const loading = deferred<ShellPort>();
+    const lazy = lazyShell(() => loading.promise);
+    expect(lazy.completion.get()).toBeNull();
+    const engine = { engine: {}, env: {} } as unknown as Completion;
+    (fake.shell.completion as Writable<Completion | null>).set(engine);
+    loading.resolve(fake.shell);
+    await lazy.ready;
+    expect(lazy.completion.get()).toBe(engine);
+  });
+
   it('runs a line typed before the kernel arrives as soon as it does', async () => {
     const fake = fakeShell();
     const loading = deferred<ShellPort>();

@@ -8,6 +8,8 @@ import type { Block, Line } from '../output/model';
 import type { Appearance, Bell, Clipboard, Clock, KV, Net, Opener, SysInfo } from '../services/types';
 import { expandAliases } from './alias';
 import type { SimpleCommand } from './ast';
+import { createCompletionEnv } from './complete/env';
+import type { Completion, CompletionEnv } from './complete/types';
 import {
   Executor,
   Interrupted,
@@ -21,13 +23,14 @@ import {
   type TerminalInfo,
 } from './executor';
 import { expandHistory, type HistoryState } from './histexpand';
-import { readonly, type Readable } from './observable';
+import { readonly, writable, type Readable } from './observable';
 import { parse } from './parser';
 import { promptLine } from './prompt';
 import { Session, type HistoryStore, type JobState } from './session';
 import { JobDetached, NullOut, StringIn, TtyIn, TtyOut, TtySink, vfsWriteTarget, type ScreenAction, type WriteTarget } from './streams';
 import { EXIT, ExitRequest, type CommandSpec, type Env, type ExitCode, type JobInfo, type Registry, type User } from './types';
 
+export type { Completion, CompletionEnv } from './complete/types';
 export type { ShellFs, TerminalInfo } from './executor';
 export type { ScreenAction, WriteTarget } from './streams';
 
@@ -100,6 +103,11 @@ export interface ShellPort {
   remember(line: string): void;
   /** The prompt as it looks now, for a line the UI records itself (an empty line, ^C). */
   renderPrompt(): Line;
+  /**
+   * Tab completion, the ghost and the chips: the engine bound to this session. Null until the
+   * engine's chunk has loaded, which the first subscriber starts.
+   */
+  readonly completion: Readable<Completion | null>;
 }
 
 export interface Shell extends ShellPort {
@@ -107,6 +115,8 @@ export interface Shell extends ShellPort {
   readonly env: Env;
   readonly history: HistoryStore;
   readonly aliases: Map<string, string>;
+  /** What completion reads from this session: commands, files, variables, aliases and history. */
+  readonly completionEnv: CompletionEnv;
   /** `reset` without a job: variables, files, history and the theme, as a new session has them. */
   reset(options?: { files?: boolean }): void;
   /**
@@ -143,6 +153,30 @@ export const SOURCE_TIMEOUT_MS = 2000;
 
 const DEFAULT_TERMINAL: TerminalInfo = { size: () => ({ cols: 80, rows: 24 }), touch: false, inApp: null };
 
+/** A store that loads the completion engine's chunk when it is first subscribed to. */
+function lazyCompletion(env: CompletionEnv): Readable<Completion | null> {
+  const store = writable<Completion | null>(null);
+  let loading = false;
+  const load = (): void => {
+    if (loading) return;
+    loading = true;
+    import('./complete/index').then(
+      ({ engine }) => store.set({ engine, env }),
+      () => {
+        // Offline, say: the next subscriber tries again.
+        loading = false;
+      },
+    );
+  };
+  return {
+    subscribe(run) {
+      load();
+      return store.subscribe(run);
+    },
+    get: () => store.get(),
+  };
+}
+
 /** The text of a word made only of literal parts and `~`, or null if it needs expanding. */
 function literalWord(parts: SimpleCommand['words'][number]['parts'], home: string): string | null {
   let text = '';
@@ -174,6 +208,16 @@ export function createShell(deps: ShellDeps): Shell {
   });
   const renderPrompt = (): Line =>
     promptLine({ cwd: session.currentDir, status: session.status, columns: terminal.size().cols, home: session.user.home });
+  const completionEnv = createCompletionEnv({
+    registry: deps.registry,
+    fs: deps.fs,
+    cwd: () => session.currentDir,
+    home: () => session.home,
+    vars: () => session.env.entries(),
+    aliases: () => session.aliases,
+    history: () => session.history.list().map((entry) => entry.line),
+    appearance: deps.appearance,
+  });
 
   let pending: (Preflighted & { readonly line: string }) | null = null;
   /** The last :s replacement, for !!:& on a later line. */
@@ -350,6 +394,8 @@ export function createShell(deps: ShellDeps): Shell {
     env: session.env,
     history: session.history,
     aliases: session.aliases,
+    completionEnv,
+    completion: lazyCompletion(completionEnv),
     preflight,
     start,
     run: (line, origin) => start(line, origin).done,

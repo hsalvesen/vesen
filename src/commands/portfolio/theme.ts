@@ -67,7 +67,7 @@ export default defineCommand({
   },
   args: [{ ...NAME, optional: true }],
   examples: [
-    { line: 'theme ls', note: 'every theme, with its colours', offline: true, starter: 6 },
+    { line: 'theme ls', note: 'every theme, with its colours', offline: true, starter: 5 },
     { line: 'theme set cockatoo', note: 'the light one', offline: true },
     { line: 'theme swamphen', note: 'the default, without set', offline: true },
   ],

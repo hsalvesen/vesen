@@ -151,3 +151,124 @@ describe('App', () => {
     await vi.waitFor(() => expect(dollar()).toContain('--role-error'));
   });
 });
+
+describe('Tab completion and the completion row', () => {
+  const promptBox = () => screen.getByRole('textbox', { name: 'Terminal command' }) as HTMLInputElement;
+  const press = async (key: string, init: KeyboardEventInit = {}) => fireEvent.keyDown(promptBox(), { key, ...init });
+  const type = async (value: string) => {
+    await fireEvent.input(promptBox(), { target: { value } });
+    promptBox().setSelectionRange(value.length, value.length);
+  };
+
+  /** Renders the app and waits for the engine's chunk. */
+  async function ready() {
+    const view = renderApp();
+    await vi.waitFor(() => expect(view.container.querySelector('[data-completion="ready"]')).not.toBeNull());
+    return view;
+  }
+
+  it("completes 'cat doc', then 'li', to cat documents/linux.txt", async () => {
+    await ready();
+    await type('cat doc');
+    await press('Tab');
+    expect(promptBox().value).toBe('cat documents/');
+    await type('cat documents/li');
+    await press('Tab');
+    expect(promptBox().value).toBe('cat documents/linux.txt ');
+    expect(promptBox().selectionStart).toBe(24);
+  });
+
+  it('extends, lists on the second Tab, cycles on the next, and Escape puts back what was typed', async () => {
+    await ready();
+    await type('ca');
+    await press('Tab');
+    expect(promptBox().value).toBe('cat');
+    await press('Tab');
+    await settle();
+    expect(screen.getByRole('listbox', { name: 'Completions' })).toBeInTheDocument();
+    expect(screen.getAllByRole('option').map((o) => o.textContent?.startsWith('cath') ? 'cathode' : 'cat')).toEqual(['cat', 'cathode']);
+
+    await press('Tab');
+    await settle();
+    expect(promptBox().value).toBe('cat');
+    expect(screen.getAllByRole('option')[0]?.getAttribute('aria-selected')).toBe('true');
+    expect(promptBox().getAttribute('aria-activedescendant')).toBe('completion-list-0');
+    await press('Tab');
+    await settle();
+    expect(promptBox().value).toBe('cathode');
+    await press('Tab', { shiftKey: true });
+    await settle();
+    expect(promptBox().value).toBe('cat');
+
+    const escape = await press('Escape');
+    await settle();
+    expect(escape).toBe(false);
+    expect(promptBox().value).toBe('cat');
+    expect(screen.queryByRole('listbox', { name: 'Completions' })).toBeNull();
+  });
+
+  it('Enter in the menu takes the choice without running it', async () => {
+    await ready();
+    await type('theme set k');
+    await press('Tab');
+    await press('Tab');
+    await press('Tab');
+    await settle();
+    expect(promptBox().value).toBe('theme set kookaburra');
+    await press('Enter');
+    await settle();
+    expect(promptBox().value).toBe('theme set kookaburra ');
+    expect(transcript.entries()).toEqual([]);
+  });
+
+  it('shows chips while typing; a click puts the choice on the line as Tab would and keeps focus', async () => {
+    await ready();
+    promptBox().focus();
+    await type('theme set k');
+    await settle();
+    const options = screen.getAllByRole('option');
+    expect(options.map((o) => o.textContent)).toEqual(['kangaroo', 'kookaburra']);
+    expect(options[1]?.querySelector('.swatch')).not.toBeNull();
+    expect(await fireEvent.mouseDown(options[1] as HTMLElement)).toBe(false);
+    await fireEvent.click(options[1] as HTMLElement);
+    await settle();
+    expect(promptBox().value).toBe('theme set kookaburra ');
+    expect(document.activeElement).toBe(promptBox());
+  });
+
+  it("rings the visual bell and says 'No completions' when nothing completes", async () => {
+    const { container } = await ready();
+    await type('zzz');
+    await press('Tab');
+    await settle();
+    expect(container.querySelector('.input-box.bell')).not.toBeNull();
+    expect(container.querySelector('.completion-row [aria-live="polite"]')?.textContent?.trim()).toBe('No completions');
+    expect(promptBox().value).toBe('zzz');
+  });
+
+  it("asks 'Display all N possibilities? (y or n)' over 100, and y lists them", async () => {
+    const { container } = await ready();
+    await shell.run('mkdir many; touch many/f{001..150}');
+    transcript.clear();
+    await type('cat many/f');
+    await press('Tab');
+    await settle();
+    expect(container.querySelector('.question')?.textContent).toBe('Display all 150 possibilities? (y or n)');
+    expect(await press('y')).toBe(false);
+    await settle();
+    expect(container.querySelector('.question')).toBeNull();
+    expect(screen.getAllByRole('option')).toHaveLength(150);
+    expect(promptBox().value).toBe('cat many/f');
+  });
+
+  it('offers the starters on an empty line on a touch screen, which run in one tap without the keyboard', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('coarse'), media: query, addEventListener() {}, removeEventListener() {} }));
+    await ready();
+    await settle();
+    const names = screen.getAllByRole('option').map((o) => o.getAttribute('aria-label'));
+    expect(names).toEqual(['Run help', 'Run cat README.md', 'Run fastfetch', 'Run ls', 'Run theme ls', 'Run cathode ls']);
+    await fireEvent.click(screen.getByRole('option', { name: 'Run ls' }));
+    await vi.waitFor(() => expect(transcript.entries().map((e) => e.line)).toEqual(['ls']));
+    expect(document.activeElement).not.toBe(promptBox());
+  });
+});

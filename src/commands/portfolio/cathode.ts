@@ -33,7 +33,7 @@ export default defineCommand({
   },
   args: [{ ...MODE, optional: true }],
   examples: [
-    { line: 'cathode ls', offline: true },
+    { line: 'cathode ls', note: 'the CRT effects', offline: true, starter: 6 },
     { line: 'cathode set vintage', note: 'the full retro set', offline: true },
     { line: 'cathode quality lite', note: 'a lighter effect', offline: true },
     { line: 'cathode off', offline: true },

@@ -225,7 +225,7 @@ export default defineCommand({
   ],
   args: [{ name: 'FILE', source: { kind: 'path', accept: 'any', includeParent: true }, optional: true, variadic: true }],
   examples: [
-    { line: 'ls', note: 'the working directory', offline: true },
+    { line: 'ls', note: 'the working directory', offline: true, starter: 4 },
     { line: 'ls -la ~', note: 'everything in home, in detail', offline: true },
     { line: 'ls -lh /etc', note: 'sizes like 1.5K', offline: true },
     { line: 'ls *.txt', note: 'the shell expands the pattern', offline: true },

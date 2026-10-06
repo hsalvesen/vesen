@@ -2,7 +2,7 @@
 // thin shim over the VFS (src/vfs/vfs.ts), deleted with the last legacy command.
 //
 // - `virtualFileSystem` is the VFS's own tree: the object it keeps its nodes in, so the legacy
-//   walks over `children` (Tab completion, suggestions) see the same files the shell does. It is
+//   walks over `children` see the same files the shell does. It is
 //   empty until the shell's chunk has loaded and the VFS has filled it.
 // - `currentPath` mirrors the shell's cwd store, as segments of the real path, with symbolic
 //   links resolved, so those walks never stop at one.

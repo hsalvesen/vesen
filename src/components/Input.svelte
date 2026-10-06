@@ -2,14 +2,29 @@
   import { onMount, untrack } from "svelte";
   import { screen } from "../stores/screen";
   import { commandHistory, speedtestPhase } from "../utils/legacyStores";
-  import { commandNames } from "../utils/commands";
-  import { virtualFileSystem, currentPath } from "../utils/virtualFileSystem";
   import { outputBlocks } from "../interfaces/command";
-  import themes from "../../themes.json";
-  import { cathodeModes, crtQualities } from "../stores/cathode";
   import type { JobOrigin, ShellPort } from "../shell/index";
-  import type { JobInfo } from "../shell/types";
+  import type { ExitCode, JobInfo } from "../shell/types";
+  import {
+    TAB_IDLE,
+    type Chip,
+    type Completion,
+    type CompletionResult,
+    type EditState,
+    type TabEffect,
+    type TabState,
+  } from "../shell/complete/types";
+  import { COMPLETION_LIST_ID, optionId } from "../ui/CompletionRow.svelte";
   import { notice } from "../utils/notice";
+
+  /** What the completion row under the prompt shows. */
+  export interface CompletionView {
+    readonly chips: readonly Chip[];
+    readonly more: number;
+    readonly listed: boolean;
+    readonly question: string | null;
+    readonly announce: string;
+  }
 
   let {
     shell,
@@ -17,6 +32,7 @@
     isProcessing = $bindable(false),
     loadingText = $bindable(""),
     command = $bindable(""),
+    completionView = $bindable(),
   }: {
     /** Runs every line: parsing, pipes, redirection, history and ^C are the shell's. */
     shell: ShellPort;
@@ -24,6 +40,8 @@
     isProcessing?: boolean;
     loadingText?: string;
     command?: string;
+    /** The chips and list for the completion row, which App draws under the prompt. */
+    completionView?: CompletionView;
   } = $props();
 
   let historyIndex = $state(-1);
@@ -52,67 +70,132 @@
   // Loading animation frames
   const loadingFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
-  // Helper function to resolve file paths for completion
-  const getCompletions = (
-    input: string,
-    isFilePath: boolean = false,
-  ): string[] => {
-    if (!isFilePath) {
-      // Command completion
-      return commandNames().filter((cmd) => cmd.startsWith(input));
+  // ── Completion: Tab, the chips and the list (src/shell/complete) ──────────────────────────
+
+  /** The engine and this session's commands and files; null until its chunk has loaded. */
+  let completion = $state<Completion | null>(null);
+  $effect(() => shell.completion.subscribe((value) => (completion = value)));
+
+  let lastStatus = $state<ExitCode>(0);
+  $effect(() => shell.lastStatus.subscribe((value) => (lastStatus = value)));
+
+  /** Where the caret is, kept in step with the input. */
+  let cursor = $state(0);
+  let tab = $state<TabState>(TAB_IDLE);
+  /** For the polite live region; a no-break space alternates so a repeat is announced again. */
+  let announce = $state("");
+  let announced = 0;
+  /** The visual bell: the prompt flashes, and nothing beeps. */
+  let bell = $state(false);
+  let bellTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const touch = typeof window !== "undefined" && (window.matchMedia?.("(pointer: coarse)").matches ?? false);
+
+  const result = $derived<CompletionResult | null>(
+    completion === null || isPasswordMode ? null : completion.engine.complete({ text: command, cursor: Math.min(cursor, command.length) }, completion.env),
+  );
+
+  const view = $derived.by((): CompletionView => {
+    const engine = completion?.engine;
+    if (engine === undefined || completion === null) return { chips: [], more: 0, listed: false, question: null, announce };
+    const shown = engine.tabView(tab);
+    const list = engine.chipsFor({
+      mode: isPasswordMode ? "secret" : isProcessing ? "busy" : "edit",
+      state: { text: command, cursor: Math.min(cursor, command.length) },
+      result,
+      tab,
+      touch,
+      registry: completion.env.registry,
+      history: $commandHistory,
+      max: touch ? 24 : 8,
+      lastStatus,
+    });
+    // The status line under the prompt already stops a running command.
+    const chips = list.chips.filter((chip) => chip.action.kind !== "interrupt");
+    return { chips, more: list.more, listed: shown.result !== null, question: shown.question, announce };
+  });
+  $effect(() => {
+    completionView = view;
+  });
+
+  /** The menu's choice, for aria-activedescendant. */
+  const activeOption = $derived.by(() => {
+    const index = view.chips.findIndex((chip) => chip.selected === true);
+    return index === -1 ? undefined : optionId(index);
+  });
+
+  function say(text: string): void {
+    announced += 1;
+    announce = announced % 2 === 0 ? text : `${text}\u00a0`;
+  }
+
+  function ring(): void {
+    bell = true;
+    clearTimeout(bellTimer);
+    bellTimer = setTimeout(() => (bell = false), 150);
+  }
+
+  /** Puts a line in the input, with the caret where the edit leaves it. */
+  function setLine(state: EditState): void {
+    command = state.text;
+    cursor = state.cursor;
+    if (input) {
+      input.value = state.text;
+      input.setSelectionRange(state.cursor, state.cursor);
     }
+  }
 
-    // File path completion using actual virtual file system
-    let searchPath = [...currentPath];
-    let searchTerm = input;
+  function applyEffect(effect: TabEffect): void {
+    if (effect.edit) setLine(effect.edit);
+    if (effect.bell) ring();
+    if (effect.announce) say(effect.announce);
+  }
 
-    // Handle absolute paths
-    if (input.startsWith("/")) {
-      searchPath = [];
-      searchTerm = input.substring(1);
+  /** Tab, or Shift+Tab. */
+  function pressTab(reverse: boolean): void {
+    if (completion === null) return;
+    const step = completion.engine.pressTab(tab, { text: command, cursor: input.selectionStart ?? command.length }, completion.env, reverse);
+    tab = step.tab;
+    applyEffect(step.effect);
+  }
+
+  /** Ends any Tab in progress, as an edit or a run does. */
+  function resetTab(): void {
+    tab = TAB_IDLE;
+  }
+
+  /**
+   * A tapped or clicked chip: an edit goes on the line exactly as Tab would put it there, and
+   * focus stays on the prompt, so a phone's keyboard stays up; a starter runs.
+   */
+  export function choose(chip: Chip): void {
+    const action = chip.action;
+    if (action.kind === "apply") {
+      const edit = completion?.engine.applyChip(chip) ?? null;
+      resetTab();
+      if (edit !== null) setLine(edit);
+      input?.focus({ preventScroll: true });
+    } else if (action.kind === "run") {
+      resetTab();
+      void submit(action.line);
+      focusPrompt();
+    } else if (action.kind === "interrupt") {
+      shell.abort();
+    } else if (action.kind === "cancel") {
+      interruptSudoPasswordPrompt();
     }
+  }
 
-    // Handle relative paths with directories
-    if (input.includes("/")) {
-      const parts = input.split("/");
-      searchTerm = parts.pop() || "";
-      const pathParts = parts.filter((p) => p !== "");
+  /** Keeps the caret position in step after the visitor types, clicks or selects. */
+  function syncCursor(): void {
+    cursor = input?.selectionStart ?? command.length;
+  }
 
-      if (input.startsWith("/")) {
-        searchPath = pathParts;
-      } else {
-        searchPath = [...currentPath, ...pathParts];
-      }
-    }
-
-    // Navigate to the search directory
-    let current = virtualFileSystem;
-    for (const segment of searchPath) {
-      if (current && current.children && current.children[segment]) {
-        current = current.children[segment];
-      } else {
-        return [];
-      }
-    }
-
-    // Get completions from current directory
-    if (current && current.children) {
-      return Object.keys(current.children)
-        .filter((name) => name.startsWith(searchTerm))
-        .map((name) => {
-          const child = current.children![name];
-          const fullPath =
-            input.substring(0, input.lastIndexOf("/") + 1) + name;
-          // Add trailing slash for directories
-          if (child && child.type === "directory") {
-            return fullPath + "/";
-          }
-          return fullPath;
-        });
-    }
-
-    return [];
-  };
+  function onInput(): void {
+    syncCursor();
+    // Any edit ends a Tab in progress.
+    resetTab();
+  }
 
   // Interrupt helper for sudo password prompt
   function interruptSudoPasswordPrompt() {
@@ -142,6 +225,7 @@
 
   /** Ctrl+C: cancels the sudo prompt, interrupts the running command, or abandons the line. */
   function interrupt() {
+    resetTab();
     if (isPasswordMode) {
       interruptSudoPasswordPrompt();
     } else if (isProcessing) {
@@ -150,7 +234,7 @@
     } else {
       // Like bash: echo the abandoned line with ^C under a fresh prompt. It is not kept in history.
       screen.push({ prompt: shell.renderPrompt(), line: `${command}^C`, blocks: [], status: 130 });
-      command = "";
+      setLine({ text: "", cursor: 0 });
       historyIndex = -1;
     }
   }
@@ -163,7 +247,8 @@
    */
   async function runLine(line: string, origin: JobOrigin = "keyboard") {
     const run = ++runs;
-    command = "";
+    resetTab();
+    setLine({ text: "", cursor: 0 });
     historyIndex = -1;
     runningLine = line;
     isProcessing = true;
@@ -188,8 +273,12 @@
 
   /** Puts text at the prompt, for a tapped suggestion that inserts rather than runs. */
   export function insert(text: string): void {
-    command = text;
+    resetTab();
+    setLine({ text, cursor: text.length });
     historyIndex = -1;
+    // As if typed: the transcript brings the prompt back into view and stays with it while the
+    // completions under it change (ui/actions/stickToBottom.ts).
+    input?.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
   /**
@@ -219,6 +308,16 @@
       if (hasSelection()) return;
       event.preventDefault();
       interrupt();
+      return;
+    }
+
+    const listOpen = tab.phase === "listed" || tab.phase === "menu" || tab.phase === "asking";
+    if (event.key === "Escape" && event.target === input && listOpen && completion !== null) {
+      // Escape closes the list; in the menu it also puts back what was typed.
+      event.preventDefault();
+      const step = tab.phase === "menu" ? completion.engine.menuKey(tab, "escape") : { tab: TAB_IDLE, effect: {} };
+      tab = step.tab;
+      applyEffect(step.effect);
       return;
     }
 
@@ -254,7 +353,33 @@
       return;
     }
 
+    // `Display all N possibilities? (y or n)`: y or a space lists them; any other key does not,
+    // and n says no without typing itself.
+    if (tab.phase === "asking" && completion !== null && event.key !== "Tab" && !MODIFIER_KEYS.has(event.key)) {
+      const yes = event.key === "y" || event.key === "Y" || event.key === " ";
+      const step = completion.engine.answer(tab, yes);
+      tab = step.tab;
+      applyEffect(step.effect);
+      if (yes || event.key === "n" || event.key === "N") {
+        event.preventDefault();
+        return;
+      }
+    }
+
+    // In the Tab menu, Enter takes the choice without running it; any other key keeps the choice
+    // on the line and goes on as usual.
+    if (tab.phase === "menu" && completion !== null && event.key !== "Tab" && !MODIFIER_KEYS.has(event.key)) {
+      const step = completion.engine.menuKey(tab, event.key === "Enter" ? "enter" : "commit");
+      tab = step.tab;
+      applyEffect(step.effect);
+      if (event.key === "Enter") {
+        event.preventDefault();
+        return;
+      }
+    }
+
     if (event.key === "Enter") {
+      resetTab();
       if (isPasswordMode) {
         isPasswordMode = false;
         passwordInput = "";
@@ -303,264 +428,23 @@
     } else if (event.key === "ArrowUp") {
       if (historyIndex < $commandHistory.length - 1) {
         historyIndex++;
-        command = $commandHistory[$commandHistory.length - 1 - historyIndex];
+        const recalled = $commandHistory[$commandHistory.length - 1 - historyIndex] ?? "";
+        resetTab();
+        setLine({ text: recalled, cursor: recalled.length });
       }
       event.preventDefault();
     } else if (event.key === "ArrowDown") {
       if (historyIndex > -1) {
         historyIndex--;
-        command =
-          historyIndex >= 0
-            ? $commandHistory[$commandHistory.length - 1 - historyIndex]
-            : "";
+        const recalled = historyIndex >= 0 ? ($commandHistory[$commandHistory.length - 1 - historyIndex] ?? "") : "";
+        resetTab();
+        setLine({ text: recalled, cursor: recalled.length });
       }
       event.preventDefault();
     } else if (event.key === "Tab") {
+      // Complete: extend, then list, then a menu that Tab and Shift+Tab step through.
       event.preventDefault();
-
-      const parts = command.split(" ");
-      const commandName = parts[0];
-      const currentArg = parts[parts.length - 1] || "";
-
-      // Commands that expect file paths as arguments
-      const fileCommands = ["cd", "cat", "rm", "touch", "nano"];
-
-      if (parts.length === 1) {
-        // Complete command name
-        const completions = getCompletions(commandName, false);
-        if (completions.length === 1) {
-          command = completions[0];
-        } else if (completions.length > 1) {
-          // Find common prefix
-          const commonPrefix = completions.reduce((prefix, cmd) => {
-            let i = 0;
-            while (
-              i < prefix.length &&
-              i < cmd.length &&
-              prefix[i] === cmd[i]
-            ) {
-              i++;
-            }
-            return prefix.substring(0, i);
-          });
-          if (commonPrefix.length > commandName.length) {
-            command = commonPrefix;
-          }
-        }
-      } else if (commandName === "theme" && parts.length === 2) {
-        // Complete theme subcommands (ls, set)
-        const themeSubcommands = ["ls", "set"];
-        const matchingSubcommands = themeSubcommands.filter((sub) =>
-          sub.startsWith(currentArg.toLowerCase()),
-        );
-
-        if (matchingSubcommands.length === 1) {
-          command = `theme ${matchingSubcommands[0]}`;
-        } else if (matchingSubcommands.length > 1) {
-          // Find common prefix
-          const commonPrefix = matchingSubcommands.reduce((prefix, sub) => {
-            let i = 0;
-            while (
-              i < prefix.length &&
-              i < sub.length &&
-              prefix[i] === sub[i]
-            ) {
-              i++;
-            }
-            return prefix.substring(0, i);
-          });
-          if (commonPrefix.length > currentArg.length) {
-            command = `theme ${commonPrefix}`;
-          }
-        }
-      } else if (
-        commandName === "theme" &&
-        parts.length === 3 &&
-        parts[1] === "set"
-      ) {
-        // Complete theme names for 'theme set' command
-        const themeNames = themes.map((t) => t.name.toLowerCase());
-        const matchingThemes = themeNames.filter((name) =>
-          name.startsWith(currentArg.toLowerCase()),
-        );
-
-        if (matchingThemes.length === 1) {
-          // Find the original case theme name
-          const originalTheme = themes.find(
-            (t) => t.name.toLowerCase() === matchingThemes[0],
-          );
-          if (originalTheme) {
-            parts[parts.length - 1] = originalTheme.name;
-            command = parts.join(" ");
-          }
-        } else if (matchingThemes.length > 1) {
-          // Find common prefix
-          const commonPrefix = matchingThemes.reduce((prefix, name) => {
-            let i = 0;
-            while (
-              i < prefix.length &&
-              i < name.length &&
-              prefix[i] === name[i]
-            ) {
-              i++;
-            }
-            return prefix.substring(0, i);
-          });
-          if (commonPrefix.length > currentArg.length) {
-            parts[parts.length - 1] = commonPrefix;
-            command = parts.join(" ");
-          }
-        }
-      } else if (commandName === "cathode" && parts.length === 2) {
-        // Complete cathode subcommands (ls, set, off, quality)
-        const cathodeSubcommands = ["ls", "set", "off", "quality"];
-        const matchingSubcommands = cathodeSubcommands.filter((sub) =>
-          sub.startsWith(currentArg.toLowerCase()),
-        );
-
-        if (matchingSubcommands.length === 1) {
-          command = `cathode ${matchingSubcommands[0]}`;
-        } else if (matchingSubcommands.length > 1) {
-          const commonPrefix = matchingSubcommands.reduce((prefix, sub) => {
-            let i = 0;
-            while (
-              i < prefix.length &&
-              i < sub.length &&
-              prefix[i] === sub[i]
-            ) {
-              i++;
-            }
-            return prefix.substring(0, i);
-          });
-          if (commonPrefix.length > currentArg.length) {
-            command = `cathode ${commonPrefix}`;
-          }
-        }
-      } else if (
-        commandName === "cathode" &&
-        parts.length === 3 &&
-        parts[1] === "quality"
-      ) {
-        // Complete the quality, which has no shared prefixes to extend.
-        const matching = crtQualities.filter((quality) =>
-          quality.startsWith(currentArg.toLowerCase()),
-        );
-        if (matching.length === 1) {
-          parts[parts.length - 1] = matching[0];
-          command = parts.join(" ");
-        }
-      } else if (
-        commandName === "cathode" &&
-        parts.length === 3 &&
-        parts[1] === "set"
-      ) {
-        // Complete cathode variation names for 'cathode set'
-        const variations: string[] = cathodeModes.filter(
-          (mode) => mode !== "off",
-        );
-        const matchingVariations = variations.filter((name) =>
-          name.startsWith(currentArg.toLowerCase()),
-        );
-
-        if (matchingVariations.length === 1) {
-          parts[parts.length - 1] = matchingVariations[0];
-          command = parts.join(" ");
-        } else if (matchingVariations.length > 1) {
-          const commonPrefix = matchingVariations.reduce((prefix, name) => {
-            let i = 0;
-            while (
-              i < prefix.length &&
-              i < name.length &&
-              prefix[i] === name[i]
-            ) {
-              i++;
-            }
-            return prefix.substring(0, i);
-          });
-          if (commonPrefix.length > currentArg.length) {
-            parts[parts.length - 1] = commonPrefix;
-            command = parts.join(" ");
-          }
-        }
-      } else if (commandName === "curl" && parts.length >= 2) {
-        // Complete curl URL argument
-        const curlSuggestions = [
-          "curl explainshell.com",
-          "curl https://httpbin.org/get",
-        ];
-        const matchingCurl = curlSuggestions.filter((s) =>
-          s.startsWith(command.toLowerCase()),
-        );
-        const matchingCurlUrls = matchingCurl.map((s) =>
-          s.slice("curl ".length),
-        );
-
-        if (matchingCurlUrls.length === 1) {
-          command = `curl ${matchingCurlUrls[0]}`;
-        } else if (matchingCurlUrls.length > 1) {
-          const commonPrefix = matchingCurlUrls.reduce((prefix, url) => {
-            let i = 0;
-            while (i < prefix.length && i < url.length && prefix[i] === url[i])
-              i++;
-            return prefix.substring(0, i);
-          });
-          if (commonPrefix.length > currentArg.length) {
-            command = `curl ${commonPrefix}`;
-          }
-        }
-      } else if (commandName === "qr" && parts.length >= 2) {
-        // Complete qr URL argument
-        const qrSuggestions = [
-          "qr https://tldr.sh",
-          "qr explainshell.com",
-          "qr www.wikipedia.org/wiki/Computer_terminal",
-          "qr https://shellcheck.net",
-          "qr commandlinefu.com",
-        ];
-        const matchingFull = qrSuggestions.filter((s) =>
-          s.startsWith(command.toLowerCase()),
-        );
-        // Work only with the URL portion (after 'qr ')
-        const matchingUrls = matchingFull.map((s) => s.slice("qr ".length));
-
-        if (matchingUrls.length === 1) {
-          command = `qr ${matchingUrls[0]}`;
-        } else if (matchingUrls.length > 1) {
-          const commonPrefix = matchingUrls.reduce((prefix, url) => {
-            let i = 0;
-            while (i < prefix.length && i < url.length && prefix[i] === url[i])
-              i++;
-            return prefix.substring(0, i);
-          });
-          if (commonPrefix.length > currentArg.length) {
-            command = `qr ${commonPrefix}`;
-          }
-        }
-      } else if (fileCommands.includes(commandName)) {
-        // Complete file path
-        const completions = getCompletions(currentArg, true);
-        if (completions.length === 1) {
-          parts[parts.length - 1] = completions[0];
-          command = parts.join(" ");
-        } else if (completions.length > 1) {
-          // Find common prefix for file paths
-          const commonPrefix = completions.reduce((prefix, path) => {
-            let i = 0;
-            while (
-              i < prefix.length &&
-              i < path.length &&
-              prefix[i] === path[i]
-            ) {
-              i++;
-            }
-            return prefix.substring(0, i);
-          });
-          if (commonPrefix.length > currentArg.length) {
-            parts[parts.length - 1] = commonPrefix;
-            command = parts.join(" ");
-          }
-        }
-      }
+      pressTab(event.shiftKey);
     }
   };
 
@@ -592,13 +476,20 @@
   {#if isProcessing && runningLine}
     <span class="running-line">{runningLine}</span>
   {/if}
-  <span class="input-box">
+  <span class="input-box" class:bell data-completion={completion === null ? undefined : "ready"}>
     <input
       bind:this={input}
       bind:value={command}
+      oninput={onInput}
+      onkeyup={syncCursor}
+      onclick={syncCursor}
+      onselect={syncCursor}
+      onfocus={syncCursor}
       class="bg-transparent outline-none command-input"
       type={isPasswordMode ? "password" : "text"}
       aria-label="Terminal command"
+      aria-controls={view.chips.length > 0 ? COMPLETION_LIST_ID : undefined}
+      aria-activedescendant={activeOption}
       enterkeyhint="go"
       autocomplete="off"
       spellcheck="false"
@@ -610,6 +501,15 @@
 </div>
 
 <style>
+  /* The visual bell: nothing to complete. The underline flashes once; there is no beep. */
+  .input-box {
+    box-shadow: inset 0 -1px 0 transparent;
+  }
+
+  .input-box.bell {
+    box-shadow: inset 0 -2px 0 var(--role-warn);
+  }
+
   /* While a command runs, its line sits on the prompt row and the type-ahead input on the line
      below, so the input is never squeezed to nothing. */
   .prompt-line {

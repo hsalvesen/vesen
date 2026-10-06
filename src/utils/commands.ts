@@ -167,22 +167,6 @@ const qrCommands = {
   },
 };
 
-/** Where the names of every command come from: the shell's registry, once it has loaded. */
-let catalogue: () => readonly string[] = () => Object.keys(commands);
-
-/**
- * Every command name, sorted: the legacy commands until the shell has loaded, then the
- * registry's, so commands ported to specs (cd, pwd, reset) stay in help and completion.
- */
-export function commandNames(): string[] {
-  return [...new Set(catalogue())].sort((a, b) => a.localeCompare(b));
-}
-
-/** Lists the registry's commands from now on (legacyShell.ts calls it once the shell is built). */
-export function setCommandCatalogue(names: () => readonly string[]): void {
-  catalogue = names;
-}
-
 // Combine all commands
 export const commands: Record<string, (args: string[], signal?: AbortSignal) => Promise<string> | string> = {
   ...systemCommands,

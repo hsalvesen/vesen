@@ -153,7 +153,7 @@ const TABLE: Readonly<Record<LegacyName, StaticMeta>> = {
     summary: 'show information about this system',
     featured: true,
     loadingLabel: () => 'gathering system information…',
-    examples: examples('fastfetch'),
+    examples: [{ line: 'fastfetch', note: 'this system, at a glance', starter: 3 }],
   },
   // It takes over the whole page, so only a line typed at the prompt may run it: never ~/.bashrc.
   poweroff: { category: 'system', summary: 'shut down the terminal', examples: examples('poweroff'), interactiveOnly: true },

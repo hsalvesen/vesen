@@ -5,11 +5,11 @@
   the visible viewport by styles/shell.css and platform/viewport.ts.
 -->
 <script lang="ts">
-  import Input from './components/Input.svelte';
-  import CommandSuggestionsRow from './components/CommandSuggestionsRow.svelte';
+  import Input, { type CompletionView } from './components/Input.svelte';
   import Cathode from './components/Cathode.svelte';
   import type { Action } from './output/model';
   import type { ShellPort } from './shell/index';
+  import CompletionRow from './ui/CompletionRow.svelte';
   import Prompt from './ui/Prompt.svelte';
   import Transcript from './ui/Transcript.svelte';
   import { focusPolicy } from './ui/actions/focusPolicy';
@@ -22,6 +22,7 @@
   let isProcessing = $state(false);
   let loadingText = $state('');
   let command = $state('');
+  let completion: CompletionView | undefined = $state();
   let screen: HTMLElement | undefined = $state();
   let newOutput = $state(false);
 
@@ -85,11 +86,27 @@
               <Prompt cwd={shell.cwd} status={shell.lastStatus} secret={isPasswordMode} />
             </div>
             <div class="min-w-0">
-              <Input bind:this={prompt} {shell} bind:command bind:isPasswordMode bind:isProcessing bind:loadingText />
+              <Input
+                bind:this={prompt}
+                {shell}
+                bind:command
+                bind:isPasswordMode
+                bind:isProcessing
+                bind:loadingText
+                bind:completionView={completion}
+              />
             </div>
           </div>
 
-          <CommandSuggestionsRow {command} {isProcessing} {isPasswordMode} />
+          <!-- Tab's list, the chips while typing, and the starters on an empty phone prompt. -->
+          <CompletionRow
+            chips={completion?.chips}
+            more={completion?.more}
+            listed={completion?.listed}
+            question={completion?.question}
+            announce={completion?.announce}
+            onchoose={(chip) => prompt?.choose(chip)}
+          />
 
           {#if isProcessing && loadingText}
             <!--

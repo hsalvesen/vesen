@@ -5,7 +5,7 @@
 // status 130, and it never runs.
 
 import type { Line } from '../output/model';
-import type { JobHandle, JobOrigin, JobResult, PreflightResult, ScreenSink, ShellPort } from '../shell/index';
+import type { Completion, JobHandle, JobOrigin, JobResult, PreflightResult, ScreenSink, ShellPort } from '../shell/index';
 import { readonly, writable, type Readable } from '../shell/observable';
 import { promptLine } from '../shell/prompt';
 import { GUEST, type ExitCode, type JobInfo } from '../shell/types';
@@ -43,6 +43,7 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
   const cwd = writable(GUEST.home);
   const lastStatus = writable<ExitCode>(0);
   const job = writable<JobInfo | null>(null);
+  const completion = writable<Completion | null>(null);
   let shell: ShellPort | null = null;
   /** Lines to remember once the shell is here. */
   const remembered: string[] = [];
@@ -76,6 +77,8 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
       forward(loaded.cwd, cwd);
       forward(loaded.lastStatus, lastStatus);
       forward(loaded.job, job);
+      // Subscribing starts the engine's chunk loading, now the kernel is here.
+      forward(loaded.completion, completion);
       return loaded;
     },
     (error: unknown) => {
@@ -148,6 +151,7 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
     cwd: readonly(cwd),
     lastStatus: readonly(lastStatus),
     job: readonly(job),
+    completion: readonly(completion),
     preflight: (line): PreflightResult | null => shell?.preflight(line) ?? null,
     start,
     run: (line, origin) => start(line, origin).done,

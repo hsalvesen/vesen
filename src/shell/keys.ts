@@ -10,10 +10,11 @@ export interface KeyBinding {
 /** On a keyboard. */
 export const KEY_BINDINGS: readonly KeyBinding[] = [
   { keys: 'Enter', does: 'run the line' },
-  { keys: 'Tab', does: 'complete a command, file or theme name' },
+  { keys: 'Tab', does: 'complete; again to list the choices, again to step through them' },
+  { keys: 'Shift+Tab', does: 'step back through the choices' },
   { keys: '↑ ↓', does: 'step through the command history' },
   { keys: 'Ctrl+C', does: 'stop the running command; with text selected, copy it' },
-  { keys: 'Escape', does: 'stop the running command' },
+  { keys: 'Escape', does: 'stop the running command; in the choices, put back what you typed' },
   { keys: 'Ctrl+L', does: 'clear the screen' },
   { keys: 'Escape, Tab', does: 'leave the terminal for the rest of the page' },
 ];
