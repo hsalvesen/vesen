@@ -282,12 +282,12 @@ function renderQuote(quote: Quote, ticker: string): string {
   const ohlcChart = createOHLCChart(open, high, low, price, useStackedLayout);
 
   // Format the output
-  let output = `<span style="color: var(--theme-bright-cyan); font-weight: bold; font-size: 1em;">${symbol}</span>`;
+  let output = `<span style="color: var(--theme-bright-cyan); font-weight: bold;">${symbol}</span>`;
   if (companyName && companyName !== symbol) {
-    output += ` <span style="color: var(--theme-white); font-size: 1em;">- ${companyName}</span>`;
+    output += ` <span style="color: var(--theme-white);">- ${companyName}</span>`;
   }
   output += `\n`;
-  output += `<span style="color: var(--theme-white); font-size: 1.1em;">$${price.toFixed(2)}</span> `;
+  output += `<span style="color: var(--theme-white);">$${price.toFixed(2)}</span> `;
   output += `<span style="color: ${changeColor}; font-weight: bold;">${arrow} ${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n\n`;
 
   // Use responsive layout based on screen size
@@ -318,7 +318,7 @@ function renderQuote(quote: Quote, ticker: string): string {
     // OHLC Chart section - stacked below on mobile
     output += `<div style="width: 100%; max-width: ${availableWidth}px; overflow-x: auto;">`;
     output += `<span style="color: var(--theme-purple); font-weight: bold;">OHLC Chart:</span>\n`;
-    output += `<pre style="font-family: monospace; line-height: 1.2; margin: 0; white-space: pre; overflow-x: auto;">${ohlcChart}</pre>`;
+    output += `<pre class="art" style="margin: 0;">${ohlcChart}</pre>`;
     output += `</div>\n`;
 
   } else {
@@ -345,7 +345,7 @@ function renderQuote(quote: Quote, ticker: string): string {
 
     output += `<div style="flex: 1; padding-left: 10%;">`;
     output += `<span style="color: var(--theme-purple); font-weight: bold;">OHLC Chart:</span>\n`;
-    output += `<pre style="font-family: monospace; line-height: 1.2; margin: 0;">${ohlcChart}</pre>`;
+    output += `<pre class="art" style="margin: 0;">${ohlcChart}</pre>`;
     output += `</div>\n`;
   }
 
@@ -667,7 +667,7 @@ export const networkCommands = {
       lines.push(`<span style="color: ${currentTheme.red};">Ping:</span> avg ${lat.avg.toFixed(0)} ms, min ${lat.min.toFixed(0)} ms, max ${lat.max.toFixed(0)} ms`);
 
       speedtestPhase.set('');
-      return `<div style="font-family: monospace; line-height: 1.4;">${lines.join('<br>')}</div>`;
+      return `<div>${lines.join('<br>')}</div>`;
     } catch (error) {
       speedtestPhase.set('');
       if (wasCancelled(error, signal)) return cancelledNotice('speedtest');

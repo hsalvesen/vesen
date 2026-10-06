@@ -15,6 +15,7 @@ import {
   legacyAttribute,
   legacyHref,
 } from '../output/legacy-policy';
+import { textWidth } from '../output/model';
 
 const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
 const ELEMENT_NODE = 1;
@@ -88,10 +89,25 @@ export function sanitizeLegacyHtml(html: string, target: Document = document): D
   return fragment;
 }
 
+/**
+ * Gives each `.art-fit` element its widest row as `--art-cols`, which the stylesheet divides the
+ * width by to shrink the art until it fits. Counted here from the text, so the policy never has to
+ * let a custom property through from command output.
+ */
+export function sizeFittedArt(root: ParentNode): void {
+  for (const art of Array.from(root.querySelectorAll<HTMLElement>('.art-fit'))) {
+    const rows = (art.textContent ?? '').split('\n');
+    const widest = rows.reduce((max, row) => Math.max(max, textWidth(row)), 1);
+    art.style.setProperty('--art-cols', String(widest));
+  }
+}
+
 /** `use:legacyHtml={html}`: replaces the element's children with the sanitised fragment. */
 export const legacyHtml: Action<HTMLElement, string> = (node, html) => {
   const render = (value: string): void => {
-    node.replaceChildren(sanitizeLegacyHtml(value, node.ownerDocument));
+    const fragment = sanitizeLegacyHtml(value, node.ownerDocument);
+    sizeFittedArt(fragment);
+    node.replaceChildren(fragment);
   };
   render(html);
   return { update: render };

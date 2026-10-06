@@ -18,10 +18,11 @@ export const LEGACY_DROP_WITH_CONTENT: ReadonlySet<string> = new Set([
 
 /**
  * Every class name legacy command output uses: the theme and cathode lists, fastfetch's
- * "WM Theme" value, and the highlight the stores toggle on them.
+ * "WM Theme" value, the highlight the stores toggle on them, and the art classes (the banner,
+ * logos, colour blocks, charts and QR codes).
  */
 export const LEGACY_CLASSES: ReadonlySet<string> = new Set([
-  'theme-name', 'cathode-name', 'current-theme-name', 'is-current',
+  'theme-name', 'cathode-name', 'current-theme-name', 'is-current', 'art', 'art-fit',
 ]);
 
 /** Attributes kept besides style, class and href, with the values they may hold. */

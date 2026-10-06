@@ -94,7 +94,7 @@ export const qrCommands = {
 
             return [
                 `<span style="color: var(--theme-cyan);">QR Code</span> <span style="color: var(--theme-green);">${displayInput}</span>`,
-                `<pre style="font-family: monospace; line-height: 1.05; letter-spacing: 0; display: block; margin: 6px 0 0 0; color: var(--theme-white); background: var(--theme-background); padding: 6px 0 0 0; border-radius: 4px;">${art}</pre><span style="color: var(--theme-bright-black);">Scan with your phone camera to open the link</span>`,
+                `<pre class="art" style="margin: 6px 0 0 0; color: var(--theme-white); background: var(--theme-background); padding-top: 6px; border-radius: 4px;">${art}</pre><span style="color: var(--theme-bright-black);">Scan with your phone camera to open the link</span>`,
             ].join('\n');
         } catch (err) {
             playBeep();

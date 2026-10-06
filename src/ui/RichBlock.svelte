@@ -78,7 +78,7 @@
   <div class="art-wrap">
     <div
       class="art {spanClasses(block.style)}"
-      class:scale={block.fit === 'scale'}
+      class:art-fit={block.fit === 'scale'}
       aria-hidden="true"
       style="--art-cols: {artColumns(block.text)}; {spanCss(block.style) ?? ''}"
     >{block.text}</div>
@@ -227,18 +227,6 @@
 
   .art-wrap {
     max-width: 100%;
-  }
-
-  /* Art keeps its shape: it never wraps. It scrolls inside itself, or shrinks its font so the
-     widest row fits where container units are supported (0.6 is a monospace glyph's width in em). */
-  .art {
-    white-space: pre;
-    overflow-x: auto;
-    line-height: 1.1;
-  }
-
-  .art.scale {
-    font-size: min(1em, calc(100cqi / var(--art-cols) / 0.6));
   }
 
   /* The one callout style: a 4px left border and a 12% tint, for help, notices and cancellations. */

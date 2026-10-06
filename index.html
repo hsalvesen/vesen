@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- Pinch zoom stays on. The command input is 16px on touch, so focusing it never zooms. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
     <title>Vesen · a terminal in your browser</title>
     <meta name="description" content="A terminal in your browser by Has Salvesen. Explore a small Unix-like shell with themes, a CRT effect, weather, stock quotes and QR codes." />
     <link rel="canonical" href="https://www.vesen.app/" />
@@ -28,6 +29,9 @@
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
 
+    <!-- The terminal's font, fetched alongside the page rather than after the stylesheet. -->
+    <link rel="preload" href="/fonts/VesenMono.woff2" as="font" type="font/woff2" crossorigin />
+
     <!--
       Paints the saved theme before first paint (scripts/vite-plugin-boot.ts). A plain classic
       script: vite-ignore only stops Vite from trying to bundle it, and is stripped from the output.
@@ -35,7 +39,7 @@
     <script vite-ignore src="/boot.js"></script>
   </head>
 
-  <body class="min-h-screen font-mono antialiased">
+  <body class="min-h-screen antialiased">
     <div id="app" class="h-screen p-4"></div>
 
     <script type="module" src="/src/main.ts"></script>

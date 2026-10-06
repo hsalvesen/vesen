@@ -576,22 +576,24 @@
 
 <div class="prompt-line">
   {#if isProcessing && runningLine}
-    <span class="prompt-text running-line">{runningLine}</span>
+    <span class="running-line">{runningLine}</span>
   {/if}
-  <input
-    bind:this={input}
-    bind:value={command}
-    class="bg-transparent outline-none prompt-text command-input"
-    style="color: var(--theme-white); opacity: 1;"
-    type={isPasswordMode ? "password" : "text"}
-    aria-label="Terminal command"
-    enterkeyhint="go"
-    autocomplete="off"
-    spellcheck="false"
-    autocapitalize="off"
-    autocorrect="off"
-    inputmode="text"
-  />
+  <span class="input-box">
+    <input
+      bind:this={input}
+      bind:value={command}
+      class="bg-transparent outline-none command-input"
+      style="color: var(--theme-white); opacity: 1;"
+      type={isPasswordMode ? "password" : "text"}
+      aria-label="Terminal command"
+      enterkeyhint="go"
+      autocomplete="off"
+      spellcheck="false"
+      autocapitalize="none"
+      autocorrect="off"
+      inputmode="text"
+    />
+  </span>
 </div>
 
 <style>
@@ -605,20 +607,19 @@
     min-width: 0;
   }
 
-  .command-input {
+  .input-box {
+    display: block;
     flex: 1 1 8ch;
     min-width: 8ch;
   }
 
-  .prompt-text {
-    font-family: monospace;
-    font-size: 0.75rem; /* text-xs */
-    letter-spacing: 0;
-    font-feature-settings: normal;
-    font-variant-ligatures: none;
-    text-rendering: optimizeSpeed;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  /* The caret takes the theme's cursor colour until the drawn block cursor replaces it. */
+  .command-input {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    caret-color: var(--theme-cursor-color, currentColor);
   }
 
   .running-line {
@@ -628,15 +629,22 @@
     min-width: 0;
   }
 
-  @media (min-width: 640px) {
-    .prompt-text {
-      font-size: 0.875rem; /* sm:text-sm */
+  /* Touch: iOS zooms into any input under 16px when it takes focus. The input is really 16px and
+     drawn at the terminal's size by --input-scale (platform/measure.ts); the box is one terminal
+     line tall and clips the unscaled layout. At --input-scale: 1 this is a plain 16px input. */
+  @media (pointer: coarse) {
+    .input-box {
+      height: calc(16px * var(--term-lh) * var(--input-scale));
+      overflow: hidden;
     }
-  }
 
-  @media (min-width: 768px) {
-    .prompt-text {
-      font-size: 1rem; /* md:text-base */
+    .command-input {
+      font-size: 16px;
+      line-height: var(--term-lh);
+      height: calc(16px * var(--term-lh));
+      width: calc(100% / var(--input-scale));
+      transform: scale(var(--input-scale));
+      transform-origin: 0 0;
     }
   }
 </style>

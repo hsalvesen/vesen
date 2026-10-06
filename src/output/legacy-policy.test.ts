@@ -89,7 +89,8 @@ describe('filterLegacyClasses', () => {
     expect(filterLegacyClasses('theme-name is-current')).toBe('theme-name is-current');
     expect(filterLegacyClasses('  cathode-name  fixed inset-0 z-50 ')).toBe('cathode-name');
     expect(filterLegacyClasses('sr-only hidden')).toBe('');
-    expect([...LEGACY_CLASSES].sort()).toEqual(['cathode-name', 'current-theme-name', 'is-current', 'theme-name']);
+    expect(filterLegacyClasses('art art-fit art-x')).toBe('art art-fit');
+    expect([...LEGACY_CLASSES].sort()).toEqual(['art', 'art-fit', 'cathode-name', 'current-theme-name', 'is-current', 'theme-name']);
   });
 });
 

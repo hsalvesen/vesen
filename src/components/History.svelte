@@ -15,12 +15,12 @@
       <Ps1 />
 
       <div class="flex flex-1 min-w-0">
-        <span class="command-text command-input-display" style="margin-left: 0.25rem;">{command}</span>
+        <span class="command-input-display" style="margin-left: 0.25rem;">{command}</span>
       </div>
     </div>
 
     {#each outputs as output}
-      <div class="command-text command-output">
+      <div class="command-output">
         <OutputView blocks={outputBlocks(output)} {onaction} />
       </div>
     {/each}
@@ -28,17 +28,6 @@
 {/each}
 
 <style>
-  .command-text {
-    font-family: monospace;
-    font-size: 0.75rem; /* text-xs */
-    letter-spacing: 0;
-    font-feature-settings: normal;
-    font-variant-ligatures: none;
-    text-rendering: optimizeSpeed;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
   /* Long commands wrap like a terminal line instead of being cut off with an ellipsis. */
   .command-input-display {
     min-width: 0;
@@ -51,32 +40,18 @@
     max-width: 100%;
   }
 
-  @media (min-width: 640px) {
-    .command-text {
-      font-size: 0.875rem; /* sm:text-sm */
-    }
-  }
-
-  @media (min-width: 768px) {
-    .command-text {
-      font-size: 1rem; /* md:text-base */
-    }
-  }
-
-  /* Phones keep the sizes the old output wrapper gave them, until the phone work sets new ones. */
+  /* Phones keep the widths the old output wrapper gave them, until the app shell is sized to the
+     visible viewport. */
   @media (max-width: 768px) {
     .command-output {
       max-width: calc(100vw - 64px);
       overflow-x: hidden;
-      font-size: 0.75rem;
-      line-height: 1.4;
     }
   }
 
   @media (max-width: 480px) {
     .command-output {
       max-width: calc(100vw - 32px);
-      font-size: 0.7rem;
     }
   }
 </style>

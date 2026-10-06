@@ -46,7 +46,7 @@ const terminalCommands = {
       lines.push(row);
     }
 
-    return `<div style="font-family: monospace; white-space: pre;">${lines.join('\n')}</div>`;
+    return `<div style="white-space: pre;">${lines.join('\n')}</div>`;
   },
 
   history: (args: string[]) => {
@@ -330,7 +330,7 @@ export function processCommand(input: string, signal?: AbortSignal): string | Pr
 
     // Beep and return only a suggestion, do NOT execute or print help
     playBeep();
-    return `Did you mean <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">${escapeHtml(suggestedBase)} --help</span>?`;
+    return `Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${escapeHtml(suggestedBase)} --help</span>?`;
   }
 
   if (hasHelpFlag) {

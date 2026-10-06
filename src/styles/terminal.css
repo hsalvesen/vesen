@@ -1,0 +1,50 @@
+/* Base typography and the art class. Everything inherits the tokens from tokens.css. */
+
+html {
+  /* Phones keep the sizes set here when rotated, and pinch zoom does the enlarging. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--term-font);
+  font-size: var(--term-fs);
+  line-height: var(--term-lh);
+  font-variant-ligatures: none;
+}
+
+/* A double tap on a control acts at once instead of waiting to see whether it is a zoom. */
+a,
+button,
+input,
+label,
+select,
+summary,
+textarea,
+[role='button'] {
+  touch-action: manipulation;
+}
+
+/* Art (the banner, OS logos, colour blocks, charts, QR codes) keeps its shape: rows touch, cells
+   line up, and it never wraps. When it is wider than its box it scrolls inside itself. At line
+   height 1 a glyph stands about 0.08em above and below its row; the padding keeps the first and
+   last rows whole, and overflow-y stops that sliver from making the art scroll up and down. */
+.art {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.1em;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1;
+  letter-spacing: 0;
+  font-variant-ligatures: none;
+}
+
+/* Art that shrinks to fit the output's width instead of scrolling. --art-cols is the widest row,
+   which the renderer sets. Without container units the declaration is dropped, and it scrolls. */
+.art-fit {
+  font-size: min(1em, calc(100cqi / var(--art-cols, 1) / var(--ch-ratio)));
+}

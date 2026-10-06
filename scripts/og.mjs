@@ -29,7 +29,7 @@ const COLOURS = { background: '#222235', foreground: '#ffffff', green: '#06c993'
 const BANNER_PX = (14 * 2048) / 1200;
 
 /** The terminal's own font, if it is in the repo; the system monospace font otherwise. */
-const FONT_CANDIDATES = ['public/fonts/vesen-mono.woff2', 'public/fonts/CascadiaCode.ttf'];
+const FONT_CANDIDATES = ['public/fonts/VesenMono.woff2', 'assets-src/fonts/CascadiaCode.ttf'];
 
 /**
  * The six lines of the VESEN block banner, read from the banner command so the preview never
@@ -37,7 +37,7 @@ const FONT_CANDIDATES = ['public/fonts/vesen-mono.woff2', 'public/fonts/Cascadia
  * @param {string} source the text of src/utils/commands/system.ts
  */
 export function bannerArt(source) {
-  const match = /banner:\s*\(\)\s*=>\s*\{[\s\S]*?return `([\s\S]*?) v\$\{__APP_VERSION__\}/.exec(source);
+  const match = /banner:\s*\(\)\s*=>\s*\{[\s\S]*?return `(?:<div class="art[^"]*">)?([\s\S]*?) v\$\{__APP_VERSION__\}/.exec(source);
   const art = match?.[1];
   if (!art) throw new Error('og: could not find the banner art in src/utils/commands/system.ts');
   const lines = art.split('\n').map((line) => line.trimEnd());

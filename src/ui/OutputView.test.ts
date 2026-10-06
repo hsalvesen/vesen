@@ -164,7 +164,9 @@ describe('OutputView: layout blocks', () => {
     const art = root.querySelector('.art');
     expect(art?.getAttribute('aria-hidden')).toBe('true');
     expect(art?.textContent).toBe('██\n██');
-    expect(art?.classList.contains('scale')).toBe(true);
+    // The global art classes (styles/terminal.css): rows touch, and the font shrinks to fit.
+    expect(art?.classList.contains('art-fit')).toBe(true);
+    expect(styleOf(art)).toBe('--art-cols: 2');
     expect(root.querySelector('.sr-only')?.textContent).toBe('The vesen logo');
   });
 

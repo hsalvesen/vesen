@@ -6,6 +6,7 @@ import { applyCathode } from '../platform/crt';
 import { installChunkReload } from '../platform/chunkReload';
 import { applyTheme } from '../platform/head';
 import { canonicalRedirect } from '../platform/hosts';
+import { startMeasuring } from '../platform/measure';
 import { createStorage, runMigrations } from '../services/storage';
 import type { StorageService } from '../services/types';
 import { cathode, cathodeModes, DEFAULT_CATHODE_MODE, persistCathode } from '../stores/cathode';
@@ -64,6 +65,8 @@ export function bootstrap({ window: win, build, banner }: BootOptions): Booted |
       applyCathode(doc.documentElement, mode);
       markCurrentCathode(doc, mode);
     }),
+    // The touch input's scale and the font's cell width, as CSS variables.
+    startMeasuring(win),
   ];
 
   history.set([{ command: 'banner', outputs: [banner()] }]);

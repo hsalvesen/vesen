@@ -59,11 +59,9 @@
 
 <style>
   .command-suggestions {
-    font-family: monospace;
     color: var(--theme-bright-black);
     opacity: 1;
     white-space: pre-wrap;
-    line-height: 1.25;
   }
 
   .label {

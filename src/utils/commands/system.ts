@@ -1,6 +1,5 @@
 import { theme } from '../../stores/theme';
 import { get } from 'svelte/store';
-import { getAppleLogo, getAndroidLogo, getWindowsLogo, getLinuxLogo } from '../osLogos';
 import { isMobileDevice } from '../mobile';
 import { fetchJson, isNetError } from '../../services/net';
 import { escapeHtml } from '../../output/escape';
@@ -22,6 +21,8 @@ export const systemCommands = {
     return new Promise<string>((resolve, reject) => {
       (async () => {
         try {
+          // Only fastfetch draws the logos, so they load with it rather than with the page.
+          const { getAppleLogo, getAndroidLogo, getWindowsLogo, getLinuxLogo } = await import('../osLogos');
           const userAgent = navigator.userAgent;
           const platform = navigator.platform;
           const language = navigator.language;
@@ -533,7 +534,7 @@ export const systemCommands = {
 
           // ASCII art colour blocks (now using CSS variables for dynamic themes)
           const colourBlocksAscii = `
-<div style="font-family: monospace; line-height: 1; margin-top: 8px; margin-bottom: 8px;">
+<div class="art" style="margin-top: 8px; margin-bottom: 8px;">
 <span style="color: var(--theme-black);">███</span><span style="color: var(--theme-red);">███</span><span style="color: var(--theme-green);">███</span><span style="color: var(--theme-yellow);">███</span><span style="color: var(--theme-blue);">███</span><span style="color: var(--theme-purple);">███</span><span style="color: var(--theme-cyan);">███</span><span style="color: var(--theme-white);">███</span>
 <span style="color: var(--theme-bright-black);">███</span><span style="color: var(--theme-bright-red);">███</span><span style="color: var(--theme-bright-green);">███</span><span style="color: var(--theme-bright-yellow);">███</span><span style="color: var(--theme-bright-blue);">███</span><span style="color: var(--theme-bright-purple);">███</span><span style="color: var(--theme-bright-cyan);">███</span><span style="color: var(--theme-bright-white);">███</span>
 </div>`;
@@ -565,20 +566,20 @@ export const systemCommands = {
           ];
 
           // Create HTML structure
-          const logoHtml = logoLines.map(line => 
-            `<div style="color: var(--theme-yellow); font-weight: bold; font-family: monospace; white-space: pre;">${line}</div>`
-          ).join('');
+          const logoHtml = `<div class="art">${logoLines.map(line =>
+            `<div style="color: var(--theme-yellow); font-weight: bold;">${line}</div>`
+          ).join('')}</div>`;
           
-          const userHostHtml = `<div style="color: var(--theme-green); font-weight: bold; font-family: monospace; margin-bottom: 8px;">${userHost}</div>`;
+          const userHostHtml = `<div style="color: var(--theme-green); font-weight: bold; margin-bottom: 8px;">${userHost}</div>`;
           
           // Values come from the browser (the WebGL renderer, the user agent), so they are text.
           // WM Theme alone is markup, a span the theme store keeps current.
           const infoHtml = infoData.map(({ label, value }) => 
-            `<div style="display: flex; margin-bottom: 1px; font-family: monospace;"><span style="color: var(--theme-cyan); font-weight: bold; width: 140px; display: inline-block;">${label}:</span><span style="color: var(--theme-white);">${label === 'WM Theme' ? value : escapeHtml(value)}</span></div>`
+            `<div style="display: flex; margin-bottom: 1px;"><span style="color: var(--theme-cyan); font-weight: bold; width: 140px; display: inline-block;">${label}:</span><span style="color: var(--theme-white);">${label === 'WM Theme' ? value : escapeHtml(value)}</span></div>`
           ).join('');
           
           const isMobile = isMobileDevice();
-          const result = `<div style="display: flex; ${isMobile ? 'flex-direction: column;' : 'gap: 30px;'} font-family: monospace; line-height: 1.3;"><div style="${isMobile ? 'margin-bottom: 12px;' : 'flex-shrink: 0;'}">${logoHtml}${colourBlocksAscii}</div><div style="${isMobile ? '' : 'flex: 1; display: flex; flex-direction: column; justify-content: flex-start;'}">${userHostHtml}${infoHtml}</div></div>`;
+          const result = `<div style="display: flex; ${isMobile ? 'flex-direction: column;' : 'gap: 30px;'}"><div style="${isMobile ? 'margin-bottom: 12px;' : 'flex-shrink: 0;'}">${logoHtml}${colourBlocksAscii}</div><div style="${isMobile ? '' : 'flex: 1; display: flex; flex-direction: column; justify-content: flex-start;'}">${userHostHtml}${infoHtml}</div></div>`;
           
           resolve(result);
         } catch (error) {
@@ -595,14 +596,14 @@ export const systemCommands = {
 
   banner: () => {
     const currentTheme = get(theme);
-    return `██╗   ██╗███████╗███████╗███████╗███╗   ██╗ 
+    // The logo shrinks to fit narrow screens (the art-fit class) rather than wrapping.
+    return `<div class="art art-fit">██╗   ██╗███████╗███████╗███████╗███╗   ██╗ 
 ██║   ██║██╔════╝██╔════╝██╔════╝████╗  ██║ 
 ██║   ██║█████╗  ███████╗█████╗  ██╔██╗ ██║ 
 ╚██╗ ██╔╝██╔══╝  ╚════██║██╔══╝  ██║╚██╗██║ 
  ╚████╔╝ ███████╗███████║███████╗██║ ╚████║ 
-  ╚═══╝  ╚══════╝╚══════╝╚══════╝╚═╝  ╚═══╝ v${__APP_VERSION__}
-<span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-family: monospace;">help</span><span style="color: var(--theme-white);"> to see all available commands.</span>
-<span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan); font-family: monospace;">cat README.md</span><span style="color: var(--theme-white);"> to learn more about this terminal.</span>`;
+  ╚═══╝  ╚══════╝╚══════╝╚══════╝╚═╝  ╚═══╝ v${__APP_VERSION__}</div><span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan);">help</span><span style="color: var(--theme-white);"> to see all available commands.</span>
+<span style="color: var(--theme-white);">Type </span><span style="color: var(--theme-cyan);">cat README.md</span><span style="color: var(--theme-white);"> to learn more about this terminal.</span>`;
   },
   // ... existing code ...
 };

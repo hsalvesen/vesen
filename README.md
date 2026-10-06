@@ -58,7 +58,9 @@ src/
 │                                 # applied to the page, stale-chunk reload, the banner
 ├── App.svelte                    # Layout: scrollback, prompt, suggestions, running-command line
 ├── app.css                       # Global styles and the CRT (cathode) effect
-├── constants.ts                  # Repository URL
+├── styles/                       # tokens.css (Vesen Mono, --term-font, --term-fs, --term-lh) and
+│                                 # terminal.css (base type, the .art class for banners, logos and charts)
+├── constants.ts                  # Repository URL and the prompt's host
 ├── global.d.ts                   # Build-time globals
 ├── components/
 │   ├── History.svelte            # Scrollback of commands, each output drawn by ui/OutputView
@@ -78,7 +80,8 @@ src/
 ├── vfs/types.ts                  # The file system contract
 ├── lib/colour.ts                  # Luminance and the light or dark color-scheme of a background
 ├── platform/                     # Browser-facing helpers: canonical host redirect, stale-chunk reload,
-│                                 # head.ts (theme colours, theme-color, favicon), crt.ts (CRT classes)
+│                                 # head.ts (theme colours, theme-color, favicon), crt.ts (CRT classes),
+│                                 # measure.ts (--input-scale for the 16px touch input)
 ├── services/
 │   ├── net.ts                    # fetch with timeouts, cancelling, byte caps and typed network errors
 │   ├── storage.ts                # localStorage and sessionStorage with a memory fallback; one-time migrations
@@ -102,16 +105,19 @@ src/
     ├── notice.ts                 # Shared notices (cancelled commands, errors)
     ├── beep.ts                   # The terminal bell
     └── mobile.ts, osLogos.ts
-public/                           # README.md, history.txt and linux.txt for cat; font; 404.html;
-                                  # icons/ and og.png (generated, see scripts/); manifest.webmanifest;
-                                  # probe/ (device capability probe, not linked from the app)
+public/                           # README.md, history.txt and linux.txt for cat; 404.html; fonts/ (Vesen Mono
+                                  # and its licence, OFL.txt); icons/ and og.png (generated, see scripts/);
+                                  # manifest.webmanifest; probe/ (device capability probe, not linked from the app)
+assets-src/fonts/                 # The source font Vesen Mono is built from (not served)
 themes.json                       # The ten colour themes
 tests/                            # Golden snapshots and their parity check, XSS tests, network fixtures, hosting checks, helpers
 e2e/                              # Playwright end-to-end tests
 scripts/                          # Checks: module boundaries, bundle budget, theme contrast (and its baseline);
                                   # vite-plugin-boot.ts (emits /boot.js, which paints the saved theme before
                                   # the app loads); icons.mjs and og.mjs (regenerate public/icons and
-                                  # public/og.png with `node scripts/icons.mjs` or `node scripts/og.mjs`)
+                                  # public/og.png with `node scripts/icons.mjs` or `node scripts/og.mjs`);
+                                  # fonts/build-vesen-mono.py (rebuilds public/fonts/VesenMono.woff2; needs
+                                  # `pip install fonttools brotli`)
 docs/
 ├── adr/                          # Architecture decision records; 0001 fixes the shared contracts
 ├── plan/                         # The improvement plan
@@ -153,6 +159,8 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+The terminal font, Vesen Mono (`public/fonts/VesenMono.woff2`), is a modified subset of a font released under the SIL Open Font License 1.1, and is distributed under that licence: see [public/fonts/OFL.txt](public/fonts/OFL.txt).
 
 ## Author
 

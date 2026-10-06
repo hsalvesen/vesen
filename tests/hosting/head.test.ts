@@ -58,6 +58,17 @@ describe('index.html head', () => {
     }
   });
 
+  it('lets visitors pinch to zoom, and fits notched screens and the soft keyboard', () => {
+    expect(meta('viewport')).toBe('width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content');
+  });
+
+  it('preloads the terminal font from public/fonts, the way the stylesheet asks for it', () => {
+    const preload = '<link rel="preload" href="/fonts/VesenMono.woff2" as="font" type="font/woff2" crossorigin />';
+    expect(head).toContain(preload);
+    expect(read('src/styles/tokens.css')).toContain("src: url('/fonts/VesenMono.woff2') format('woff2');");
+    expect(html).not.toMatch(/\bfont-mono\b/);
+  });
+
   it('runs the boot script from a file, before the app, and no inline script at all', () => {
     const scripts = [...html.matchAll(/<script\b[^>]*>/g)].map(([tag]) => tag);
     expect(scripts).toEqual(['<script vite-ignore src="/boot.js">', '<script type="module" src="/src/main.ts">']);
@@ -129,5 +140,23 @@ describe('icons and link preview', () => {
   it('has a 1200x630 preview image under 150 kB', () => {
     expect(pngSize('public/og.png')).toEqual({ width: 1200, height: 630 });
     expect(statSync(join(ROOT, 'public/og.png')).size).toBeLessThan(150_000);
+  });
+});
+
+describe('the terminal font', () => {
+  it('ships Vesen Mono as a small WOFF2, with the licence beside it', () => {
+    const font = readFileSync(join(ROOT, 'public/fonts/VesenMono.woff2'));
+    expect(font.subarray(0, 4).toString('latin1')).toBe('wOF2');
+    expect(font.length).toBeLessThan(90_000);
+    const licence = read('public/fonts/OFL.txt');
+    expect(licence).toMatch(/^Copyright \(c\) 2019 - Present, Microsoft Corporation,\nwith Reserved Font Name Cascadia Code\.\n/);
+    expect(licence).toContain('SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007');
+    expect(licence).toContain('DISCLAIMER');
+  });
+
+  it('keeps the source font out of the site, where nothing loads it', () => {
+    expect(readdirSync(join(ROOT, 'public/fonts')).sort()).toEqual(['OFL.txt', 'VesenMono.woff2']);
+    expect(existsSync(join(ROOT, 'assets-src/fonts/CascadiaCode.ttf'))).toBe(true);
+    expect(existsSync(join(ROOT, 'scripts/fonts/build-vesen-mono.py'))).toBe(true);
   });
 });

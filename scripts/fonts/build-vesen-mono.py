@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+"""Builds public/fonts/VesenMono.woff2 from the variable source font in assets-src/fonts.
+
+The terminal's font is a subset of a font released under the SIL Open Font License 1.1 with a
+Reserved Font Name, so the subset is a Modified Version and ships under its own name, Vesen Mono,
+with public/fonts/OFL.txt beside it.
+
+What it does:
+  1. Instances the variable font at wght=400 (one static Regular face).
+  2. Subsets it to the characters a terminal needs: Latin (with the macron vowels of te reo
+     Māori), punctuation, currency, arrows, maths, box drawing, blocks, shapes and braille.
+  3. Drops hinting and every layout feature that changes spacing or substitutes glyphs (kerning,
+     ligatures, contextual alternates), so each character keeps one fixed-width cell.
+  4. Renames the family and keeps the copyright and licence records.
+  5. Writes WOFF2.
+
+Needs fontTools and brotli (pip install fonttools brotli). Paths default to the repository, so
+`python3 scripts/fonts/build-vesen-mono.py` works from any directory.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+from fontTools import subset
+from fontTools.ttLib import TTFont
+from fontTools.varLib import instancer
+
+ROOT = Path(__file__).resolve().parents[2]
+SOURCE = ROOT / "assets-src" / "fonts" / "CascadiaCode.ttf"
+OUTPUT = ROOT / "public" / "fonts" / "VesenMono.woff2"
+
+FAMILY = "Vesen Mono"
+FULL_NAME = "Vesen Mono Regular"
+POSTSCRIPT_NAME = "VesenMono-Regular"
+COPYRIGHT_SUFFIX = " Modified as Vesen Mono."
+
+# Inclusive code point ranges. Code points the source font lacks are skipped by the subsetter,
+# and the browser falls back to the next font in --term-font for them.
+RANGES: list[tuple[int, int]] = [
+    (0x0020, 0x007E),  # Basic Latin
+    (0x00A0, 0x00FF),  # Latin-1 Supplement
+    (0x0100, 0x017F),  # Latin Extended-A: ā ē ī ō ū Ā Ē Ī Ō Ū (Ōtautahi, Tāmaki Makaurau)
+    (0x1E00, 0x1EFF),  # Latin Extended Additional
+    (0x2000, 0x206F),  # General Punctuation
+    (0x2070, 0x209F),  # Superscripts and Subscripts
+    (0x20A0, 0x20CF),  # Currency Symbols
+    (0x2100, 0x214F),  # Letterlike Symbols
+    (0x2190, 0x21FF),  # Arrows
+    (0x2200, 0x22FF),  # Mathematical Operators
+    (0x23CE, 0x23CE),  # Return symbol, for key hints
+    (0x2500, 0x257F),  # Box Drawing
+    (0x2580, 0x259F),  # Block Elements
+    (0x25A0, 0x25FF),  # Geometric Shapes
+    (0x2600, 0x2603),  # Sun, cloud, umbrella, snowman
+    (0x2614, 0x2614),  # Umbrella with rain
+    (0x26A1, 0x26A1),  # High voltage
+    (0x2713, 0x2713),  # Check mark
+    (0x2717, 0x2717),  # Ballot X
+    (0x2744, 0x2744),  # Snowflake
+    (0x2800, 0x28FF),  # Braille Patterns (the spinner)
+    (0xFFFD, 0xFFFD),  # Replacement character
+]
+
+# Only what correct text needs: no kern, liga, calt (where the source keeps its code ligatures),
+# rlig or stylistic sets.
+LAYOUT_FEATURES = ["ccmp", "locl", "mark", "mkmk"]
+
+# Name records kept: copyright (0), family and style (1, 2), unique ID (3), full name (4),
+# version (5), PostScript name (6), designer and vendor credits (8, 9, 11, 12), licence (13, 14),
+# typographic family and style (16, 17). The trademark record (7) is about the reserved name.
+NAME_IDS = [0, 1, 2, 3, 4, 5, 6, 8, 9, 11, 12, 13, 14, 16, 17]
+
+
+def unicodes() -> list[int]:
+    return [cp for start, end in RANGES for cp in range(start, end + 1)]
+
+
+def rename(font: TTFont) -> None:
+    name = font["name"]
+    version = f"{font['head'].fontRevision:.3f}"
+    copyright_text = name.getDebugName(0)
+    if not copyright_text:
+        raise SystemExit("the source font has no copyright record (name ID 0)")
+    if not copyright_text.endswith(COPYRIGHT_SUFFIX):
+        copyright_text += COPYRIGHT_SUFFIX
+
+    # Platform 3 (Windows, Unicode BMP, en-US) is what browsers read. Every other record of the
+    # renamed IDs is removed, so no old name survives on another platform.
+    renamed = {
+        0: copyright_text,
+        1: FAMILY,
+        2: "Regular",
+        3: f"{version};{POSTSCRIPT_NAME}",
+        4: FULL_NAME,
+        6: POSTSCRIPT_NAME,
+        16: FAMILY,
+        17: "Regular",
+    }
+    for name_id in renamed:
+        name.removeNames(nameID=name_id)
+    for name_id, text in renamed.items():
+        name.setName(text, name_id, 3, 1, 0x409)
+    name.names = [record for record in name.names if record.nameID in NAME_IDS]
+
+    # The copyright and licence records are kept as written; no other record may use the old name.
+    leftovers = [
+        record.nameID
+        for record in name.names
+        if record.nameID not in (0, 13, 14) and "cascadia" in record.toUnicode().lower()
+    ]
+    if leftovers:
+        raise SystemExit(f"name records still carry the reserved name: {sorted(set(leftovers))}")
+
+
+def build(source: Path, output: Path) -> int:
+    # The source's own timestamps are kept so the output is the same on every run.
+    font = TTFont(source, recalcTimestamp=False)
+    font = instancer.instantiateVariableFont(font, {"wght": 400}, updateFontNames=False)
+
+    options = subset.Options()
+    options.layout_features = LAYOUT_FEATURES
+    options.hinting = False
+    options.name_IDs = NAME_IDS
+    options.name_languages = [0x409]
+    options.notdef_outline = True
+    options.glyph_names = False
+    options.drop_tables += ["gasp", "DSIG", "STAT"]
+    subsetter = subset.Subsetter(options=options)
+    subsetter.populate(unicodes=unicodes())
+    subsetter.subset(font)
+
+    rename(font)
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    font.flavor = "woff2"
+    font.save(output)
+    return output.stat().st_size
+
+
+def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--source", type=Path, default=SOURCE)
+    parser.add_argument("--output", type=Path, default=OUTPUT)
+    args = parser.parse_args(argv)
+
+    size = build(args.source, args.output)
+    try:
+        shown = args.output.resolve().relative_to(ROOT)
+    except ValueError:
+        shown = args.output
+    print(f"vesen-mono: wrote {shown} ({size:,} bytes, {size / 1000:.1f} kB)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

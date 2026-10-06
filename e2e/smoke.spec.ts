@@ -69,9 +69,10 @@ test.describe('smoke', { tag: '@smoke' }, () => {
     await prompt.pressSequentially('ls -a');
     await expect(prompt).toHaveValue('ls -a');
     // The input wraps under the running line rather than shrinking to nothing: it keeps at
-    // least 8ch, which is more than four ems in a monospace font.
+    // least 8ch, which is more than four ems in a monospace font. Ems of the terminal's size: on
+    // touch the input itself is 16px, drawn scaled down to that size.
     const width = (await prompt.boundingBox())?.width ?? 0;
-    const fourEms = await prompt.evaluate((input) => 4 * parseFloat(getComputedStyle(input).fontSize));
+    const fourEms = await prompt.evaluate((input) => 4 * parseFloat(getComputedStyle(input.parentElement ?? input).fontSize));
     expect(width, 'type-ahead input width in px').toBeGreaterThanOrEqual(fourEms);
   });
 });

@@ -1,0 +1,42 @@
+/* ==========================================================================
+   Type tokens (docs/plan/09-visual-and-accessibility.md, deliverable 2)
+   --------------------------------------------------------------------------
+   One font, one size and one line height for the whole terminal. Components
+   inherit them and never set their own. Vesen Mono is a subset of a font under
+   the SIL Open Font License (public/fonts/OFL.txt), built by
+   scripts/fonts/build-vesen-mono.py.
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Vesen Mono';
+  src: url('/fonts/VesenMono.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --term-font: 'Vesen Mono', ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  /* 13px on phones fits the 44-column banner; see the media queries below for wider screens. */
+  --term-fs: 13px;
+  --term-lh: 1.35;
+  /* One cell's width in em, for art that shrinks to fit. Vesen Mono's is 0.586; 0.6 leaves room
+     for the fallback fonts, whose cells are at most that wide. */
+  --ch-ratio: 0.6;
+  /* The command input on touch is really 16px and drawn at --term-fs with this scale, which
+     platform/measure.ts sets. 1 (a plain 16px input) until it does, or if it cannot. Setting
+     --input-scale-off: 1 here, or opening the page with ?input=plain, keeps it plain. */
+  --input-scale: 1;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --term-fs: 14px;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --term-fs: 16px;
+  }
+}

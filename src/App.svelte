@@ -62,7 +62,7 @@
 
 <main
   bind:this={mainElement}
-  class="h-full border-2 rounded-md p-2 sm:p-4 overflow-auto text-xs sm:text-sm md:text-base"
+  class="h-full border-2 rounded-md p-2 sm:p-4 overflow-auto"
   style={`background-color: ${$theme.background}; color: ${$theme.foreground}; border-color: ${$theme.green};`}
 >
   <h1 class="sr-only">Vesen terminal</h1>
@@ -73,11 +73,14 @@
   </div>
 
   <div class="flex flex-col">
-    <div class="grid items-center gap-x-1" style="grid-template-columns: max-content 1fr;">
+    <!-- minmax(0, 1fr) and min-w-0 let the input shrink, so the row never overflows at 320px. -->
+    <div class="grid items-center gap-x-1" style="grid-template-columns: max-content minmax(0, 1fr);">
       <div class="flex items-center">
         <Ps1 {isPasswordMode} />
       </div>
-      <Input bind:command bind:isPasswordMode bind:isProcessing bind:loadingText />
+      <div class="min-w-0">
+        <Input bind:command bind:isPasswordMode bind:isProcessing bind:loadingText />
+      </div>
     </div>
 
     <CommandSuggestionsRow {command} {isProcessing} {isPasswordMode} on:show={onSuggestionsShow} on:hide={onSuggestionsHide} on:update={onSuggestionsUpdate} />
@@ -89,7 +92,7 @@
       -->
       <button
         type="button"
-        class="processing font-mono mt-1"
+        class="processing mt-1"
         aria-label="Cancel running command"
         onmousedown={(event) => event.preventDefault()}
         onclick={() => interruptJob()}

@@ -544,7 +544,6 @@ export const fileSystemCommands = {
               height: 100vh;
               background: #000;
               color: #fff;
-              font-family: monospace;
               font-size: 24px;
               text-align: center;
             ">
