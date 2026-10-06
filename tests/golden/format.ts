@@ -4,7 +4,7 @@
 /** One line typed at the prompt and what the legacy terminal returned for it. */
 export interface Step {
   line: string;
-  /** The exact string processCommand resolved to, before History.svelte wraps it. */
+  /** The output: a legacy command's exact HTML, or the shell's own lines as spans (blocksToGoldenHtml). */
   html: string;
   /** How many times the terminal bell rang while the line ran. */
   bells: number;
@@ -91,4 +91,64 @@ export function normaliseSvelteMarkup(html: string): string {
     const kept = classes.split(/\s+/).filter((name) => name !== '' && !/^svelte-[a-z0-9]+$/.test(name));
     return kept.length > 0 ? ` class="${kept.join(' ')}"` : '';
   });
+}
+
+// ── What the shell put on the screen, as golden HTML ──────────────────────────────────────
+
+/** The parts of the output model the goldens need; structural, so this file needs no app imports. */
+interface GoldenSpan {
+  readonly text: string;
+  readonly style?: {
+    readonly fg?: string;
+    readonly bg?: string;
+    readonly bold?: boolean;
+    readonly dim?: boolean;
+    readonly italic?: boolean;
+    readonly underline?: boolean;
+    readonly strike?: boolean;
+  };
+}
+type GoldenBlock =
+  | { readonly type: 'legacyHtml'; readonly html: string }
+  | { readonly type: 'lines'; readonly lines: readonly (readonly GoldenSpan[])[] }
+  | { readonly type: string };
+
+const ROLES = new Set([
+  'fg', 'fg-strong', 'muted', 'accent', 'ok', 'warn', 'error', 'link', 'chip-bg', 'chip-fg', 'ghost', 'selection',
+  'cursor', 'prompt-user', 'prompt-host', 'prompt-path', 'sun', 'rain', 'cold', 'hot', 'qr-ink', 'qr-paper',
+]);
+
+function goldenColour(name: string): string {
+  return ROLES.has(name) ? `var(--role-${name})` : `var(--theme-${name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)})`;
+}
+
+function escapeText(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function spanHtml(span: GoldenSpan): string {
+  const style = span.style ?? {};
+  const css = [
+    style.fg === undefined ? '' : `color: ${goldenColour(style.fg)};`,
+    style.bg === undefined ? '' : `background-color: ${goldenColour(style.bg)};`,
+    style.bold ? 'font-weight: bold;' : '',
+    style.italic ? 'font-style: italic;' : '',
+    style.dim ? 'opacity: 0.65;' : '',
+    style.underline || style.strike ? `text-decoration: ${[style.underline ? 'underline' : '', style.strike ? 'line-through' : ''].filter(Boolean).join(' ')};` : '',
+  ].filter(Boolean);
+  return css.length === 0 ? escapeText(span.text) : `<span style="${css.join(' ')}">${escapeText(span.text)}</span>`;
+}
+
+/**
+ * A step's output for the golden: a legacy command's HTML exactly as it rendered, and the
+ * shell's own lines (command not found, say) as the equivalent spans, with tap actions left out.
+ */
+export function blocksToGoldenHtml(blocks: readonly GoldenBlock[]): string {
+  return blocks
+    .map((block) => {
+      if ('html' in block) return block.html;
+      if ('lines' in block) return block.lines.map((line) => line.map(spanHtml).join('')).join('\n');
+      throw new Error(`no golden form for a ${block.type} block`);
+    })
+    .join('\n');
 }

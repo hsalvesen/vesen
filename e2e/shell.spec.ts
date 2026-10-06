@@ -366,7 +366,8 @@ test.describe('focus', { tag: '@smoke' }, () => {
     await prompt(page).evaluate((input) => input.blur());
     await page.getByRole('button', { name: 'Cancel running command' }).tap();
     await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
-    await expect(page.getByRole('log')).toContainText('cat cancelled');
+    // Interrupted as in a terminal: ^C, and the prompt back at once.
+    await expect(page.locator('[role="log"] .entry').last()).toContainText('^C');
     await expect(prompt(page)).not.toBeFocused();
     release();
   });
@@ -475,7 +476,7 @@ test.describe('keys on other controls', { tag: '@smoke' }, () => {
     await cancel.focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
-    await expect(page.getByRole('log')).toContainText('cat cancelled');
+    await expect(page.locator('[role="log"] .entry').last()).toContainText('^C');
   });
 });
 

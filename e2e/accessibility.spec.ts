@@ -126,9 +126,11 @@ test.describe('accessibility', { tag: '@smoke' }, () => {
         probe.style.color = value;
         return getComputedStyle(probe).color;
       };
+      const span = (text: string) =>
+        Array.from(document.querySelectorAll('[role="log"] span')).find((el) => el.textContent === text) ?? null;
       const result = {
-        error: [colourOf(document.querySelector('.out-error')), resolve(root.getPropertyValue('--role-error'))],
-        hint: [colourOf(document.querySelector('.out-error + .out-muted, .out-muted')), resolve(root.getPropertyValue('--role-muted'))],
+        error: [colourOf(span('vesen: lss: command not found')), resolve(root.getPropertyValue('--role-error'))],
+        hint: [colourOf(span('Did you mean ')), resolve(root.getPropertyValue('--role-muted'))],
         user: [colourOf(document.querySelector('.user')), resolve(root.getPropertyValue('--role-prompt-user'))],
       };
       probe.remove();

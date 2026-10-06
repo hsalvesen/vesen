@@ -2,8 +2,10 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { get } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { lineText, type Block } from '../output/model';
+import type { Shell } from '../shell/index';
 import { commandHistory, history } from '../stores/history';
-import { interruptJob } from '../stores/job';
+import { legacyAppShell } from '../utils/legacyShell';
 import Input from './Input.svelte';
 
 /** Lets pending promise callbacks and Svelte updates run, without moving any timer. */
@@ -26,12 +28,29 @@ function ctrlC(): KeyboardEvent {
 
 const lastEntry = () => get(history).at(-1);
 
+/** The text of an entry's output, which the shell records as blocks. */
+const outputText = (output: unknown): string =>
+  (output as Block[]).map((block) => (block.type === 'lines' ? block.lines.map(lineText).join('\n') : '')).join('\n');
+
+let shell: Shell;
+let stopShell: () => void = () => {};
+
+/** Mounts the prompt over a fresh shell. */
+function renderInput() {
+  return render(Input, { props: { shell } });
+}
+
 beforeEach(() => {
   history.set([]);
   commandHistory.set([]);
+  const app = legacyAppShell({ banner: () => 'BANNER', yieldToHost: () => Promise.resolve() });
+  shell = app.shell;
+  stopShell = app.stop;
 });
 
 afterEach(() => {
+  shell.abort();
+  stopShell();
   window.getSelection()?.removeAllRanges();
   document.body.querySelectorAll('[data-test-text]').forEach((node) => node.remove());
   vi.unstubAllGlobals();
@@ -40,7 +59,7 @@ afterEach(() => {
 
 describe('Ctrl+C', () => {
   it('leaves the event alone when text is selected in the page, so the browser copies it', async () => {
-    render(Input);
+    renderInput();
     await type('echo hello');
     const text = document.createElement('p');
     text.dataset.testText = '';
@@ -60,7 +79,7 @@ describe('Ctrl+C', () => {
   });
 
   it('leaves the event alone when text is selected in the prompt', async () => {
-    render(Input);
+    renderInput();
     await type('echo hello');
     prompt().focus();
     prompt().setSelectionRange(0, 4);
@@ -74,7 +93,7 @@ describe('Ctrl+C', () => {
   });
 
   it('with nothing selected, abandons the line with ^C and keeps it out of history', async () => {
-    render(Input);
+    renderInput();
     await type('echo hello');
 
     const event = ctrlC();
@@ -95,7 +114,7 @@ describe('a running command', () => {
   });
 
   it('is interrupted at once by Ctrl+C, without waiting for the request', async () => {
-    render(Input);
+    renderInput();
     await type('stock AAPL');
     await fireEvent.keyDown(prompt(), { key: 'Enter' });
     // The network commands load on first use, then make the request.
@@ -106,28 +125,28 @@ describe('a running command', () => {
     expect(get(history)).toEqual([]);
 
     prompt().dispatchEvent(ctrlC());
-    await settle();
+    await vi.waitFor(() => expect(lastEntry()?.command).toBe('stock AAPL'));
 
-    expect(lastEntry()?.command).toBe('stock AAPL');
-    expect(lastEntry()?.outputs[0]).toContain('Stock request cancelled');
+    // The prompt returns at once with ^C, and the late output of the request is dropped.
+    expect(outputText(lastEntry()?.outputs[0])).toBe('^C');
     expect(get(commandHistory)).toEqual(['stock AAPL']);
     expect(screen.queryByText('stock AAPL')).not.toBeInTheDocument();
   });
 
   it('is interrupted by Escape too', async () => {
-    render(Input);
+    renderInput();
     await type('curl example.com');
     await fireEvent.keyDown(prompt(), { key: 'Enter' });
     await settle();
 
     await fireEvent.keyDown(prompt(), { key: 'Escape' });
-    await settle();
+    await vi.waitFor(() => expect(lastEntry()?.command).toBe('curl example.com'));
 
-    expect(lastEntry()?.outputs[0]).toContain('Request cancelled');
+    expect(outputText(lastEntry()?.outputs[0])).toBe('^C');
   });
 
   it('keeps the prompt enabled and takes type-ahead, but ignores Enter until it finishes', async () => {
-    render(Input);
+    renderInput();
     await type('weather Oslo');
     await fireEvent.keyDown(prompt(), { key: 'Enter' });
     await settle();
@@ -143,17 +162,39 @@ describe('a running command', () => {
     expect(get(history)).toEqual([]);
 
     prompt().dispatchEvent(ctrlC());
-    await settle();
-
-    expect(get(history)).toHaveLength(1);
+    await vi.waitFor(() => expect(get(history)).toHaveLength(1));
     expect(lastEntry()?.command).toBe('weather Oslo');
     expect(prompt().value).toBe('ls');
   });
 });
 
+describe('sudo', () => {
+  it('asks for a password however the line is typed: leading spaces and quotes make no difference', async () => {
+    for (const line of ['sudo ls', '   sudo ls', "'sudo' ls"]) {
+      const { unmount } = renderInput();
+      await type(line);
+      await fireEvent.keyDown(prompt(), { key: 'Enter' });
+      await settle();
+      // A password field is no longer a textbox to assistive technology.
+      expect(document.querySelector('input.command-input')?.getAttribute('type'), line).toBe('password');
+      expect(lastEntry()).toEqual({ command: line, outputs: [] });
+      unmount();
+    }
+    expect(get(commandHistory)).toEqual(['sudo ls', "'sudo' ls"]);
+  });
+
+  it('runs sudo --help like any command', async () => {
+    renderInput();
+    await type('sudo --help');
+    await fireEvent.keyDown(prompt(), { key: 'Enter' });
+    await vi.waitFor(() => expect(lastEntry()?.command).toBe('sudo --help'));
+    expect(prompt().type).toBe('text');
+  });
+});
+
 describe('focus', () => {
   it('starts in the prompt with a mouse and keyboard', () => {
-    render(Input);
+    renderInput();
     expect(document.activeElement).toBe(prompt());
   });
 
@@ -161,30 +202,28 @@ describe('focus', () => {
     vi.spyOn(window, 'matchMedia').mockImplementation(
       (query: string) => ({ matches: query === '(pointer: coarse)' }) as MediaQueryList,
     );
-    render(Input);
+    renderInput();
     expect(document.activeElement).not.toBe(prompt());
   });
 
   it('comes back to the prompt after a command only if it was there at submit', async () => {
-    render(Input);
+    renderInput();
     await type('echo one');
     await fireEvent.keyDown(prompt(), { key: 'Enter' });
-    await settle();
-    expect(lastEntry()?.command).toBe('echo one');
+    await vi.waitFor(() => expect(lastEntry()?.command).toBe('echo one'));
     expect(document.activeElement).toBe(prompt());
 
     prompt().blur();
     await type('echo two');
     await fireEvent.keyDown(prompt(), { key: 'Enter' });
-    await settle();
-    expect(lastEntry()?.command).toBe('echo two');
+    await vi.waitFor(() => expect(lastEntry()?.command).toBe('echo two'));
     expect(document.activeElement).not.toBe(prompt());
   });
 
   it('stays put away when the visitor dismissed the keyboard while a command ran', async () => {
     let answer: (response: Response) => void = () => {};
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => (answer = resolve))));
-    render(Input);
+    renderInput();
     prompt().focus();
     await type('cat README.md');
     await fireEvent.keyDown(prompt(), { key: 'Enter' });
@@ -199,14 +238,14 @@ describe('focus', () => {
 
   it('stays put away when the visitor dismissed the keyboard and then tapped cancel', async () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
-    render(Input);
+    renderInput();
     prompt().focus();
     await type('cat README.md');
     await fireEvent.keyDown(prompt(), { key: 'Enter' });
     await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
 
     prompt().blur();
-    interruptJob();
+    shell.abort();
     await vi.waitFor(() => expect(lastEntry()?.command).toBe('cat README.md'));
     await settle();
     expect(document.activeElement).not.toBe(prompt());
@@ -221,7 +260,7 @@ describe('keys meant for other controls', () => {
   };
 
   it('holds Tab in the prompt for completion, but lets Escape then Tab leave the terminal', async () => {
-    render(Input);
+    renderInput();
     prompt().focus();
     expect(key(prompt(), { key: 'Tab' }).defaultPrevented).toBe(true);
 
@@ -245,7 +284,7 @@ describe('keys meant for other controls', () => {
   });
 
   it('leaves Enter on a button to the button', async () => {
-    render(Input);
+    renderInput();
     const button = document.createElement('button');
     button.dataset.testText = '';
     document.body.append(button);
@@ -263,7 +302,7 @@ describe('keys meant for other controls', () => {
 
   it('leaves Enter on the cancel button to it while a command runs', async () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
-    render(Input);
+    renderInput();
     await type('cat README.md');
     await fireEvent.keyDown(prompt(), { key: 'Enter' });
     await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
@@ -272,7 +311,7 @@ describe('keys meant for other controls', () => {
     button.dataset.testText = '';
     document.body.append(button);
     expect(key(button, { key: 'Enter' }).defaultPrevented).toBe(false);
-    interruptJob();
+    shell.abort();
     await vi.waitFor(() => expect(lastEntry()?.command).toBe('cat README.md'));
   });
 });

@@ -6,18 +6,25 @@ import type { CommandOutput } from '../interfaces/command';
 import { applyCathode } from '../platform/crt';
 import { installChunkReload } from '../platform/chunkReload';
 import { applyTheme } from '../platform/head';
-import { decideTier, NO_SIGNALS, startPerf, type PerfSignals } from '../platform/perf';
+import { decideTier, inAppBrowser, NO_SIGNALS, startPerf, type PerfSignals } from '../platform/perf';
 import { applyRoles } from '../platform/theme-apply';
 import { canonicalRedirect } from '../platform/hosts';
-import { startMeasuring } from '../platform/measure';
+import { startMeasuring, transcriptColumns } from '../platform/measure';
 import { startViewport } from '../platform/viewport';
+import { createBell } from '../services/bell';
+import { createOpener } from '../services/opener';
 import { createStorage, runMigrations } from '../services/storage';
+import { createSysInfoStub } from '../services/sysinfo';
 import type { StorageService } from '../services/types';
+import type { ShellFs, ShellPort, TerminalInfo } from '../shell/index';
+import type { CommandSpec, InAppBrowser } from '../shell/types';
 import { cathode, cathodeModes, cathodeQuality, crtTier, DEFAULT_CATHODE_MODE, persistCathode } from '../stores/cathode';
 import { history } from '../stores/history';
 import { DEFAULT_THEME_NAME, persistTheme, theme, themes } from '../stores/theme';
 import { markCurrentCathode, markCurrentTheme } from '../ui/legacy-highlights';
+import { playBeep } from '../utils/beep';
 import { notice } from '../utils/notice';
+import { lazyShell } from './lazy-shell';
 
 export interface BootOptions {
   readonly window: Window;
@@ -25,10 +32,24 @@ export interface BootOptions {
   readonly build: string;
   /** The welcome banner that opens the transcript. */
   readonly banner: () => CommandOutput;
+  /**
+   * Migration only: loads the legacy commands and file tree (src/utils/legacyShell.ts). main.ts
+   * hands it in, so this strictly typed module never imports src/utils. Without it the shell has
+   * only the spec files and an empty home folder.
+   */
+  readonly legacy?: () => Promise<LegacyParts>;
+}
+
+/** The legacy commands as specs, and the legacy file tree. */
+export interface LegacyParts {
+  readonly specs: readonly CommandSpec[];
+  readonly fs: ShellFs;
 }
 
 export interface Booted {
   readonly storage: StorageService;
+  /** The shell the terminal runs lines through; its kernel loads just after the first paint. */
+  readonly shell: ShellPort;
   /** Disconnects the stores from storage and the page, and the chunk reload listener. */
   stop(): void;
 }
@@ -37,7 +58,7 @@ export interface Booted {
  * Prepares the page for the app. Returns null when the visitor is being sent to the canonical
  * origin, in which case nothing should mount.
  */
-export function bootstrap({ window: win, build, banner }: BootOptions): Booted | null {
+export function bootstrap({ window: win, build, banner, legacy }: BootOptions): Booted | null {
   // The apex and the two Firebase hostnames serve the same build; send visitors to the one
   // origin so storage and the prompt are the same everywhere.
   const canonical = canonicalRedirect(new URL(win.location.href));
@@ -93,13 +114,70 @@ export function bootstrap({ window: win, build, banner }: BootOptions): Booted |
     startViewport(win),
   ];
 
+  // The kernel loads now, in its own chunk, so it is not in the way of the first paint.
+  const services = {
+    banner,
+    storage: storage.local,
+    bell: createBell({ play: playBeep }),
+    opener: createOpener(win, { inApp: inAppBrowser(win.navigator.userAgent), touch: coarsePointer(win) }),
+    terminal: terminalInfo(win),
+    sys: createSysInfoStub(win),
+  };
+  let stopped = false;
+  const shell = lazyShell(
+    async () => {
+      const [{ createAppShell }, { createNet }, { createClock }, { emptyHome }, parts] = await Promise.all([
+        import('./shell'),
+        import('../services/net'),
+        import('../services/clock'),
+        import('../vfs/legacy-tree'),
+        legacy?.() ?? Promise.resolve(null),
+      ]);
+      const app = createAppShell({
+        ...services,
+        fs: parts?.fs ?? emptyHome(),
+        specs: parts?.specs ?? [],
+        net: createNet(),
+        clock: createClock(),
+      });
+      if (stopped) app.stop();
+      else stops.push(app.stop);
+      return app.shell;
+    },
+    {
+      // Only if the kernel's chunk never arrives: the line that waited for it says so.
+      screen: { commit: ({ line, blocks }) => history.update((entries) => [...entries, { command: line, outputs: [blocks] }]) },
+    },
+  );
+
   history.set([{ command: 'banner', outputs: [banner()] }]);
 
   return {
     storage,
+    shell,
     stop: () => {
+      stopped = true;
       for (const stop of stops) stop();
     },
+  };
+}
+
+function coarsePointer(win: Window): boolean {
+  return win.matchMedia?.('(pointer: coarse)').matches ?? false;
+}
+
+const IN_APP: Readonly<Record<string, InAppBrowser>> = { Instagram: 'instagram', Facebook: 'facebook', TikTok: 'tiktok' };
+
+/** The terminal as the shell sees it: its size in cells, touch, and the in-app browser. */
+function terminalInfo(win: Window): TerminalInfo {
+  const app = inAppBrowser(win.navigator.userAgent);
+  return {
+    size: () => ({
+      cols: transcriptColumns(win),
+      rows: Math.max(10, Math.floor((win.visualViewport?.height ?? win.innerHeight) / 20)),
+    }),
+    touch: coarsePointer(win),
+    inApp: app === null ? null : (IN_APP[app] ?? null),
   };
 }
 

@@ -1,19 +1,27 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte";
   import { history, commandHistory, speedtestPhase } from "../stores/history";
-  import { commands, processCommand } from "../utils/commands";
+  import { commands } from "../utils/commands";
   import { virtualFileSystem, currentPath } from "../utils/virtualFileSystem";
   import themes from "../../themes.json";
   import { cathodeModes, crtQualities } from "../stores/cathode";
-  import { interruptJob, runJob } from "../stores/job";
-  import { escapeHtml } from "../output/escape";
-  import { cancelledNotice, notice } from "../utils/notice";
+  import type { JobOrigin, ShellPort } from "../shell/index";
+  import type { JobInfo } from "../shell/types";
+  import { notice } from "../utils/notice";
 
   let {
+    shell,
     isPasswordMode = $bindable(),
     isProcessing = $bindable(false),
     loadingText = $bindable(""),
     command = $bindable(""),
+  }: {
+    /** Runs every line: parsing, pipes, redirection, history and ^C are the shell's. */
+    shell: ShellPort;
+    isPasswordMode?: boolean;
+    isProcessing?: boolean;
+    loadingText?: string;
+    command?: string;
   } = $props();
 
   let historyIndex = $state(-1);
@@ -23,7 +31,21 @@
 
   // The line that is running. It leaves the input on Enter, so the input collects type-ahead.
   let runningLine = $state("");
-  let runningName = $state("");
+  // Which run is current, so a run that was replaced does not end the busy state of the next.
+  let runs = 0;
+
+  // The shell's job: the command now running, for the status line. The prompt is idle again the
+  // moment the job ends, in the same update as its transcript entry, so the two never show apart.
+  let job = $state<JobInfo | null>(null);
+  $effect(() =>
+    shell.job.subscribe((value) => {
+      job = value;
+      if (value === null && untrack(() => isProcessing)) {
+        runningLine = "";
+        isProcessing = false;
+      }
+    }),
+  );
 
   // Loading animation frames
   const loadingFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -127,8 +149,8 @@
     if (isPasswordMode) {
       interruptSudoPasswordPrompt();
     } else if (isProcessing) {
-      // runLine sees the interrupt at once and prints the cancelled notice.
-      interruptJob();
+      // The shell ends the job at once with ^C; runLine then records it.
+      shell.abort();
     } else {
       // Like bash: echo the abandoned line with ^C under a fresh prompt. It is not kept in history.
       $history = [...$history, { command: `${command}^C`, outputs: [] }];
@@ -138,43 +160,45 @@
   }
 
   /**
-   * Runs one line as the current job and records it once it finishes or is interrupted.
-   * The input is never disabled, so it keeps focus through the run and nothing gives focus back
-   * afterwards: it can only have left because the visitor put the keyboard away to read, and a
-   * phone's keyboard stays as the visitor left it.
+   * Runs one line through the shell, which records it in the transcript once it finishes or is
+   * interrupted. The input is never disabled, so it keeps focus through the run and nothing gives
+   * focus back afterwards: it can only have left because the visitor put the keyboard away to
+   * read, and a phone's keyboard stays as the visitor left it.
    */
-  async function runLine(line: string, commandName: string, args: string[]) {
+  async function runLine(line: string, origin: JobOrigin = "keyboard") {
+    const run = ++runs;
     command = "";
     historyIndex = -1;
     runningLine = line;
-    runningName = commandName;
     isProcessing = true;
-
-    let output: string;
-    let interrupted = false;
     try {
-      const outcome = await runJob(commandName, (signal) => processCommand(line, signal));
-      interrupted = outcome.status === "interrupted";
-      output = outcome.status === "done" ? outcome.value : cancelledNotice(commandName);
-    } catch (error) {
-      output = `Error: ${escapeHtml(String(error))}`;
+      await shell.start(line, origin).done;
     } finally {
-      runningLine = "";
-      runningName = "";
-      isProcessing = false;
+      if (run === runs) {
+        runningLine = "";
+        isProcessing = false;
+      }
     }
+  }
 
-    // Arrow-key history keeps everything except reset, which clears it.
-    if (commandName !== "reset") {
-      $commandHistory = [...$commandHistory, line];
-    }
+  /**
+   * Runs a line from a tapped did-you-mean or chip, as if typed. The shell opens any URL the
+   * command opens inside this tap, while the browser still allows it.
+   */
+  export function submit(line: string): Promise<void> {
+    shell.preflight(line);
+    return runLine(line, "chip");
+  }
 
-    // clear and reset leave the screen to themselves unless they were asked for help.
-    const hasHelpFlag = args.includes("--help") || args.includes("-h");
-    const skipsDisplay = (commandName === "clear" || commandName === "reset") && !hasHelpFlag;
-    if (interrupted || !skipsDisplay) {
-      $history = [...$history, { command: line, outputs: [output] }];
-    }
+  /** Puts text at the prompt, for a tapped suggestion that inserts rather than runs. */
+  export function insert(text: string): void {
+    command = text;
+    historyIndex = -1;
+  }
+
+  /** Focuses the prompt without scrolling, on a desktop; on touch it would open the keyboard. */
+  export function focusPrompt(): void {
+    if (!window.matchMedia?.("(pointer: coarse)").matches) input?.focus({ preventScroll: true });
   }
 
   // A keyboard and mouse can start typing at once. On touch, focus opens the soft keyboard over
@@ -249,28 +273,25 @@
         return;
       }
 
-      const [commandName, ...args] = command.split(" ");
+      const line = command;
+      // Synchronous, inside the key press: the shell reads the line, and opens any URL its
+      // command opens while the browser still allows it.
+      const preflight = shell.preflight(line);
 
-      // Special handling for sudo
-      if (commandName === "sudo" && args.length > 0) {
-        const hasHelpFlag = args.includes("--help") || args.includes("-h");
-        // Check if help flag is present
-        if (!hasHelpFlag) {
-          pendingSudoCommand = args.join(" ");
-          isPasswordMode = true;
-          $history = [
-            ...$history,
-            {
-              command,
-              outputs: [],
-            },
-          ];
-          command = "";
-          return;
-        }
+      // sudo asks for a password first. The shell read the words, so quoting and leading spaces
+      // make no difference.
+      const [name, ...args] = preflight?.argv ?? [];
+      const asksHelp = args[0] === "-h" || args.includes("--help");
+      if (name === "sudo" && args.length > 0 && !asksHelp) {
+        pendingSudoCommand = args.join(" ");
+        isPasswordMode = true;
+        shell.remember(line);
+        $history = [...$history, { command: line, outputs: [] }];
+        command = "";
+        return;
       }
 
-      await runLine(command, commandName, args);
+      await runLine(line);
     } else if (isPasswordMode) {
       // Handle password input (hide characters)
       if (event.key === "Backspace") {
@@ -543,26 +564,25 @@
     }
   };
 
-  // The spinner under the prompt while a command runs; speedtest reports its phase.
+  // The spinner under the prompt while a command runs: what the command is doing (its spec's
+  // loading label; speedtest reports its phase), and how to stop it.
+  let frame = $state(0);
+  $effect(() => {
+    if (!isProcessing) return;
+    untrack(() => (frame = 0));
+    const timer = setInterval(() => {
+      frame = (frame + 1) % loadingFrames.length;
+    }, 100);
+    return () => clearInterval(timer);
+  });
   $effect(() => {
     if (!isProcessing) {
       loadingText = "";
       return;
     }
-
-    let frame = 0;
-    const render = () => {
-      const phase = $speedtestPhase;
-      const label = runningName === "speedtest" && phase ? phase : "Processing…";
-      loadingText = `${loadingFrames[frame]} ${label}`;
-    };
-    untrack(render);
-    const timer = setInterval(() => {
-      frame = (frame + 1) % loadingFrames.length;
-      render();
-    }, 100);
-
-    return () => clearInterval(timer);
+    const phase = $speedtestPhase;
+    const label = job?.name === "speedtest" && phase ? phase : (job?.label ?? "Processing…");
+    loadingText = `${loadingFrames[frame]} ${label}`;
   });
 </script>
 

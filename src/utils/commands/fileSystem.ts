@@ -1,5 +1,4 @@
 import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from '../virtualFileSystem';
-import { history } from '../../stores/history';
 import { commandHelp } from '../helpTexts';
 import { playBeep } from '../beep';
 import { fetchText, isNetError } from '../../services/net';
@@ -393,11 +392,8 @@ export const fileSystemCommands = {
     return `mkdir: created directory '${escapeHtml(args[0])}'`;
   },
 
-  clear: () => {
-    history.set([]);  // Only clear display history
-    // commandHistory remains intact for navigation
-    return '';
-  },
+  // The shell runs clear as an effect on the screen (Tty.clear); the entry stays so it is listed.
+  clear: () => '',
   
   echo: (args: string[]) => {
     if (args.length === 0) {

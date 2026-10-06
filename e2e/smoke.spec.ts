@@ -51,7 +51,8 @@ test.describe('smoke', { tag: '@smoke' }, () => {
     if (hasTouch) await cancel.tap();
     else await cancel.click();
 
-    await expect(page.getByText('Stock request cancelled')).toBeVisible();
+    // Interrupted as in a terminal: ^C, and the prompt back at once.
+    await expect(page.locator('[role="log"] .entry').last()).toContainText('^C');
     await expect(cancel).toBeHidden();
     await expect(prompt).toBeFocused();
   });

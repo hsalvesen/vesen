@@ -1,11 +1,13 @@
-// Script injection through the whole legacy pipeline: lines typed at the prompt run through
-// processCommand exactly as Input.svelte runs them, and the transcript is mounted with the real
-// History component, which renders every output through OutputView's sanitising legacy block.
+// Script injection through the whole pipeline: lines typed at the prompt run through the shell
+// exactly as Input.svelte runs them (legacy commands through the adapter), and the transcript is
+// mounted with the real History component, which renders the shell's own output as text and
+// legacy output through OutputView's sanitising legacy block.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { blocksToGoldenHtml } from '../golden/format';
 import { activeContent, xssCorpus } from '../support/xss';
 
 interface Session {
-  /** Runs one line and records it the way Input.svelte's Enter handler does. */
+  /** Runs one line through the shell, which records it in the transcript; returns its output as HTML. */
   run(line: string): Promise<string>;
   /** Mounts History over everything run so far. */
   render(): Promise<HTMLElement>;
@@ -18,16 +20,13 @@ let disposers: (() => void)[] = [];
 /** A fresh page load: new instances of the file system, the stores and the commands. */
 async function boot(): Promise<Session> {
   vi.resetModules();
-  const { processCommand } = await import('../../src/utils/commands');
-  const { history, commandHistory } = await import('../../src/stores/history');
+  const { legacyAppShell } = await import('../../src/utils/legacyShell');
   const { virtualFileSystem } = await import('../../src/utils/virtualFileSystem');
+  const { shell } = legacyAppShell({ banner: () => '', yieldToHost: () => Promise.resolve() });
 
   return {
     async run(line) {
-      const html = await processCommand(line, new AbortController().signal);
-      commandHistory.update((lines) => [...lines, line]);
-      history.update((entries) => [...entries, { command: line, outputs: [html] }]);
-      return html;
+      return blocksToGoldenHtml((await shell.run(line)).blocks);
     },
     async render() {
       // Imported after the reset so the component shares this session's stores.
@@ -120,7 +119,7 @@ describe('the XSS corpus typed at the prompt', () => {
 describe('typed and file text shows exactly as written', () => {
   it('echo prints tags literally', async () => {
     const session = await boot();
-    await session.run('echo <b>x</b>');
+    await session.run("echo '<b>x</b>'");
     const root = await session.render();
     const output = root.querySelectorAll('.command-output');
     expect(output[output.length - 1]?.textContent).toBe('<b>x</b>');
@@ -131,9 +130,18 @@ describe('typed and file text shows exactly as written', () => {
     const session = await boot();
     await session.run('echo "<i>a</i>" > a.txt');
     await session.run('echo b>b.txt');
-    await session.run('echo <b>c</b> >> a.txt');
-    expect(await session.run('cat a.txt')).toBe('&lt;i&gt;a&lt;/i&gt;<br>&lt;b&gt;c&lt;/b&gt;');
-    expect(await session.run('cat b.txt')).toBe('b');
+    await session.run("echo '<b>c</b>' >> a.txt");
+    expect(await session.run('cat a.txt')).toBe('&lt;i&gt;a&lt;/i&gt;<br>&lt;b&gt;c&lt;/b&gt;<br>');
+    expect(await session.run('cat b.txt')).toBe('b<br>');
+  });
+
+  it('an unquoted < or > is a redirection, never markup', async () => {
+    const session = await boot();
+    await session.run('echo <b>c</b>');
+    await session.run('echo <b');
+    const text = (await session.render()).textContent ?? '';
+    expect(text).toContain("vesen: syntax error near unexpected token 'newline'");
+    expect(text).toContain('vesen: b: No such file or directory');
   });
 
   it('cat shows source code with its angle brackets', async () => {
@@ -149,13 +157,14 @@ describe('typed and file text shows exactly as written', () => {
   it('an unknown command, a file name and the history listing show what was typed', async () => {
     const session = await boot();
     const typed = '<img/src/onerror=window.__x=1>';
-    await session.run(typed);
+    // Quoted, so the shell reads it as a command name rather than redirections.
+    await session.run(`'${typed}'`);
     session.plant('<u>planted</u>');
     await session.run('ls');
     await session.run('history');
     const text = (await session.render()).textContent ?? '';
     expect(text).toContain(`vesen: ${typed}: command not found`);
     expect(text).toContain('<u>planted</u>');
-    expect(text).toMatch(/1 {2}<img\/src\/onerror=window\.__x=1>/);
+    expect(text).toMatch(/1 {2}'<img\/src\/onerror=window\.__x=1>'/);
   });
 });

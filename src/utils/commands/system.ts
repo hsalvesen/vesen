@@ -12,11 +12,12 @@ export const BANNER_ART = `██╗   ██╗███████╗██�
  ╚████╔╝ ███████╗███████║███████╗██║ ╚████║
   ╚═══╝  ╚══════╝╚══════╝╚══════╝╚═╝  ╚═══╝`;
 
+/** The developer's LinkedIn profile, which whoami opens. */
+export const LINKEDIN_URL = 'https://www.linkedin.com/in/harrysalvesen/';
+
 export const systemCommands = {
-  whoami: () => {
-    window.open('https://www.linkedin.com/in/harrysalvesen/');
-    return `<span class="out-accent">Opening developer's LinkedIn profile...</span>`;
-  },
+  // The shell opens LINKEDIN_URL (spec.opens, inside the Enter gesture); this is what it prints.
+  whoami: () => `<span class="out-accent">Opening developer's LinkedIn profile...</span>`,
   
   // fastfetch loads the first time it runs, which keeps it out of the initial chunk.
   fastfetch: async (args: string[], signal?: AbortSignal): Promise<string> => {

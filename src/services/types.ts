@@ -217,6 +217,6 @@ export interface Appearance {
   cathodeModes(): readonly CathodeInfo[];
   currentCathode(): string;
   setCathode(mode: string): boolean;
-  /** Restores the default theme and the CRT default for this device. */
+  /** `reset`: restores the default theme, as reset always has; the CRT mode stays the visitor's choice. */
   resetDefaults(): void;
 }

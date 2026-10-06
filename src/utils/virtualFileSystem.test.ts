@@ -9,11 +9,17 @@ function text(html: string): string {
   return template.content.textContent ?? '';
 }
 
+/** A fresh page load, running legacy commands directly: `ls -a ~` is ls with the words -a and ~. */
 async function freshTerminal() {
   vi.resetModules();
   vi.stubGlobal('AudioContext', undefined);
-  const { processCommand } = await import('./commands');
-  return async (line: string) => text(await processCommand(line));
+  const { commands } = await import('./commands');
+  return async (line: string) => {
+    const [name = '', ...args] = line.split(' ');
+    const fn = commands[name];
+    if (!fn) throw new Error(`no legacy command ${name}`);
+    return text(String(await fn(args)));
+  };
 }
 
 describe('the home folder (F003)', () => {

@@ -1,8 +1,9 @@
 import type { Block } from '../output/model';
 
 /**
- * What one run printed. Legacy commands return HTML strings, rendered through the sanitising
- * legacyHtml block; ported commands return blocks.
+ * What one run printed: the blocks the shell's screen collected (a legacy command's HTML among
+ * them as a sanitised legacyHtml block), or an HTML string the app adds itself, such as the
+ * banner and its notices.
  */
 export type CommandOutput = string | readonly Block[];
 
@@ -10,6 +11,11 @@ export type CommandOutput = string | readonly Block[];
 export interface Command {
   command: string;
   outputs: CommandOutput[];
+  /**
+   * False when the line cleared the screen before printing (`clear; ls`): the output stays and
+   * the prompt line it was typed at does not, as in a terminal.
+   */
+  echo?: boolean;
 }
 
 /** The blocks to render for an output; anything else a legacy command returned is stringified first. */

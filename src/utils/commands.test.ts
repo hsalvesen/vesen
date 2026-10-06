@@ -48,19 +48,41 @@ describe('fastfetch', () => {
   });
 });
 
+describe('qr', () => {
+  it('loads on first use, with its encoder, and says so when it cannot', async () => {
+    const beep = vi.fn();
+    vi.doMock('./beep', () => ({ playBeep: beep }));
+    vi.doMock('./commands/qr', () => {
+      throw new TypeError('Failed to fetch dynamically imported module');
+    });
+    const { commands } = await import('./commands');
+
+    expect(await commands.qr?.(['https://www.vesen.app'])).toContain('qr: could not load the command. Check the connection and try again.');
+    expect(beep).toHaveBeenCalledTimes(1);
+    vi.doUnmock('./beep');
+    vi.doUnmock('./commands/qr');
+  });
+});
+
+/** Runs a legacy command function directly; the shell's adapter is tested in src/commands. */
+async function legacy(name: string, ...args: string[]): Promise<string> {
+  const { commands } = await import('./commands');
+  const fn = commands[name];
+  if (!fn) throw new Error(`no legacy command ${name}`);
+  return String(await fn(args));
+}
+
 describe('cathode', () => {
   it('lists the variations with the quality in force and why', async () => {
-    const { processCommand } = await import('./commands');
     const { crtTier } = await import('../stores/cathode');
     crtTier.set({ tier: 'lite', reason: 'a touch screen', quality: 'auto' });
 
-    const output = String(processCommand('cathode ls'));
+    const output = await legacy('cathode', 'ls');
     expect(output).toContain('<span class="out-accent">Quality:</span> <span class="out-strong">lite (auto: a touch screen)</span>');
     expect(output).toContain('cathode quality');
   });
 
   it('sets, reports and rejects a quality', async () => {
-    const { processCommand } = await import('./commands');
     const { cathodeQuality, crtTier } = await import('../stores/cathode');
     const { get } = await import('svelte/store');
     // What bootstrap does when the quality changes.
@@ -68,12 +90,12 @@ describe('cathode', () => {
       crtTier.set({ tier: quality === 'auto' ? 'full' : quality, reason: quality === 'auto' ? 'a desktop' : `set with cathode quality ${quality}`, quality }),
     );
 
-    expect(processCommand('cathode quality lite')).toBe('Cathode quality set to lite: lite (set with cathode quality lite).');
+    expect(await legacy('cathode', 'quality', 'lite')).toBe('Cathode quality set to lite: lite (set with cathode quality lite).');
     expect(get(cathodeQuality)).toBe('lite');
-    expect(String(processCommand('cathode quality'))).toContain('Cathode quality: lite (set with cathode quality lite)');
-    expect(processCommand('cathode quality AUTO')).toBe('Cathode quality set to auto: full (auto: a desktop).');
+    expect(await legacy('cathode', 'quality')).toContain('Cathode quality: lite (set with cathode quality lite)');
+    expect(await legacy('cathode', 'quality', 'AUTO')).toBe('Cathode quality set to auto: full (auto: a desktop).');
 
-    const rejected = String(processCommand('cathode quality ultra'));
+    const rejected = await legacy('cathode', 'quality', 'ultra');
     expect(rejected).toContain('<span class="out-error">cathode: quality: ultra: not a quality</span>');
     expect(rejected).toContain('Choose one of: auto, full, lite, off.');
     expect(get(cathodeQuality)).toBe('auto');
@@ -81,8 +103,7 @@ describe('cathode', () => {
   });
 
   it('shows its usage, with the quality subcommand, in the help panels', async () => {
-    const { processCommand } = await import('./commands');
-    const usage = String(processCommand('cathode'));
+    const usage = await legacy('cathode');
     expect(usage).toContain('<div class="out-panel tone-link"><div class="out-panel-title">Usage:</div>');
     expect(usage).toContain('quality: auto, full, lite or off');
     expect(usage).toContain('cathode quality lite');
@@ -91,8 +112,7 @@ describe('cathode', () => {
 
 describe('theme ls', () => {
   it('draws one row per theme with eight swatches in its own colours on its own background', async () => {
-    const { processCommand } = await import('./commands');
-    const output = String(processCommand('theme ls'));
+    const output = await legacy('theme', 'ls');
     const rows = output.split('\n').filter((row) => row.includes('class="theme-name'));
     expect(rows).toHaveLength(10);
     const swamphen = rows.find((row) => row.includes('data-theme-name="swamphen"')) ?? '';
@@ -104,15 +124,16 @@ describe('theme ls', () => {
 });
 
 describe('errors', () => {
-  it('report an unknown command the way a shell does, with a hint', async () => {
-    const { processCommand } = await import('./commands');
-    expect(processCommand('lss')).toBe(
-      '<span class="out-error">vesen: lss: command not found</span>\n<span class="out-muted">Did you mean ls? Type \'help\' to see all commands.</span>',
-    );
-    expect(processCommand('qqqq')).toBe(
-      '<span class="out-error">vesen: qqqq: command not found</span>\n<span class="out-muted">Type \'help\' to see all commands.</span>',
-    );
-    expect(String(processCommand('theme set nope'))).toContain('<span class="out-error">theme: nope: no such theme</span>');
+  it('report a theme that does not exist', async () => {
+    expect(await legacy('theme', 'set', 'nope')).toContain('<span class="out-error">theme: nope: no such theme</span>');
+  });
+});
+
+describe('help', () => {
+  it('lays out each legacy help text as panels, for the shell to show on --help', async () => {
+    const { legacyHelpHtml } = await import('./commands');
+    expect(legacyHelpHtml('ls')).toContain('<div class="out-panel tone-link"><div class="out-panel-title">Usage:</div>');
+    expect(legacyHelpHtml('constructor')).toBeUndefined();
   });
 });
 

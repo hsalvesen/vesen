@@ -1,0 +1,295 @@
+// The legacy adapter (docs/plan/designs/shell-architecture.md, section 4). Temporary: it wraps
+// the 26 commands in src/utils so that every one of them runs under the shell kernel, and so
+// gains quotes, pipes, redirection, $? and ^C, until each is ported to its own spec file. It is
+// deleted with the last port.
+//
+// This module stays DOM-free: the legacy functions, their help and their descriptions live in
+// src/utils, which touches the page, so the app layer (src/app/legacy-commands.ts) hands them in.
+
+import { htmlToText } from '../output/html-to-text';
+import { out } from '../output/model';
+import type { RawArgsSpec } from '../shell/flags';
+import { writeLegacyHtml } from '../shell/streams';
+import type { ArgSpec, CommandContext, CommandSpec, EnumValue, Example, ExitCode, SubcommandSpec } from '../shell/types';
+
+/** A legacy command: words in, HTML out. The signal aborts on ^C and when the budget runs out. */
+export type LegacyFn = (args: string[], signal?: AbortSignal) => string | Promise<string>;
+
+/** What the adapter adds to a legacy function to make it a command. */
+export interface LegacyMeta
+  extends Pick<
+    CommandSpec,
+    | 'category'
+    | 'aliases'
+    | 'args'
+    | 'subcommands'
+    | 'network'
+    | 'budgetMs'
+    | 'featured'
+    | 'hidden'
+    | 'examples'
+    | 'builtin'
+    | 'loadingLabel'
+  > {
+  readonly summary: string;
+  /** The legacy help, already laid out as panels; shown for --help and -h. */
+  readonly help?: string;
+  /** A URL the command opens: opened inside the Enter gesture on a desktop, and linked otherwise. */
+  readonly opens?: (argv: readonly string[]) => string | null;
+  /** Commands that only change the screen or the session become shell effects. */
+  readonly effect?: 'clearScreen' | 'resetSession';
+  /** Runs first; a status ends the command there, without the legacy function. */
+  readonly prelude?: (ctx: CommandContext) => ExitCode | undefined | Promise<ExitCode | undefined>;
+  /** The words the legacy function gets, when they differ from the operands. */
+  readonly argsFor?: (ctx: CommandContext) => readonly string[];
+}
+
+/**
+ * A legacy command's status. Legacy commands report failure only in their HTML, so their error
+ * styles mean 1: the out-error class or the error role anywhere, a first line in the red palette
+ * colour, or 'not found' or 'cannot' in the first line of text. Coloured text further in (a
+ * stock's fall, fastfetch's palette, the owner's documents) is not a failure.
+ */
+export function legacyStatus(html: string): ExitCode {
+  if (/\bout-error\b|var\(--role-error\)/.test(html)) return 1;
+  if (/^\s*<span style="color: var\(--theme-red\)/.test(html)) return 1;
+  const first = htmlToText(html).split('\n', 1)[0] ?? '';
+  return /not found|cannot/i.test(first) ? 1 : 0;
+}
+
+/** Wraps one legacy function as a command spec. */
+export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpec {
+  const { help, opens, effect, prelude, argsFor, ...shown } = meta;
+  const spec: CommandSpec & RawArgsSpec = {
+    name,
+    ...shown,
+    rawArgs: true,
+    ...(help === undefined ? {} : { legacyHelp: help }),
+    ...(opens === undefined ? {} : { opens }),
+    async run(ctx) {
+      if (effect === 'clearScreen') {
+        ctx.tty.clear();
+        return 0;
+      }
+      if (effect === 'resetSession') {
+        ctx.shell.reset();
+        return 0;
+      }
+      const early = await prelude?.(ctx);
+      if (early !== undefined) return early;
+
+      // The opener runs before the output, as the legacy command did; off the screen it does not.
+      const url = ctx.stdout.isTTY ? (opens?.(ctx.argv) ?? null) : null;
+      const opened = url === null ? null : await ctx.tty.open(url, name);
+
+      // The legacy function gets its own controller, linked to the job's ^C and budget.
+      const controller = new AbortController();
+      const onAbort = (): void => controller.abort(ctx.signal.reason);
+      if (ctx.signal.aborted) controller.abort(ctx.signal.reason);
+      else ctx.signal.addEventListener('abort', onAbort, { once: true });
+      let html: string;
+      try {
+        html = await fn([...(argsFor?.(ctx) ?? ctx.args)], controller.signal);
+      } finally {
+        ctx.signal.removeEventListener('abort', onAbort);
+      }
+      // Interrupted or out of time: the kernel says so, not the legacy notice.
+      if (ctx.signal.aborted) throw ctx.signal.reason;
+
+      // A legacy error goes to stderr, so `2>/dev/null` hides it and a pipe does not carry it.
+      const status = legacyStatus(html);
+      await writeLegacyHtml(status === 0 ? ctx.stdout : ctx.stderr, html);
+      if (url !== null && opened !== 'opened') await ctx.stdout.line(out.link(url, url));
+      return status;
+    },
+  };
+  return spec;
+}
+
+// ── The table ──────────────────────────────────────────────────────────────────────────────
+
+/** The legacy command names, in the order help lists them today. */
+export const LEGACY_NAMES = [
+  'banner', 'cat', 'cathode', 'cd', 'clear', 'curl', 'echo', 'email', 'fastfetch', 'help', 'history', 'ls', 'mkdir',
+  'poweroff', 'pwd', 'qr', 'repo', 'reset', 'rm', 'speedtest', 'stock', 'sudo', 'theme', 'touch', 'weather', 'whoami',
+] as const;
+export type LegacyName = (typeof LEGACY_NAMES)[number];
+
+/** What the app layer supplies from src/utils and the stores. */
+export interface LegacySource {
+  readonly commands: Readonly<Record<LegacyName, LegacyFn>>;
+  /** The legacy help panels for a command, as `<cmd> --help` showed them. */
+  help(name: LegacyName): string | undefined;
+  /** The one-line descriptions help.ts and Tab completion show. */
+  readonly descriptions: Readonly<Partial<Record<LegacyName, string>>>;
+  /** URLs the openers open: whoami, repo and email. */
+  readonly opens?: Readonly<Partial<Record<LegacyName, (argv: readonly string[]) => string | null>>>;
+  readonly themes: () => readonly EnumValue[];
+  readonly cathodeModes: () => readonly EnumValue[];
+  readonly crtQualities: () => readonly EnumValue[];
+}
+
+const path = (name: string, accept: 'any' | 'file' | 'dir', optional = true, variadic = false): ArgSpec => ({
+  name,
+  source: accept === 'dir' ? { kind: 'path', accept, includeParent: true } : { kind: 'path', accept },
+  optional,
+  variadic,
+});
+
+const examples = (...lines: string[]): Example[] => lines.map((line) => ({ line }));
+const offline = (...lines: string[]): Example[] => lines.map((line) => ({ line, offline: true }));
+
+/** Copies stdin to stdout, for `cat` with no files in a pipe. */
+async function copyStdin(ctx: CommandContext): Promise<ExitCode> {
+  for await (const line of ctx.stdin.lines()) await ctx.stdout.write(`${line}\n`);
+  return 0;
+}
+
+type StaticMeta = Omit<LegacyMeta, 'summary' | 'help' | 'opens'> & { readonly summary?: string };
+
+function tableFor(source: LegacySource): Record<LegacyName, StaticMeta> {
+  const subcommand = (summary: string, args?: ArgSpec[]): SubcommandSpec => (args ? { summary, args } : { summary });
+  return {
+    banner: { category: 'portfolio', examples: offline('banner') },
+    cat: {
+      category: 'files',
+      args: [path('FILE', 'file', false, true)],
+      examples: offline('cat README.md', 'cat documents/linux.txt'),
+      // With no files in a pipe, cat copies its input, so `help | cat` works before cat is ported.
+      prelude: (ctx) => (ctx.args.length === 0 && !ctx.stdin.isTTY ? copyStdin(ctx) : undefined),
+    },
+    cathode: {
+      category: 'portfolio',
+      subcommands: {
+        ls: subcommand('list the CRT variations'),
+        set: subcommand('turn a variation on', [{ name: 'VARIATION', source: { kind: 'enum', values: source.cathodeModes } }]),
+        off: subcommand('turn the effect off'),
+        quality: subcommand('choose how much of the effect to draw', [
+          { name: 'QUALITY', source: { kind: 'enum', values: source.crtQualities }, optional: true },
+        ]),
+      },
+      examples: offline('cathode ls', 'cathode set vintage', 'cathode off'),
+    },
+    cd: {
+      category: 'files',
+      builtin: true,
+      args: [path('DIR', 'dir')],
+      examples: offline('cd documents', 'cd ..', 'cd ~'),
+      // `cd` alone goes home, and home is $HOME.
+      argsFor: (ctx) => (ctx.args.length === 0 ? [ctx.env.get('HOME') ?? '~'] : ctx.args),
+    },
+    clear: { category: 'shell', effect: 'clearScreen', examples: offline('clear') },
+    curl: {
+      category: 'network',
+      network: true,
+      loadingLabel: (argv) => `fetching ${argv[1] ?? 'the page'}…`,
+      args: [{ name: 'URL', source: { kind: 'url' } }],
+      examples: examples('curl https://httpbin.org/get', 'curl explainshell.com'),
+    },
+    echo: {
+      category: 'text',
+      args: [{ name: 'TEXT', source: { kind: 'free', placeholder: 'text' }, optional: true, variadic: true }],
+      examples: offline('echo hello', 'echo "hi there" > note.txt'),
+    },
+    email: { category: 'portfolio', examples: examples('email') },
+    fastfetch: {
+      category: 'system',
+      featured: true,
+      loadingLabel: () => 'gathering system information…',
+      examples: examples('fastfetch'),
+    },
+    help: {
+      category: 'shell',
+      featured: true,
+      args: [{ name: 'COMMAND', source: { kind: 'command' }, optional: true }],
+      examples: offline('help', 'help ls'),
+    },
+    history: {
+      category: 'shell',
+      examples: offline('history', 'history -c'),
+      // History is the shell's now, and kept across reloads, so it can be cleared.
+      prelude: (ctx) => {
+        if (ctx.args[0] !== '-c') return undefined;
+        ctx.shell.history.clear();
+        return 0;
+      },
+    },
+    ls: { category: 'files', args: [path('DIR', 'dir')], examples: offline('ls', 'ls -a', 'ls /') },
+    mkdir: { category: 'files', args: [path('DIR', 'any', false)], examples: offline('mkdir notes') },
+    poweroff: { category: 'system', examples: examples('poweroff') },
+    pwd: { category: 'files', examples: offline('pwd') },
+    qr: {
+      category: 'portfolio',
+      args: [{ name: 'TEXT', source: { kind: 'examples' }, variadic: true }],
+      examples: offline('qr https://tldr.sh', 'qr explainshell.com', 'qr https://shellcheck.net'),
+    },
+    repo: { category: 'portfolio', examples: examples('repo') },
+    reset: { category: 'shell', effect: 'resetSession', examples: offline('reset') },
+    rm: { category: 'files', args: [path('FILE', 'any', false, true)], examples: offline('rm notes.txt', 'rm -r notes') },
+    speedtest: {
+      category: 'network',
+      network: true,
+      budgetMs: 120_000,
+      loadingLabel: () => 'measuring the connection…',
+      examples: examples('speedtest'),
+    },
+    stock: {
+      category: 'network',
+      network: true,
+      budgetMs: 10_000,
+      loadingLabel: (argv) => `fetching ${argv[1]?.toUpperCase() ?? 'the quote'}…`,
+      args: [{ name: 'TICKER', source: { kind: 'examples', caseInsensitive: true } }],
+      examples: examples('stock AAPL', 'stock TEAM'),
+    },
+    sudo: {
+      category: 'shell',
+      args: [{ name: 'COMMAND', source: { kind: 'commandLine' }, optional: true }],
+      examples: examples('sudo ls'),
+    },
+    theme: {
+      category: 'portfolio',
+      featured: true,
+      subcommands: {
+        ls: subcommand('list the themes'),
+        set: subcommand('switch to a theme', [{ name: 'THEME', source: { kind: 'enum', values: source.themes, caseInsensitive: true } }]),
+      },
+      examples: offline('theme ls', 'theme set swamphen'),
+    },
+    touch: { category: 'files', args: [path('FILE', 'any', false, true)], examples: offline('touch notes.txt') },
+    weather: {
+      category: 'network',
+      network: true,
+      budgetMs: 25_000,
+      loadingLabel: (argv) => (argv.length > 1 ? `fetching the weather for ${argv.slice(1).join(' ')}…` : 'fetching the weather…'),
+      args: [{ name: 'PLACE', source: { kind: 'examples', caseInsensitive: true, fromHistory: true }, optional: true, variadic: true }],
+      examples: examples('weather Gadigal', 'weather Oslo', 'weather Aotearoa'),
+    },
+    whoami: {
+      category: 'portfolio',
+      featured: true,
+      examples: examples('whoami'),
+      // In a pipe whoami is the Linux command again.
+      prelude: async (ctx) => {
+        if (ctx.stdout.isTTY) return undefined;
+        await ctx.stdout.write(`${ctx.user.name}\n`);
+        return 0;
+      },
+    },
+  };
+}
+
+/** Every legacy command as a spec. */
+export function legacySpecs(source: LegacySource): CommandSpec[] {
+  const table = tableFor(source);
+  return LEGACY_NAMES.map((name) => {
+    const { summary, ...meta } = table[name];
+    const help = source.help(name);
+    const opens = source.opens?.[name];
+    return legacy(name, source.commands[name], {
+      ...meta,
+      summary: summary ?? source.descriptions[name] ?? name,
+      ...(help === undefined ? {} : { help }),
+      ...(opens === undefined ? {} : { opens }),
+    });
+  });
+}

@@ -1,5 +1,5 @@
 $ pwd
-/home/user
+/home/guest
 $ cd documents
 $ echo the quick brown fox jumps over the lazy dog, twice over
 the quick brown fox jumps over the lazy dog, twice over
@@ -9,3 +9,4 @@ $ history
    2  cd documents
    3  echo the quick brown fox jumps over the lazy dog, twice over
    4  cd ..
+   5  history

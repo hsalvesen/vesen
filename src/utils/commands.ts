@@ -1,9 +1,8 @@
 import themes from '../../themes.json';
-import { history, commandHistory } from '../stores/history';
+import { commandHistory } from '../stores/history';
 import { systemCommands } from './commands/system';
 import { fileSystemCommands } from './commands/fileSystem';
 import type { networkCommands as NetworkCommands } from './commands/network';
-import { qrCommands } from './commands/qr';
 import { theme } from '../stores/theme';
 import {
   cathode,
@@ -16,12 +15,9 @@ import {
   type CathodeMode,
 } from '../stores/cathode';
 import { get } from 'svelte/store';
-import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from './virtualFileSystem';
-import { commandHelp, commandDescriptions } from './helpTexts';
+import { commandHelp } from './helpTexts';
 import { playBeep } from './beep';
-import { createInitialFileSystem } from './virtualFileSystem';
 import { errorLine } from './notice';
-import { REPO_URL } from '../constants';
 import { escapeHtml } from '../output/escape';
 import { transcriptColumns } from '../platform/measure';
 
@@ -119,30 +115,9 @@ const terminalCommands = {
     return '';
   },
 
-  reset: () => {
-    // Reset theme to default (swamphen)
-    const defaultTheme = themes.find((t) => t.name.toLowerCase() === 'swamphen')!;
-    theme.set(defaultTheme);
-
-    // Reset current path to default
-    currentPath.length = 0;
-    currentPath.push('home', 'user');
-
-    // Clear display history and the arrow-key history
-    history.set([]);
-    commandHistory.set([]);
-
-    // Restore virtual file system to original state
-    const initialFS = createInitialFileSystem();
-    virtualFileSystem.children = initialFS.children;
-
-    // Clear the terminal history and add the banner
-    const bannerOutput = systemCommands.banner();
-    history.set([{ command: 'banner', outputs: [bannerOutput] }]);
-
-    // Return empty string since we're handling the output via history
-    return '';
-  }
+  // The shell runs reset as an effect (ShellApi.reset): banner, default theme, home folder,
+  // original files and an empty history. The entry stays so the name is listed.
+  reset: () => '',
 };
 
 /** The palette slots `theme ls` previews, in terminal order, each as a two-cell swatch. */
@@ -304,85 +279,25 @@ ${rows}
       }
     }
   },
-  repo: () => {
-    window.open(REPO_URL);
-    return `<span class="out-accent">Opening Vesen repository...</span>`;
-  },
+  // The shell opens the repository (spec.opens, inside the Enter gesture); this is what it prints.
+  repo: () => `<span class="out-accent">Opening Vesen repository...</span>`,
 
-  email: () => {
-    const now = new Date();
-    const timestamp = now.toLocaleString('en-US', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
-
-    const subject = `Terminal Contact - ${timestamp}`;
-    const encodedSubject = encodeURIComponent(subject);
-
-    window.open(`mailto:has@salvesen.app?subject=${encodedSubject}`);
-    return 'Opening email client...';
-  }
+  // The shell opens emailHref() (spec.opens, inside the Enter gesture); this is what it prints.
+  email: () => 'Opening email client...',
 };
 
-// Add a separate function to handle --help flags
-// Helper function to find case-insensitive command matches
-function findSimilarCommand(inputCommand: string): string | null {
-  const commandList = Object.keys(commands);
-
-  // First try exact case-insensitive match
-  const exactMatch = commandList.find(cmd => cmd.toLowerCase() === inputCommand.toLowerCase());
-  if (exactMatch) {
-    return exactMatch;
-  }
-
-  // Then try partial matches (starts with)
-  const partialMatch = commandList.find(cmd =>
-    cmd.toLowerCase().startsWith(inputCommand.toLowerCase()) ||
-    inputCommand.toLowerCase().startsWith(cmd.toLowerCase())
-  );
-
-  return partialMatch || null;
-}
-
-/** Runs one line. `signal` aborts when the user interrupts; long-running commands pass it to their requests. */
-export function processCommand(input: string, signal?: AbortSignal): string | Promise<string> {
-  const args = input.trim().split(/\s+/);
-  const command = args[0];
-  const hasHelpFlag = args.includes('--help') || args.includes('-h');
-
-  // Detect incorrectly concatenated help flags (e.g., 'pwd--help', 'help-h')
-  const concatenatedHelp = command.match(/^([A-Za-z0-9]+)(--help|-h)$/i);
-  if (concatenatedHelp) {
-    const base = concatenatedHelp[1];
-
-    // Try to suggest the closest valid command name
-    const suggestedBase = commands[base] ? base : (findSimilarCommand(base) || base);
-
-    // Beep and return only a suggestion, do NOT execute or print help
-    playBeep();
-    return `Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${escapeHtml(suggestedBase)} --help</span>?`;
-  }
-
-  if (hasHelpFlag) {
-    return getCommandHelp(command);
-  }
-
-  // Execute the actual command if it exists (exact match)
-  if (commands[command]) {
-    return commands[command](args.slice(1), signal);
-  }
-
-  // Try to find a similar command with different case
-  const similarCommand = findSimilarCommand(command);
-  // An unknown command rings the bell and says so the way a shell does, with a hint.
-  playBeep();
-  const suggestion = similarCommand ? `Did you mean ${similarCommand}? ` : '';
-  return errorLine(`vesen: ${command}: command not found`, `${suggestion}Type 'help' to see all commands.`);
+/** The developer's address, with the time in the subject so threads stay apart. */
+export function emailHref(now: Date = new Date()): string {
+  const timestamp = now.toLocaleString('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  return `mailto:has@salvesen.app?subject=${encodeURIComponent(`Terminal Contact - ${timestamp}`)}`;
 }
 
 // Re-export virtualFileSystem and currentPath from the dedicated module
@@ -390,11 +305,13 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
 
 // Detailed help for a command, from its legacy help text.
 function getCommandHelp(command: string): string {
-  const raw = commandHelp[command];
-  if (!raw) {
-    return errorLine(`help: no help available for ${command}`);
-  }
-  return renderHelp(raw);
+  return legacyHelpHtml(command) ?? errorLine(`help: no help available for ${command}`);
+}
+
+/** A legacy command's help laid out as panels, as `<cmd> --help` shows it; undefined when it has none. */
+export function legacyHelpHtml(command: string): string | undefined {
+  const raw = Object.prototype.hasOwnProperty.call(commandHelp, command) ? commandHelp[command] : undefined;
+  return raw ? renderHelp(raw) : undefined;
 }
 
 /**
@@ -498,6 +415,19 @@ const networkCommands = Object.fromEntries(
     },
   ]),
 );
+
+// qr loads the first time it runs, with its encoder, which keeps both out of the initial chunk.
+const qrCommands = {
+  qr: async (args: string[]): Promise<string> => {
+    // Undefined when platform/chunkReload has taken the failure over to reload the page.
+    const module = await import('./commands/qr').catch(() => undefined);
+    if (!module) {
+      playBeep();
+      return errorLine('qr: could not load the command. Check the connection and try again.');
+    }
+    return module.qrCommands.qr(args);
+  },
+};
 
 // Combine all commands
 export const commands: Record<string, (args: string[], signal?: AbortSignal) => Promise<string> | string> = {

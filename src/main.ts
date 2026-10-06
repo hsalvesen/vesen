@@ -8,10 +8,15 @@ const target = document.getElementById('app');
 
 try {
   // The entry chunk's URL carries the build hash, so it identifies this deploy.
-  const booted = bootstrap({ window, build: import.meta.url, banner: () => systemCommands.banner() });
+  const booted = bootstrap({
+    window,
+    build: import.meta.url,
+    banner: () => systemCommands.banner(),
+    legacy: () => import('./utils/legacyShell').then((module) => module.legacyBindings()),
+  });
   if (booted) {
     if (!target) throw new Error('#app is missing from the page');
-    mount(App, { target });
+    mount(App, { target, props: { shell: booted.shell } });
   }
 } catch (error) {
   console.error(error);

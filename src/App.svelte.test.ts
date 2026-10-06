@@ -1,24 +1,39 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.svelte';
+import type { Shell } from './shell/index';
 import { history } from './stores/history';
 import { systemCommands } from './utils/commands/system';
+import { legacyAppShell } from './utils/legacyShell';
 
 async function settle(): Promise<void> {
   for (let i = 0; i < 20; i += 1) await Promise.resolve();
   await tick();
 }
 
+let shell: Shell;
+let stopShell: () => void = () => {};
+
+beforeEach(() => {
+  const app = legacyAppShell({ banner: () => systemCommands.banner(), yieldToHost: () => Promise.resolve() });
+  shell = app.shell;
+  stopShell = app.stop;
+});
+
 afterEach(() => {
+  shell.abort();
+  stopShell();
   vi.unstubAllGlobals();
   // The transcript is a module store, so each test starts from an empty screen.
   history.set([]);
 });
 
+const renderApp = () => render(App, { props: { shell } });
+
 describe('App', () => {
   it('is a column of the screen frame, holding the transcript and the CRT overlay, then the dock slot', () => {
-    const { container } = render(App);
+    const { container } = renderApp();
     const shell = container.querySelector('.shell');
     const [frame, dock] = Array.from(shell?.children ?? []);
 
@@ -36,7 +51,7 @@ describe('App', () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
     // What app/bootstrap.ts puts in the transcript before the app mounts.
     history.set([{ command: 'banner', outputs: [systemCommands.banner()] }]);
-    const { container } = render(App);
+    const { container } = renderApp();
 
     const headings = container.querySelectorAll('h1');
     expect(headings).toHaveLength(1);
@@ -67,7 +82,7 @@ describe('App', () => {
   it('cancels a running command when the processing line is tapped', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
-    render(App);
+    renderApp();
     const prompt = screen.getByRole('textbox');
 
     await fireEvent.input(prompt, { target: { value: 'stock AAPL' } });
@@ -75,7 +90,8 @@ describe('App', () => {
     await settle();
     // The spinner draws its first frame straight away.
     const cancel = screen.getByRole('button', { name: 'Cancel running command' });
-    expect(cancel).toHaveTextContent(/Processing… \((tap|Ctrl\+C) to cancel\)/);
+    // The status line says what the command is doing, and how to stop it.
+    expect(cancel).toHaveTextContent(/fetching AAPL… \((tap|Ctrl\+C) to cancel\)/);
 
     // A tap must not be cancelled at pointerdown: WebKit on iOS then never sends the click.
     expect(await fireEvent.pointerDown(cancel)).toBe(true);
@@ -86,7 +102,20 @@ describe('App', () => {
     await settle();
 
     expect(screen.queryByRole('button', { name: 'Cancel running command' })).not.toBeInTheDocument();
-    expect(screen.getByText('Stock request cancelled')).toBeInTheDocument();
+    // The prompt returns at once with ^C, as in a terminal.
+    expect(screen.getByText('^C')).toBeInTheDocument();
     vi.useRealTimers();
+  });
+
+  it('runs a tapped did-you-mean as if it were typed', async () => {
+    renderApp();
+    const prompt = screen.getByRole('textbox');
+    await fireEvent.input(prompt, { target: { value: 'pwdd' } });
+    await fireEvent.keyDown(prompt, { key: 'Enter' });
+    const suggestion = await screen.findByRole('button', { name: 'pwd' });
+    expect(screen.getByText('vesen: pwdd: command not found')).toBeInTheDocument();
+
+    await fireEvent.click(suggestion);
+    await vi.waitFor(() => expect(screen.getByText('/home/guest')).toBeInTheDocument());
   });
 });

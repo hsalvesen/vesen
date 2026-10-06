@@ -1,10 +1,12 @@
-// Golden snapshots of the legacy terminal, recorded before the overhaul changes any behaviour.
-// They document what processCommand returns today, bugs included, so every port can be
-// compared against them. Read README.md in this folder before updating any of them.
+// Golden snapshots of the legacy terminal, first recorded before the overhaul changed any
+// behaviour. They document what each line prints through the shell and the legacy adapter, bugs
+// included, so every port can be compared against them. Read README.md in this folder before
+// updating any of them.
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IPHONE_INSTAGRAM, MAC_CHROME, installDevice, type DeviceProfile } from '../support/devices';
 import { createNetworkMock, type NetworkMock } from '../support/net';
 import {
+  blocksToGoldenHtml,
   formatHtmlTranscript,
   formatTextTranscript,
   normaliseSvelteMarkup,
@@ -126,7 +128,7 @@ function useDevice(device: DeviceProfile) {
 }
 
 interface LegacyTerminal {
-  /** Runs a line the way Input.svelte does, including its bookkeeping in the history stores. */
+  /** Runs a line through the shell, as Input.svelte does, legacy commands through the adapter. */
   type(line: string): Promise<Step>;
   /** Mounts History.svelte over everything typed so far and returns one line per entry. */
   renderHistory(): Promise<string>;
@@ -139,8 +141,10 @@ async function boot(viewport: Viewport): Promise<LegacyTerminal> {
   localStorage.clear();
   vi.resetModules();
 
-  const { processCommand } = await import('../../src/utils/commands');
-  const { history, commandHistory } = await import('../../src/stores/history');
+  const { legacyAppShell } = await import('../../src/utils/legacyShell');
+  const { createBell } = await import('../../src/services/bell');
+  const { playBeep } = await import('../../src/utils/beep');
+  const { history } = await import('../../src/stores/history');
   const { systemCommands } = await import('../../src/utils/commands/system');
   // What app/bootstrap.ts puts in the transcript before the app mounts, and the CRT tier it
   // decides for the device, which `cathode ls` reports.
@@ -148,22 +152,18 @@ async function boot(viewport: Viewport): Promise<LegacyTerminal> {
   const { crtTier } = await import('../../src/stores/cathode');
   const { decideTier, readSignals } = await import('../../src/platform/perf');
   crtTier.set(decideTier(readSignals(window)));
+  const { shell } = legacyAppShell({
+    banner: () => systemCommands.banner(),
+    bell: createBell({ play: playBeep }),
+    yieldToHost: () => Promise.resolve(),
+  });
 
   return {
     async type(line) {
-      const [name = '', ...args] = line.split(' ');
-      // Input.svelte runs every line as a job with its own abort signal.
       const ringsBefore = bells;
-      const html = await processCommand(line, new AbortController().signal);
-
-      // Mirrors Input.svelte's Enter handler: reset stays out of the arrow-key history, and
-      // clear and reset stay off the screen unless they were asked for help.
-      if (name !== 'reset') commandHistory.update((lines) => [...lines, line]);
-      const wantsHelp = args.includes('--help') || args.includes('-h');
-      if (!((name === 'clear' || name === 'reset') && !wantsHelp)) {
-        history.update((entries) => [...entries, { command: line, outputs: [html] }]);
-      }
-      return { line, html, bells: bells - ringsBefore };
+      // The shell records the line in the transcript itself, as it does for Input.svelte.
+      const result = await shell.run(line);
+      return { line, html: blocksToGoldenHtml(result.blocks), bells: bells - ringsBefore };
     },
 
     async renderHistory() {

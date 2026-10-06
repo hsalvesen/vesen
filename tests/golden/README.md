@@ -1,6 +1,8 @@
 # Golden snapshots
 
-These files record what the legacy terminal does today: the exact output of `processCommand` in `src/utils/commands.ts`, plus one rendering of `History.svelte`. They were taken before the overhaul changed any behaviour. Every port is checked against them. They document current behaviour, bugs included, so a golden that looks wrong is still correct until a commit fixes the bug on purpose.
+These files record what the legacy terminal does: the output of each line typed at the prompt, plus one rendering of `History.svelte`. They were first taken before the overhaul changed any behaviour, and every port is checked against them. They document current behaviour, bugs included, so a golden that looks wrong is still correct until a commit fixes the bug on purpose.
+
+Lines run through the shell kernel (`src/shell`), as `Input.svelte` runs them, and the legacy commands through the legacy adapter (`src/commands/legacy.ts`). A legacy command's output is its HTML exactly as the adapter hands it to the screen, so these goldens prove the adapter renders every legacy command as before.
 
 ## Changing a golden
 
@@ -27,13 +29,13 @@ On CI (`CI=true`) a missing golden fails instead of being written.
 
 ## Format
 
-- **`.html`:** for each line typed, a marker line `<!-- $ <line> -->`, then the exact string `processCommand` returned, then one newline. `parseHtmlTranscript` in `format.ts` is the reference parser, and the test checks that every golden round-trips through it.
+- **`.html`:** for each line typed, a marker line `<!-- $ <line> -->`, then the output, then one newline. A legacy command's output is its exact HTML. Output the shell writes itself, such as `command not found`, is written as the equivalent styled spans by `blocksToGoldenHtml` in `format.ts`; tap actions have no HTML form and are left out. `parseHtmlTranscript` in `format.ts` is the reference parser, and the test checks that every golden round-trips through it.
 - **`.txt`:** the same session as a reader sees it: `$ <line>`, then the output as plain text (`<br>` and block elements become newlines, trailing spaces trimmed). `[bell]` marks a line that rang the terminal bell.
 
 ## What keeps them deterministic
 
 - Each session is a fresh page load. Storage is emptied, `vi.resetModules()` runs, and the legacy modules are imported again, because the file system and current path are module singletons.
-- Lines run the way `Input.svelte`'s Enter handler runs them. Every command gets an abort signal, and the history stores are updated, so `history` sees earlier lines.
+- Lines run the way `Input.svelte`'s Enter handler runs them: through `shell.run`, which records each line in the shell's history before it runs, so `history` sees earlier lines and itself, as in bash.
 - The clock is frozen at 2026-10-06 09:00 Sydney time, `Math.random()` returns 0.5, `__APP_VERSION__` reads `0.0.0-golden`, numbers format as `en-US`, and the page URL is `https://www.vesen.app/`.
 - The browser is a fixed device from `tests/support/devices.ts`. Chrome on a Mac is the default, and one `fastfetch` case uses Instagram's in-app browser on an iPhone.
 - `fetch` is answered by `tests/support/net.ts`. Same-origin paths come from `public/`, and network calls come from `tests/fixtures/net/`. Any request without a fixture fails the test.

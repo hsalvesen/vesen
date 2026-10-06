@@ -8,15 +8,18 @@
   let { onaction }: { onaction?: (action: Action) => void } = $props();
 </script>
 
-{#each $history as { command, outputs }}
+{#each $history as { command, outputs, echo }}
   <div class="entry">
-    <div class="flex flex-row">
-      <Ps1 />
+    <!-- A line that cleared the screen keeps its output, not the prompt it was typed at. -->
+    {#if echo !== false}
+      <div class="flex flex-row">
+        <Ps1 />
 
-      <div class="flex flex-1 min-w-0">
-        <span class="command-input-display" style="margin-left: 0.25rem;">{command}</span>
+        <div class="flex flex-1 min-w-0">
+          <span class="command-input-display" style="margin-left: 0.25rem;">{command}</span>
+        </div>
       </div>
-    </div>
+    {/if}
 
     {#each outputs as output}
       <div class="command-output">

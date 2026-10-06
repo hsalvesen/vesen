@@ -10,10 +10,14 @@
   import History from './components/History.svelte';
   import CommandSuggestionsRow from './components/CommandSuggestionsRow.svelte';
   import Cathode from './components/Cathode.svelte';
-  import { interruptJob } from './stores/job';
+  import type { Action } from './output/model';
+  import type { ShellPort } from './shell/index';
   import { focusPolicy } from './ui/actions/focusPolicy';
   import { scrollToEnd, stickToBottom } from './ui/actions/stickToBottom';
 
+  let { shell }: { shell: ShellPort } = $props();
+
+  let prompt: ReturnType<typeof Input> | undefined = $state();
   let isPasswordMode = $state(false);
   let isProcessing = $state(false);
   let loadingText = $state('');
@@ -28,6 +32,29 @@
       : 'Ctrl+C to cancel';
 
   const commandInput = (): HTMLInputElement | null => screen?.querySelector('input.command-input') ?? null;
+
+  /** A tap on a trusted action in the output: a did-you-mean, a chip, a link card. */
+  function onaction(action: Action): void {
+    switch (action.kind) {
+      case 'run':
+        void prompt?.submit(action.line);
+        prompt?.focusPrompt();
+        break;
+      case 'insert':
+        prompt?.insert(action.text);
+        prompt?.focusPrompt();
+        break;
+      case 'open':
+        window.open(action.href, '_blank', 'noopener');
+        break;
+      case 'copy':
+        void navigator.clipboard?.writeText(action.text).catch(() => {});
+        break;
+      case 'share':
+        void navigator.share?.({ url: action.url, ...(action.title ? { title: action.title } : {}) }).catch(() => {});
+        break;
+    }
+  }
 </script>
 
 <div class="shell" use:focusPolicy={{ input: commandInput }}>
@@ -42,7 +69,7 @@
 
         <!-- Announced politely as entries are added; held back while a command is still running. -->
         <div role="log" aria-live="polite" aria-relevant="additions" aria-busy={isProcessing} aria-label="Terminal output">
-          <History />
+          <History {onaction} />
         </div>
 
         <div class="prompt-area" data-prompt-area>
@@ -52,7 +79,7 @@
               <Ps1 {isPasswordMode} />
             </div>
             <div class="min-w-0">
-              <Input bind:command bind:isPasswordMode bind:isProcessing bind:loadingText />
+              <Input bind:this={prompt} {shell} bind:command bind:isPasswordMode bind:isProcessing bind:loadingText />
             </div>
           </div>
 
@@ -68,7 +95,7 @@
               class="processing mt-1"
               aria-label="Cancel running command"
               onmousedown={(event) => event.preventDefault()}
-              onclick={() => interruptJob()}
+              onclick={() => shell.abort()}
             >{loadingText} ({cancelHint})</button>
           {/if}
         </div>

@@ -1,0 +1,194 @@
+import { get, writable } from 'svelte/store';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createAppearance } from './appearance';
+import { createBell } from './bell';
+import { createClock } from './clock';
+import { createNet, NetError } from './net';
+import { createOpener } from './opener';
+import { createSysInfoStub } from './sysinfo';
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
+
+describe('clock', () => {
+  it('reads the injected time and randomness, and remembers when it booted', () => {
+    let now = 100;
+    const clock = createClock({ now: () => now, random: () => 0.25, timeZone: 'Australia/Sydney' });
+    now = 200;
+    expect(clock.now()).toBe(200);
+    expect(clock.bootTime()).toBe(100);
+    expect(clock.random()).toBe(0.25);
+    expect(clock.timeZone()).toBe('Australia/Sydney');
+  });
+
+  it('sleeps until the time is up, or rejects as soon as the signal aborts', async () => {
+    vi.useFakeTimers();
+    const clock = createClock();
+    const slept = clock.sleep(1000);
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(slept).resolves.toBeUndefined();
+
+    const controller = new AbortController();
+    const cut = clock.sleep(1000, controller.signal);
+    controller.abort('stop');
+    await expect(cut).rejects.toBe('stop');
+    await expect(clock.sleep(1, controller.signal)).rejects.toBe('stop');
+  });
+});
+
+describe('bell', () => {
+  it('plays the sound, or flashes when the sound is off', () => {
+    const play = vi.fn();
+    let audible = true;
+    const bell = createBell({ play, audible: () => audible });
+    const flashes = vi.fn();
+    const stop = bell.onFlash(flashes);
+    bell.ring();
+    audible = false;
+    bell.ring();
+    stop();
+    bell.ring();
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(flashes).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('opener', () => {
+  const host = (tab: object | null) => {
+    const open = vi.fn((_url: string, _target: string) => tab as Window | null);
+    return { open };
+  };
+
+  it('opens inside the gesture on a desktop browser, cutting the new tab off from the page', () => {
+    const tab = { opener: {} as unknown };
+    const browser = host(tab);
+    const opener = createOpener(browser, { inApp: null, touch: false });
+    expect(opener.autoOpen).toBe(true);
+    expect(opener.preflight('https://www.linkedin.com/')).toBe('opened');
+    expect(browser.open).toHaveBeenCalledWith('https://www.linkedin.com/', '_blank');
+    expect(tab.opener).toBeNull();
+    expect(createOpener(host(null), { inApp: null, touch: false }).preflight('https://x.example/')).toBe('blocked');
+  });
+
+  it('waits for a tap inside an in-app browser and on touch', () => {
+    const browser = host({});
+    for (const options of [{ inApp: 'Instagram', touch: true }, { inApp: null, touch: true }]) {
+      const opener = createOpener(browser, options);
+      expect(opener.autoOpen).toBe(false);
+      expect(opener.preflight('https://x.example/')).toBe('skipped');
+    }
+    expect(browser.open).not.toHaveBeenCalled();
+    expect(createOpener(browser, { inApp: 'Instagram', touch: true }).menuHint()).toContain('Open in browser');
+    expect(createOpener(browser, { inApp: 'Instagram', touch: true }).open('https://x.example/')).toBe('opened');
+  });
+
+  it('shares through the system sheet when there is one', async () => {
+    const share = vi.fn(async () => {});
+    const opener = createOpener({ open: () => null, navigator: { share } }, { inApp: null, touch: true });
+    expect(opener.canShare()).toBe(true);
+    expect(await opener.share({ url: 'https://www.vesen.app/' })).toBe('shared');
+    expect(await createOpener({ open: () => null }, { inApp: null, touch: true }).share({ url: 'https://x.example/' })).toBe('unavailable');
+  });
+});
+
+describe('appearance', () => {
+  const themes = [
+    { name: 'swamphen', background: '#222235', foreground: '#ffffff' },
+    { name: 'Wombat', background: '#1c1814', foreground: '#e6ddd4' },
+  ];
+  const make = () => {
+    const theme = writable(themes[0] ?? { name: '', background: '', foreground: '' });
+    const cathode = writable<'off' | 'vintage'>('off');
+    const appearance = createAppearance({
+      theme,
+      themes,
+      defaultTheme: themes[0] ?? { name: '', background: '', foreground: '' },
+      cathode,
+      cathodeModes: [
+        { name: 'off', summary: 'none' },
+        { name: 'vintage', summary: 'all of it' },
+      ],
+    });
+    return { theme, cathode, appearance };
+  };
+
+  it('sets the theme by name, ignoring case', () => {
+    const { theme, appearance } = make();
+    expect(appearance.setTheme('WOMBAT')).toBe(true);
+    expect(get(theme).name).toBe('Wombat');
+    expect(appearance.currentTheme()).toBe('Wombat');
+    expect(appearance.setTheme('nope')).toBe(false);
+    expect(appearance.themes()).toEqual(themes);
+  });
+
+  it('sets the CRT mode, and reset restores only the theme', () => {
+    const { cathode, appearance } = make();
+    expect(appearance.setCathode('vintage')).toBe(true);
+    expect(appearance.setCathode('neon')).toBe(false);
+    appearance.setTheme('wombat');
+    appearance.resetDefaults();
+    expect(appearance.currentTheme()).toBe('swamphen');
+    expect(get(cathode)).toBe('vintage');
+    expect(appearance.cathodeModes().map((mode) => mode.name)).toEqual(['off', 'vintage']);
+    expect(appearance.currentCathode()).toBe('vintage');
+  });
+});
+
+describe('sysinfo stub', () => {
+  it('reports the cheap facts and nothing it would have to probe', async () => {
+    const sys = createSysInfoStub({
+      navigator: { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X)', languages: ['en-AU'], hardwareConcurrency: 6, deviceMemory: 4 },
+      screen: { width: 390, height: 844, colorDepth: 24 },
+      devicePixelRatio: 3,
+    });
+    expect(sys.snapshot()).toMatchObject({ device: { class: 'phone' }, cores: 6, memoryGB: 4, languages: ['en-AU'], screen: { pixelRatio: 3 } });
+    expect(createSysInfoStub(null).snapshot().device.class).toBe('desktop');
+    expect(sys.gpu()).toBeNull();
+    expect(await sys.publicIp()).toBeNull();
+  });
+});
+
+describe('createNet', () => {
+  it('reads text with the status, lower-case headers and the time taken', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('hello', { status: 200, headers: { 'X-Thing': 'yes' } })));
+    const net = createNet();
+    const response = await net.text('https://example.com/');
+    expect(response).toMatchObject({ status: 200, body: 'hello', headers: { 'x-thing': 'yes' } });
+    expect(response.ms).toBeGreaterThanOrEqual(0);
+    expect(net.online()).toBe(true);
+  });
+
+  it('parses JSON, and a failed check is a parse error', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{"n":1}')));
+    const net = createNet();
+    expect(await net.json('https://example.com/')).toEqual({ n: 1 });
+    const failed = net.json('https://example.com/', {
+      parse: () => {
+        throw new Error('bad');
+      },
+    });
+    await expect(failed).rejects.toMatchObject({ kind: 'parse', host: 'example.com' });
+  });
+
+  it('times out after 8 s by default, as a NetError the shell can word', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
+    const net = createNet();
+    const request = net.text('https://example.com/');
+    const caught = request.catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(8000);
+    const error = await caught;
+    expect(net.isError(error)).toBe(true);
+    expect(error).toBeInstanceOf(NetError);
+    expect(error).toMatchObject({ kind: 'timeout', timeoutMs: 8000 });
+  });
+
+  it('shares one request per key through memo', async () => {
+    const net = createNet();
+    const load = vi.fn(async () => 42);
+    expect(await Promise.all([net.memo('k', 1000, load), net.memo('k', 1000, load)])).toEqual([42, 42]);
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+});

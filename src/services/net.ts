@@ -5,14 +5,20 @@
 // AbortSignal.any and AbortSignal.timeout are deliberately not used: Instagram's WKWebView on
 // iOS before 17.4 lacks both, so signals are combined and timed by hand.
 
+import { combineSignals } from '../lib/signals';
 import {
   MEMO_FAILURE_COOLDOWN_MS,
   REQUEST_TIMEOUT_MS,
+  type JsonInit,
+  type Net,
   type NetError as NetErrorContract,
   type NetErrorKind,
+  type NetInit,
+  type NetResponse,
 } from './types';
 
 export type { NetErrorKind };
+export { combineSignals };
 
 /** The deadline for one request when the caller does not set one. */
 export const DEFAULT_TIMEOUT_MS = REQUEST_TIMEOUT_MS.default;
@@ -62,25 +68,6 @@ export function isNetError(error: unknown): error is NetError {
 /** False only when the browser reports that it is offline; unknown counts as online. */
 export function isOnline(): boolean {
   return typeof navigator === 'undefined' || navigator.onLine !== false;
-}
-
-/** A signal that aborts as soon as any of `signals` does, with that signal's reason. */
-export function combineSignals(...signals: ReadonlyArray<AbortSignal | null | undefined>): AbortSignal {
-  const controller = new AbortController();
-  const inputs = signals.filter((signal): signal is AbortSignal => signal != null);
-
-  const alreadyAborted = inputs.find((signal) => signal.aborted);
-  if (alreadyAborted) {
-    controller.abort(alreadyAborted.reason);
-    return controller.signal;
-  }
-
-  const onAbort = (event: Event): void => {
-    for (const signal of inputs) signal.removeEventListener('abort', onAbort);
-    controller.abort((event.target as AbortSignal).reason);
-  };
-  for (const signal of inputs) signal.addEventListener('abort', onAbort);
-  return controller.signal;
 }
 
 export interface FetchOptions extends Omit<RequestInit, 'signal'> {
@@ -307,4 +294,49 @@ export function untilAborted<T>(promise: Promise<T>, signal: AbortSignal | null 
       },
     );
   });
+}
+
+// ── The Net service ────────────────────────────────────────────────────────────────────────
+
+function hostOf(url: string): string {
+  return parseUrl(url)?.host || url;
+}
+
+/**
+ * The Net service commands reach through `ctx.net`: text and JSON with the per-request deadline
+ * (8 s unless `timeoutMs` says otherwise), the caller's signal, typed NetErrors, and a memo table
+ * of its own.
+ */
+export function createNet(options: MemoOptions = {}): Net {
+  const table = createMemo(options);
+  const fetchOptions = (init: NetInit): FetchOptions => {
+    const { headers, ...rest } = init;
+    return headers === undefined ? rest : { ...rest, headers: { ...headers } };
+  };
+  return {
+    text(url: string, init: NetInit = {}): Promise<NetResponse> {
+      const started = Date.now();
+      return fetchAndRead(url, fetchOptions(init), async (response) => {
+        const body = await response.text();
+        const headers: Record<string, string> = {};
+        response.headers.forEach((value, name) => {
+          headers[name.toLowerCase()] = value;
+        });
+        return { url: response.url || url, status: response.status, headers, body, ms: Date.now() - started };
+      });
+    },
+    async json<T = unknown>(url: string, init: JsonInit<T> = {}): Promise<T> {
+      const { parse, ...rest } = init;
+      const raw: unknown = await fetchAndRead(url, fetchOptions(rest), (response) => response.json() as Promise<unknown>);
+      if (parse === undefined) return raw as T;
+      try {
+        return parse(raw);
+      } catch {
+        throw new NetError('parse', hostOf(url));
+      }
+    },
+    memo: <T>(key: string, ttlMs: number, load: () => Promise<T>): Promise<T> => table(key, ttlMs, load),
+    isError: (error: unknown): error is NetError => isNetError(error),
+    online: isOnline,
+  };
 }

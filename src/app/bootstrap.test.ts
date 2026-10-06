@@ -197,6 +197,30 @@ describe('bootstrap', () => {
     expect(String(last?.outputs[0])).toContain('vesen was updated, reloading…');
   });
 
+  it('runs lines through the shell, whose kernel loads after the first paint, and keeps history', async () => {
+    const { boot, history } = await load();
+    const result = await boot()?.shell.run('lss');
+    expect(result?.status).toBe(127);
+    expect(get(history).at(-1)?.command).toBe('lss');
+    expect(JSON.parse(localStorage.getItem('vesen:history:v1') ?? '')).toEqual({ v: 1, lines: ['lss'] });
+  });
+
+  it('runs the legacy commands main.ts hands in, over their file tree', async () => {
+    const { boot } = await load();
+    const { emptyHome } = await import('../vfs/legacy-tree');
+    const spec = { name: 'hello', category: 'fun' as const, summary: 'say hello', run: () => 3 };
+    const booted = boot({ legacy: () => Promise.resolve({ specs: [spec], fs: emptyHome() }) });
+    expect((await booted?.shell.run('hello'))?.status).toBe(3);
+  });
+
+  it('keeps history for the session when storage is blocked', async () => {
+    blockStorage();
+    const { boot } = await load();
+    const booted = boot();
+    await booted?.shell.run('echo-nothing');
+    expect(booted?.storage.local.persistent).toBe(false);
+  });
+
   it('sends an alias host to the canonical origin and boots nothing', async () => {
     const replace = vi.fn();
     const { bootstrap } = await load();
