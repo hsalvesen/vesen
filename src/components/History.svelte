@@ -1,8 +1,12 @@
 <script lang="ts">
   import { history } from '../stores/history';
   import { theme } from '../stores/theme';
+  import { outputBlocks } from '../interfaces/command';
+  import type { Action } from '../output/model';
+  import OutputView from '../ui/OutputView.svelte';
   import Ps1 from './Ps1.svelte';
-  import { applyResponsiveWrapping } from '../utils/textWrap';
+
+  let { onaction }: { onaction?: (action: Action) => void } = $props();
 </script>
 
 {#each $history as { command, outputs }}
@@ -16,8 +20,8 @@
     </div>
 
     {#each outputs as output}
-      <div class="whitespace-pre command-text command-output">
-        {@html applyResponsiveWrapping(output)}
+      <div class="command-text command-output">
+        <OutputView blocks={outputBlocks(output)} {onaction} />
       </div>
     {/each}
   </div>
@@ -42,21 +46,9 @@
     overflow-wrap: anywhere;
   }
 
+  /* OutputView wraps text (pre-wrap, overflow-wrap: anywhere) at every width. */
   .command-output {
     max-width: 100%;
-    word-wrap: break-word;
-    word-break: break-word;
-    overflow-wrap: break-word;
-  }
-
-  /* Global responsive text wrapping for command outputs */
-  :global(.command-output-wrapper) {
-    max-width: 100%;
-    word-wrap: break-word;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    white-space: pre-wrap;
-    line-height: 1.4;
   }
 
   @media (min-width: 640px) {
@@ -71,30 +63,20 @@
     }
   }
 
+  /* Phones keep the sizes the old output wrapper gave them, until the phone work sets new ones. */
   @media (max-width: 768px) {
-    :global(.command-output-wrapper) {
-      font-size: 0.75rem;
-      line-height: 1.3;
-      overflow-x: hidden;
-    }
-    
     .command-output {
       max-width: calc(100vw - 64px);
       overflow-x: hidden;
+      font-size: 0.75rem;
+      line-height: 1.4;
     }
   }
 
   @media (max-width: 480px) {
-    :global(.command-output-wrapper) {
-      font-size: 0.7rem;
-      line-height: 1.2;
-      max-width: calc(100vw - 32px);
-      overflow-x: hidden;
-    }
-    
     .command-output {
       max-width: calc(100vw - 32px);
-      overflow-x: hidden;
+      font-size: 0.7rem;
     }
   }
 </style>

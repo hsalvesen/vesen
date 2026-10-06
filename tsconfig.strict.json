@@ -26,6 +26,7 @@
     "src/lib/**/*.ts",
     "src/services/**/*.ts",
     "src/platform/**/*.ts",
+    "src/ui/**/*.ts",
     "src/commands/**/*.ts",
     "src/stores/**/*.ts",
     "src/constants.ts",

@@ -198,8 +198,9 @@
     // This effect runs whenever $history changes
     $history;
 
-    // Scroll to bottom after DOM updates
-    setTimeout(() => {
+    // Scroll to bottom after DOM updates. Cleared if the history changes again first or the
+    // prompt unmounts, so no timer outlives the component.
+    const timer = setTimeout(() => {
       const mainContainer = document.querySelector("main");
       if (mainContainer) {
         mainContainer.scrollTo({
@@ -208,6 +209,7 @@
         });
       }
     }, 10);
+    return () => clearTimeout(timer);
   });
 
   const handleKeyDown = async (event: KeyboardEvent) => {
@@ -582,6 +584,8 @@
     class="bg-transparent outline-none prompt-text command-input"
     style="color: var(--theme-white); opacity: 1;"
     type={isPasswordMode ? "password" : "text"}
+    aria-label="Terminal command"
+    enterkeyhint="go"
     autocomplete="off"
     spellcheck="false"
     autocapitalize="off"

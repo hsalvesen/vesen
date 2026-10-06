@@ -12,6 +12,7 @@ import { commandHelp, commandDescriptions } from './helpTexts';
 import { playBeep } from './beep';
 import { createInitialFileSystem } from './virtualFileSystem';
 import { REPO_URL } from '../constants';
+import { escapeHtml } from '../output/escape';
 
 // Terminal-specific commands that don't fit in other modules
 const terminalCommands = {
@@ -85,17 +86,17 @@ const terminalCommands = {
           chunks.push(cmd.substring(i, i + commandMaxWidth));
         }
 
-        // First line with line number
-        historyLines.push(prefix + `<span style="color: ${currentTheme.white};">${chunks[0]}</span>`);
+        // First line with line number. Chunks are cut from the typed text, then escaped.
+        historyLines.push(prefix + `<span style="color: ${currentTheme.white};">${escapeHtml(chunks[0])}</span>`);
 
         // Continuation lines with proper indentation
         for (let i = 1; i < chunks.length; i++) {
           const indent = '      '; // 6 spaces to align with command text
-          historyLines.push(`<span style="color: ${currentTheme.cyan};">${indent}</span><span style="color: ${currentTheme.white};">${chunks[i]}</span>`);
+          historyLines.push(`<span style="color: ${currentTheme.cyan};">${indent}</span><span style="color: ${currentTheme.white};">${escapeHtml(chunks[i])}</span>`);
         }
       } else {
         // Command fits on one line
-        historyLines.push(prefix + `<span style="color: ${currentTheme.white};">${cmd}</span>`);
+        historyLines.push(prefix + `<span style="color: ${currentTheme.white};">${escapeHtml(cmd)}</span>`);
       }
     });
 
@@ -180,7 +181,7 @@ const projectCommands = {
         const t = themes.find((t) => t.name.toLowerCase() === selectedTheme.toLowerCase());
 
         if (!t) {
-          return `Theme '${selectedTheme}' not found. Try 'theme ls' to see all available themes.`;
+          return `Theme '${escapeHtml(selectedTheme)}' not found. Try 'theme ls' to see all available themes.`;
         }
 
         theme.set(t);
@@ -246,7 +247,7 @@ ${rows}
         const requested = args[1].toLowerCase();
         const match = cathodeModes.find((m) => m === requested);
         if (!match) {
-          return `Cathode variation '${args[1]}' not found. Try 'cathode ls' to see all available variations.`;
+          return `Cathode variation '${escapeHtml(args[1])}' not found. Try 'cathode ls' to see all available variations.`;
         }
 
         return applyMode(match);
@@ -329,7 +330,7 @@ export function processCommand(input: string, signal?: AbortSignal): string | Pr
 
     // Beep and return only a suggestion, do NOT execute or print help
     playBeep();
-    return `Did you mean <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">${suggestedBase} --help</span>?`;
+    return `Did you mean <span style="color: var(--theme-cyan); font-weight: bold; font-family: monospace;">${escapeHtml(suggestedBase)} --help</span>?`;
   }
 
   if (hasHelpFlag) {
@@ -347,12 +348,12 @@ export function processCommand(input: string, signal?: AbortSignal): string | Pr
     // Play beep sound for unrecognized command
     playBeep();
     const currentTheme = get(theme);
-    return `Command '${command}' not found. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${similarCommand}</span>? Type 'help' to see available commands.`;
+    return `Command '${escapeHtml(command)}' not found. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${escapeHtml(similarCommand)}</span>? Type 'help' to see available commands.`;
   }
 
   // Play beep sound for unrecognized command
   playBeep();
-  return `Command '${command}' not found. Type 'help' to see available commands.`;
+  return `Command '${escapeHtml(command)}' not found. Type 'help' to see available commands.`;
 }
 
 // Re-export virtualFileSystem and currentPath from the dedicated module
@@ -362,7 +363,7 @@ export { virtualFileSystem, currentPath } from './virtualFileSystem';
 function getCommandHelp(command: string): string {
   const raw = commandHelp[command];
   if (!raw) {
-    return `No help available for command: ${command}`;
+    return `No help available for command: ${escapeHtml(command)}`;
   }
 
   // Normalize and split into lines

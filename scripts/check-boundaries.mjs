@@ -2,7 +2,8 @@
 // Enforces the module boundaries from docs/plan/02-architecture-and-contracts.md:
 //   1. The DOM-free folders never reference browser globals or import Svelte, and import only
 //      each other plus the service interfaces, so nothing reaches the DOM through an import.
-//   2. No new `{@html}` blocks appear outside the few files allowed to render HTML.
+//   2. No `{@html}` block appears anywhere: output renders through the output model, and legacy
+//      HTML through the sanitising legacyHtml block in src/ui.
 //   3. Nothing in src uses AbortSignal.any or AbortSignal.timeout, which Instagram's WKWebView
 //      before iOS 17.4 lacks.
 // Zero dependencies; run with `npm run check:boundaries`.
@@ -40,12 +41,17 @@ export const FORBIDDEN_APIS = [
   { pattern: /\bAbortSignal\s*\??\.\s*(?:any|timeout)\b/g, reason: "Instagram's WKWebView before iOS 17.4 lacks it; use combineSignals from services/net" },
 ];
 
-/** The only files allowed to contain `{@html`. The two legacy ones go away in Phase 5. */
-export const HTML_ALLOWLIST = [
-  'src/components/History.svelte',
-  'src/components/CommandSuggestionsRow.svelte',
-  'src/ui/OutputView.svelte',
-];
+/**
+ * Finds `{@html` in any source file, test files included, so raw HTML never reaches the DOM.
+ * @param {string} source
+ * @returns {{ line: number, message: string }[]}
+ */
+export function findRawHtml(source) {
+  return [...source.matchAll(/\{@html\b/g)].map((match) => ({
+    line: lineAt(source, match.index),
+    message: 'uses {@html}; render through the output model (or a legacyHtml block) instead',
+  }));
+}
 
 const SOURCE_EXTENSIONS = ['.ts', '.mts', '.js', '.mjs', '.svelte'];
 const TEST_FILE = /\.test\.[cm]?[jt]s$/;
@@ -341,10 +347,7 @@ function main() {
     if (!TEST_FILE.test(file)) {
       for (const problem of findForbiddenApis(source)) failures.push(`${repoPath}:${problem.line} ${problem.message}`);
     }
-    if (HTML_ALLOWLIST.includes(repoPath)) continue;
-    for (const match of source.matchAll(/\{@html\b/g)) {
-      failures.push(`${repoPath}:${lineAt(source, match.index)} uses {@html}; render through the output model instead`);
-    }
+    for (const problem of findRawHtml(source)) failures.push(`${repoPath}:${problem.line} ${problem.message}`);
   }
 
   if (failures.length > 0) {
@@ -353,7 +356,7 @@ function main() {
     console.error(`\nDOM-free folders: ${DOM_FREE_DIRS.join(', ')}`);
     process.exit(1);
   }
-  console.log(`check-boundaries: ok (${scanned} DOM-free file(s) scanned, {@html} only in allowlisted files)`);
+  console.log(`check-boundaries: ok (${scanned} DOM-free file(s) scanned, no {@html} anywhere)`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

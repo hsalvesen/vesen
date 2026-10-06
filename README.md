@@ -59,7 +59,7 @@ src/
 ├── constants.ts                  # Repository URL
 ├── global.d.ts                   # Build-time globals
 ├── components/
-│   ├── History.svelte            # Scrollback of commands and their output
+│   ├── History.svelte            # Scrollback of commands, each output drawn by ui/OutputView
 │   ├── Input.svelte              # The prompt: keys, history, Tab completion, running and cancelling commands
 │   ├── Ps1.svelte                # The prompt string
 │   ├── CommandSuggestionsRow.svelte  # Suggestions while typing
@@ -71,6 +71,7 @@ src/
 ├── output/                       # DOM-free output
 │   ├── model.ts                  # Spans, blocks, actions, the `out` builders and plain()
 │   ├── html-to-text.ts           # Plain text of legacy HTML output, for pipes
+│   ├── legacy-policy.ts          # What the legacy HTML shim keeps: tags, attributes, classes, styles
 │   └── escape.ts                 # HTML escaping for command output
 ├── vfs/types.ts                  # The file system contract
 ├── platform/                     # Browser-facing helpers: canonical host redirect, stale-chunk reload, legacy keys
@@ -79,6 +80,12 @@ src/
 │   ├── types.ts                  # Service interfaces: net, storage, bell, opener, clipboard, clock, system info
 │   └── storage-keys.ts           # Every browser storage key, in one registry
 ├── stores/                       # Svelte stores: history, the running job, theme, cathode
+├── ui/
+│   ├── OutputView.svelte         # Draws output blocks with text interpolation only
+│   ├── SpanView.svelte           # One styled span: link, trusted action button or live theme binding
+│   ├── legacy-html.ts            # use:legacyHtml, which rebuilds legacy HTML from the allowlist
+│   ├── span-style.ts             # Colour tokens to CSS, with role fallbacks
+│   └── components/registry.ts    # Rich cards a component block may name (none yet)
 ├── testing/                      # Test setup
 └── utils/
     ├── commands.ts               # Command table and dispatcher
@@ -88,11 +95,11 @@ src/
     ├── commandSuggestions.ts     # Suggestions while typing
     ├── notice.ts                 # Shared notices (cancelled commands, errors)
     ├── beep.ts                   # The terminal bell
-    └── mobile.ts, textWrap.ts, osLogos.ts
+    └── mobile.ts, osLogos.ts
 public/                           # README.md, history.txt and linux.txt for cat; favicons; font;
                                   # 404.html; probe/ (device capability probe, not linked from the app)
 themes.json                       # The ten colour themes
-tests/                            # Golden snapshots of command output, network fixtures, hosting checks, helpers
+tests/                            # Golden snapshots and their parity check, XSS tests, network fixtures, hosting checks, helpers
 e2e/                              # Playwright end-to-end tests
 scripts/                          # Checks: module boundaries, bundle budget, theme contrast (and its baseline)
 docs/

@@ -7,16 +7,16 @@
 </script>
 
 {#if isPasswordMode}
-  <h1 class="flex">
+  <span class="flex">
     <span style={`color: ${$theme.white}`}>Password:</span>
-  </h1>
+  </span>
 {:else}
-  <h1 class="font-bold flex">
+  <span class="font-bold flex">
     <span style={`color: ${$theme.yellow};`}>guest</span>
     <span style={`color: ${$theme.white}`}>@</span>
     <span style={`color: ${$theme.green}`}>{hostname}</span>
     <span style={`color: ${$theme.white}`}>:</span>
     <span style={`color: ${$theme.blue}`}>{currentDir}</span>
     <span style={`color: ${$theme.white}`}>$</span>
-  </h1>
+  </span>
 {/if}

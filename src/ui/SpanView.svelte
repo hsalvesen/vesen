@@ -1,0 +1,84 @@
+<!--
+  One span of output, drawn with text interpolation only. A trusted action becomes a button, a
+  checked http, https or mailto href becomes a link, and live bindings read the theme and cathode
+  stores, so old output stays true after either changes.
+-->
+<script lang="ts">
+  import { isTrustedAction, safeHref, type Action, type Span } from '../output/model';
+  import { theme } from '../stores/theme';
+  import { cathode } from '../stores/cathode';
+  import { spanClasses, spanCss } from './span-style';
+
+  let { span, onaction }: { span: Span; onaction?: (action: Action) => void } = $props();
+
+  const text = $derived(span.live?.kind === 'currentThemeName' ? $theme.name : span.text);
+
+  /** For a highlight binding, whether this span names the current theme or CRT mode. */
+  const current = $derived.by(() => {
+    const live = span.live;
+    if (live?.kind === 'isCurrentTheme') return live.theme.toLowerCase() === $theme.name.toLowerCase();
+    if (live?.kind === 'isCurrentCathode') return live.mode === $cathode;
+    return false;
+  });
+
+  // The current entry of a theme or cathode list is drawn the way the legacy lists draw it.
+  const style = $derived(current ? { ...span.style, fg: 'brightCyan' as const, bold: true } : span.style);
+  const classes = $derived(spanClasses(style) || undefined);
+  const css = $derived(spanCss(style));
+  // Checked again here: a span is plain data, and only a builder-made action or URL may act.
+  const action = $derived(isTrustedAction(span.action) ? span.action : null);
+  const href = $derived(span.href === undefined ? null : safeHref(span.href));
+</script>
+
+{#if action !== null && onaction}
+  <button type="button" class="action {classes ?? ''}" style={css} onclick={() => onaction(action)}>{text}</button>
+{:else if href !== null}
+  <a class={classes} style={css} {href} target="_blank" rel="noopener noreferrer">{text}</a>
+{:else}
+  <span class={classes} style={css} aria-current={current ? 'true' : undefined}>{text}</span>
+{/if}
+
+<style>
+  .b {
+    font-weight: bold;
+  }
+
+  .dim {
+    opacity: 0.65;
+  }
+
+  .i {
+    font-style: italic;
+  }
+
+  .u {
+    text-decoration: underline;
+  }
+
+  .s {
+    text-decoration: line-through;
+  }
+
+  .u.s {
+    text-decoration: underline line-through;
+  }
+
+  a {
+    color: var(--role-link, var(--theme-bright-blue));
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .action {
+    display: inline;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: inherit;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+</style>

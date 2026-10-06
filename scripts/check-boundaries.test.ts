@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findBoundaryViolations, findForbiddenApis, maskSource, resolveImport } from './check-boundaries.mjs';
+import { findBoundaryViolations, findForbiddenApis, findRawHtml, maskSource, resolveImport } from './check-boundaries.mjs';
 
 describe('maskSource', () => {
   it('blanks comments and literals but keeps template expressions and line breaks', () => {
@@ -114,5 +114,17 @@ describe('findForbiddenApis', () => {
       'const fine = AbortSignal.abort();',
     ].join('\n');
     expect(findForbiddenApis(source).map((p) => p.line)).toEqual([3, 4]);
+  });
+});
+
+describe('findRawHtml', () => {
+  it('flags every raw HTML block, wherever it is', () => {
+    const tag = '{' + '@html';
+    const source = ['<p>{text}</p>', `<div>${tag} output}</div>`, `<!-- ${tag} in a comment -->`].join('\n');
+    expect(findRawHtml(source).map((p) => p.line)).toEqual([2, 3]);
+  });
+
+  it('allows text interpolation and other blocks', () => {
+    expect(findRawHtml('<span>{line}</span>{#if a}{@render b()}{/if}')).toEqual([]);
   });
 });

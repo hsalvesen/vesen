@@ -68,7 +68,12 @@
   class="h-full border-2 rounded-md p-2 sm:p-4 overflow-auto text-xs sm:text-sm md:text-base"
   style={`background-color: ${$theme.background}; color: ${$theme.foreground}; border-color: ${$theme.green};`}
 >
-  <History />
+  <h1 class="sr-only">Vesen terminal</h1>
+
+  <!-- Announced politely as entries are added; held back while a command is still running. -->
+  <div role="log" aria-live="polite" aria-relevant="additions" aria-busy={isProcessing} aria-label="Terminal output">
+    <History />
+  </div>
 
   <div class="flex flex-col">
     <div class="grid items-center gap-x-1" style="grid-template-columns: max-content 1fr;">

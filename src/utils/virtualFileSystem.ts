@@ -4,6 +4,11 @@ export interface VirtualFile {
   type: 'file' | 'directory';
   content?: string;
   filePath?: string; // Path to real file
+  /**
+   * 'html' marks the owner's styled documents, whose markup cat renders. Every other file is
+   * text, and cat escapes it so it shows exactly as written.
+   */
+  format?: 'html';
   children?: { [key: string]: VirtualFile };
 }
 
@@ -182,12 +187,14 @@ export function createInitialFileSystem(): VirtualFile {
               'README.md': {
                 name: 'README.md',
                 type: 'file',
-                filePath: '/README.md' 
+                filePath: '/README.md',
+                format: 'html'
               },
               'history.txt': {
                 name: 'history.txt',
                 type: 'file',
-                filePath: '/history.txt'   
+                filePath: '/history.txt',
+                format: 'html'
               },
               // Essential User Directories
               'documents': {
@@ -197,7 +204,8 @@ export function createInitialFileSystem(): VirtualFile {
                   'linux.txt': {
                     name: 'linux.txt',
                     type: 'file',
-                    filePath: '/linux.txt'
+                    filePath: '/linux.txt',
+                    format: 'html'
                   }
                 }
               },

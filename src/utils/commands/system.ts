@@ -454,7 +454,7 @@ export const systemCommands = {
               signal,
               timeoutMs: IP_LOOKUP_TIMEOUT_MS
             });
-            localIP = typeof ipData?.ip === 'string' ? escapeHtml(ipData.ip) : 'Unable to fetch';
+            localIP = typeof ipData?.ip === 'string' ? ipData.ip : 'Unable to fetch';
           } catch (error) {
             if (signal?.aborted || (isNetError(error) && error.kind === 'abort')) {
               resolve(cancelledNotice('fastfetch'));
@@ -549,7 +549,7 @@ export const systemCommands = {
             { label: 'Display', value: `${displayInfo} @ ${refreshRate}` },
             { label: 'DE', value: osName === 'macOS' ? 'Aqua' : osName === 'Windows' ? 'Windows Shell' : 'Unknown' },
             { label: 'WM', value: osName === 'macOS' ? 'Quartz Compositor' : osName === 'Windows' ? 'Desktop Window Manager' : 'Unknown' },
-            { label: 'WM Theme', value: `<span class="current-theme-name">${wmTheme}</span>` },
+            { label: 'WM Theme', value: `<span class="current-theme-name">${escapeHtml(wmTheme)}</span>` },
             { label: 'Font', value: font },
             { label: 'Cursor', value: 'Default System Cursor' },
             { label: 'Terminal', value: terminal },
@@ -571,8 +571,10 @@ export const systemCommands = {
           
           const userHostHtml = `<div style="color: var(--theme-green); font-weight: bold; font-family: monospace; margin-bottom: 8px;">${userHost}</div>`;
           
+          // Values come from the browser (the WebGL renderer, the user agent), so they are text.
+          // WM Theme alone is markup, a span the theme store keeps current.
           const infoHtml = infoData.map(({ label, value }) => 
-            `<div style="display: flex; margin-bottom: 1px; font-family: monospace;"><span style="color: var(--theme-cyan); font-weight: bold; width: 140px; display: inline-block;">${label}:</span><span style="color: var(--theme-white);">${value}</span></div>`
+            `<div style="display: flex; margin-bottom: 1px; font-family: monospace;"><span style="color: var(--theme-cyan); font-weight: bold; width: 140px; display: inline-block;">${label}:</span><span style="color: var(--theme-white);">${label === 'WM Theme' ? value : escapeHtml(value)}</span></div>`
           ).join('');
           
           const isMobile = isMobileDevice();

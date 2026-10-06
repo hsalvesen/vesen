@@ -6,6 +6,7 @@ import { commandHelp } from '../helpTexts';
 import { playBeep } from '../beep';
 import { fetchText, isNetError } from '../../services/net';
 import { cancelledNotice, errorLine } from '../notice';
+import { escapeHtml } from '../../output/escape';
 
 /**
  * Loads a file that public/ serves, such as /README.md. Each request has the default 8 s deadline
@@ -55,9 +56,38 @@ function findSimilarFile(target: string, directory: VirtualFile): string | null 
   return null;
 }
 
+/**
+ * Finds where echo's output redirect starts: the first `>` outside quotes that begins a word or
+ * sits in a word without a `<` before it. So `echo hi > f` and `echo hi>f` redirect, while the
+ * `>` of a tag such as `<b>x</b>` is text. Unbalanced quotes are ignored rather than swallowing
+ * the rest of the line. The shell kernel's lexer replaces this.
+ */
+function findRedirect(text: string, respectQuotes = true): { index: number; append: boolean } | null {
+  let quote: string | null = null;
+  let wordHasAngle = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const c = text[i];
+    if (quote !== null) {
+      if (c === quote) quote = null;
+      continue;
+    }
+    if (/\s/.test(c)) {
+      wordHasAngle = false;
+    } else if (respectQuotes && (c === '"' || c === "'")) {
+      quote = c;
+    } else if (c === '<') {
+      wordHasAngle = true;
+    } else if (c === '>') {
+      const startsWord = i === 0 || /\s/.test(text[i - 1]);
+      if (startsWord || !wordHasAngle) return { index: i, append: text[i + 1] === '>' };
+    }
+  }
+  return quote !== null && respectQuotes ? findRedirect(text, false) : null;
+}
+
 export const fileSystemCommands = {
   pwd: () => {
-    return '/' + currentPath.join('/');
+    return escapeHtml('/' + currentPath.join('/'));
   },
   
   ls: (args: string[]) => {
@@ -83,26 +113,29 @@ export const fileSystemCommands = {
       } else {
         playBeep();
         const pathStr = pathArgs.length === 0 ? '.' : pathArgs[0];
-        return `ls: cannot access '${pathStr}': No such file or directory`;
+        return `ls: cannot access '${escapeHtml(pathStr)}': No such file or directory`;
       }
     }
     
     if (current.type !== 'directory') {
       const pathStr = pathArgs.length === 0 ? '.' : pathArgs[0];
-      return `ls: cannot access '${pathStr}': Not a directory`;
+      return `ls: cannot access '${escapeHtml(pathStr)}': Not a directory`;
     }
     
     if (!current.children) {
       return '';
     }
     
-    // Filter out hidden files unless -a flag is used
+    // Filter out hidden files unless -a flag is used. Names are text: a file may be called <b>.
     const items = Object.values(current.children)
       .filter((item: VirtualFile) => showHidden || !item.name.startsWith('.'))
       .map((item: VirtualFile) => {
         const color = item.type === 'directory' ? currentTheme.brightBlue : currentTheme.white;
         const suffix = item.type === 'directory' ? '/' : '';
-        return `<span style="color: ${color}; font-weight: ${item.type === 'directory' ? 'bold' : 'normal'};">${item.name}${suffix}</span>`;
+        return {
+          html: `<span style="color: ${color}; font-weight: ${item.type === 'directory' ? 'bold' : 'normal'};">${escapeHtml(item.name)}${suffix}</span>`,
+          width: item.name.length + suffix.length,
+        };
       });
     
     // Improved mobile-responsive terminal width calculation
@@ -120,17 +153,15 @@ export const fileSystemCommands = {
     let currentLineLength = 0;
     
     for (const item of items) {
-      // Estimate item length (removing HTML tags for calculation)
-      const itemText = item.replace(/<[^>]*>/g, '');
-      const itemLength = itemText.length + 2; // +2 for spacing
+      const itemLength = item.width + 2; // +2 for spacing
       
       // If adding this item would exceed the line width, start a new line
       if (currentLineLength + itemLength > responsiveWidth && currentLine.length > 0) {
         lines.push(currentLine.join('  '));
-        currentLine = [item];
+        currentLine = [item.html];
         currentLineLength = itemLength;
       } else {
-        currentLine.push(item);
+        currentLine.push(item.html);
         currentLineLength += itemLength;
       }
     }
@@ -162,19 +193,21 @@ export const fileSystemCommands = {
           if (similarFile) {
             playBeep();
             const currentTheme = get(theme);
-            return `cat: ${args[0]}: No such file or directory. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${similarFile}</span>?`;
+            return `cat: ${escapeHtml(args[0])}: No such file or directory. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${escapeHtml(similarFile)}</span>?`;
           }
         }
         playBeep();
-        return `cat: ${args[0]}: No such file or directory`;
+        return `cat: ${escapeHtml(args[0])}: No such file or directory`;
       }
     }
     
     if (current.type !== 'file') {
-      return `cat: ${args[0]}: Is a directory`;
+      return `cat: ${escapeHtml(args[0])}: Is a directory`;
     }
     
     let content = '';
+    // Only the owner's styled documents are markup; any other file shows exactly as written.
+    const isOwnerHtml = current.format === 'html' && Boolean(current.filePath);
     
     // Handle files with filePath property
     if (current.filePath) {
@@ -191,7 +224,7 @@ export const fileSystemCommands = {
     }
     
     // Convert newlines to HTML line breaks for proper display in web terminal
-    return content.replace(/\n/g, '<br>');
+    return (isOwnerHtml ? content : escapeHtml(content)).replace(/\n/g, '<br>');
   },
   
   cd: (args: string[]) => {
@@ -216,16 +249,16 @@ export const fileSystemCommands = {
           if (similarDir && current.children[similarDir].type === 'directory') {
             playBeep();
             const currentTheme = get(theme);
-            return `cd: ${args[0]}: No such file or directory. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${similarDir}</span>?`;
+            return `cd: ${escapeHtml(args[0])}: No such file or directory. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${escapeHtml(similarDir)}</span>?`;
           }
         }
         playBeep();
-        return `cd: ${args[0]}: No such file or directory`;
+        return `cd: ${escapeHtml(args[0])}: No such file or directory`;
       }
     }
     
     if (current.type !== 'directory') {
-      return `cd: ${args[0]}: Not a directory`;
+      return `cd: ${escapeHtml(args[0])}: Not a directory`;
     }
     
     // Update current path
@@ -262,25 +295,25 @@ export const fileSystemCommands = {
         parent = parent.children[segment];
       } else {
         playBeep();
-        return `rm: cannot remove '${targetFile}': No such file or directory`;
+        return `rm: cannot remove '${escapeHtml(targetFile)}': No such file or directory`;
       }
     }
     
     if (!parent.children || !parent.children[fileName]) {
       playBeep();
-      return `rm: cannot remove '${targetFile}': No such file or directory`;
+      return `rm: cannot remove '${escapeHtml(targetFile)}': No such file or directory`;
     }
     
     const target = parent.children[fileName];
     
     if (target.type === 'directory' && !recursive) {
-      return `rm: cannot remove '${targetFile}': Is a directory (use -r to remove directories)`;
+      return `rm: cannot remove '${escapeHtml(targetFile)}': Is a directory (use -r to remove directories)`;
     }
     
     // Delete the file or directory
     delete parent.children[fileName];
     
-    return `rm: removed '${targetFile}'`;
+    return `rm: removed '${escapeHtml(targetFile)}'`;
   },
   
   touch: (args: string[]) => {
@@ -299,20 +332,20 @@ export const fileSystemCommands = {
         parent = parent.children[segment];
       } else {
         playBeep();
-        return `touch: cannot touch '${args[0]}': No such file or directory`;
+        return `touch: cannot touch '${escapeHtml(args[0])}': No such file or directory`;
       }
     }
     
     if (!parent.children) {
-      return `touch: cannot touch '${args[0]}': Parent is not a directory`;
+      return `touch: cannot touch '${escapeHtml(args[0])}': Parent is not a directory`;
     }
     
     // Check if file already exists
     if (parent.children[fileName]) {
       if (parent.children[fileName].type === 'directory') {
-        return `touch: cannot touch '${args[0]}': Is a directory`;
+        return `touch: cannot touch '${escapeHtml(args[0])}': Is a directory`;
       }
-      return `touch: '${args[0]}' timestamp updated`;
+      return `touch: '${escapeHtml(args[0])}' timestamp updated`;
     }
     
     // Create new empty file
@@ -322,7 +355,7 @@ export const fileSystemCommands = {
       content: ''
     };
     
-    return `touch: created '${args[0]}'`;
+    return `touch: created '${escapeHtml(args[0])}'`;
   },
   
   mkdir: (args: string[]) => {
@@ -341,17 +374,17 @@ export const fileSystemCommands = {
         parent = parent.children[segment];
       } else {
         playBeep();
-        return `mkdir: cannot create directory '${args[0]}': No such file or directory`;
+        return `mkdir: cannot create directory '${escapeHtml(args[0])}': No such file or directory`;
       }
     }
 
     if (!parent.children) {
-      return `mkdir: cannot create directory '${args[0]}': Parent is not a directory`;
+      return `mkdir: cannot create directory '${escapeHtml(args[0])}': Parent is not a directory`;
     }
 
     // Check if directory already exists
     if (parent.children[dirName]) {
-      return `mkdir: cannot create directory '${args[0]}': File exists`;
+      return `mkdir: cannot create directory '${escapeHtml(args[0])}': File exists`;
     }
 
     // Create new directory
@@ -361,7 +394,7 @@ export const fileSystemCommands = {
       children: {}
     };
 
-    return `mkdir: created directory '${args[0]}'`;
+    return `mkdir: created directory '${escapeHtml(args[0])}'`;
   },
 
   clear: () => {
@@ -379,19 +412,11 @@ export const fileSystemCommands = {
     const fullCommand = args.join(' ');
     
     // Check for redirection operators
-    let isAppend = false;
-    let redirectIndex = -1;
+    const redirect = findRedirect(fullCommand);
     
-    // Look for >> first (append)
-    if (fullCommand.includes('>>')) {
-      isAppend = true;
-      redirectIndex = fullCommand.indexOf('>>');
-    } else if (fullCommand.includes('>')) {
-      // Look for > (overwrite)
-      redirectIndex = fullCommand.indexOf('>');
-    }
-    
-    if (redirectIndex !== -1) {
+    if (redirect !== null) {
+      const isAppend = redirect.append;
+      const redirectIndex = redirect.index;
       // Handle file redirection
       const beforeRedirect = fullCommand.substring(0, redirectIndex).trim();
       const afterRedirect = fullCommand.substring(redirectIndex + (isAppend ? 2 : 1)).trim();
@@ -427,17 +452,17 @@ export const fileSystemCommands = {
         if (parent.children && parent.children[segment]) {
           parent = parent.children[segment];
         } else {
-          return `echo: cannot create '${filename}': No such file or directory`;
+          return `echo: cannot create '${escapeHtml(filename)}': No such file or directory`;
         }
       }
   
       if (!parent.children) {
-        return `echo: cannot create '${filename}': Parent is not a directory`;
+        return `echo: cannot create '${escapeHtml(filename)}': Parent is not a directory`;
       }
   
       // Check if target exists and is a directory
       if (parent.children[fileName] && parent.children[fileName].type === 'directory') {
-        return `echo: cannot write to '${filename}': Is a directory`;
+        return `echo: cannot write to '${escapeHtml(filename)}': Is a directory`;
       }
   
       // Create, overwrite, or append to the file
@@ -456,7 +481,7 @@ export const fileSystemCommands = {
   
       const currentTheme = get(theme);
       const action = isAppend ? 'appended to' : 'written to';
-      return `<span style="color: ${currentTheme.green};">Content ${action} '${filename}'</span>`;
+      return `<span style="color: ${currentTheme.green};">Content ${action} '${escapeHtml(filename)}'</span>`;
     }
   
     // Regular echo behavior - remove surrounding quotes and process escape sequences
@@ -466,8 +491,9 @@ export const fileSystemCommands = {
       output = output.slice(1, -1);
     }
     
-    // Process escape sequences for regular echo output
-    output = output.replace(/\\n/g, '<br>')
+    // Process escape sequences for regular echo output. The text is escaped first, so tags
+    // typed at the prompt print as typed and only these sequences become markup.
+    output = escapeHtml(output).replace(/\\n/g, '<br>')
                 .replace(/\\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
                 .replace(/\\r/g, '')
                 .replace(/\\\\/g, '\\');

@@ -51,15 +51,10 @@
       dispatch("update");
     }
   });
-
-  const suggestionHtml = () => {
-    const items = suggestions.join("\n");
-    return `<span style="color: var(--theme-cyan);">Suggestions:</span>\n${items}`;
-  };
 </script>
 
 {#if !isProcessing && !isPasswordMode && suggestions.length > 0}
-  <div class="command-suggestions">{@html suggestionHtml()}</div>
+  <div class="command-suggestions"><span class="label">Suggestions:</span>{"\n" + suggestions.join("\n")}</div>
 {/if}
 
 <style>
@@ -69,5 +64,9 @@
     opacity: 1;
     white-space: pre-wrap;
     line-height: 1.25;
+  }
+
+  .label {
+    color: var(--theme-cyan);
   }
 </style>
