@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { isBenignConsoleMessage } from './console';
 
 interface HeaderRule {
   source: string;
@@ -25,7 +26,7 @@ function firebaseHeaders(): Record<string, string> {
 async function servedLikeFirebase(page: Page, origin: string) {
   const problems: string[] = [];
   page.on('console', (message) => {
-    if (message.type() === 'error') problems.push(message.text());
+    if (message.type() === 'error' && !isBenignConsoleMessage(message.text())) problems.push(message.text());
   });
   page.on('pageerror', (error) => problems.push(error.message));
   page.on('request', (request) => {

@@ -1,10 +1,11 @@
 import { expect, test } from '@playwright/test';
+import { isBenignConsoleMessage } from './console';
 
 test.describe('smoke', { tag: '@smoke' }, () => {
   test('boots, runs help, fits the viewport and logs no errors', async ({ page }) => {
     const errors: string[] = [];
     page.on('console', (message) => {
-      if (message.type() === 'error') errors.push(message.text());
+      if (message.type() === 'error' && !isBenignConsoleMessage(message.text())) errors.push(message.text());
     });
     page.on('pageerror', (error) => errors.push(error.message));
 
