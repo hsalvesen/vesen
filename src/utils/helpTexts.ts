@@ -1,6 +1,5 @@
 export const commandHelp = {
   // System commands
-  help: `<span style="color: var(--theme-cyan); font-weight: bold;">help</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Shows a list of all available commands organised by category.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> help`,
   poweroff: `<span style="color: var(--theme-cyan); font-weight: bold;">poweroff</span> : <span style="word-wrap: break-word; overflow-wrap: break-word;">Closes the terminal session. Attempts to close window, then triggers shutdown sequence.</span><br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> poweroff`,
 
   // System info commands
@@ -33,30 +32,8 @@ stock AAPL
 stock TEAM
 stock GOOGL
 stock MSFT`,
-  // Project commands
-  theme: `<span style="color: var(--theme-cyan); font-weight: bold;">theme</span> - Change terminal theme
-<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> theme <span style="color: var(--theme-green);">[args]</span>.
-  <span style="color: var(--theme-green);">args:</span>
-    ls: list all available themes
-    set: set theme to [theme]
-
-<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
-  theme ls
-  theme set swamphen`,
-  cathode: `<span style="color: var(--theme-cyan); font-weight: bold;">cathode</span> - Trial a retro CRT (cathode ray tube) display effect
-<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> cathode <span style="color: var(--theme-green);">[args]</span>.
-  <span style="color: var(--theme-green);">args:</span>
-    ls: list all cathode variations
-    set: set the effect to [variation]
-    off: turn the effect off
-
-<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
-  cathode ls
-  cathode set phosphor
-  cathode off`,
   repo: `<span style="color: var(--theme-cyan); font-weight: bold;">repo</span> : Opens the project's GitHub repository in a new tab.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> repo`,
   email: `<span style="color: var(--theme-cyan); font-weight: bold;">email</span> : Opens the default email client to send an email to the developer.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> email`,
-  banner: `<span style="color: var(--theme-cyan); font-weight: bold;">banner</span> : Shows the terminal welcome banner with ASCII art and version information.<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> banner`,
   speedtest: `<span style="color: var(--theme-cyan); font-weight: bold;">speedtest</span> : Test internet connection speed<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> speedtest<br><span style="color: var(--theme-green); font-weight: bold;">Features:</span> Tests download/upload speeds and ping latency using Cloudflare infrastructure.`,
   qr: `<span style="color: var(--theme-cyan); font-weight: bold;">qr</span> - Generate a QR code from a URL or text
 <span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> qr <span style="color: var(--theme-green);">[url or text]</span>
@@ -64,23 +41,4 @@ stock MSFT`,
   qr https://github.com/hsalvesen/vesen
   qr https://example.com
   qr hello-world`,
-};
-
-// Short descriptions for the help command
-export const commandDescriptions = {
-  'help': 'Show commands',
-  'poweroff': 'Shut down terminal',
-  'fastfetch': 'System info',
-  'whoami': 'Developer info',
-  'sudo': 'Elevate privileges',
-  'weather': 'Weather forecast',
-  'curl': 'HTTP request',
-  'stock': 'Stock data',
-  'theme': 'Change theme',
-  'cathode': 'Trial CRT effect',
-  'repo': 'Open repository',
-  'email': 'Open mail client',
-  'banner': 'Show banner',
-  'speedtest': 'Internet speed test',
-  'qr': 'Generate QR code',
 };

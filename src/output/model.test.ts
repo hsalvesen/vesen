@@ -4,6 +4,7 @@ import {
   PALETTE,
   ROLES,
   colourVar,
+  hexColour,
   isPalette,
   isRole,
   isTrustedAction,
@@ -338,5 +339,31 @@ describe('plain', () => {
   it('uses span text for live bindings', () => {
     const live = { ...out.run('swamphen', 'theme set swamphen'), live: { kind: 'isCurrentTheme', theme: 'swamphen' } } as const;
     expect(plain(out.grid([live]))).toBe('swamphen\n');
+  });
+});
+
+describe('swatches, markers and grid notes', () => {
+  it('swatches checks every colour, and gives a pipe its blocks of text', () => {
+    const strip = out.swatches('#222235', ['#FFFFFF', '#f60055']);
+    expect(strip.swatches).toEqual({ background: '#222235', colours: ['#ffffff', '#f60055'] });
+    expect(strip.text).toBe(' ████ ');
+    expect(plain(out.lines([[strip]]))).toBe(' ████ \n');
+    expect(() => out.swatches('red', [])).toThrow(TypeError);
+    expect(() => out.swatches('#000000', ['url(x)'])).toThrow(TypeError);
+    expect(hexColour('#ABCDEF')).toBe('#abcdef');
+    expect(hexColour('#abc')).toBeNull();
+  });
+
+  it('live makes a span the renderer reads from the stores, which a pipe reads as written', () => {
+    const marker = out.live('› ', { kind: 'isCurrentTheme', theme: 'wombat', marker: '› ' }, { fg: 'accent' });
+    expect(marker).toEqual({ text: '› ', style: { fg: 'accent' }, live: { kind: 'isCurrentTheme', theme: 'wombat', marker: '› ' } });
+    expect(lineText([marker, out.span('wombat')])).toBe('› wombat');
+  });
+
+  it('grid notes line up after their items in a pipe', () => {
+    const grid = out.grid([out.span('ls'), out.span('mkdir'), out.span('cd')], 40, [[out.span('list')], [out.span('make')], []]);
+    expect(grid).toMatchObject({ type: 'grid', minCh: 40, notes: [[{ text: 'list' }], [{ text: 'make' }], []] });
+    expect(plain(grid)).toBe('ls     list\nmkdir  make\ncd\n');
+    expect(out.grid([out.span('a')])).toEqual({ type: 'grid', items: [{ text: 'a' }] });
   });
 });

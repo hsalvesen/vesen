@@ -23,7 +23,7 @@ import { cathode, cathodeModes, cathodeQuality, crtTier, DEFAULT_CATHODE_MODE, p
 import { screen } from '../stores/screen';
 import { columns } from '../stores/term';
 import { DEFAULT_THEME_NAME, persistTheme, theme, themes } from '../stores/theme';
-import { markCurrentCathode, markCurrentTheme } from '../ui/legacy-highlights';
+import { markCurrentThemeName } from '../ui/legacy-highlights';
 import { playBeep } from '../utils/beep';
 import { notice } from '../utils/notice';
 import { GUEST } from '../vfs/identity';
@@ -104,16 +104,13 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
     theme.subscribe((value) => {
       applyTheme(doc, value);
       applyRoles(root, value);
-      markCurrentTheme(doc, value.name);
+      markCurrentThemeName(doc, value.name);
     }),
     startPerf(win, (next) => {
       signals = next;
       showCathode();
     }),
-    cathode.subscribe((mode) => {
-      showCathode();
-      markCurrentCathode(doc, mode);
-    }),
+    cathode.subscribe(showCathode),
     cathodeQuality.subscribe(showCathode),
     // The touch input's scale and the font's cell width, as CSS variables.
     startMeasuring(win),

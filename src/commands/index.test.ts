@@ -8,8 +8,10 @@ describe('the command catalogue', () => {
   it('finds the spec files under src/commands/<category>/', () => {
     // Each port adds one, and this list grows.
     expect(specFiles().map((found) => found.name).sort()).toEqual([
-      'alias', 'cat', 'cd', 'clear', 'cp', 'echo', 'export', 'history', 'ln', 'ls', 'mkdir', 'mv', 'printf', 'pwd',
-      'reset', 'rm', 'rmdir', 'stat', 'touch',
+      'alias', 'apropos', 'banner', 'cat', 'cathode', 'cd', 'clear', 'command', 'cp', 'date', 'echo', 'env', 'exit', 'export',
+      'false', 'help', 'history', 'ln', 'login', 'ls', 'man', 'mkdir', 'mv', 'printenv', 'printf', 'pwd', 'reset', 'rm',
+      'rmdir', 'set', 'sleep', 'source', 'stat', 'test', 'theme', 'touch', 'true', 'type', 'unalias', 'unset', 'whatis',
+      'which',
     ]);
   });
 

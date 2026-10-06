@@ -96,15 +96,15 @@ describe('isLegacyStyleProperty', () => {
 
 describe('filterLegacyClasses', () => {
   it('keeps only the class names legacy output uses', () => {
-    expect(filterLegacyClasses('theme-name is-current')).toBe('theme-name is-current');
-    expect(filterLegacyClasses('  cathode-name  fixed inset-0 z-50 ')).toBe('cathode-name');
+    expect(filterLegacyClasses('current-theme-name is-current')).toBe('current-theme-name');
+    expect(filterLegacyClasses('  out-muted  fixed inset-0 z-50 ')).toBe('out-muted');
     expect(filterLegacyClasses('sr-only hidden')).toBe('sr-only');
     expect(filterLegacyClasses('art art-fit art-x')).toBe('art art-fit');
     expect(filterLegacyClasses('out-panel tone-warn fixed')).toBe('out-panel tone-warn');
     expect([...LEGACY_CLASSES].sort()).toEqual([
-      'art', 'art-cell', 'art-fit', 'cathode-name', 'current-theme-name', 'is-current', 'keys-hint',
+      'art', 'art-cell', 'art-fit', 'current-theme-name',
       'out-accent', 'out-error', 'out-muted', 'out-panel', 'out-panel-title', 'out-strong',
-      'sr-only', 'swatches', 'theme-name', 'tone-error', 'tone-link', 'tone-muted', 'tone-ok', 'tone-warn',
+      'sr-only', 'tone-error', 'tone-link', 'tone-muted', 'tone-ok', 'tone-warn',
     ]);
   });
 });
@@ -123,14 +123,14 @@ describe('legacyAttribute', () => {
   it('passes style and class through their filters and drops what is left empty', () => {
     expect(legacyAttribute('style', 'color: red; top: 0')).toBe('color: red');
     expect(legacyAttribute('style', 'top: 0')).toBeNull();
-    expect(legacyAttribute('class', 'theme-name evil')).toBe('theme-name');
+    expect(legacyAttribute('class', 'out-accent evil')).toBe('out-accent');
     expect(legacyAttribute('class', 'evil')).toBeNull();
   });
 
-  it('keeps the two data attributes with plain names', () => {
-    expect(legacyAttribute('data-theme-name', 'swamphen')).toBe('swamphen');
-    expect(legacyAttribute('data-cathode-name', 'vintage')).toBe('vintage');
-    expect(legacyAttribute('data-theme-name', '"><img src=x onerror=alert(1)>')).toBeNull();
+  it('keeps no data attributes: the theme and cathode lists that used them are specs now', () => {
+    expect(legacyAttribute('data-theme-name', 'swamphen')).toBeNull();
+    expect(legacyAttribute('data-cathode-name', 'vintage')).toBeNull();
+    expect(legacyAttribute('data-x', '"><img src=x onerror=alert(1)>')).toBeNull();
   });
 
   it('keeps aria-hidden only as true', () => {

@@ -132,6 +132,18 @@ describe('OutputView: links and actions', () => {
 });
 
 describe('OutputView: layout blocks', () => {
+  it('lays a grid with notes out as an item column and a note beside each item', async () => {
+    const blocks = [out.grid([out.insert('ls', 'ls '), out.span('mkdir')], 40, [[out.span('list')], [out.span('make')]])];
+    const grid = (await view(blocks, () => {})).querySelector('.grid');
+    expect(styleOf(grid)).toBe('--min-col: 40ch; --item-col: 5ch');
+    const cells = Array.from(grid?.querySelectorAll('.cell') ?? []);
+    expect(cells.map((cell) => Array.from(cell.children, (child) => child.textContent))).toEqual([
+      ['ls', 'list'],
+      ['mkdir', 'make'],
+    ]);
+    expect(cells[0]?.querySelector('button')?.textContent).toBe('ls');
+  });
+
   it('lays a grid out in as many columns as fit', async () => {
     const grid = (await view([out.grid([out.span('README.md'), out.span('documents/', { fg: 'brightBlue' })])])).querySelector('.grid');
     expect(styleOf(grid)).toBe('--min-col: 12ch');

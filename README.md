@@ -41,7 +41,7 @@ npm run preview
 ```
 
 ### Getting started
-Type `help` in the terminal to see all available commands, or explore the file system with `ls` and `cd`.
+Type `help` in the terminal to see every command by category, `man <command>` for one command's manual (`man vesen` is about the terminal itself), and `help keys` for the keys. Explore the file system with `ls` and `cd`; `exit` ends the session and offers a new one.
 
 ## Themes
 
@@ -65,7 +65,7 @@ src/
 │                                 # terminal.css (base type, the .art class for banners, logos and charts),
 │                                 # shell.css (the fixed shell sized to the visible viewport; phones
 │                                 # edge to edge, the desktop framed), components.css (output in role
-│                                 # colours: errors, panels, list markers, swatches, the scrollbar) and
+│                                 # colours: errors, panels, theme ls swatches, the scrollbar) and
 │                                 # crt.css (the CRT effect, by tier)
 ├── constants.ts                  # Repository URL (the prompt's host is in vfs/identity.ts)
 ├── global.d.ts                   # Build-time globals
@@ -74,9 +74,11 @@ src/
 │   ├── CommandSuggestionsRow.svelte  # Suggestions while typing
 │   └── Cathode.svelte            # CRT overlay, inside the screen frame
 ├── interfaces/                   # TypeScript interfaces (command, theme)
-├── shell/                        # Contracts for the DOM-free shell kernel (docs/adr/0001-architecture.md)
+├── shell/                        # The DOM-free shell kernel (docs/adr/0001-architecture.md)
 │   ├── types.ts                  # CommandSpec, command context, registry, history, TTY, streams, identity
-│   └── lexer-types.ts            # The lexer's result and tokens
+│   ├── lexer-types.ts            # The lexer's result and tokens
+│   ├── help.ts                   # help, --help, man, whatis and apropos, all generated from the specs
+│   └── keys.ts                   # The keys the terminal answers to, for help keys and man vesen
 ├── output/                       # DOM-free output
 │   ├── model.ts                  # Spans, blocks, actions, the `out` builders and plain()
 │   ├── html-to-text.ts           # Plain text of legacy HTML output, for pipes
@@ -89,10 +91,13 @@ src/
 │                                 # reloads as an overlay on the seed), identity.ts (guest@vesen)
 ├── content/                      # The owner's styled documents (README, history, linux notes) in {colour}
 │                                 # markup, converted once from HTML by scripts/convert-content.mjs
-├── commands/                     # One CommandSpec per file, DOM-free, by category: files/ (ls, cat, cp,
-│                                 # mv, rm, rmdir, mkdir, touch, ln, stat, cd, pwd), text/ (echo, printf),
-│                                 # shell/ (history, clear, alias, export, reset); lib/ is what they share;
-│                                 # legacy.ts wraps the commands not yet ported
+├── commands/                     # One CommandSpec per file, DOM-free, by category: portfolio/ (theme,
+│                                 # cathode, banner), files/ (ls, cat, cp, mv, rm, rmdir, mkdir, touch, ln,
+│                                 # stat, cd, pwd), text/ (echo, printf), shell/ (help, man, whatis,
+│                                 # apropos, history, clear, reset, alias, unalias, export, unset, env,
+│                                 # printenv, set, source, type, which, command, true, false, test, exit,
+│                                 # login, sleep), system/ (date); lib/ is what they share, the banner
+│                                 # included; legacy.ts wraps the commands not yet ported
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette
 │                                 # where themes.json does not set them, and the contrast each must meet);
@@ -116,21 +121,22 @@ src/
 │   ├── Transcript.svelte         # Each entry: the prompt it was typed at, the line, its output
 │   ├── Prompt.svelte             # guest@vesen:~/documents$, live under the transcript and as each entry's snapshot
 │   ├── OutputView.svelte         # Draws output blocks with text interpolation only
-│   ├── SpanView.svelte           # One styled span: link, trusted action button or live theme binding
+│   ├── SpanView.svelte           # One styled span: link, trusted action button, live theme or CRT marker,
+│   │                             # or theme swatches
 │   ├── legacy-html.ts            # use:legacyHtml, which rebuilds legacy HTML from the allowlist
 │   ├── span-style.ts             # Colour tokens to CSS, with role fallbacks
-│   ├── legacy-highlights.ts      # Moves the current-theme and CRT markers in earlier legacy listings
+│   ├── legacy-highlights.ts      # Renames the theme in earlier legacy fastfetch output
 │   ├── actions/                  # stickToBottom (the one scroll owner, with the new-output pill) and
 │   │                             # focusPolicy (when a click, tap or key puts the caret in the prompt)
 │   └── components/registry.ts    # Rich cards a component block may name (none yet)
 ├── testing/                      # Test setup
 └── utils/
-    ├── commands.ts               # The legacy command table (help, theme, cathode, sudo); the network
-    │                             # commands load on first use
+    ├── commands.ts               # The legacy command table (sudo, repo, email); the network commands
+    │                             # load on first use
     ├── commands/                 # Legacy commands not yet ported: network, system, QR, poweroff;
     │                             # fastfetch and the network commands load on first use
     ├── virtualFileSystem.ts      # A shim over the VFS for the legacy commands not yet ported
-    ├── helpTexts.ts              # Help for each command
+    ├── helpTexts.ts              # Help for each legacy command not yet ported
     ├── commandSuggestions.ts     # Suggestions while typing
     ├── notice.ts                 # The one notice panel and the one error style (cmd: message, then a hint)
     ├── beep.ts                   # The terminal bell

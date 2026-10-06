@@ -1,7 +1,7 @@
 <!--
-  The layout blocks: grid, table, art, panel, chips, card, columns and component. OutputView
-  loads this the first time it draws one, so the initial chunk carries only what legacy output
-  and plain lines need. Everything is drawn with text interpolation only.
+  The layout blocks: grid, table, panel, chips, card, columns and component. OutputView loads
+  this the first time it draws one, so the initial chunk carries only what legacy output, plain
+  lines and art (the boot banner) need. Everything is drawn with text interpolation only.
 
   Markup inside text containers is written without whitespace between tags on purpose: those
   containers preserve whitespace, so any space Svelte kept there would show.
@@ -20,7 +20,7 @@
   import LineView from './LineView.svelte';
   import OutputView from './OutputView.svelte';
   import { lookupComponent } from './components/registry';
-  import { cssColour, spanClasses, spanCss } from './span-style';
+  import { cssColour } from './span-style';
 
   let { block, onaction }: { block: Block; onaction?: (action: Action) => void } = $props();
 
@@ -33,21 +33,27 @@
     return `stack-${bucket}`;
   }
 
-  /** The narrowest a grid column may be: the caller's choice, or the widest item plus a gap. */
-  function gridMinCh(grid: GridBlock): number {
-    if (grid.minCh !== undefined) return grid.minCh;
-    return grid.items.reduce((widest, item) => Math.max(widest, textWidth(item.text)), 1) + 2;
+  /** The widest item in a grid, in cells. */
+  function itemCh(grid: GridBlock): number {
+    return grid.items.reduce((widest, item) => Math.max(widest, textWidth(item.text)), 1);
   }
 
-  function artColumns(text: string): number {
-    return text.split('\n').reduce((widest, row) => Math.max(widest, textWidth(row)), 1);
+  /** The narrowest a grid column may be: the caller's choice, or the widest item plus a gap. */
+  function gridMinCh(grid: GridBlock): number {
+    return grid.minCh ?? itemCh(grid) + 2;
   }
 </script>
 
 {#if block.type === 'grid'}
-  <div class="grid" style="--min-col: {gridMinCh(block)}ch">
-    {#each block.items as item}
-      <div class="text"><LineView line={[item]} {onaction} /></div>
+  {@const notes = block.notes}
+  <div class="grid" style={notes === undefined ? `--min-col: ${gridMinCh(block)}ch` : `--min-col: ${gridMinCh(block)}ch; --item-col: ${itemCh(block)}ch`}>
+    {#each block.items as item, i}
+      {#if notes !== undefined}
+        <!-- An item in a column of its own, and its note wrapping beside it. -->
+        <div class="cell"><div class="text"><LineView line={[item]} {onaction} /></div><div class="text note"><LineView line={notes[i] ?? []} {onaction} /></div></div>
+      {:else}
+        <div class="text"><LineView line={[item]} {onaction} /></div>
+      {/if}
     {/each}
   </div>
 {:else if block.type === 'table'}
@@ -73,16 +79,6 @@
         {/each}
       </tbody>
     </table>
-  </div>
-{:else if block.type === 'art'}
-  <div class="art-wrap">
-    <div
-      class="art {spanClasses(block.style)}"
-      class:art-fit={block.fit === 'scale'}
-      aria-hidden="true"
-      style="--art-cols: {artColumns(block.text)}; {spanCss(block.style) ?? ''}"
-    >{block.text}</div>
-    <span class="sr-only">{block.alt}</span>
   </div>
 {:else if block.type === 'panel'}
   <div class="out-panel" style="--panel-tone: {cssColour(block.tone)}">
@@ -145,6 +141,13 @@
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(var(--min-col), 100%), 1fr));
+  }
+
+  .cell {
+    display: grid;
+    grid-template-columns: var(--item-col) minmax(0, 1fr);
+    column-gap: 2ch;
+    padding-right: 2ch;
   }
 
   .table-wrap {
@@ -223,10 +226,6 @@
   }
   @container output (max-width: 120ch) {
     .stack-120 { --row: block; --cell: block; --head: none; --label: inline; --row-gap: 0.5em; }
-  }
-
-  .art-wrap {
-    max-width: 100%;
   }
 
   .chips {

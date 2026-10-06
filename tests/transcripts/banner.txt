@@ -1,0 +1,28 @@
+# banner: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ banner
+[terminal at 40 columns; pipe at 40 columns]
+█   █ █▀▀▀ █▀▀▀ █▀▀▀ █▄  █
+▀▄ ▄▀ █▀▀  ▀▀▀█ █▀▀  █ ▀▄█
+  ▀   ▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀   ▀
+vesen v0.0.0-test · by Has Salvesen
+Tab completes · ↑ history · help <cmd> for details
+
+Type help to see all available commands.
+Type cat README.md to learn more about this terminal.
+? 0
+[terminal at 80, 120 columns; pipe at 80, 120 columns]
+██╗   ██╗███████╗███████╗███████╗███╗   ██╗
+██║   ██║██╔════╝██╔════╝██╔════╝████╗  ██║
+██║   ██║█████╗  ███████╗█████╗  ██╔██╗ ██║
+╚██╗ ██╔╝██╔══╝  ╚════██║██╔══╝  ██║╚██╗██║
+ ╚████╔╝ ███████╗███████║███████╗██║ ╚████║
+  ╚═══╝  ╚══════╝╚══════╝╚══════╝╚═╝  ╚═══╝
+vesen v0.0.0-test · a terminal by Has Salvesen
+Tab completes · ↑ history · help <cmd> for details
+
+Type help to see all available commands.
+Type cat README.md to learn more about this terminal.
+? 0

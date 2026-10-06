@@ -1,0 +1,28 @@
+# cathode: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ cathode ls
+Cathode variations (current marked):
+  off        No effect. A clean, modern flat display.
+› scanlines  Subtle horizontal scanlines with a slow refresh sweep.
+  phosphor   Glowing phosphor text, scanlines and a gentle flicker.
+  vintage    The full retro set: glow, flicker, RGB fringing and a heavy vignette.
+
+Quality: full (auto: not decided yet)
+
+Trial one with: cathode set VARIATION, or click a name.
+Change the quality with: cathode quality [auto|full|lite|off]
+? 0
+$ cathode set neon
+! cathode: neon: no such variation
+! Try 'cathode ls' to see all available variations.
+? 1
+$ cathode quality
+Cathode quality: full (auto: not decided yet)
+Change it with: cathode quality [auto|full|lite|off]
+? 0
+$ cathode quality ultra
+! cathode: quality: ultra: not a quality
+! Choose one of: auto, full, lite, off.
+? 1

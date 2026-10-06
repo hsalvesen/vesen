@@ -15,7 +15,7 @@ import { parse } from './parser';
 import { promptLine } from './prompt';
 import { Session, type HistoryStore, type JobState } from './session';
 import { JobDetached, NullOut, StringIn, TtyIn, TtyOut, TtySink, vfsWriteTarget, type ScreenAction, type WriteTarget } from './streams';
-import { EXIT, type CommandSpec, type Env, type ExitCode, type JobInfo, type Registry, type User } from './types';
+import { EXIT, ExitRequest, type CommandSpec, type Env, type ExitCode, type JobInfo, type Registry, type User } from './types';
 
 export type { ShellFs, TerminalInfo } from './executor';
 export type { ScreenAction, WriteTarget } from './streams';
@@ -164,13 +164,17 @@ export function createShell(deps: ShellDeps): Shell {
     promptLine({ cwd: session.currentDir, status: session.status, columns: terminal.size().cols, home: session.user.home });
 
   let pending: (Preflighted & { readonly line: string }) | null = null;
+  /** Set by `exit`: the next line starts a new login session before it runs. */
+  let ended = false;
 
   const jobStore: Readable<JobInfo | null> = {
     subscribe: (run) => session.jobs.store.subscribe((state: JobState | null) => run(state)),
     get: () => session.jobs.store.get(),
   };
 
-  async function runLine(line: string, job: Job, io: Io, origin: JobOrigin): Promise<ExitCode> {
+  async function runLine(line: string, job: Job, io: Io, origin: JobOrigin, fresh: boolean): Promise<ExitCode> {
+    // The session ended with `exit`; a key or a tap starts a new one, files kept.
+    if (fresh) await executor.login(job);
     let text = line;
     if (origin !== 'boot') {
       const history = expandHistory(line, session.history);
@@ -197,6 +201,12 @@ export function createShell(deps: ShellDeps): Shell {
   function start(line: string, origin: JobOrigin = 'keyboard'): JobHandle {
     const preflighted = pending?.line === line ? pending : null;
     pending = null;
+    const fresh = ended && origin !== 'boot';
+    if (fresh) {
+      ended = false;
+      // At once, so the line is shown at the new session's prompt.
+      session.reset();
+    }
     const first = line.trim().split(/\s+/)[0] ?? '';
     const prompt = renderPrompt();
     const startedAt = deps.clock.now();
@@ -224,7 +234,7 @@ export function createShell(deps: ShellDeps): Shell {
     const columns = (): number => terminal.size().cols;
     const io: Io = { stdin: new TtyIn(), stdout: new TtyOut(sink, 'stdout', columns), stderr: new TtyOut(sink, 'stderr', columns) };
 
-    const work = runLine(line, job, io, origin);
+    const work = runLine(line, job, io, origin, fresh);
     const done = (async (): Promise<JobResult> => {
       // null when ^C came first.
       const outcome: { status: ExitCode } | { error: unknown } | null = await Promise.race([
@@ -243,7 +253,11 @@ export function createShell(deps: ShellDeps): Shell {
         work.catch(() => {});
       } else if ('error' in outcome) {
         const error = outcome.error;
-        if (error instanceof Interrupted || error instanceof JobDetached) {
+        if (error instanceof ExitRequest) {
+          // `exit` ended the session: what it printed stays, and the next line starts a new one.
+          status = error.status;
+          ended = true;
+        } else if (error instanceof Interrupted || error instanceof JobDetached) {
           interrupted = true;
           status = EXIT.interrupted;
         } else {
@@ -340,7 +354,9 @@ export function createShell(deps: ShellDeps): Shell {
         const work = executor.source(path, job, io, TOP_FRAME);
         work.catch(() => {});
         return await Promise.race([work, whenAborted(controller.signal).then(() => EXIT.interrupted)]);
-      } catch {
+      } catch (error) {
+        // An `exit` in a file read at boot ends only the reading of it.
+        if (error instanceof ExitRequest) return error.status;
         return EXIT.error;
       } finally {
         clearTimeout(deadline);

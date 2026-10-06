@@ -1,0 +1,81 @@
+# man: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ man pwd
+[terminal at 40 columns; pipe at 40 columns]
+PWD(1)       User Commands        PWD(1)
+
+NAME
+   pwd - print the working directory
+
+SYNOPSIS
+   pwd [-L|-P]
+
+DESCRIPTION
+   Prints the full path of the working
+   directory: the one the prompt shows,
+   with ~ written out.
+
+OPTIONS
+   -L
+      Print the path with its symbolic
+      links (the default).
+   -P
+      Print the physical path, with
+      links resolved.
+   --help
+      Display this help and exit.
+
+EXAMPLES
+   pwd
+   pwd -P
+
+SEE ALSO
+   cd(1), ls(1)
+
+vesen 0.0.0-test                  PWD(1)
+? 0
+[terminal at 80, 120 columns; pipe at 80, 120 columns]
+PWD(1)                           User Commands                            PWD(1)
+
+NAME
+       pwd - print the working directory
+
+SYNOPSIS
+       pwd [-L|-P]
+
+DESCRIPTION
+       Prints the full path of the working directory: the one the prompt shows,
+       with ~ written out.
+
+OPTIONS
+       -L
+              Print the path with its symbolic links (the default).
+       -P
+              Print the physical path, with links resolved.
+       --help
+              Display this help and exit.
+
+EXAMPLES
+       pwd
+       pwd -P
+
+SEE ALSO
+       cd(1), ls(1)
+
+vesen 0.0.0-test                                                          PWD(1)
+? 0
+$ man 1 nope
+! No manual entry for nope in section 1
+? 16
+$ whatis ls cd
+ls (1)               - list directory contents
+cd (1)               - change the working directory
+? 0
+$ apropos theme
+theme (1)            - change the colour theme
+? 0
+$ man -k zzz
+! zzz: nothing appropriate.
+? 16

@@ -92,10 +92,10 @@ test.describe('the terminal font', { tag: '@smoke' }, () => {
 
   test('the banner shows the key hints only where there are keys', async ({ page }) => {
     await page.goto('/');
-    const keys = page.locator('.keys-hint').first();
-    await expect(page.getByText('help <cmd> for details')).toBeVisible();
-    if (PHONES.includes(test.info().project.name)) await expect(keys).toBeHidden();
-    else await expect(keys).toHaveText('Tab completes · ↑ history · ');
+    const keys = page.getByText('help <cmd> for details').first();
+    await expect(keys).toBeVisible();
+    if (PHONES.includes(test.info().project.name)) await expect(keys).toHaveText('help <cmd> for details');
+    else await expect(keys).toHaveText('Tab completes · ↑ history · help <cmd> for details');
   });
 
   test('the prompt names the brand as the host', async ({ page }) => {
@@ -203,8 +203,9 @@ test.describe('zoom and the touch input', { tag: '@smoke' }, () => {
     await page.goto('/');
     await fontLoaded(page);
 
+    // Under 50 columns the banner is the compact logo.
     const banner = page.locator('.art-fit').first();
-    await expect(banner).toContainText('██╗   ██╗');
+    await expect(banner).toContainText('▀▄ ▄▀');
     const fit = await banner.evaluate((art) => ({
       overflow: art.scrollWidth - art.clientWidth,
       css: Array.from(document.styleSheets).some((sheet) => {
@@ -225,8 +226,9 @@ test.describe('zoom and the touch input', { tag: '@smoke' }, () => {
       await page.goto('/');
       await fontLoaded(page);
 
+      // Under 50 columns the banner is the compact logo, three rows of half blocks.
       const banner = page.locator('.art-fit').first();
-      await expect(banner).toContainText('██╗   ██╗');
+      await expect(banner).toContainText('▀▄ ▄▀');
       const fit = await banner.evaluate((art) => {
         const style = getComputedStyle(art);
         return {
@@ -236,8 +238,8 @@ test.describe('zoom and the touch input', { tag: '@smoke' }, () => {
           pageOverflow: document.documentElement.scrollWidth - window.innerWidth,
         };
       });
-      // Six rows of art, none wrapped, none cut off, and no sideways scroll anywhere.
-      expect(fit.rows).toBeCloseTo(6, 0);
+      // Three rows of art, none wrapped, none cut off, and no sideways scroll anywhere.
+      expect(fit.rows).toBeCloseTo(3, 0);
       expect(fit.whiteSpace).toBe('pre');
       expect(fit.overflow, 'banner scrolls inside itself').toBeLessThanOrEqual(0);
       expect(fit.pageOverflow, 'page scrolls sideways').toBeLessThanOrEqual(0);

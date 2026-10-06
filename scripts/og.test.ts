@@ -4,7 +4,7 @@ import { bannerArt } from './og.mjs';
 
 describe('bannerArt', () => {
   it('reads the six rows of the banner from the banner command, without its markup', () => {
-    const art = bannerArt(readFileSync(new URL('../src/utils/commands/system.ts', import.meta.url), 'utf8'));
+    const art = bannerArt(readFileSync(new URL('../src/commands/lib/banner.ts', import.meta.url), 'utf8'));
     const rows = art.split('\n');
     expect(rows).toHaveLength(6);
     expect(rows[0]).toBe('██╗   ██╗███████╗███████╗███████╗███╗   ██╗');

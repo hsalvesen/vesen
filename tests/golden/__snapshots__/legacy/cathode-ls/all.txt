@@ -1,11 +1,11 @@
 $ cathode ls
 Cathode variations (current marked):
-off        No effect. A clean, modern flat display.
-scanlines  Subtle horizontal scanlines with a slow refresh sweep.
-phosphor   Glowing phosphor text, scanlines and a gentle flicker.
-vintage    The full retro set: glow, flicker, RGB fringing and a heavy vignette.
+  off        No effect. A clean, modern flat display.
+› scanlines  Subtle horizontal scanlines with a slow refresh sweep.
+  phosphor   Glowing phosphor text, scanlines and a gentle flicker.
+  vintage    The full retro set: glow, flicker, RGB fringing and a heavy vignette.
 
 Quality: full (auto: a desktop with a mouse or trackpad)
 
-Trial one with: cathode set [variation]
+Trial one with: cathode set VARIATION, or click a name.
 Change the quality with: cathode quality [auto|full|lite|off]

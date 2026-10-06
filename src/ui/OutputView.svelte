@@ -1,8 +1,8 @@
 <!--
   Renders output blocks with text interpolation only. Legacy HTML is the one exception, and it
-  goes through the sanitising use:legacyHtml action. Lines and legacy HTML, which is everything
-  today's commands print, are drawn here; the layout blocks are drawn by RichBlock, loaded the
-  first time one appears.
+  goes through the sanitising use:legacyHtml action. Lines, legacy HTML and art (the banner, which
+  boot shows before anything has loaded) are drawn here; the layout blocks are drawn by
+  RichBlock, loaded the first time one appears.
 
   Markup inside text containers is written without whitespace between tags on purpose: those
   containers preserve whitespace, so any space Svelte kept there would show.
@@ -30,10 +30,17 @@
 </script>
 
 <script lang="ts">
+  import { textWidth } from '../output/model';
   import LineView from './LineView.svelte';
   import { legacyHtml } from './legacy-html';
+  import { spanClasses, spanCss } from './span-style';
 
   let { blocks, onaction }: { blocks: readonly Block[]; onaction?: (action: Action) => void } = $props();
+
+  /** The widest row of some art, in cells, which .art-fit scales it to. */
+  function artColumns(text: string): number {
+    return text.split('\n').reduce((widest, row) => Math.max(widest, textWidth(row)), 1);
+  }
 </script>
 
 <div class="output">
@@ -46,6 +53,16 @@
       </div>
     {:else if block.type === 'legacyHtml'}
       <div class="legacy" use:legacyHtml={block.html}></div>
+    {:else if block.type === 'art'}
+      <!-- Hidden from screen readers, which hear the alternative text instead of the glyphs. -->
+      <div class="art-wrap">
+        <div
+          class="art {spanClasses(block.style)}"
+          class:art-fit={block.fit === 'scale'}
+          aria-hidden="true"
+          style="--art-cols: {artColumns(block.text)}; {spanCss(block.style) ?? ''}"
+        >{block.text}</div><span class="sr-only">{block.alt}</span>
+      </div>
     {:else}
       {#await loadRichBlock() then RichBlock}
         <RichBlock {block} {onaction} />
@@ -69,6 +86,10 @@
   .legacy {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+  }
+
+  .art-wrap {
+    max-width: 100%;
   }
 
   /* Legacy HTML is drawn, and takes taps, only inside its own box: padding or a negative margin

@@ -1,0 +1,61 @@
+$ help
+Portfolio
+banner  show the welcome banner
+cathode  trial a retro CRT display effect
+email  write an email to the developer
+qr  draw a QR code for a URL or text
+repo  open this terminal's source code
+theme  change the colour theme
+whoami  meet the developer; in a pipe, your user name
+Files
+cat  concatenate files and print them
+cd  change the working directory
+cp  copy files and directories
+ln  make links between files
+ls  list directory contents
+mkdir  make directories
+mv  move or rename files
+pwd  print the working directory
+rm  remove files or directories
+rmdir  remove empty directories
+stat  display file status
+touch  change file timestamps, or create files
+Text
+echo  display a line of text
+printf  format and print data
+Shell
+alias  define or list aliases
+apropos  search the command summaries
+clear  clear the terminal screen
+command  run a command, or say what a name runs
+env  run a command in a changed environment
+exit  end the session
+export  give variables to the commands you run
+false  do nothing, unsuccessfully
+help  list the commands, or explain one
+history  display or manipulate the command history
+man  show the manual page of a command
+printenv  print all or part of the environment
+reset  restore the terminal, its files and history
+set  list variables, or set the shell's options
+sleep  delay for a specified amount of time
+source  run the lines of a file in this shell
+sudo  run a command as the superuser
+test  check a condition: files, strings, numbers
+true  do nothing, successfully
+type  describe what a command name runs
+unalias  remove aliases
+unset  remove shell variables
+whatis  display one-line command summaries
+which  locate a command on $PATH
+System
+date  print the date and time
+fastfetch  show information about this system
+poweroff  shut down the terminal
+Network
+curl  transfer a URL
+speedtest  measure the speed of the connection
+stock  show the price of a stock
+weather  show the weather forecast for a place
+
+Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.

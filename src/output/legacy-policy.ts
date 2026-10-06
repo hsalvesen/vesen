@@ -17,23 +17,19 @@ export const LEGACY_DROP_WITH_CONTENT: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Every class name legacy command output uses: the theme and cathode lists, fastfetch's
- * "WM Theme" value, the highlight the stores toggle on them, the art classes (the banner,
- * logos, colour blocks, charts and QR codes, and a fallback glyph held to one cell) with their
- * screen-reader text, and the output
- * components in styles/components.css (role colours, errors, panels and their tones, swatches,
- * and the banner's keyboard hint).
+ * Every class name the remaining legacy commands' output uses: fastfetch's "WM Theme" value,
+ * which ui/legacy-highlights.ts renames, the art classes (logos, colour blocks, charts and QR
+ * codes, and a fallback glyph held to one cell) with their screen-reader text, and the output
+ * components in styles/components.css (role colours, errors, panels and their tones). theme,
+ * cathode and banner are specs now, so their list and banner classes are gone.
  */
 export const LEGACY_CLASSES: ReadonlySet<string> = new Set([
-  'theme-name', 'cathode-name', 'current-theme-name', 'is-current', 'art', 'art-fit', 'art-cell', 'sr-only',
+  'current-theme-name', 'art', 'art-fit', 'art-cell', 'sr-only',
   'out-strong', 'out-accent', 'out-muted', 'out-error',
   'out-panel', 'out-panel-title', 'tone-warn', 'tone-ok', 'tone-error', 'tone-link', 'tone-muted',
-  'swatches', 'keys-hint',
 ]);
 
 /** Attributes kept besides style, class and href, with the values they may hold. */
-const DATA_ATTRIBUTES: ReadonlySet<string> = new Set(['data-theme-name', 'data-cathode-name']);
-const DATA_VALUE = /^[a-z0-9 _-]{1,64}$/i;
 
 /**
  * No `position`, `inset`, `z-index` or `transform`: output stays in the flow, so it cannot be
@@ -147,6 +143,6 @@ export function legacyAttribute(name: string, value: string): string | null {
     case 'aria-hidden':
       return value === 'true' ? value : null;
     default:
-      return DATA_ATTRIBUTES.has(name) && DATA_VALUE.test(value) ? value : null;
+      return null;
   }
 }

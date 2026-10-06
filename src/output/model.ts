@@ -65,6 +65,7 @@ export interface SpanStyle {
 
 declare const checkedHref: unique symbol;
 declare const trustedAction: unique symbol;
+declare const checkedHex: unique symbol;
 
 /** An absolute http, https or mailto URL. Made only by `safeHref`, which checks the scheme. */
 export type SafeHref = string & { readonly [checkedHref]: true };
@@ -83,11 +84,29 @@ export type ActionKind = Action['kind'];
 /**
  * A value the renderer reads from the stores when it draws the span, so old output stays true
  * after the theme or CRT mode changes. `plain()` uses the span's own text.
+ *
+ * The two `isCurrent` bindings draw their span in the accent while it names the current theme or
+ * CRT mode. With a `marker`, the span is a marker instead: it reads `marker` while its theme or
+ * mode is current, and as many spaces otherwise, so the mark moves in every earlier listing.
  */
 export type LiveBinding =
-  | { readonly kind: 'isCurrentTheme'; readonly theme: string }
-  | { readonly kind: 'isCurrentCathode'; readonly mode: string }
+  | { readonly kind: 'isCurrentTheme'; readonly theme: string; readonly marker?: string }
+  | { readonly kind: 'isCurrentCathode'; readonly mode: string; readonly marker?: string }
   | { readonly kind: 'currentThemeName' };
+
+/** A `#rrggbb` colour. Made only by `hexColour`, which checks it. */
+export type HexColour = string & { readonly [checkedHex]: true };
+
+/**
+ * A strip of swatches in fixed colours: a theme's own palette on its own background, in
+ * `theme ls`. It is the one place output carries hex rather than tokens, because it previews a
+ * theme other than the one showing; it is drawn for the eye only (hidden from screen readers),
+ * and a pipe receives the span's text.
+ */
+export interface Swatches {
+  readonly background: HexColour;
+  readonly colours: readonly HexColour[];
+}
 
 export interface Span {
   readonly text: string;
@@ -96,6 +115,8 @@ export interface Span {
   readonly href?: SafeHref;
   readonly action?: Action;
   readonly live?: LiveBinding;
+  /** Made only by `out.swatches`. */
+  readonly swatches?: Swatches;
 }
 
 export type Line = readonly Span[];
@@ -121,12 +142,17 @@ export interface LinesBlock {
   readonly stream: Stream;
 }
 
-/** Items laid out in as many columns as fit: ls, help, theme ls. */
+/** Items laid out in as many columns as fit: ls, help. */
 export interface GridBlock {
   readonly type: 'grid';
   readonly items: readonly Span[];
   /** The narrowest a column may be, in characters. */
   readonly minCh?: number;
+  /**
+   * Text after each item in its cell, by index, such as help's summaries. The items line up in
+   * a column of their own, and a note wraps beside its item.
+   */
+  readonly notes?: readonly Line[];
 }
 
 /** Rows of cells; each cell is a Line. */
@@ -217,6 +243,13 @@ export type BlockType = Block['type'];
 // ── Trust ──────────────────────────────────────────────────────────────────────────────────
 
 const HREF_SCHEMES: ReadonlySet<string> = new Set(['http:', 'https:', 'mailto:']);
+
+const HEX = /^#[0-9a-f]{6}$/i;
+
+/** The colour in lower case when it is `#rrggbb`; otherwise null. */
+export function hexColour(value: string): HexColour | null {
+  return HEX.test(value) ? (value.toLowerCase() as HexColour) : null;
+}
 
 /** Returns the normalised URL when it is absolute and http, https or mailto; otherwise null. */
 export function safeHref(url: string): SafeHref | null {
@@ -329,8 +362,32 @@ export const out = {
 
   lines: (lines: readonly Line[], stream: Stream = 'stdout'): LinesBlock => ({ type: 'lines', lines, stream }),
 
-  grid: (items: readonly Span[], minCh?: number): GridBlock =>
-    minCh === undefined ? { type: 'grid', items } : { type: 'grid', items, minCh },
+  /** A grid; `notes`, by index, put text after each item in its cell. */
+  grid: (items: readonly Span[], minCh?: number, notes?: readonly Line[]): GridBlock => ({
+    type: 'grid',
+    items,
+    ...(minCh === undefined ? {} : { minCh }),
+    ...(notes === undefined ? {} : { notes }),
+  }),
+
+  /** A span whose text or colour the renderer reads from the stores; see LiveBinding. */
+  live: (text: string, live: LiveBinding, style?: SpanStyle): Span => ({ ...span(text, style), live }),
+
+  /**
+   * A strip of colour swatches, two cells each, in `colours` on `background` (each `#rrggbb`),
+   * with a space either side; see Swatches.
+   */
+  swatches: (background: string, colours: readonly string[]): Span => {
+    const fixed = (value: string): HexColour => {
+      const hex = hexColour(value);
+      if (hex === null) throw new TypeError(`out.swatches: not a #rrggbb colour: ${value}`);
+      return hex;
+    };
+    return {
+      text: ` ${'██'.repeat(colours.length)} `,
+      swatches: { background: fixed(background), colours: colours.map(fixed) },
+    };
+  },
 
   table: (
     rows: readonly (readonly Line[])[],
@@ -455,9 +512,18 @@ export function plain(block: Block): string {
   switch (block.type) {
     case 'lines':
       return asLines(block.lines.map(lineText));
-    case 'grid':
-      // Like `ls | cat`: one item per line.
-      return asLines(block.items.map((item) => item.text));
+    case 'grid': {
+      // Like `ls | cat`: one item per line, and its note after it, the notes lined up.
+      const notes = block.notes;
+      if (notes === undefined) return asLines(block.items.map((item) => item.text));
+      const width = Math.max(0, ...block.items.map((item) => textWidth(item.text)));
+      return asLines(
+        block.items.map((item, i) => {
+          const note = lineText(notes[i] ?? []);
+          return note === '' ? item.text : `${item.text}${' '.repeat(width - textWidth(item.text) + 2)}${note}`;
+        }),
+      );
+    }
     case 'table':
       return asLines(tableRows(block));
     case 'art':

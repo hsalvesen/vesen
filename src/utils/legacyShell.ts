@@ -8,14 +8,11 @@ import { createAppShell, type AppShell, type AppShellOptions } from '../app/shel
 import { LEGACY_NAMES, legacySpecs, type LegacyFn, type LegacyName, type LegacySource } from '../commands/legacy';
 import { REPO_URL } from '../constants';
 import type { Shell } from '../shell/index';
-import type { CommandSpec, EnumValue } from '../shell/types';
-import { cathodeModeInfo, crtQualities } from '../stores/cathode';
-import { themes } from '../stores/theme';
+import type { CommandSpec } from '../shell/types';
 import type { VirtualFile } from '../vfs/types';
 import type { Vfs } from '../vfs/vfs';
 import { commands, emailHref, legacyHelpHtml, setCommandCatalogue } from './commands';
 import { LINKEDIN_URL } from './commands/system';
-import { commandDescriptions } from './helpTexts';
 import { commandHistory } from './legacyStores';
 import { bindLegacyVfs, mirrorCwd, virtualFileSystem } from './virtualFileSystem';
 
@@ -39,17 +36,11 @@ export function legacySource(): LegacySource {
   return {
     commands: fns,
     help: (name) => legacyHelpHtml(name),
-    descriptions: commandDescriptions,
     opens: {
       whoami: () => LINKEDIN_URL,
       repo: () => REPO_URL,
       email: () => emailHref(),
     },
-    themes: (): readonly EnumValue[] =>
-      themes.map((theme) => ({ value: theme.name.toLowerCase(), summary: theme.name, swatch: theme.background })),
-    cathodeModes: (): readonly EnumValue[] =>
-      cathodeModeInfo.filter((info) => info.name !== 'off').map((info) => ({ value: info.name, summary: info.summary })),
-    crtQualities: (): readonly EnumValue[] => crtQualities.map((quality) => ({ value: quality })),
   };
 }
 

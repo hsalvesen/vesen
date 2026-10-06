@@ -41,6 +41,11 @@ export interface EnumValue {
   readonly swatch?: string;
 }
 
+/** What an `enum` source may read its values from: the theme and CRT lists come from appearance. */
+export interface ValueContext {
+  readonly appearance?: Appearance;
+}
+
 /** Where completion finds values for an argument or a flag value. */
 export type ValueSource =
   | { readonly kind: 'path'; readonly accept?: 'any' | 'file' | 'dir' | 'exec'; readonly includeParent?: boolean }
@@ -48,7 +53,12 @@ export type ValueSource =
   | { readonly kind: 'command' }
   /** The rest of the line is a nested command line: sudo, time. */
   | { readonly kind: 'commandLine' }
-  | { readonly kind: 'enum'; readonly values: () => readonly EnumValue[]; readonly caseInsensitive?: boolean }
+  | {
+      readonly kind: 'enum';
+      /** The values; completion passes the services a list may come from. */
+      readonly values: (context?: ValueContext) => readonly EnumValue[];
+      readonly caseInsensitive?: boolean;
+    }
   /** This argument's position in the spec's examples, and optionally in history. */
   | { readonly kind: 'examples'; readonly caseInsensitive?: boolean; readonly fromHistory?: boolean }
   | { readonly kind: 'var' | 'alias' | 'user' | 'host' | 'url' | 'int' }
@@ -155,6 +165,17 @@ export type RunnerChoice = { readonly run: RunFn; readonly load?: never } | { re
 /** Declares a command. An identity function whose type requires exactly one of run and load. */
 export function defineCommand(spec: CommandSpec & RunnerChoice): CommandSpec {
   return spec;
+}
+
+/**
+ * Thrown by `exit` and `logout`: ends the session, or the script running them, with `status`. A
+ * pipeline stage or `$( )` is a subshell, so there it ends only that.
+ */
+export class ExitRequest extends Error {
+  constructor(readonly status: ExitCode) {
+    super(`exit ${status}`);
+    this.name = 'ExitRequest';
+  }
 }
 
 /** Thrown by a command for bad options or arguments; the kernel prints it with a --help hint and exits 2. */
@@ -369,6 +390,14 @@ export interface Registry {
   validate(): string[];
 }
 
+/** The shell's options, which `set` reads and changes. */
+export interface ShellOptionFlags {
+  /** `set -o noclobber` (`set -C`): `>` refuses to overwrite a file. */
+  noclobber: boolean;
+  /** `set -o noglob` (`set -f`): no pathname expansion. */
+  noglob: boolean;
+}
+
 /** What builtins and commands that run other lines may do to the session. */
 export interface ShellApi {
   cwd(): string;
@@ -378,10 +407,23 @@ export interface ShellApi {
   readonly aliases: Map<string, string>;
   readonly history: HistoryApi;
   readonly registry: Registry;
-  /** Runs a line in this session: source, xargs, $( ). */
+  /** The session's options; a change applies from the next command. */
+  readonly options: ShellOptionFlags;
+  /** Runs a line in this session, without alias expansion: command, env, xargs. */
   exec(line: string, io?: Partial<Pick<CommandContext, 'stdin' | 'stdout' | 'stderr'>>): Promise<ExitCode>;
+  /**
+   * `source` and `.`: runs a file's lines in this session, with `args` as $1, $2 and so on. A
+   * missing or unreadable file is reported and is status 1.
+   */
+  source(path: string, args?: readonly string[]): Promise<ExitCode>;
   /** `reset`: restores the session, and the files under ~ unless `files` is false. */
   reset(options?: { files?: boolean }): void;
+  /**
+   * A new login session, as after `exit`: a new session's variables, aliases and options in the
+   * home folder, then /etc/profile and ~/.bashrc read again. Files, history and the theme stay.
+   * With `banner`, the screen is cleared and the banner shown, as at boot.
+   */
+  login(options?: { banner?: boolean }): Promise<void>;
 }
 
 export type OptValue = boolean | number | string | readonly string[] | undefined;

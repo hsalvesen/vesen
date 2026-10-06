@@ -2,8 +2,13 @@
 // contracts"): each command's session run at 40, 80 and 120 columns, with stdout on the terminal
 // and into a pipe, from a fresh VFS with a frozen clock. Read README.md in this folder before
 // updating any of them.
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { session } from '../harness';
+
+// Pinned, so a release does not rewrite the banner and the man page footers.
+beforeAll(() => {
+  vi.stubGlobal('__APP_VERSION__', '0.0.0-test');
+});
 
 const WIDTHS = [40, 80, 120] as const;
 
@@ -80,6 +85,25 @@ const SESSIONS: Readonly<Record<string, readonly string[]>> = {
     'history',
   ],
   clear: ['echo before', 'clear', 'echo after; clear | cat; echo cleared again'],
+  // Each variant runs at once, and the theme and CRT mode are the app's, so these sessions only
+  // read them; setting them is in src/commands/portfolio/portfolio.test.ts.
+  help: ['help', 'help pwd cd', 'help keys', 'help nope'],
+  man: ['man pwd', 'man 1 nope', 'whatis ls cd', 'apropos theme', 'man -k zzz'],
+  theme: ['theme ls', 'theme set nope', 'theme set', 'theme a b'],
+  cathode: ['cathode ls', 'cathode set neon', 'cathode quality', 'cathode quality ultra'],
+  banner: ['banner'],
+  builtins: [
+    'type ll cd ls if nope',
+    'which cat nope',
+    'command -v ls ll cd',
+    'set -o',
+    'set -o noclobber; echo a > f; echo b > f',
+    'unset HOME; echo "[$HOME]"',
+    '[ -d documents ] && echo yes; test 1 -gt 2; echo $?',
+    'printenv USER; env GREETING=hi printenv GREETING',
+    'date; date -u +%s',
+    'exit 3',
+  ],
 };
 
 interface Variant {

@@ -1,8 +1,10 @@
 import './app.css';
 import { mount } from 'svelte';
 import App from './App.svelte';
+import { get } from 'svelte/store';
 import { bootstrap, renderBootError } from './app/bootstrap';
-import { systemCommands } from './utils/commands/system';
+import { bannerBlocks } from './commands/lib/banner';
+import { columns } from './stores/term';
 
 const target = document.getElementById('app');
 
@@ -11,7 +13,9 @@ try {
   const booted = bootstrap({
     window,
     build: import.meta.url,
-    banner: () => systemCommands.banner(),
+    // At boot, and again for reset and a new login, at the width the terminal has then.
+    banner: () =>
+      bannerBlocks({ version: __APP_VERSION__, columns: get(columns), touch: window.matchMedia?.('(pointer: coarse)').matches ?? false }),
     legacy: () => import('./utils/legacyShell').then((module) => module.legacyBindings()),
   });
   if (booted) {

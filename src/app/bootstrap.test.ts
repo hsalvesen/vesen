@@ -111,22 +111,18 @@ describe('bootstrap', () => {
     expect({ ...localStorage }).toEqual({ 'vesen:theme:v1': 'cockatoo', 'vesen:cathode:v1': '{"mode":"vintage"}' });
   });
 
-  it('saves a new theme by name and re-marks earlier listings', async () => {
+  it("saves a new theme by name, and renames the theme in legacy fastfetch's earlier output", async () => {
     const { boot, setTheme, cathode } = await load();
     boot();
     expect(localStorage.length).toBe(0);
-    document.body.innerHTML = `
-      <span class="theme-name is-current" data-theme-name="swamphen">swamphen</span>
-      <span class="theme-name" data-theme-name="wombat">wombat</span>
-      <span class="cathode-name" data-cathode-name="off">off</span>`;
+    document.body.innerHTML = '<span class="current-theme-name">swamphen</span>';
 
     setTheme('wombat');
     cathode.set('off');
 
     expect(localStorage.getItem('vesen:theme:v1')).toBe('wombat');
     expect(localStorage.getItem('vesen:cathode:v1')).toBe('{"mode":"off"}');
-    expect(document.querySelector('.theme-name.is-current')?.textContent).toBe('wombat');
-    expect(document.querySelector('.cathode-name')?.classList.contains('is-current')).toBe(true);
+    expect(document.querySelector('.current-theme-name')?.textContent).toBe('wombat');
     expect(document.documentElement.classList.contains('crt-on')).toBe(false);
   });
 

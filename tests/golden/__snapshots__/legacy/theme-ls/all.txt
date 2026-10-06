@@ -1,13 +1,13 @@
 $ theme ls
-cassowary    ████████████████
-cockatoo     ████████████████
-crocodile    ████████████████
-kangaroo     ████████████████
-kookaburra   ████████████████
-petroica     ████████████████
-swamphen     ████████████████
-treefrog     ████████████████
-wallaby      ████████████████
-wombat       ████████████████
+  cassowary    ████████████████
+  cockatoo     ████████████████
+  crocodile    ████████████████
+  kangaroo     ████████████████
+  kookaburra   ████████████████
+  petroica     ████████████████
+› swamphen     ████████████████
+  treefrog     ████████████████
+  wallaby      ████████████████
+  wombat       ████████████████
 
-Try one with: theme set [name]
+Try one with: theme set NAME, or click a name.

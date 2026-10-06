@@ -34,12 +34,12 @@ const FONT_CANDIDATES = ['public/fonts/VesenMono.woff2', 'assets-src/fonts/Casca
 /**
  * The six lines of the VESEN block banner, read from BANNER_ART, which the banner command draws,
  * so the preview never drifts from what visitors see.
- * @param {string} source the text of src/utils/commands/system.ts
+ * @param {string} source the text of src/commands/lib/banner.ts
  */
 export function bannerArt(source) {
   const match = /\bBANNER_ART\s*=\s*`([^`]*)`/.exec(source);
   const art = match?.[1];
-  if (!art) throw new Error('og: could not find the banner art in src/utils/commands/system.ts');
+  if (!art) throw new Error('og: could not find the banner art in src/commands/lib/banner.ts');
   const lines = art.split('\n').map((line) => line.trimEnd());
   if (lines.length !== 6) throw new Error(`og: expected 6 banner lines, found ${lines.length}`);
   return lines.join('\n');
@@ -76,7 +76,7 @@ pre { margin: 0; font: inherit; font-size: ${BANNER_PX}px; line-height: ${BANNER
 }
 
 async function main() {
-  const art = bannerArt(readFileSync(join(ROOT, 'src', 'utils', 'commands', 'system.ts'), 'utf8'));
+  const art = bannerArt(readFileSync(join(ROOT, 'src', 'commands', 'lib', 'banner.ts'), 'utf8'));
   const fontPath = FONT_CANDIDATES.map((path) => join(ROOT, path)).find((path) => existsSync(path));
   const fontUrl = fontPath
     ? `data:font/${fontPath.endsWith('.woff2') ? 'woff2' : 'ttf'};base64,${readFileSync(fontPath).toString('base64')}`

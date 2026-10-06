@@ -227,19 +227,51 @@ export function sampleTree(): VirtualFile {
   };
 }
 
-export function stubAppearance(): Appearance & { resets: number } {
+/** Two themes and the CRT modes, held in plain variables: an Appearance for kernel tests. */
+export function stubAppearance(): Appearance & { resets: number; cathode: string; quality: string } {
+  const swatches = (base: string) => [base, '#ff0000', '#00ff00', '#ffff00', '#0000ff', '#ff00ff', '#00ffff', '#808080'];
+  const themes = [
+    { name: 'swamphen', background: '#222235', foreground: '#ffffff', swatches: swatches('#ffffff') },
+    { name: 'wombat', background: '#1c1814', foreground: '#e6ddd4', swatches: swatches('#e6ddd4') },
+  ];
+  const modes = [
+    { name: 'off', summary: 'No effect.' },
+    { name: 'scanlines', summary: 'Subtle scanlines.' },
+    { name: 'vintage', summary: 'The full retro set.' },
+  ];
+  const qualities = ['auto', 'full', 'lite', 'off'];
   let theme = 'swamphen';
   const state = {
     resets: 0,
-    themes: () => [{ name: 'swamphen', background: '#222235', foreground: '#ffffff' }],
+    cathode: 'scanlines',
+    quality: 'auto',
+    themes: () => themes,
     currentTheme: () => theme,
     setTheme: (name: string) => {
-      theme = name;
+      const found = themes.find((t) => t.name === name.trim().toLowerCase());
+      if (found === undefined) return false;
+      theme = found.name;
       return true;
     },
-    cathodeModes: () => [],
-    currentCathode: () => 'off',
-    setCathode: () => false,
+    cathodeModes: () => modes,
+    currentCathode: () => state.cathode,
+    setCathode: (mode: string) => {
+      const found = modes.find((m) => m.name === mode.trim().toLowerCase());
+      if (found === undefined) return false;
+      state.cathode = found.name;
+      return true;
+    },
+    cathodeQualities: () => qualities,
+    setCathodeQuality: (quality: string) => {
+      const found = qualities.find((q) => q === quality.trim().toLowerCase());
+      if (found === undefined) return false;
+      state.quality = found;
+      return true;
+    },
+    cathodeTier: () =>
+      state.quality === 'auto'
+        ? { tier: 'full', reason: 'a desktop', quality: 'auto' }
+        : { tier: state.quality, reason: `set with cathode quality ${state.quality}`, quality: state.quality },
     resetDefaults: () => {
       state.resets += 1;
       theme = 'swamphen';

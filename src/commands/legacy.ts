@@ -10,7 +10,7 @@ import { htmlToText } from '../output/html-to-text';
 import { out } from '../output/model';
 import type { RawArgsSpec } from '../shell/flags';
 import { writeLegacyHtml } from '../shell/streams';
-import type { ArgSpec, CommandContext, CommandSpec, EnumValue, Example, ExitCode, SubcommandSpec } from '../shell/types';
+import type { CommandContext, CommandSpec, Example, ExitCode } from '../shell/types';
 
 /** A legacy command: words in, HTML out. The signal aborts on ^C and when the budget runs out. */
 export type LegacyFn = (args: string[], signal?: AbortSignal) => string | Promise<string>;
@@ -100,145 +100,103 @@ export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpe
 
 /** The legacy command names, in the order help lists them today. */
 export const LEGACY_NAMES = [
-  'banner', 'cathode', 'curl', 'email', 'fastfetch', 'help', 'poweroff', 'qr', 'repo', 'speedtest', 'stock', 'sudo',
-  'theme', 'weather', 'whoami',
+  'curl', 'email', 'fastfetch', 'poweroff', 'qr', 'repo', 'speedtest', 'stock', 'sudo', 'weather', 'whoami',
 ] as const;
 export type LegacyName = (typeof LEGACY_NAMES)[number];
 
-/** What the app layer supplies from src/utils and the stores. */
+/** What the app layer supplies from src/utils. */
 export interface LegacySource {
   readonly commands: Readonly<Record<LegacyName, LegacyFn>>;
   /** The legacy help panels for a command, as `<cmd> --help` showed them. */
   help(name: LegacyName): string | undefined;
-  /** The one-line descriptions help.ts and Tab completion show. */
-  readonly descriptions: Readonly<Partial<Record<LegacyName, string>>>;
   /** URLs the openers open: whoami, repo and email. */
   readonly opens?: Readonly<Partial<Record<LegacyName, (argv: readonly string[]) => string | null>>>;
-  readonly themes: () => readonly EnumValue[];
-  readonly cathodeModes: () => readonly EnumValue[];
-  readonly crtQualities: () => readonly EnumValue[];
 }
 
 const examples = (...lines: string[]): Example[] => lines.map((line) => ({ line }));
 const offline = (...lines: string[]): Example[] => lines.map((line) => ({ line, offline: true }));
 
-/** `help NAME` for a command that has been ported: the help its spec generates. */
-async function specHelp(ctx: CommandContext): Promise<ExitCode | undefined> {
-  const name = ctx.args[0];
-  const spec = name === undefined ? undefined : ctx.shell.registry.get(name);
-  if (spec === undefined || spec.legacyHelp !== undefined) return undefined;
-  const { commandHelp } = await import('../shell/help');
-  for (const block of commandHelp(spec)) await ctx.stdout.block(block);
-  return 0;
-}
+type StaticMeta = Omit<LegacyMeta, 'help' | 'opens'>;
 
-type StaticMeta = Omit<LegacyMeta, 'summary' | 'help' | 'opens'> & { readonly summary?: string };
-
-function tableFor(source: LegacySource): Record<LegacyName, StaticMeta> {
-  const subcommand = (summary: string, args?: ArgSpec[]): SubcommandSpec => (args ? { summary, args } : { summary });
-  return {
-    banner: { category: 'portfolio', examples: offline('banner') },
-    cathode: {
-      category: 'portfolio',
-      subcommands: {
-        ls: subcommand('list the CRT variations'),
-        set: subcommand('turn a variation on', [{ name: 'VARIATION', source: { kind: 'enum', values: source.cathodeModes } }]),
-        off: subcommand('turn the effect off'),
-        quality: subcommand('choose how much of the effect to draw', [
-          { name: 'QUALITY', source: { kind: 'enum', values: source.crtQualities }, optional: true },
-        ]),
-      },
-      examples: offline('cathode ls', 'cathode set vintage', 'cathode off'),
+/** Each legacy command's spec fields, until it is ported. */
+const TABLE: Readonly<Record<LegacyName, StaticMeta>> = {
+  curl: {
+    category: 'network',
+    summary: 'transfer a URL',
+    network: true,
+    loadingLabel: (argv) => `fetching ${argv[1] ?? 'the page'}…`,
+    args: [{ name: 'URL', source: { kind: 'url' } }],
+    examples: examples('curl https://httpbin.org/get', 'curl explainshell.com'),
+  },
+  email: { category: 'portfolio', summary: 'write an email to the developer', examples: examples('email') },
+  fastfetch: {
+    category: 'system',
+    summary: 'show information about this system',
+    featured: true,
+    loadingLabel: () => 'gathering system information…',
+    examples: examples('fastfetch'),
+  },
+  poweroff: { category: 'system', summary: 'shut down the terminal', examples: examples('poweroff') },
+  qr: {
+    category: 'portfolio',
+    summary: 'draw a QR code for a URL or text',
+    args: [{ name: 'TEXT', source: { kind: 'examples' }, variadic: true }],
+    examples: offline('qr https://tldr.sh', 'qr explainshell.com', 'qr https://shellcheck.net'),
+  },
+  repo: { category: 'portfolio', summary: "open this terminal's source code", examples: examples('repo') },
+  speedtest: {
+    category: 'network',
+    summary: 'measure the speed of the connection',
+    network: true,
+    budgetMs: 120_000,
+    loadingLabel: () => 'measuring the connection…',
+    examples: examples('speedtest'),
+  },
+  stock: {
+    category: 'network',
+    summary: 'show the price of a stock',
+    network: true,
+    budgetMs: 10_000,
+    loadingLabel: (argv) => `fetching ${argv[1]?.toUpperCase() ?? 'the quote'}…`,
+    args: [{ name: 'TICKER', source: { kind: 'examples', caseInsensitive: true } }],
+    examples: examples('stock AAPL', 'stock TEAM'),
+  },
+  sudo: {
+    category: 'shell',
+    summary: 'run a command as the superuser',
+    args: [{ name: 'COMMAND', source: { kind: 'commandLine' }, optional: true }],
+    examples: examples('sudo ls'),
+  },
+  weather: {
+    category: 'network',
+    summary: 'show the weather forecast for a place',
+    network: true,
+    budgetMs: 25_000,
+    loadingLabel: (argv) => (argv.length > 1 ? `fetching the weather for ${argv.slice(1).join(' ')}…` : 'fetching the weather…'),
+    args: [{ name: 'PLACE', source: { kind: 'examples', caseInsensitive: true, fromHistory: true }, optional: true, variadic: true }],
+    examples: examples('weather Gadigal', 'weather Oslo', 'weather Aotearoa'),
+  },
+  whoami: {
+    category: 'portfolio',
+    summary: 'meet the developer; in a pipe, your user name',
+    featured: true,
+    examples: examples('whoami'),
+    // In a pipe whoami is the Linux command again.
+    prelude: async (ctx) => {
+      if (ctx.stdout.isTTY) return undefined;
+      await ctx.stdout.write(`${ctx.user.name}\n`);
+      return 0;
     },
-    curl: {
-      category: 'network',
-      network: true,
-      loadingLabel: (argv) => `fetching ${argv[1] ?? 'the page'}…`,
-      args: [{ name: 'URL', source: { kind: 'url' } }],
-      examples: examples('curl https://httpbin.org/get', 'curl explainshell.com'),
-    },
-    email: { category: 'portfolio', examples: examples('email') },
-    fastfetch: {
-      category: 'system',
-      featured: true,
-      loadingLabel: () => 'gathering system information…',
-      examples: examples('fastfetch'),
-    },
-    help: {
-      category: 'shell',
-      featured: true,
-      args: [{ name: 'COMMAND', source: { kind: 'command' }, optional: true }],
-      examples: offline('help', 'help ls'),
-      prelude: specHelp,
-    },
-    poweroff: { category: 'system', examples: examples('poweroff') },
-    qr: {
-      category: 'portfolio',
-      args: [{ name: 'TEXT', source: { kind: 'examples' }, variadic: true }],
-      examples: offline('qr https://tldr.sh', 'qr explainshell.com', 'qr https://shellcheck.net'),
-    },
-    repo: { category: 'portfolio', examples: examples('repo') },
-    speedtest: {
-      category: 'network',
-      network: true,
-      budgetMs: 120_000,
-      loadingLabel: () => 'measuring the connection…',
-      examples: examples('speedtest'),
-    },
-    stock: {
-      category: 'network',
-      network: true,
-      budgetMs: 10_000,
-      loadingLabel: (argv) => `fetching ${argv[1]?.toUpperCase() ?? 'the quote'}…`,
-      args: [{ name: 'TICKER', source: { kind: 'examples', caseInsensitive: true } }],
-      examples: examples('stock AAPL', 'stock TEAM'),
-    },
-    sudo: {
-      category: 'shell',
-      args: [{ name: 'COMMAND', source: { kind: 'commandLine' }, optional: true }],
-      examples: examples('sudo ls'),
-    },
-    theme: {
-      category: 'portfolio',
-      featured: true,
-      subcommands: {
-        ls: subcommand('list the themes'),
-        set: subcommand('switch to a theme', [{ name: 'THEME', source: { kind: 'enum', values: source.themes, caseInsensitive: true } }]),
-      },
-      examples: offline('theme ls', 'theme set swamphen'),
-    },
-    weather: {
-      category: 'network',
-      network: true,
-      budgetMs: 25_000,
-      loadingLabel: (argv) => (argv.length > 1 ? `fetching the weather for ${argv.slice(1).join(' ')}…` : 'fetching the weather…'),
-      args: [{ name: 'PLACE', source: { kind: 'examples', caseInsensitive: true, fromHistory: true }, optional: true, variadic: true }],
-      examples: examples('weather Gadigal', 'weather Oslo', 'weather Aotearoa'),
-    },
-    whoami: {
-      category: 'portfolio',
-      featured: true,
-      examples: examples('whoami'),
-      // In a pipe whoami is the Linux command again.
-      prelude: async (ctx) => {
-        if (ctx.stdout.isTTY) return undefined;
-        await ctx.stdout.write(`${ctx.user.name}\n`);
-        return 0;
-      },
-    },
-  };
-}
+  },
+};
 
 /** Every legacy command as a spec. */
 export function legacySpecs(source: LegacySource): CommandSpec[] {
-  const table = tableFor(source);
   return LEGACY_NAMES.map((name) => {
-    const { summary, ...meta } = table[name];
     const help = source.help(name);
     const opens = source.opens?.[name];
     return legacy(name, source.commands[name], {
-      ...meta,
-      summary: summary ?? source.descriptions[name] ?? name,
+      ...TABLE[name],
       ...(help === undefined ? {} : { help }),
       ...(opens === undefined ? {} : { opens }),
     });

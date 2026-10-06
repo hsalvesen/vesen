@@ -8,6 +8,7 @@ import { createAppShell, type AppShell } from '../src/app/shell';
 import { lineText, plain, type Block, type Line } from '../src/output/model';
 import { createClock } from '../src/services/clock';
 import { expandAliases } from '../src/shell/alias';
+import { wrapText } from '../src/shell/help';
 import { CaptureOut } from '../src/shell/streams';
 import { defineCommand, type CommandSpec } from '../src/shell/types';
 import { createScreen } from '../src/stores/screen';
@@ -169,21 +170,41 @@ function widthOf(text: string): number {
 
 /**
  * A grid as the terminal lays it out at `cols`: as many columns of the widest item plus two as
- * fit, filled row by row, as CSS's repeat(auto-fill) fills them.
+ * fit, filled row by row, as CSS's repeat(auto-fill) fills them. With notes, as RichBlock draws
+ * them: each column shares out the width, and in each cell the item has a column as wide as the
+ * widest item, then a two-cell gap and the note, wrapped to what is left less a two-cell margin.
  */
-function gridRows(items: readonly string[], cols: number, minCh?: number): string[] {
-  if (items.length === 0) return [];
-  const column = minCh ?? Math.max(...items.map(widthOf)) + 2;
-  const perRow = Math.max(1, Math.floor(cols / column));
+function gridRows(names: readonly string[], cols: number, minCh?: number, notes?: readonly string[]): string[] {
+  if (names.length === 0) return [];
+  if (notes === undefined) {
+    const column = minCh ?? Math.max(...names.map(widthOf)) + 2;
+    const perRow = Math.max(1, Math.floor(cols / column));
+    const rows: string[] = [];
+    for (let i = 0; i < names.length; i += perRow) {
+      rows.push(
+        names
+          .slice(i, i + perRow)
+          .map((item) => item + ' '.repeat(Math.max(0, column - widthOf(item))))
+          .join('')
+          .trimEnd(),
+      );
+    }
+    return rows;
+  }
+  const itemWidth = Math.max(...names.map(widthOf));
+  const perRow = Math.max(1, Math.floor(cols / (minCh ?? itemWidth + 2)));
+  const columnWidth = Math.floor(cols / perRow);
+  const noteWidth = Math.max(1, columnWidth - itemWidth - 4);
+  const cells = names.map((name, i) =>
+    wrapText(notes[i] ?? '', noteWidth).map((row, r) => `${r === 0 ? name : ''}${' '.repeat(itemWidth - (r === 0 ? widthOf(name) : 0))}  ${row}`),
+  );
   const rows: string[] = [];
-  for (let i = 0; i < items.length; i += perRow) {
-    rows.push(
-      items
-        .slice(i, i + perRow)
-        .map((item) => item + ' '.repeat(Math.max(0, column - widthOf(item))))
-        .join('')
-        .trimEnd(),
-    );
+  for (let i = 0; i < cells.length; i += perRow) {
+    const group = cells.slice(i, i + perRow);
+    const height = Math.max(...group.map((cell) => cell.length));
+    for (let r = 0; r < height; r += 1) {
+      rows.push(group.map((cell) => (cell[r] ?? '').padEnd(columnWidth)).join('').trimEnd());
+    }
   }
   return rows;
 }
@@ -201,7 +222,7 @@ export function renderScreen(blocks: readonly Block[], cols: number): string[] {
         for (const line of block.lines) rows.push(block.stream === 'stderr' ? `! ${text(line)}` : text(line));
         break;
       case 'grid':
-        rows.push(...gridRows(block.items.map((item) => item.text), cols, block.minCh));
+        rows.push(...gridRows(block.items.map((item) => item.text), cols, block.minCh, block.notes?.map(text)));
         break;
       case 'panel':
         if (block.title !== undefined) rows.push(`[${block.title}]`);

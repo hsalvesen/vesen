@@ -1,0 +1,43 @@
+# theme: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ theme ls
+[terminal]
+  cassowary    ████████████████
+  cockatoo     ████████████████
+  crocodile    ████████████████
+  kangaroo     ████████████████
+  kookaburra   ████████████████
+  petroica     ████████████████
+› swamphen     ████████████████
+  treefrog     ████████████████
+  wallaby      ████████████████
+  wombat       ████████████████
+
+Try one with: theme set NAME, or click a name.
+? 0
+[pipe]
+cassowary
+cockatoo
+crocodile
+kangaroo
+kookaburra
+petroica
+swamphen
+treefrog
+wallaby
+wombat
+? 0
+$ theme set nope
+! theme: nope: no such theme
+! Try 'theme ls' to see all available themes.
+? 1
+$ theme set
+! theme: set: missing theme name
+! Try 'theme --help' for more information.
+? 2
+$ theme a b
+! theme: extra operand 'b'
+! Try 'theme --help' for more information.
+? 2

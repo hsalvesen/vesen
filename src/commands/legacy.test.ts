@@ -136,62 +136,51 @@ function fakeSource(): LegacySource & { calls: string[] } {
   return {
     calls,
     commands,
-    help: (name) => (name === 'theme' ? '<div>theme help</div>' : undefined),
-    descriptions: { theme: 'Change theme' },
+    help: (name) => (name === 'stock' ? '<div>stock help</div>' : undefined),
     opens: { repo: () => 'https://github.com/hsalvesen/vesen' },
-    themes: () => [{ value: 'swamphen' }, { value: 'wombat' }],
-    cathodeModes: () => [{ value: 'vintage' }],
-    crtQualities: () => [{ value: 'auto' }],
   };
 }
 
 describe('the legacy table', () => {
-  it('wraps the 15 commands not yet ported, each once, with a category and a summary', () => {
+  it('wraps the 11 commands not yet ported, each once, with a category and a summary', () => {
     const specs = legacySpecs(fakeSource());
-    expect(specs).toHaveLength(15);
-    expect(new Set(specs.map((spec) => spec.name)).size).toBe(15);
-    // Ported to src/commands: the file and text core, history, clear, cd, pwd and reset.
-    for (const ported of ['cd', 'ls', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'history', 'clear']) {
+    expect(specs).toHaveLength(11);
+    expect(new Set(specs.map((spec) => spec.name)).size).toBe(11);
+    // Ported to src/commands: the file and text core, history, clear, cd, pwd, reset, help, theme,
+    // cathode and banner.
+    for (const ported of ['cd', 'ls', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'history', 'clear', 'help', 'theme', 'cathode', 'banner']) {
       expect(specs.map((spec) => spec.name)).not.toContain(ported);
     }
     const registry = new CommandRegistry(specs);
     expect(registry.validate()).toEqual([]);
     expect(specs.every((spec) => takesRawArgs(spec))).toBe(true);
-    expect(registry.get('theme')).toMatchObject({ category: 'portfolio', summary: 'Change theme', legacyHelp: '<div>theme help</div>' });
+    expect(registry.get('stock')).toMatchObject({ category: 'network', summary: 'show the price of a stock', legacyHelp: '<div>stock help</div>' });
     expect(registry.get('whoami')?.category).toBe('portfolio');
     expect(registry.get('weather')).toMatchObject({ network: true, budgetMs: 25_000 });
     expect(registry.get('stock')).toMatchObject({ network: true, budgetMs: 10_000 });
     expect(registry.get('curl')?.network).toBe(true);
     expect(registry.get('repo')?.opens?.(['repo'])).toBe('https://github.com/hsalvesen/vesen');
-    expect(registry.get('poweroff')?.summary).toBe('poweroff');
+    expect(registry.get('poweroff')?.summary).toBe('shut down the terminal');
   });
 
-  it('describes arguments and subcommands for completion', () => {
+  it('gives every command a lower-case summary of 50 characters or fewer, as the specs have', () => {
+    for (const spec of legacySpecs(fakeSource())) {
+      expect(spec.summary.length, spec.name).toBeLessThanOrEqual(50);
+      expect(spec.summary.charAt(0), spec.name).toBe(spec.summary.charAt(0).toLowerCase());
+    }
+  });
+
+  it('describes arguments for completion', () => {
     const registry = new CommandRegistry(legacySpecs(fakeSource()));
-    const theme = registry.get('theme');
-    expect(Object.keys(theme?.subcommands ?? {})).toEqual(['ls', 'set']);
-    const source = theme?.subcommands?.set?.args?.[0]?.source;
-    expect(source?.kind === 'enum' && source.values().map((value) => value.value)).toEqual(['swamphen', 'wombat']);
     expect(registry.get('weather')?.args?.[0]?.source).toEqual({ kind: 'examples', caseInsensitive: true, fromHistory: true });
-    expect(registry.get('help')?.args?.[0]?.source).toEqual({ kind: 'command' });
+    expect(registry.get('sudo')?.args?.[0]?.source).toEqual({ kind: 'commandLine' });
   });
 
-  it('keeps a subcommand in the words the legacy function reads', async () => {
+  it('passes every word, unparsed, to the legacy function', async () => {
     const source = fakeSource();
     const { run } = harness({ specs: legacySpecs(source) });
-    await run('theme set wombat');
-    expect(source.calls).toEqual(['theme set wombat']);
-  });
-
-  it('answers help NAME for a ported command from its spec', async () => {
-    const source = fakeSource();
-    const pwd = { name: 'pwd', category: 'files' as const, summary: 'print the working directory', run: () => 0 };
-    const { run } = harness({ specs: [...legacySpecs(source), pwd] });
-    const result = await run('help pwd');
-    expect(result.stdout).toContain('print the working directory');
-    expect(source.calls).toEqual([]);
-    await run('help theme');
-    expect(source.calls).toEqual(['help theme']);
+    await run('stock -x AAPL');
+    expect(source.calls).toEqual(['stock -x AAPL']);
   });
 
   it('prints guest for whoami in a pipe, as the Linux command does', async () => {

@@ -6,7 +6,17 @@
 import { STORAGE_KEYS, STORAGE_LIMITS } from '../services/storage-keys';
 import type { KV } from '../services/types';
 import { readonly, writable, type Readable, type Subscriber, type Unsubscriber, type Writable } from './observable';
-import { GUEST, PROMPT_HOST, type Env, type ExitCode, type HistoryApi, type HistoryEntry, type JobInfo, type User } from './types';
+import {
+  GUEST,
+  PROMPT_HOST,
+  type Env,
+  type ExitCode,
+  type HistoryApi,
+  type HistoryEntry,
+  type JobInfo,
+  type ShellOptionFlags,
+  type User,
+} from './types';
 
 // ── Variables ──────────────────────────────────────────────────────────────────────────────
 
@@ -74,6 +84,11 @@ export class ShellEnv implements Env {
 export const DEFAULT_PATH = `${GUEST.home}/bin:/usr/local/bin:/usr/bin:/bin`;
 
 export const DEFAULT_PS1 = '\\u@\\h:\\w\\$ ';
+
+/** What a login shell reads as it starts, quietly: /etc/profile, then ~/.bashrc, so ll works (F072). */
+export function loginFiles(home: string = GUEST.home): readonly string[] {
+  return ['/etc/profile', `${home}/.bashrc`];
+}
 
 /** The variables a session starts with, as bash's login shell would have them. */
 export function defaultEnv(options: { user?: User; cwd?: string; columns?: number; rows?: number } = {}): ShellEnv {
@@ -248,12 +263,7 @@ export class JobControl {
 
 // ── Session ────────────────────────────────────────────────────────────────────────────────
 
-export interface ShellOptions {
-  /** `set -o noclobber`: `>` refuses to overwrite a file. */
-  noclobber: boolean;
-  /** `set -f`: no pathname expansion. */
-  noglob: boolean;
-}
+export type ShellOptions = ShellOptionFlags;
 
 export const DEFAULT_OPTIONS: Readonly<ShellOptions> = { noclobber: false, noglob: false };
 

@@ -5,7 +5,7 @@ import App from './App.svelte';
 import { outputBlocks } from './interfaces/command';
 import type { Shell } from './shell/index';
 import { screen as transcript } from './stores/screen';
-import { systemCommands } from './utils/commands/system';
+import { bannerBlocks } from './commands/lib/banner';
 import { legacyAppShell } from './utils/legacyShell';
 
 async function settle(): Promise<void> {
@@ -17,7 +17,7 @@ let shell: Shell;
 let stopShell: () => void = () => {};
 
 beforeEach(() => {
-  const app = legacyAppShell({ banner: () => systemCommands.banner(), yieldToHost: () => Promise.resolve() });
+  const app = legacyAppShell({ banner: () => bannerBlocks({ version: '0.0.0-test', columns: 80, touch: false }), yieldToHost: () => Promise.resolve() });
   shell = app.shell;
   stopShell = app.stop;
 });
@@ -31,6 +31,7 @@ afterEach(() => {
 });
 
 const renderApp = () => render(App, { props: { shell } });
+const banner = () => bannerBlocks({ version: '0.0.0-test', columns: 80, touch: false });
 
 describe('App', () => {
   it('is a column of the screen frame, holding the transcript and the CRT overlay, then the dock slot', () => {
@@ -51,7 +52,7 @@ describe('App', () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
     // What app/bootstrap.ts puts in the transcript before the app mounts.
-    transcript.push({ prompt: shell.renderPrompt(), line: 'banner', blocks: outputBlocks(systemCommands.banner()) });
+    transcript.push({ prompt: shell.renderPrompt(), line: 'banner', blocks: outputBlocks(banner()) });
     const { container } = renderApp();
 
     const headings = container.querySelectorAll('h1');

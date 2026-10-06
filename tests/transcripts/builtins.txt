@@ -1,0 +1,50 @@
+# builtins: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ type ll cd ls if nope
+ll is aliased to `ls -la'
+cd is a shell builtin
+ls is /usr/bin/ls
+if is a shell keyword
+! type: nope: not found
+? 1
+$ which cat nope
+/usr/bin/cat
+? 1
+$ command -v ls ll cd
+/usr/bin/ls
+alias ll='ls -la'
+cd
+? 0
+$ set -o
+noclobber      	off
+noglob         	off
+? 0
+$ set -o noclobber; echo a > f; echo b > f
+! vesen: f: cannot overwrite existing file
+? 1
+$ unset HOME; echo "[$HOME]"
+[]
+? 0
+$ [ -d documents ] && echo yes; test 1 -gt 2; echo $?
+yes
+1
+? 0
+$ printenv USER; env GREETING=hi printenv GREETING
+guest
+hi
+? 0
+$ date; date -u +%s
+Tue Oct  6 20:09:00 AEDT 2026
+1791277740
+? 0
+$ exit 3
+[terminal]
+logout
+
+[Process completed]
+
+? 3
+[pipe]
+? 3

@@ -196,16 +196,31 @@ export interface SysInfo {
 
 // ── Appearance ─────────────────────────────────────────────────────────────────────────────
 
+/** The palette slots `theme ls` previews, in terminal order, one swatch each. */
+export const SWATCH_SLOTS = ['foreground', 'red', 'green', 'yellow', 'blue', 'purple', 'cyan', 'brightBlack'] as const;
+
 export interface ThemeInfo {
   readonly name: string;
   /** Hex colours for a swatch next to the name in completions and `theme ls`. */
   readonly background: string;
   readonly foreground: string;
+  /** The theme's own hex colours for SWATCH_SLOTS, in that order. */
+  readonly swatches: readonly string[];
 }
 
 export interface CathodeInfo {
   readonly name: string;
   readonly summary: string;
+}
+
+/** How much of the CRT effect the device draws, and why, in words for `cathode ls`. */
+export interface CathodeTier {
+  /** full, lite or off. */
+  readonly tier: string;
+  /** Such as "a touch screen", or "set with cathode quality full". */
+  readonly reason: string;
+  /** The quality setting the tier came from: auto, full, lite or off. */
+  readonly quality: string;
 }
 
 /** Theme and CRT state, over the stores. Commands reach appearance only through this. */
@@ -216,7 +231,14 @@ export interface Appearance {
   setTheme(name: string): boolean;
   cathodeModes(): readonly CathodeInfo[];
   currentCathode(): string;
+  /** Case-insensitive; false when no mode has that name. */
   setCathode(mode: string): boolean;
+  /** The quality settings: auto, then the tiers. */
+  cathodeQualities(): readonly string[];
+  /** Case-insensitive; false when it is not a quality. The tier follows at once. */
+  setCathodeQuality(quality: string): boolean;
+  /** The tier in force, and why. */
+  cathodeTier(): CathodeTier;
   /** `reset`: restores the default theme, as reset always has; the CRT mode stays the visitor's choice. */
   resetDefaults(): void;
 }

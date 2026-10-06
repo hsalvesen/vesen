@@ -23,7 +23,7 @@ import { FlagError, parseFlags, takesRawArgs, tryHelp, wantsLegacyHelp, type Par
 import { createFmt } from './fmt';
 import { createGlobber, type GlobFs } from './glob';
 import { describeIncomplete, parse } from './parser';
-import type { Session } from './session';
+import { loginFiles, type Session } from './session';
 import {
   AsyncPipe,
   CaptureOut,
@@ -41,6 +41,7 @@ import {
   BrokenPipe,
   DEFAULT_BUDGET_MS,
   EXIT,
+  ExitRequest,
   OWNER_HOME,
   UsageError,
   type CommandContext,
@@ -240,7 +241,12 @@ export class Executor {
           stderr: io.stderr,
         };
         try {
-          return await this.runCommand(cmd, job, stageIo, frame);
+          // Each stage of a pipeline is a subshell, which is not the interactive shell.
+          return await this.runCommand(cmd, job, stageIo, { ...frame, interactive: false });
+        } catch (error) {
+          // `exit` there ends only the stage.
+          if (error instanceof ExitRequest) return error.status;
+          throw error;
         } finally {
           // The stage's ends close when it finishes: its reader sees end of input, and its
           // writer, if still writing, a broken pipe.
@@ -329,10 +335,17 @@ export class Executor {
         const parsed = parse(source);
         if (parsed.ok !== true) throw new ExpandError(failureMessage(source, parsed));
         const capture = new CaptureOut(io.stdout.columns);
-        const status = await this.runList(parsed.ast, job, { stdin: new StringIn(''), stdout: capture, stderr: io.stderr }, {
-          ...frame,
-          interactive: false,
-        });
+        let status: ExitCode;
+        try {
+          status = await this.runList(parsed.ast, job, { stdin: new StringIn(''), stdout: capture, stderr: io.stderr }, {
+            ...frame,
+            interactive: false,
+          });
+        } catch (error) {
+          // `$( )` is a subshell: `exit` there ends only it.
+          if (!(error instanceof ExitRequest)) throw error;
+          status = error.status;
+        }
         return { stdout: capture.text, status };
       },
     });
@@ -529,6 +542,8 @@ export class Executor {
   }
 
   private async commandError(error: unknown, name: string, io: Io, job: Job, budget: AbortSignal | undefined): Promise<ExitCode> {
+    // `exit` ends whatever runs it: the script, the sourced file or the session.
+    if (error instanceof ExitRequest) throw error;
     if (error instanceof BrokenPipe) return EXIT.brokenPipe;
     if (error instanceof JobDetached || error instanceof Interrupted || job.signal.aborted) return EXIT.interrupted;
     if (error instanceof DeadlineExceeded) {
@@ -654,6 +669,7 @@ export class Executor {
       aliases: session.aliases,
       history: session.history,
       registry,
+      options: session.options,
       exec: async (line, streams = {}) => {
         const parsed = parse(line);
         const target: Io = {
@@ -667,7 +683,9 @@ export class Executor {
         }
         return this.runList(parsed.ast, job, target, { ...frame, interactive: false });
       },
+      source: (path, args) => this.source(path, job, io, args === undefined ? frame : { ...frame, args }),
       reset: (options) => this.reset(job, options),
+      login: (options) => this.login(job, options),
     };
   }
 
@@ -695,6 +713,27 @@ export class Executor {
     if (options.files !== false) fs.restore?.();
     appearance.resetDefaults();
     job?.sink.reset();
+  }
+
+  /**
+   * A new login session: a new session's variables, aliases and options in the home folder, then
+   * /etc/profile and ~/.bashrc read quietly, as at boot. Files, history and the theme stay. With
+   * `banner`, the screen is cleared and the banner shown.
+   */
+  async login(job: Job, options: { banner?: boolean } = {}): Promise<void> {
+    const session = this.session;
+    session.reset();
+    if (options.banner) job.sink.reset();
+    const quiet: Io = { stdin: new StringIn(''), stdout: new NullOut(), stderr: new NullOut() };
+    for (const file of loginFiles(session.home)) {
+      try {
+        await this.source(file, job, quiet, TOP_FRAME);
+      } catch (error) {
+        // An `exit` in ~/.bashrc ends only the reading of it here.
+        if (!(error instanceof ExitRequest)) throw error;
+      }
+    }
+    session.setStatus(0);
   }
 
   // ── Scripts ──
@@ -732,23 +771,43 @@ export class Executor {
       return error.code === 'ENOENT' ? EXIT.notFound : EXIT.denied;
     }
     const child: Frame = { argv0: name, args: argv.slice(1), depth: frame.depth + 1, interactive: false };
-    return this.runText(text, name, job, io, child);
+    try {
+      return await this.runText(text, name, job, io, child);
+    } catch (error) {
+      // A script runs as its own process: `exit` ends the script, not the shell.
+      if (error instanceof ExitRequest) return error.status;
+      throw error;
+    }
   }
 
   /**
    * `source`: runs a file's lines in this session, so its aliases and variables stay. Used at
-   * boot for /etc/profile and ~/.bashrc. A missing or unreadable file is status 1.
+   * boot for /etc/profile and ~/.bashrc. A name without a slash that is not in the working
+   * directory is looked for on $PATH, as bash does. A missing or unreadable file is status 1.
+   * An `exit` in the file ends the session, as in bash.
    */
   async source(path: string, job: Job, io: Io, frame: Frame = TOP_FRAME): Promise<ExitCode> {
     let text: string;
     try {
-      text = this.deps.fs.readFile(this.resolve(path));
+      text = this.deps.fs.readFile(this.sourcePath(path));
     } catch (error) {
       if (!(error instanceof VfsError)) throw error;
       await say(io.stderr, [span(`vesen: ${path}: ${strerror(error.code)}`, ERROR)]);
       return EXIT.error;
     }
     return this.runText(text, path, job, io, { ...frame, interactive: false });
+  }
+
+  /** The file `source NAME` reads: NAME itself, or for a bare name missing here, the first on $PATH. */
+  private sourcePath(path: string): string {
+    const here = this.resolve(path);
+    if (path.includes('/') || this.deps.fs.exists(here)) return here;
+    for (const dir of (this.session.env.get('PATH') ?? '').split(':')) {
+      if (dir === '') continue;
+      const found = this.resolve(`${dir}/${path}`);
+      if (this.deps.fs.exists(found)) return found;
+    }
+    return here;
   }
 
   /** Runs text as a script: one parsed line at a time, joining lines that continue. */

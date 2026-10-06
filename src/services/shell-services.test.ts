@@ -94,24 +94,35 @@ describe('opener', () => {
 });
 
 describe('appearance', () => {
+  const palette = (base: string) => ({
+    foreground: '#ffffff', red: '#ff0000', green: '#00ff00', yellow: '#ffff00', blue: '#0000ff', purple: '#ff00ff', cyan: '#00ffff',
+    brightBlack: base,
+  });
   const themes = [
-    { name: 'swamphen', background: '#222235', foreground: '#ffffff' },
-    { name: 'Wombat', background: '#1c1814', foreground: '#e6ddd4' },
+    { name: 'swamphen', background: '#222235', ...palette('#555555') },
+    { name: 'Wombat', background: '#1c1814', ...palette('#666666'), foreground: '#e6ddd4' },
   ];
+  const first = themes[0] ?? themes[1];
   const make = () => {
-    const theme = writable(themes[0] ?? { name: '', background: '', foreground: '' });
+    if (first === undefined) throw new Error('no themes');
+    const theme = writable(first);
     const cathode = writable<'off' | 'vintage'>('off');
+    const cathodeQuality = writable<'auto' | 'full' | 'lite' | 'off'>('auto');
+    const crtTier = writable({ tier: 'full', reason: 'a desktop', quality: 'auto' });
     const appearance = createAppearance({
       theme,
       themes,
-      defaultTheme: themes[0] ?? { name: '', background: '', foreground: '' },
+      defaultTheme: first,
       cathode,
       cathodeModes: [
         { name: 'off', summary: 'none' },
         { name: 'vintage', summary: 'all of it' },
       ],
+      cathodeQuality,
+      cathodeQualities: ['auto', 'full', 'lite', 'off'],
+      crtTier,
     });
-    return { theme, cathode, appearance };
+    return { theme, cathode, cathodeQuality, crtTier, appearance };
   };
 
   it('sets the theme by name, ignoring case', () => {
@@ -120,12 +131,20 @@ describe('appearance', () => {
     expect(get(theme).name).toBe('Wombat');
     expect(appearance.currentTheme()).toBe('Wombat');
     expect(appearance.setTheme('nope')).toBe(false);
-    expect(appearance.themes()).toEqual(themes);
+    expect(appearance.themes().map(({ name, background, foreground }) => ({ name, background, foreground }))).toEqual([
+      { name: 'swamphen', background: '#222235', foreground: '#ffffff' },
+      { name: 'Wombat', background: '#1c1814', foreground: '#e6ddd4' },
+    ]);
+  });
+
+  it("lists each theme's eight swatch colours, in terminal order", () => {
+    const { appearance } = make();
+    expect(appearance.themes()[1]?.swatches).toEqual(['#e6ddd4', '#ff0000', '#00ff00', '#ffff00', '#0000ff', '#ff00ff', '#00ffff', '#666666']);
   });
 
   it('sets the CRT mode, and reset restores only the theme', () => {
     const { cathode, appearance } = make();
-    expect(appearance.setCathode('vintage')).toBe(true);
+    expect(appearance.setCathode('VINTAGE')).toBe(true);
     expect(appearance.setCathode('neon')).toBe(false);
     appearance.setTheme('wombat');
     appearance.resetDefaults();
@@ -133,6 +152,16 @@ describe('appearance', () => {
     expect(get(cathode)).toBe('vintage');
     expect(appearance.cathodeModes().map((mode) => mode.name)).toEqual(['off', 'vintage']);
     expect(appearance.currentCathode()).toBe('vintage');
+  });
+
+  it('sets the CRT quality, ignoring case, and reports the tier in force', () => {
+    const { cathodeQuality, crtTier, appearance } = make();
+    expect(appearance.cathodeQualities()).toEqual(['auto', 'full', 'lite', 'off']);
+    expect(appearance.setCathodeQuality('LITE')).toBe(true);
+    expect(get(cathodeQuality)).toBe('lite');
+    expect(appearance.setCathodeQuality('ultra')).toBe(false);
+    crtTier.set({ tier: 'lite', reason: 'set with cathode quality lite', quality: 'lite' });
+    expect(appearance.cathodeTier()).toEqual({ tier: 'lite', reason: 'set with cathode quality lite', quality: 'lite' });
   });
 });
 

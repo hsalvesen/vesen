@@ -27,14 +27,6 @@
   color: var(--role-muted);
 }
 
-/* The banner's keyboard shortcuts, which a touch screen has no keys for until the phone's key
-   bar lands (docs/plan/04-phone-and-instagram.md). */
-@media (pointer: coarse) {
-  .keys-hint {
-    display: none;
-  }
-}
-
 /* --- Errors -----------------------------------------------------------------
    One style: `cmd: message` in the error role, then optionally a dim hint on
    the next line (utils/notice.ts errorLine). */
@@ -93,34 +85,10 @@
   margin-top: 0.5em;
 }
 
-/* --- Lists that mark the current theme or CRT mode ---------------------------
-   ui/legacy-highlights.ts moves is-current in earlier listings when the theme
-   or the mode changes, so the marker below follows it. */
-
-.theme-name,
-.cathode-name {
-  color: var(--role-fg-strong);
-}
-
-/* The current entry is in the accent with an arrow in a two-cell gutter. Not bold: Vesen Mono has
-   one weight, and WebKit's synthetic bold is wider, which would push the columns after it. */
-.theme-name.is-current,
-.cathode-name.is-current {
-  color: var(--role-accent);
-}
-
-.theme-name::before,
-.cathode-name::before {
-  content: '  ';
-}
-
-.theme-name.is-current::before,
-.cathode-name.is-current::before {
-  content: '› ';
-}
-
-/* Each theme's swatches are drawn in that theme's own colours on its own background, a preview
-   that stays true in every theme and in forced colours. */
+/* --- theme ls ---------------------------------------------------------------
+   Each theme's swatches are drawn in that theme's own colours on its own background
+   (ui/SpanView.svelte), a preview that stays true in every theme and in forced colours. The
+   marker and highlight on the current theme or CRT mode are live spans, so they move with it. */
 .swatches {
   forced-color-adjust: none;
   border-radius: 3px;

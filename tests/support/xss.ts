@@ -111,7 +111,7 @@ export function activeContent(root: ParentNode): string[] {
       if (lower === 'style' && /url\(|expression|javascript:|\\|position\s*:|inset\s*:/i.test(value)) {
         problems.push(`style="${value}" on <${element.localName}>`);
       }
-      if (lower.startsWith('data-') && !['data-theme-name', 'data-cathode-name'].includes(lower)) {
+      if (lower.startsWith('data-')) {
         problems.push(`${lower} on <${element.localName}>`);
       }
     }

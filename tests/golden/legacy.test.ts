@@ -47,7 +47,8 @@ interface GoldenCase {
 
 const CASES: GoldenCase[] = [
   { slug: 'banner', lines: ['banner'] },
-  { slug: 'help', lines: ['help'], responsive: true },
+  // help is a spec: grids the page lays out to its width, so one golden serves every width.
+  { slug: 'help', lines: ['help'] },
   // ls is ported: a grid the page lays out to its width, so one golden serves every width.
   { slug: 'ls', lines: ['ls'] },
   { slug: 'ls-a', lines: ['ls -a'] },
@@ -146,12 +147,12 @@ async function boot(viewport: Viewport): Promise<LegacyTerminal> {
   const { playBeep } = await import('../../src/utils/beep');
   const { screen } = await import('../../src/stores/screen');
   const { outputBlocks } = await import('../../src/interfaces/command');
-  const { systemCommands } = await import('../../src/utils/commands/system');
+  const { bannerBlocks } = await import('../../src/commands/lib/banner');
   const { crtTier } = await import('../../src/stores/cathode');
   const { decideTier, readSignals } = await import('../../src/platform/perf');
   crtTier.set(decideTier(readSignals(window)));
   const app = legacyAppShell({
-    banner: () => systemCommands.banner(),
+    banner: () => bannerBlocks({ version: APP_VERSION, columns: Math.floor((window.innerWidth - 40) / 8), touch: false }),
     bell: createBell({ play: playBeep }),
     yieldToHost: () => Promise.resolve(),
   });
@@ -159,7 +160,8 @@ async function boot(viewport: Viewport): Promise<LegacyTerminal> {
   // What app/bootstrap.ts does before the app mounts: the banner at the first prompt, and
   // ~/.bashrc sourced. The CRT tier it decides for the device is what `cathode ls` reports.
   screen.clear();
-  screen.push({ prompt: shell.renderPrompt(), line: 'banner', blocks: outputBlocks(systemCommands.banner()), origin: 'boot' });
+  const banner = bannerBlocks({ version: APP_VERSION, columns: Math.floor((window.innerWidth - 40) / 8), touch: false });
+  screen.push({ prompt: shell.renderPrompt(), line: 'banner', blocks: outputBlocks(banner), origin: 'boot' });
   await app.boot();
 
   return {

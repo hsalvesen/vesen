@@ -11,8 +11,9 @@ import { createNet } from '../services/net';
 import { createSysInfoStub } from '../services/sysinfo';
 import type { Bell, Clipboard, Clock, KV, Net, Opener, SysInfo } from '../services/types';
 import { createShell, type ScreenSink, type Shell, type TerminalInfo } from '../shell/index';
+import { loginFiles } from '../shell/session';
 import type { CommandSpec } from '../shell/types';
-import { cathode, cathodeModeInfo } from '../stores/cathode';
+import { cathode, cathodeModeInfo, cathodeQuality, crtQualities, crtTier } from '../stores/cathode';
 import { screen as appScreen, type ScreenStore } from '../stores/screen';
 import { defaultTheme, theme, themes } from '../stores/theme';
 import { GUEST } from '../vfs/identity';
@@ -22,7 +23,7 @@ import type { VirtualFile } from '../vfs/types';
 import { Vfs } from '../vfs/vfs';
 
 /** Run at boot, quietly, as a login shell reads them: aliases such as ll, and exports (F072). */
-export const BOOT_FILES = ['/etc/profile', `${GUEST.home}/.bashrc`] as const;
+export const BOOT_FILES = loginFiles(GUEST.home);
 
 export interface AppShellOptions {
   /** The welcome banner, which `reset` puts back. */
@@ -121,7 +122,16 @@ export function createAppShell(options: AppShellOptions): AppShell {
     net: options.net ?? createNet(),
     clock,
     sys,
-    appearance: createAppearance({ theme, themes, defaultTheme, cathode, cathodeModes: cathodeModeInfo }),
+    appearance: createAppearance({
+      theme,
+      themes,
+      defaultTheme,
+      cathode,
+      cathodeModes: cathodeModeInfo,
+      cathodeQuality,
+      cathodeQualities: crtQualities,
+      crtTier,
+    }),
     screen: transcriptScreen(screen, options.banner, renderPrompt),
     ...(options.terminal ? { terminal: options.terminal } : {}),
     ...(options.opener ? { opener: options.opener } : {}),

@@ -1,58 +1,13 @@
-import themes from '../../themes.json';
 import { systemCommands } from './commands/system';
 import { fileSystemCommands } from './commands/fileSystem';
 import type { networkCommands as NetworkCommands } from './commands/network';
-import { theme } from '../stores/theme';
-import {
-  cathode,
-  cathodeModes,
-  cathodeModeInfo,
-  cathodeQuality,
-  crtQualities,
-  crtTier,
-  isCrtQuality,
-  type CathodeMode,
-} from '../stores/cathode';
-import { get } from 'svelte/store';
 import { commandHelp } from './helpTexts';
 import { playBeep } from './beep';
 import { errorLine } from './notice';
-import { escapeHtml } from '../output/escape';
-import { transcriptColumns } from '../platform/measure';
 
-// Terminal-specific commands that don't fit in other modules
+// Terminal-specific commands that don't fit in other modules. help, theme and cathode are specs in
+// src/commands now, with their help generated from them.
 const terminalCommands = {
-  help: (args: string[] = []) => {
-    const commandList = commandNames();
-    const target = args[0];
-
-    if (target && commandList.includes(target)) {
-      return getCommandHelp(target);
-    }
-
-    const terminalWidth = transcriptColumns(window);
-    const minWidth = 30;
-    const maxWidth = 120;
-    const responsiveWidth = Math.min(maxWidth, Math.max(minWidth, terminalWidth));
-
-    const maxCommandLength = commandList.reduce((max, cmd) => Math.max(max, cmd.length), 0);
-    const colWidth = Math.max(8, maxCommandLength + 4);
-    const cols = Math.max(1, Math.floor(responsiveWidth / colWidth));
-
-    const lines: string[] = [];
-    for (let i = 0; i < commandList.length; i += cols) {
-      const row = commandList
-        .slice(i, i + cols)
-        .map((cmd) => cmd.padEnd(colWidth, ' '))
-        .join('')
-        .trimEnd();
-      lines.push(row);
-    }
-
-    // Should the font be wider than measured, the grid scrolls rather than being cut off.
-    return `<div style="white-space: pre; overflow-x: auto;">${lines.join('\n')}</div>`;
-  },
-
   sudo: (args: string[]) => {
     if (args.length === 0) {
       return commandHelp.sudo;
@@ -66,165 +21,7 @@ const terminalCommands = {
 
 };
 
-/** The palette slots `theme ls` previews, in terminal order, each as a two-cell swatch. */
-const SWATCH_SLOTS = ['foreground', 'red', 'green', 'yellow', 'blue', 'purple', 'cyan', 'brightBlack'] as const;
-
-// Project-specific commands
 const projectCommands = {
-  theme: (args: string[]) => {
-    const usage = `<span style="color: var(--theme-cyan); font-weight: bold;">theme</span> - Change terminal theme
-<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> theme <span style="color: var(--theme-green);">[args]</span>.
-  <span style="color: var(--theme-green);">args:</span>
-    ls: list all available themes
-    set: set theme to [theme]
-
-<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
-  theme ls
-  theme set swamphen`;
-    if (args.length === 0) {
-      return renderHelp(usage);
-    }
-
-    switch (args[0]) {
-      case 'ls': {
-        // One row per theme: its name, then swatches drawn in its own colours on its own
-        // background (hex on purpose: each row previews that theme, whatever theme is showing).
-        // The stylesheet marks the current theme, and legacy-highlights moves the mark later.
-        const current = get(theme).name.toLowerCase();
-        const width = Math.max(...themes.map((t) => t.name.length));
-        const rows = themes.map((t) => {
-          const name = t.name.toLowerCase();
-          const label = `<span class="theme-name${name === current ? ' is-current' : ''}" data-theme-name="${name}">${escapeHtml(t.name)}</span>`;
-          const swatches = SWATCH_SLOTS.map((slot) => `<span style="color: ${t[slot]};">██</span>`).join('');
-          const preview = `<span class="swatches" aria-hidden="true" style="background-color: ${t.background};"> ${swatches} </span>`;
-          return `${label}${' '.repeat(width - t.name.length + 2)}${preview}`;
-        });
-        return `${rows.join('\n')}\n\n<span class="out-muted">Try one with: theme set [name]</span>`;
-      }
-
-      case 'set': {
-        if (args.length !== 2) {
-          return renderHelp(usage);
-        }
-
-        const selectedTheme = args[1];
-        const t = themes.find((t) => t.name.toLowerCase() === selectedTheme.toLowerCase());
-
-        if (!t) {
-          playBeep();
-          return errorLine(`theme: ${selectedTheme}: no such theme`, "Try 'theme ls' to see all available themes.");
-        }
-
-        theme.set(t);
-
-        return `Theme set to ${t.name}`;
-      }
-
-      default: {
-        return renderHelp(usage);
-      }
-    }
-  },
-  cathode: (args: string[]) => {
-    const usage = `<span style="color: var(--theme-cyan); font-weight: bold;">cathode</span> - Trial a retro CRT (cathode ray tube) display effect
-<span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> cathode <span style="color: var(--theme-green);">[args]</span>.
-  <span style="color: var(--theme-green);">args:</span>
-    ls: list all cathode variations and the quality in use
-    set: set the effect to [variation]
-    off: turn the effect off
-    quality: auto, full, lite or off (auto suits the device)
-
-<span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
-  cathode ls
-  cathode set vintage
-  cathode quality lite
-  cathode off`;
-
-    const applyMode = (mode: CathodeMode) => {
-      cathode.set(mode);
-      if (mode === 'off') {
-        return 'Cathode effect turned off.';
-      }
-      return `Cathode effect set to ${mode}. Try 'cathode ls' to compare the variations.`;
-    };
-
-    /** The tier in force and why, such as "lite (auto: a touch screen)". */
-    const describeQuality = () => {
-      const { tier, reason, quality } = get(crtTier);
-      return `${tier} (${quality === 'auto' ? `auto: ${reason}` : reason})`;
-    };
-
-    if (args.length === 0) {
-      return renderHelp(usage);
-    }
-
-    switch (args[0]) {
-      case 'ls': {
-        const current = get(cathode);
-        const nameWidth = Math.max(...cathodeModes.map((m) => m.length));
-
-        const rows = cathodeModeInfo
-          .map(({ name, summary }) => {
-            const isCurrent = name === current;
-            const padding = ' '.repeat(nameWidth - name.length + 2);
-            const label = `<span class="cathode-name${isCurrent ? ' is-current' : ''}" data-cathode-name="${name}">${name}</span>`;
-            return `${label}${padding}<span class="out-strong">${summary}</span>`;
-          })
-          .join('\n');
-
-        return `<span class="out-accent">Cathode variations (current marked):</span>
-${rows}
-
-<span class="out-accent">Quality:</span> <span class="out-strong">${escapeHtml(describeQuality())}</span>
-
-<span class="out-muted">Trial one with: cathode set [variation]</span>
-<span class="out-muted">Change the quality with: cathode quality [auto|full|lite|off]</span>`;
-      }
-
-      case 'set': {
-        if (args.length !== 2) {
-          return renderHelp(usage);
-        }
-
-        const requested = args[1].toLowerCase();
-        const match = cathodeModes.find((m) => m === requested);
-        if (!match) {
-          playBeep();
-          return errorLine(`cathode: ${args[1]}: no such variation`, "Try 'cathode ls' to see all available variations.");
-        }
-
-        return applyMode(match);
-      }
-
-      case 'off': {
-        return applyMode('off');
-      }
-
-      case 'quality': {
-        if (args.length === 1) {
-          return `Cathode quality: ${escapeHtml(describeQuality())}\n<span class="out-muted">Change it with: cathode quality [auto|full|lite|off]</span>`;
-        }
-        const requested = args[1].toLowerCase();
-        if (args.length !== 2 || !isCrtQuality(requested)) {
-          playBeep();
-          return errorLine(`cathode: quality: ${args.slice(1).join(' ')}: not a quality`, `Choose one of: ${crtQualities.join(', ')}.`);
-        }
-        // bootstrap decides the tier again as soon as the quality changes.
-        cathodeQuality.set(requested);
-        return `Cathode quality set to ${requested}: ${escapeHtml(describeQuality())}.`;
-      }
-
-      default: {
-        // Friendly shortcut: `cathode vintage` behaves like `cathode set vintage`.
-        const requested = args[0].toLowerCase();
-        const match = cathodeModes.find((m) => m === requested);
-        if (match) {
-          return applyMode(match);
-        }
-        return renderHelp(usage);
-      }
-    }
-  },
   // The shell opens the repository (spec.opens, inside the Enter gesture); this is what it prints.
   repo: () => `<span class="out-accent">Opening Vesen repository...</span>`,
 
@@ -248,11 +45,6 @@ export function emailHref(now: Date = new Date()): string {
 
 // Re-export virtualFileSystem and currentPath from the dedicated module
 export { virtualFileSystem, currentPath } from './virtualFileSystem';
-
-// Detailed help for a command, from its legacy help text.
-function getCommandHelp(command: string): string {
-  return legacyHelpHtml(command) ?? errorLine(`help: no help available for ${command}`);
-}
 
 /** A legacy command's help laid out as panels, as `<cmd> --help` shows it; undefined when it has none. */
 export function legacyHelpHtml(command: string): string | undefined {

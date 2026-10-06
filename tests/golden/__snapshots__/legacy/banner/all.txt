@@ -5,6 +5,7 @@ $ banner
 ╚██╗ ██╔╝██╔══╝  ╚════██║██╔══╝  ██║╚██╗██║
  ╚████╔╝ ███████╗███████║███████╗██║ ╚████║
   ╚═══╝  ╚══════╝╚══════╝╚══════╝╚═╝  ╚═══╝
+
 vesen v0.0.0-golden · a terminal by Has Salvesen
 Tab completes · ↑ history · help <cmd> for details
 
