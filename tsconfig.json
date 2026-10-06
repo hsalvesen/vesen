@@ -23,7 +23,11 @@
     "noFallthroughCasesInSwitch": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "exactOptionalPropertyTypes": false
+    "exactOptionalPropertyTypes": false,
+    // Node's types are for the tests this config also checks. TypeScript 6 loads no @types
+    // package unless it is listed; tsconfig.strict.json sets "types": [] again, so the strict
+    // browser folders still cannot use Node globals.
+    "types": ["node"]
   },
   // tests/ is listed here too because tests/golden/legacy.test.ts imports legacy code; the rest of
   // tests/ is also checked strictly by tsconfig.strict.node.json.

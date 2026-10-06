@@ -87,7 +87,9 @@ src/
 ├── vfs/types.ts                  # The file system contract
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette
-│                                 # where themes.json does not set them, and the contrast each must meet)
+│                                 # where themes.json does not set them, and the contrast each must meet);
+│                                 # qr/ (the QR encoder: segments, error correction, masks, and text, SVG
+│                                 # and raster renderers)
 ├── platform/                     # Browser-facing helpers: canonical host redirect, stale-chunk reload,
 │                                 # head.ts (palette colours, theme-color, favicon), theme-apply.ts (the
 │                                 # role colours), perf.ts (the CRT tier: full, lite or off, and why),
@@ -98,6 +100,8 @@ src/
 │   ├── storage.ts                # localStorage and sessionStorage with a memory fallback; one-time migrations
 │   ├── types.ts                  # Service interfaces: net, storage, bell, opener, clipboard, clock, system info
 │   ├── storage-keys.ts           # Every browser storage key, in one registry
+│   ├── weather/                  # Weather's sources (forecast, geocoding, IP location), place resolution,
+│   │                             # units and WMO codes, and the view model a weather card draws
 │   └── market/contract.ts        # The stock Worker's wire format, shared by the Worker and the app
 ├── stores/                       # Svelte stores, pure state: history, the running job, theme, cathode
 ├── ui/
