@@ -22,7 +22,9 @@ import type { CommandSpec, InAppBrowser } from '../shell/types';
 import { cathode, cathodeModes, cathodeQuality, crtTier, DEFAULT_CATHODE_MODE, persistCathode } from '../stores/cathode';
 import { screen } from '../stores/screen';
 import { columns } from '../stores/term';
+import { persistPrefs } from '../stores/prefs';
 import { DEFAULT_THEME_NAME, persistTheme, theme, themes } from '../stores/theme';
+import { visibleArea } from '../stores/viewport';
 import { markCurrentThemeName } from '../ui/legacy-highlights';
 import { loadRichBlock } from '../ui/rich-block';
 import { playBeep } from '../utils/beep';
@@ -101,6 +103,7 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
     }),
     persistTheme(storage.local),
     persistCathode(storage.local),
+    persistPrefs(storage.local),
     // Both colour layers: the palette (--theme-*) and the roles (--role-*).
     theme.subscribe((value) => {
       applyTheme(doc, value);
@@ -116,7 +119,8 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
     // The touch input's scale and the font's cell width, as CSS variables.
     startMeasuring(win),
     // The shell's height and position: the part of the page above the toolbars and keyboard.
-    startViewport(win),
+    // The phone dock lays itself out by the same height.
+    startViewport(win, { onChange: (area) => visibleArea.set(area) }),
     // The terminal's width in cells, for the prompt.
     trackColumns(win),
   ];

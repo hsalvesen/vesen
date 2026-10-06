@@ -6,7 +6,7 @@
 
 import { out, type Span, type SpanStyle } from '../../output/model';
 import { createFmt } from '../../shell/fmt';
-import { defineCommand, type CommandContext, type EnumValue } from '../../shell/types';
+import { defineCommand, PLAIN_ARG, type CommandContext, type EnumValue, type ExitCode, type NextContext } from '../../shell/types';
 import { basename, dirname, join } from '../../vfs/path';
 import type { Stat } from '../../vfs/types';
 import { childPath, errorCode, reason, suggestRestore, tryStat } from '../lib/files';
@@ -193,6 +193,28 @@ function entryAt(ctx: CommandContext, name: string, path: string, stat: Stat): E
   return { name, path, stat, target: tryStat(ctx, path) };
 }
 
+/** The most follow-ups a listing offers. */
+const NEXT_MAX = 10;
+
+/**
+ * After a listing of one folder: its files to read, then its folders to go into, one tap each.
+ * Hidden names, and names that are not plain words, are left out.
+ */
+export function lsNext({ status, argv }: { status: ExitCode; argv: readonly string[] }, context?: NextContext): string[] {
+  const operands = argv.slice(1).filter((word) => !word.startsWith('-'));
+  if (status !== 0 || operands.length > 1 || context?.list === undefined) return [];
+  const [folder] = operands;
+  const entries = context.list(folder ?? '.');
+  if (entries === null) return [];
+  const prefix = folder === undefined ? '' : folder.endsWith('/') ? folder : `${folder}/`;
+  const shown = entries
+    .filter((entry) => !entry.name.startsWith('.') && PLAIN_ARG.test(`${prefix}${entry.name}`))
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  const files = shown.filter((entry) => entry.type === 'file').map((entry) => `cat ${prefix}${entry.name}`);
+  const folders = shown.filter((entry) => entry.type === 'dir').map((entry) => `cd ${prefix}${entry.name}`);
+  return [...files, ...folders].slice(0, NEXT_MAX);
+}
+
 export default defineCommand({
   name: 'ls',
   category: 'files',
@@ -233,6 +255,7 @@ export default defineCommand({
     { line: 'ls -lt', note: 'newest first', offline: true },
   ],
   seeAlso: ['cd', 'stat', 'cat'],
+  next: lsNext,
   man: [
     {
       heading: 'EXIT STATUS',

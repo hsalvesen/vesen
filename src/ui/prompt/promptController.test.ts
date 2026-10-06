@@ -3,6 +3,8 @@ import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import sudo, { SUDO_HINT } from '../../commands/shell/sudo';
 import rm from '../../commands/files/rm';
+import theme from '../../commands/portfolio/theme';
+import sleep from '../../commands/shell/sleep';
 import { createStorage } from '../../services/storage';
 import { createScreen, type ScreenStore } from '../../stores/screen';
 import { harness } from '../../testing/shell-harness';
@@ -25,15 +27,16 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function setup(options: { touch?: boolean; platform?: 'mac' | 'other'; now?: () => number } = {}) {
+function setup(options: { touch?: boolean; dock?: boolean; platform?: 'mac' | 'other'; now?: () => number } = {}) {
   const storage = createStorage(window).local;
-  const h = harness({ specs: [sudo, rm], storage });
+  const h = harness({ specs: [sudo, rm, theme, sleep], storage });
   const screen: ScreenStore = createScreen();
   const controller = new PromptController({
     shell: h.shell,
     screen,
     platform: options.platform ?? 'other',
     touch: options.touch ?? false,
+    ...(options.dock ? { dock: true } : {}),
     ...(options.now ? { now: options.now } : {}),
   });
   const view = render(PromptLine, { props: { controller, shell: h.shell } });
@@ -250,6 +253,94 @@ describe('Tab and the chips', () => {
     expect(input.value).toBe('ca');
     input.dispatchEvent(new CompositionEvent('compositionend'));
     expect(input.value).toBe('cat ');
+  });
+});
+
+describe('the dock', () => {
+  it('drives the same actions as the keys: tab completes, lists and cycles; ↑ and ↓ walk history', async () => {
+    const { input, controller, h } = setup({ touch: true, dock: true });
+    await engineReady(controller);
+    await type(input, 'cat d');
+    controller.pressKey('Tab');
+    expect(input.value).toBe('cat docs/');
+    await type(input, 'cat ');
+    controller.pressKey('Tab');
+    expect(controller.listed).toBe(true);
+    controller.pressKey('Tab');
+    controller.pressKey('Tab');
+    expect(input.value).toBe('cat b.txt');
+    // Escape puts back what was typed before the menu, as the key does.
+    controller.pressKey('Escape');
+    expect(input.value).toBe('cat ');
+
+    await h.shell.run('pwd');
+    await type(input, '');
+    controller.pressKey('ArrowUp');
+    expect(input.value).toBe('pwd');
+    controller.pressKey('ArrowDown');
+    expect(input.value).toBe('');
+  });
+
+  it('moves the cursor with ← and →, and types symbols over the selection', async () => {
+    const { input, controller } = setup({ touch: true, dock: true });
+    await type(input, 'ls docs', 2);
+    controller.insertText(' |');
+    expect(input.value).toBe('ls | docs');
+    expect(controller.cursor).toBe(4);
+    controller.pressKey('ArrowLeft');
+    controller.pressKey('ArrowLeft');
+    expect(controller.cursor).toBe(2);
+    controller.pressKey('ArrowRight');
+    expect(controller.cursor).toBe(3);
+    input.setSelectionRange(5, 9);
+    controller.insertText('~');
+    expect(input.value).toBe('ls | ~');
+  });
+
+  it('puts the keyboard away with ⌄, and an Escape from the key bar never arms leaving', async () => {
+    const { input, controller } = setup({ touch: true, dock: true });
+    controller.focus({ keyboard: true });
+    expect(document.activeElement).toBe(input);
+    controller.pressKey('Escape');
+    expect(press(input, 'Tab').defaultPrevented).toBe(true);
+    controller.blur();
+    expect(document.activeElement).not.toBe(input);
+  });
+
+  it('runs a candidate that finishes the line, and a long press only puts it there', async () => {
+    const { input, controller, h } = setup({ touch: true, dock: true });
+    await engineReady(controller);
+    await type(input, 'theme set w');
+    const wombat = controller.chipList.chips.find((chip) => chip.label === 'wombat');
+    if (wombat === undefined) throw new Error('no wombat chip');
+    controller.choose(wombat, { insert: true });
+    expect(input.value).toBe('theme set wombat ');
+    expect(h.commits).toHaveLength(0);
+    await type(input, 'theme set w');
+    controller.choose(wombat);
+    await vi.waitFor(() => expect(h.commits.map((c) => c.line)).toEqual(['theme set wombat']));
+    expect(input.value).toBe('');
+  });
+
+  it('keeps the last line, its words and its status for the follow-ups', async () => {
+    const { controller } = setup({ touch: true, dock: true });
+    await engineReady(controller);
+    controller.submit('theme ls', 'chip');
+    await vi.waitFor(() => expect(controller.last).toEqual({ line: 'theme ls', argv: ['theme', 'ls'], status: 0 }));
+    expect(controller.chipList.chips.slice(0, 2).map((chip) => chip.line)).toEqual(['theme set swamphen', 'theme set wombat']);
+    controller.submit('nosuch', 'chip');
+    await vi.waitFor(() => expect(controller.last?.status).toBe(127));
+  });
+
+  it('shows cancel ^C among the chips while a command runs in the dock, and leaves it to the status line without one', async () => {
+    for (const dock of [true, false]) {
+      const { controller } = setup({ touch: true, dock });
+      await engineReady(controller);
+      controller.submit('sleep 5', 'chip');
+      await tick();
+      expect(controller.chipList.chips.map((chip) => chip.label), String(dock)).toEqual(dock ? ['cancel ^C'] : []);
+      controller.interrupt();
+    }
   });
 });
 

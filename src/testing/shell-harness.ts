@@ -228,7 +228,7 @@ export function sampleTree(): VirtualFile {
 }
 
 /** Two themes and the CRT modes, held in plain variables: an Appearance for kernel tests. */
-export function stubAppearance(): Appearance & { resets: number; cathode: string; quality: string } {
+export function stubAppearance(): Appearance & { resets: number; cathode: string; quality: string; keys: string; hardware: boolean } {
   const swatches = (base: string) => [base, '#ff0000', '#00ff00', '#ffff00', '#0000ff', '#ff00ff', '#00ffff', '#808080'];
   const themes = [
     { name: 'swamphen', background: '#222235', foreground: '#ffffff', swatches: swatches('#ffffff') },
@@ -245,6 +245,8 @@ export function stubAppearance(): Appearance & { resets: number; cathode: string
     resets: 0,
     cathode: 'scanlines',
     quality: 'auto',
+    keys: 'auto',
+    hardware: false,
     themes: () => themes,
     currentTheme: () => theme,
     setTheme: (name: string) => {
@@ -272,6 +274,14 @@ export function stubAppearance(): Appearance & { resets: number; cathode: string
       state.quality === 'auto'
         ? { tier: 'full', reason: 'a desktop', quality: 'auto' }
         : { tier: state.quality, reason: `set with cathode quality ${state.quality}`, quality: state.quality },
+    keyBar: () => ({ mode: state.keys, hardware: state.hardware, shown: state.keys === 'on' || (state.keys === 'auto' && !state.hardware) }),
+    keyBarModes: () => ['auto', 'on', 'off'],
+    setKeyBar: (mode: string) => {
+      const found = ['auto', 'on', 'off'].find((m) => m === mode.trim().toLowerCase());
+      if (found === undefined) return false;
+      state.keys = found;
+      return true;
+    },
     resetDefaults: () => {
       state.resets += 1;
       theme = 'swamphen';

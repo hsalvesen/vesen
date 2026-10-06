@@ -17,10 +17,22 @@
 //   storage or the kill ring, and is emptied when the prompt loses focus or the page is hidden.
 
 import type { Block, Line } from '../../output/model';
-import { TAB_IDLE, type Chip, type ChipList, type Completion, type CompletionResult, type EditState, type Ghost, type PromptMode, type TabState, type TabStep } from '../../shell/complete/types';
+import {
+  TAB_IDLE,
+  type Chip,
+  type ChipList,
+  type Completion,
+  type CompletionResult,
+  type EditState,
+  type Ghost,
+  type LastRun,
+  type PromptMode,
+  type TabState,
+  type TabStep,
+} from '../../shell/complete/types';
 import { joinContinuation, type ContinuationReason } from '../../shell/editor/continuation';
 import { NAV_IDLE, searchLabel, searchResult, startSearch, stepHistory, stepSearch, updateSearch, type HistoryNav, type SearchState } from '../../shell/editor/history';
-import { chordOf, isModifierKey, resolveKey, type Action, type KeyCtx, type KeyPlatform } from '../../shell/editor/keymap';
+import { chordOf, isModifierKey, resolveKey, type Action, type KeyChord, type KeyCtx, type KeyPlatform } from '../../shell/editor/keymap';
 import { normalizePaste, normalizeTyped } from '../../shell/editor/normalize';
 import { EMPTY_RING, applyOp, replaceRange, settleRing, yankLastArg, type EditOp, type KillRing, type LastArgState } from '../../shell/editor/readline';
 import type { JobOrigin, ReadRequest, ShellPort } from '../../shell/index';
@@ -38,6 +50,28 @@ export const STEADY_MS = 600;
 /** The id of a read the prompt asks itself: the Tab list's `Display all N possibilities?`. */
 const OWN_READ = -1;
 
+/** The keys on the phone dock's key bar that do what the same key on a keyboard does. */
+export type DockKey = 'Tab' | 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight' | 'Escape';
+
+/** A key press: a KeyboardEvent, or one the dock's key bar makes. */
+type KeyPress = KeyChord & { readonly defaultPrevented: boolean; preventDefault(): void };
+
+/** The key press a dock key stands for. */
+function dockKeyPress(key: DockKey): KeyPress {
+  return {
+    key,
+    code: key,
+    ctrlKey: false,
+    altKey: false,
+    metaKey: false,
+    shiftKey: false,
+    isComposing: false,
+    keyCode: 0,
+    defaultPrevented: false,
+    preventDefault: () => {},
+  };
+}
+
 export interface PromptDeps {
   readonly shell: ShellPort;
   /** The transcript: an empty Enter and an abandoned line go here, and Ctrl+L clears it. */
@@ -46,6 +80,11 @@ export interface PromptDeps {
   readonly platform: KeyPlatform;
   /** A touch screen: the native input shows, with no mirror, and focus waits for a tap. */
   readonly touch: boolean;
+  /**
+   * The phone dock is showing (a touch screen, or ?dock=1): the chips are a thumb's, with the
+   * starters, the follow-ups, a run in one tap and Stop, and they are drawn in the dock.
+   */
+  readonly dock?: boolean;
   readonly now?: () => number;
 }
 
@@ -120,6 +159,8 @@ export class PromptController {
   completion = $state.raw<Completion | null>(null);
   history = $state.raw<readonly string[]>([]);
   lastStatus = $state<ExitCode>(0);
+  /** The line that ran last at this prompt, for the chips that follow it. */
+  last = $state.raw<LastRun | null>(null);
   /** The visual bell is showing. */
   bell = $state(false);
   /** For the polite live region; a no-break space alternates so a repeat is announced again. */
@@ -129,6 +170,7 @@ export class PromptController {
 
   readonly platform: KeyPlatform;
   readonly touch: boolean;
+  readonly dock: boolean;
   /** The kill ring; never holds a secret. */
   ring: KillRing = EMPTY_RING;
   /** The mirror's ghost, for a tap on it; LineEditor sets it. */
@@ -153,6 +195,7 @@ export class PromptController {
     this.screen = deps.screen;
     this.platform = deps.platform;
     this.touch = deps.touch;
+    this.dock = deps.dock ?? false;
     this.now = deps.now ?? (() => (typeof performance === 'undefined' ? Date.now() : performance.now()));
     this.stops.push(
       deps.shell.completion.subscribe((value) => (this.completion = value)),
@@ -199,22 +242,29 @@ export class PromptController {
     });
   });
 
-  /** The chips under the prompt: completions, the Tab list, starters, did-you-mean, Cancel. */
+  /**
+   * The chips: completions, the Tab list, did-you-mean and Cancel; in the dock also the starters,
+   * the follow-ups, the line ready to run and Stop.
+   */
   readonly chipList = $derived.by((): ChipList => {
     const completion = this.completion;
     if (completion === null || this.ps2 !== null || (this.read !== null && !this.read.secret && !this.read.keepLine)) return { chips: [], more: 0 };
+    const thumb = this.touch || this.dock;
     const list = completion.engine.chipsFor({
       mode: this.mode,
       state: this.state,
       result: this.result,
       tab: this.tab,
-      touch: this.touch,
+      touch: thumb,
       registry: completion.env.registry,
       history: this.history,
-      max: this.touch ? 24 : 8,
+      max: thumb ? 24 : 8,
       lastStatus: this.lastStatus,
+      last: this.last,
+      env: completion.env,
     });
-    // The status line under the prompt already stops a running command.
+    if (this.dock) return list;
+    // Under the prompt, the status line already stops a running command.
     return { chips: list.chips.filter((chip) => chip.action.kind !== 'interrupt'), more: list.more };
   });
 
@@ -472,12 +522,17 @@ export class PromptController {
   }
 
   private onKeydown(event: KeyboardEvent): void {
-    if (event.defaultPrevented) return;
+    this.handleKey(event);
+  }
+
+  /** A key press on the prompt, or on the dock's key bar. Returns what it did, or null. */
+  private handleKey(event: KeyPress): Action | null {
+    if (event.defaultPrevented) return null;
     if (this.read?.oneKey === true && !event.isComposing && event.keyCode !== 229 && !isModifierKey(event.key)) {
       const consumed = this.answerQuestion(event.key, false, chordOf(event));
       if (consumed) {
         event.preventDefault();
-        return;
+        return null;
       }
     }
     this.syncSelection();
@@ -492,13 +547,41 @@ export class PromptController {
       if (engine !== undefined) this.applyTab(engine.menuKey(this.tab, action.a === 'submit' ? 'enter' : 'commit'));
       if (action.a === 'submit') {
         event.preventDefault();
-        return;
+        return action;
       }
     }
     this.perform(action, event);
+    return action;
   }
 
-  private perform(action: Action, event: KeyboardEvent): void {
+  /**
+   * A key on the dock's key bar: exactly what the same key on a keyboard does at the prompt, so
+   * tab completes, lists and cycles, and the arrows walk history. ← and → move the cursor.
+   */
+  pressKey(key: DockKey): void {
+    this.syncSelection();
+    const action = this.handleKey(dockKeyPress(key));
+    // A keyboard's own arrows move the caret themselves; a key bar's do it here.
+    if (action?.a === 'native' && (key === 'ArrowLeft' || key === 'ArrowRight')) this.editOp(key === 'ArrowLeft' ? 'charLeft' : 'charRight');
+    // Escape on the key bar never arms Escape-then-Tab, which is for leaving with a keyboard.
+    if (key === 'Escape') this.escapedAt = Number.NEGATIVE_INFINITY;
+  }
+
+  /** Text from the dock's symbols, at the cursor, over any selection, as if typed. */
+  insertText(text: string): void {
+    this.syncSelection();
+    const from = Math.min(this.cursor, this.selEnd);
+    const to = Math.max(this.cursor, this.selEnd);
+    this.ring = settleRing(this.ring);
+    this.write(replaceRange(this.state, from, to, text), { force: true });
+  }
+
+  /** Puts the keyboard away: the ⌄ key. */
+  blur(): void {
+    this.input?.blur();
+  }
+
+  private perform(action: Action, event: KeyPress): void {
     switch (action.a) {
       case 'native':
         return;
@@ -568,7 +651,7 @@ export class PromptController {
     }
   }
 
-  private escape(event: KeyboardEvent): void {
+  private escape(event: KeyPress): void {
     const engine = this.completion?.engine;
     if (this.tab.phase === 'menu' && engine !== undefined) {
       // The menu closes and what was typed before it comes back.
@@ -703,18 +786,31 @@ export class PromptController {
 
   /**
    * A tapped or clicked chip: an edit goes on the line exactly as Tab would put it there, and
-   * focus stays on the prompt, so a phone's keyboard stays up; a starter runs; Stop and Cancel
-   * interrupt.
+   * focus stays on the prompt, so a phone's keyboard stays up; a chip that runs (a starter, a
+   * follow-up, a candidate that finishes the line) runs, and leaves the keyboard as it was; Stop
+   * and Cancel interrupt. With `insert` (a long press), a chip that runs only edits: its line
+   * goes on the prompt, and the keyboard opens to change it.
    */
-  choose(chip: Chip): void {
+  choose(chip: Chip, options: { readonly insert?: boolean } = {}): void {
     const action = chip.action;
+    const insert = options.insert === true;
     if (action.kind === 'apply') {
       const edit = this.completion?.engine.applyChip(chip) ?? null;
       this.resetTab();
+      if (action.run === true && !insert && chip.line !== undefined) {
+        this.submit(chip.line, 'chip');
+        this.focus();
+        return;
+      }
       if (edit !== null) this.write(edit, { force: true });
       this.input?.focus({ preventScroll: true });
     } else if (action.kind === 'run') {
       this.resetTab();
+      if (insert) {
+        if (chip.kind !== 'current') this.insert(action.line);
+        this.focus({ keyboard: true });
+        return;
+      }
       this.submit(action.line, 'chip');
       this.focus();
     } else {
@@ -842,13 +938,17 @@ export class PromptController {
     this.write({ text: '', cursor: 0 }, { replace: true, force: true });
     this.running = { line, prompt };
     // Inside the key press or tap: a command that opens a URL opens it now, while it may.
-    this.shell.preflight(line);
+    const preflight = this.shell.preflight(line);
     const run = ++this.runs;
     const handle = this.shell.start(line, origin);
     const settle = (): void => {
       if (run === this.runs && this.job === null) this.running = null;
     };
-    handle.done.then(settle, settle);
+    handle.done.then((result) => {
+      // What comes next follows the newest line only.
+      if (run === this.runs) this.last = { line, argv: preflight?.argv ?? null, status: result.status };
+      settle();
+    }, settle);
   }
 
   /**

@@ -1,4 +1,4 @@
-// sleep: pause for a while, as coreutils' sleep does. Ctrl+C (or Stop) ends it at once with 130.
+// sleep: pause for a while, as coreutils' sleep does. Ctrl+C (or ^C and cancel on a phone) ends it at once with 130.
 
 import { out } from '../../output/model';
 import { defineCommand, type CommandContext, type ExitCode } from '../../shell/types';
@@ -29,7 +29,7 @@ export default defineCommand({
   summary: 'delay for a specified amount of time',
   synopsis: ['sleep NUMBER[SUFFIX]...'],
   description:
-    "Pauses for NUMBER seconds; with several, for their sum. NUMBER may have a fraction. A SUFFIX of s, m, h or d means seconds, minutes, hours or days, and 'infinity' never ends. Ctrl+C, or Stop, ends it at once.",
+    "Pauses for NUMBER seconds; with several, for their sum. NUMBER may have a fraction. A SUFFIX of s, m, h or d means seconds, minutes, hours or days, and 'infinity' never ends. Ctrl+C ends it at once; on a phone, so do ^C and the cancel chip.",
   args: [{ name: 'NUMBER', source: { kind: 'free', placeholder: 'seconds' }, variadic: true }],
   loadingLabel: (argv) => `sleeping ${argv.slice(1).join(' ')}`.trimEnd(),
   examples: [

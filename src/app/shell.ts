@@ -15,6 +15,7 @@ import { createShell, type ScreenSink, type Shell, type TerminalInfo } from '../
 import { loginFiles } from '../shell/session';
 import type { CommandSpec } from '../shell/types';
 import { cathode, cathodeModeInfo, cathodeQuality, crtQualities, crtTier } from '../stores/cathode';
+import { hardwareKeyboard, keyBar, keyBarModes } from '../stores/prefs';
 import { screen as appScreen, type ScreenStore } from '../stores/screen';
 import { defaultTheme, theme, themes } from '../stores/theme';
 import { GUEST } from '../vfs/identity';
@@ -146,6 +147,9 @@ export function createAppShell(options: AppShellOptions): AppShell {
       cathodeQuality,
       cathodeQualities: crtQualities,
       crtTier,
+      keyBar,
+      keyBarModes,
+      hardwareKeyboard,
     }),
     screen: transcriptScreen(screen, options.banner, renderPrompt),
     ...(options.terminal ? { terminal: options.terminal } : {}),

@@ -46,6 +46,26 @@ export interface Viewport {
   readonly baseline: Baseline;
 }
 
+/** How the phone dock lays itself out for the visible height. */
+export type DockMode = 'full' | 'compact' | 'minimal';
+
+/** At least this tall: the dock's two rows, chips over keys. */
+export const DOCK_FULL_MIN_PX = 460;
+/** At least this tall: one row, three keys then the chips. Shorter: the keys only. */
+export const DOCK_COMPACT_MIN_PX = 300;
+
+/** The dock's layout for a visible height; full while the height is unknown (0). */
+export function dockMode(height: number): DockMode {
+  if (!(height > 0) || height >= DOCK_FULL_MIN_PX) return 'full';
+  return height >= DOCK_COMPACT_MIN_PX ? 'compact' : 'minimal';
+}
+
+/** What the rest of the app hears of the viewport: the visible height, and the keyboard. */
+export interface VisibleArea {
+  readonly height: number;
+  readonly keyboardOpen: boolean;
+}
+
 /** A shrink smaller than this is a toolbar showing or hiding, not a keyboard. */
 export const KEYBOARD_THRESHOLD_PX = 150;
 /** Further from 1 than this, the page is pinch-zoomed. */
@@ -132,6 +152,11 @@ export interface ViewportOptions {
    * with a touch screen; a desktop window made shorter is never a keyboard.
    */
   readonly isEditing?: () => boolean;
+  /**
+   * Hears each change of the visible height or the keyboard, and the first reading at once:
+   * from visualViewport, or the window's height where there is none. Not while pinch-zoomed.
+   */
+  readonly onChange?: (area: VisibleArea) => void;
 }
 
 /** Tracks the visual viewport until the returned function is called. */
@@ -146,6 +171,7 @@ export function startViewport(win: Window, options: ViewportOptions = {}): () =>
 
   let viewport = INITIAL_VIEWPORT;
   let written: ViewportState | null | undefined;
+  let heard: VisibleArea | null = null;
   let frame = 0;
   let timers: number[] = [];
   let stopped = false;
@@ -164,7 +190,13 @@ export function startViewport(win: Window, options: ViewportOptions = {}): () =>
     );
     const next = viewport.state;
     // Zoomed, the shell stays where it was; otherwise only a change is written.
-    if (next?.zoomed || sameState(next, written)) return;
+    if (next?.zoomed) return;
+    const area: VisibleArea = { height: next?.height ?? win.innerHeight, keyboardOpen: next?.keyboardOpen ?? false };
+    if (heard === null || heard.height !== area.height || heard.keyboardOpen !== area.keyboardOpen) {
+      heard = area;
+      options.onChange?.(area);
+    }
+    if (sameState(next, written)) return;
     written = next;
     applyViewport(root, next);
   };

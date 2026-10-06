@@ -110,6 +110,16 @@ export function keysHelp(options: { readonly touch?: boolean } = {}): Block[] {
   return blocks;
 }
 
+/**
+ * `help keys`, and `keys --help`: the keys, then, where `keys` is a command (the phone dock's key
+ * bar), its own help, so both say everything about the keys.
+ */
+export function keysTopic(options: { readonly touch?: boolean; readonly spec?: CommandSpec } = {}): Block[] {
+  const blocks = keysHelp(options);
+  if (options.spec !== undefined) blocks.push(out.lines([[]]), ...commandHelp(options.spec));
+  return blocks;
+}
+
 // ── --help ─────────────────────────────────────────────────────────────────────────────────
 
 function argUsage(arg: ArgSpec): string {

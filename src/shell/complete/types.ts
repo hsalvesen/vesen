@@ -145,15 +145,22 @@ export interface Ghost {
 
 export type PromptMode = 'edit' | 'busy' | 'secret' | 'search';
 
-export type ChipKind = CandidateKind | 'starter' | 'didyoumean' | 'control';
+/**
+ * A completion's kind, or: a starter command on an empty line, a follow-up after a run, a
+ * did-you-mean, the line itself when it is ready to run, or cancel (a running command) and Cancel (a password).
+ */
+export type ChipKind = CandidateKind | 'starter' | 'followup' | 'didyoumean' | 'current' | 'control';
 
 /**
  * What a chip does. Only trusted code makes these (02, section 6): candidates from the specs,
  * the files and history, never text parsed from output.
  */
 export type ChipAction =
-  /** Puts the candidate on the line exactly as Tab would. */
-  | { readonly kind: 'apply'; readonly result: CompletionResult; readonly candidate: Candidate }
+  /**
+   * Puts the candidate on the line exactly as Tab would. With `run`, a thumb's tap then runs the
+   * line, because the candidate finishes it: `theme set w` and wombat. A long press only edits.
+   */
+  | { readonly kind: 'apply'; readonly result: CompletionResult; readonly candidate: Candidate; readonly run?: boolean }
   /** Runs a line in one tap. */
   | { readonly kind: 'run'; readonly line: string }
   /** Stops the running command. */
@@ -174,6 +181,8 @@ export interface Chip {
   readonly swatch?: string;
   /** The candidate the Tab menu has on the line. */
   readonly selected?: boolean;
+  /** The whole line a tap runs, for a chip that runs one: its name for screen readers says it. */
+  readonly line?: string;
 }
 
 export interface ChipList {
@@ -188,6 +197,10 @@ export interface ChipInput {
   /** The completion of `state`; null before the engine has loaded. */
   readonly result: CompletionResult | null;
   readonly tab: TabState;
+  /**
+   * Chips for a thumb, in the phone dock: the starters and follow-ups on an empty line, a
+   * candidate that finishes the line runs it, and the line ready to run comes first.
+   */
   readonly touch: boolean;
   readonly registry: Pick<Registry, 'get' | 'list' | 'suggest'>;
   /** Command history, oldest first. */
@@ -196,6 +209,21 @@ export interface ChipInput {
   readonly max: number;
   /** The status of the last line, for a did-you-mean after 127. */
   readonly lastStatus?: ExitCode;
+  /** The line run last in this session, for its follow-ups and did-you-mean. */
+  readonly last?: LastRun | null;
+  /**
+   * What completion reads, for the chips that look further than the word under the cursor: a
+   * follow-up listing a folder, whether a line is ready to run, and which candidates finish it.
+   */
+  readonly env?: CompletionEnv;
+}
+
+/** A line that ran, as the chips after it see it. */
+export interface LastRun {
+  readonly line: string;
+  /** Its words, when it was one simple command made of plain words; null otherwise. */
+  readonly argv: readonly string[] | null;
+  readonly status: ExitCode;
 }
 
 // ── The engine, as the UI reaches it ────────────────────────────────────────────────────────

@@ -43,8 +43,8 @@
 
   /** The chip's name for screen readers: what a tap does, when that is more than its label says. */
   function nameOf(chip: Chip): string | undefined {
-    if (chip.kind === 'starter') return `Run ${chip.label}`;
     if (chip.kind === 'didyoumean') return `Did you mean ${chip.label}?`;
+    if (chip.action.kind === 'run') return `Run: ${chip.line ?? chip.action.line}`;
     return undefined;
   }
 

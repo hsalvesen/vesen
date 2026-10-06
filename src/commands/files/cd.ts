@@ -47,6 +47,8 @@ export default defineCommand({
     { line: 'cd /tmp; cd -', note: 'there, and back to the previous folder', offline: true },
   ],
   seeAlso: ['pwd', 'ls'],
+  // Arrived somewhere: see what is there.
+  next: ({ status }) => (status === 0 ? ['ls'] : []),
   async run(ctx) {
     if (ctx.args.length > 1) return ctx.fail('too many arguments');
     let typed = ctx.args[0];

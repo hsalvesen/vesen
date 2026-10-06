@@ -1,0 +1,274 @@
+import { expect, test, type Locator, type Page } from '@playwright/test';
+import { fakeVisualViewport } from './viewport';
+
+// The phone dock (docs/plan/04-phone-and-instagram.md, "Dock, chips and key bar" and "What
+// visitors get"; designs/phone-and-instagram.md, S5 and sections A to D; F067): chips that run or
+// build a line by tapping, a key bar that never takes focus from the prompt, a history sheet, and
+// a dock that rides above the keyboard without covering the prompt.
+
+const PHONES = ['iphone-instagram', 'pixel-7'];
+const isPhone = () => PHONES.includes(test.info().project.name);
+
+const prompt = (page: Page) => page.locator('input.command-input');
+const dock = (page: Page) => page.locator('.dock');
+const echoes = (page: Page) => page.locator('[role="log"] .command-input-display');
+const lastEntry = (page: Page) => page.locator('[role="log"] .entry').last();
+const chip = (page: Page, name: string) => dock(page).getByRole('option', { name, exact: true });
+const key = (page: Page, name: string) => dock(page).getByRole('button', { name, exact: true });
+
+/** Opens the terminal with the kernel, the completion engine and the dock loaded. */
+async function open(page: Page): Promise<void> {
+  await page.goto('/');
+  await expect(page.locator('[data-completion="ready"]')).toHaveCount(1);
+  await expect(chip(page, 'Run: help')).toBeVisible();
+}
+
+async function focusPrompt(page: Page): Promise<void> {
+  await prompt(page).tap();
+  await expect(prompt(page)).toBeFocused();
+}
+
+/** Holds a finger on `target` for `ms`, as a long press. */
+async function longPress(target: Locator, ms = 700): Promise<void> {
+  const box = await target.boundingBox();
+  if (!box) throw new Error('nothing to press');
+  const at = { clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, pointerType: 'touch', isPrimary: true, button: 0, pointerId: 7 };
+  await target.dispatchEvent('pointerdown', at);
+  await target.page().waitForTimeout(ms);
+  await target.dispatchEvent('pointerup', at);
+}
+
+async function noSidewaysScroll(page: Page): Promise<void> {
+  const widths = await page.evaluate(() => ({
+    page: document.documentElement.scrollWidth,
+    body: document.body.scrollWidth,
+    view: window.innerWidth,
+  }));
+  expect(widths.page).toBeLessThanOrEqual(widths.view);
+  expect(widths.body).toBeLessThanOrEqual(widths.view);
+}
+
+/**
+ * The dock never covers the prompt: the screen, which holds it, ends where the dock begins, and
+ * with the transcript at its end (where a long output may have left it further up), the prompt's
+ * input sits wholly above the dock, in view.
+ */
+async function promptAboveDock(page: Page): Promise<void> {
+  const boxes = await page.evaluate(() => {
+    const main = document.querySelector('main') as HTMLElement;
+    main.scrollTop = main.scrollHeight;
+    const box = (selector: string) => document.querySelector(selector)?.getBoundingClientRect().toJSON() as DOMRect;
+    return { input: box('input.command-input'), frame: box('.screen-frame'), dock: box('.dock'), height: window.innerHeight };
+  });
+  expect(boxes.frame.bottom).toBeLessThanOrEqual(boxes.dock.top + 0.5);
+  expect(boxes.input.bottom).toBeLessThanOrEqual(boxes.dock.top);
+  expect(boxes.input.top).toBeGreaterThanOrEqual(boxes.frame.top);
+  expect(boxes.dock.bottom).toBeLessThanOrEqual(boxes.height + 0.5);
+}
+
+for (const size of [
+  { width: 375, height: 812 },
+  { width: 375, height: 560 },
+]) {
+  test.describe(`the dock at ${size.width}x${size.height}`, { tag: '@smoke' }, () => {
+    test.use({ viewport: size });
+    test.beforeEach(() => {
+      test.skip(!isPhone(), 'a touch screen');
+    });
+
+    test('a starter chip runs help in one tap, without opening the keyboard', async ({ page }) => {
+      await open(page);
+      await expect(prompt(page)).not.toBeFocused();
+      await expect(key(page, 'Type a command')).toBeVisible();
+      const before = await echoes(page).count();
+      await chip(page, 'Run: help').tap();
+      await expect(echoes(page)).toHaveCount(before + 1);
+      await expect(lastEntry(page)).toContainText('help');
+      await expect(page.locator('main')).toContainText('fastfetch');
+      await expect(prompt(page)).not.toBeFocused();
+      // What follows help, one tap each.
+      await expect(chip(page, 'Run: cat README.md')).toBeVisible();
+      await noSidewaysScroll(page);
+    });
+
+    test("builds and runs theme set wombat by tapping chips after typing 'the'", async ({ page }) => {
+      await open(page);
+      await focusPrompt(page);
+      await prompt(page).fill('the');
+      await chip(page, 'Insert: theme').tap();
+      await expect(prompt(page)).toHaveValue('theme ');
+      await expect(prompt(page)).toBeFocused();
+      await chip(page, 'Insert: set').tap();
+      await expect(prompt(page)).toHaveValue('theme set ');
+      // Labelled with the word only, named with the whole line.
+      const wombat = chip(page, 'Run: theme set wombat');
+      await expect(wombat).toContainText('wombat');
+      await expect(wombat).not.toContainText('theme');
+      await wombat.tap();
+      await expect(lastEntry(page)).toContainText('theme set wombat');
+      await expect(lastEntry(page)).toContainText(/Theme set to wombat\./i);
+      await expect(prompt(page)).toHaveValue('');
+      // The keyboard stayed open throughout.
+      await expect(prompt(page)).toBeFocused();
+      await noSidewaysScroll(page);
+    });
+
+    test('tab completes, as the key does, and keeps focus in the prompt', async ({ page }) => {
+      await open(page);
+      await focusPrompt(page);
+      await prompt(page).fill('cat docu');
+      await key(page, 'Tab: complete').tap();
+      await expect(prompt(page)).toHaveValue('cat documents/');
+      await expect(prompt(page)).toBeFocused();
+      // A folder offers what is inside it next.
+      await expect(chip(page, 'Insert: linux.txt')).toBeVisible();
+      await chip(page, 'Insert: linux.txt').tap();
+      await expect(prompt(page)).toHaveValue('cat documents/linux.txt ');
+      await chip(page, 'Run: cat documents/linux.txt').tap();
+      await expect(lastEntry(page)).toContainText('Linux');
+      await expect(prompt(page)).toBeFocused();
+    });
+
+    test('holding ↑ opens the history sheet; a tap there puts the line at the prompt', async ({ page }) => {
+      await open(page);
+      const before = await echoes(page).count();
+      await chip(page, 'Run: ls').tap();
+      await expect(echoes(page)).toHaveCount(before + 1);
+      await focusPrompt(page);
+      await longPress(key(page, 'Previous command (hold for history)'));
+      const sheet = page.getByRole('dialog', { name: 'History' });
+      await expect(sheet).toBeVisible();
+      await expect(sheet.getByRole('button', { name: 'Insert: ls' })).toBeFocused();
+      await sheet.getByRole('button', { name: 'Insert: ls' }).tap();
+      await expect(sheet).toHaveCount(0);
+      await expect(prompt(page)).toHaveValue('ls');
+      await expect(prompt(page)).toBeFocused();
+      // Escape closes it too.
+      await longPress(key(page, 'Previous command (hold for history)'));
+      await expect(sheet).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(sheet).toHaveCount(0);
+    });
+
+    test('never covers the prompt, open or closed, and rides above a keyboard', async ({ page }) => {
+      await open(page);
+      await promptAboveDock(page);
+      for (const line of ['help', 'ls -a', 'theme ls']) {
+        await focusPrompt(page);
+        await prompt(page).fill(line);
+        await prompt(page).press('Enter');
+        await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
+      }
+      await expect(dock(page).locator('.key-bar')).toBeVisible();
+      await promptAboveDock(page);
+      await noSidewaysScroll(page);
+      await prompt(page).evaluate((input) => input.blur());
+      await expect(key(page, 'Type a command')).toBeVisible();
+      await promptAboveDock(page);
+    });
+
+    test('while sleep 5 runs, the one cancel chip stops it with ^C', async ({ page }) => {
+      await open(page);
+      await focusPrompt(page);
+      await prompt(page).fill('sleep 5');
+      await prompt(page).press('Enter');
+      const cancel = chip(page, 'Cancel the running command (Control C)');
+      await expect(cancel).toBeVisible();
+      await expect(dock(page).getByRole('option')).toHaveCount(1);
+      const height = await cancel.evaluate((element) => element.getBoundingClientRect().height);
+      expect(height).toBeGreaterThanOrEqual(44);
+      await expect(key(page, 'Control C: cancel')).toHaveClass(/emphasis/);
+      const started = Date.now();
+      await cancel.tap();
+      await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
+      expect(Date.now() - started).toBeLessThan(4000);
+      await expect(lastEntry(page)).toContainText('^C');
+      await expect(prompt(page)).toBeFocused();
+    });
+  });
+}
+
+test.describe('the dock on a short screen', { tag: '@smoke' }, () => {
+  test.beforeEach(() => {
+    test.skip(!isPhone(), 'a touch screen');
+  });
+
+  test('every key is at least 44 by 44 px, in every layout', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 560 });
+    await open(page);
+    const sizes = () =>
+      dock(page)
+        .locator('.key')
+        .evaluateAll((keys) => keys.map((element) => element.getBoundingClientRect()).map(({ width, height }) => ({ width, height })));
+    for (const { width, height } of await sizes()) {
+      expect(width).toBeGreaterThanOrEqual(44);
+      expect(height).toBeGreaterThanOrEqual(44);
+    }
+    await focusPrompt(page);
+    await key(page, 'Symbols').tap();
+    await expect(key(page, 'Pipe')).toBeVisible();
+    for (const { width, height } of await sizes()) {
+      expect(width).toBeGreaterThanOrEqual(44);
+      expect(height).toBeGreaterThanOrEqual(44);
+    }
+    await key(page, 'Pipe').tap();
+    await expect(prompt(page)).toHaveValue('|');
+    await expect(prompt(page)).toBeFocused();
+    await noSidewaysScroll(page);
+  });
+
+  test('rides directly above the keyboard, in one row when the keyboard leaves little room', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await fakeVisualViewport(page);
+    await open(page);
+    await focusPrompt(page);
+    const dockBottom = () => dock(page).evaluate((element) => element.getBoundingClientRect().bottom);
+    for (const [visible, mode] of [
+      [520, 'full'],
+      [400, 'compact'],
+    ] as const) {
+      await page.evaluate((height) => window.__vv?.set({ height }), visible);
+      await expect(dock(page)).toHaveAttribute('data-dock-mode', mode);
+      await expect.poll(dockBottom).toBeCloseTo(visible, 0);
+      await promptAboveDock(page);
+    }
+    // The keyboard goes: the whole screen again, and the closed bar.
+    await prompt(page).evaluate((input) => input.blur());
+    await page.evaluate(() => window.__vv?.set({ height: 812 }));
+    await expect(key(page, 'Type a command')).toBeVisible();
+    await expect.poll(dockBottom).toBeCloseTo(812, 0);
+  });
+
+  test('lays itself out in one row when little is visible, and keys only when less is', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 420 });
+    await open(page);
+    await focusPrompt(page);
+    await expect(dock(page)).toHaveAttribute('data-dock-mode', 'compact');
+    await expect(dock(page).locator('.one-row .key')).toHaveCount(3);
+    await promptAboveDock(page);
+    await page.setViewportSize({ width: 375, height: 280 });
+    await expect(dock(page)).toHaveAttribute('data-dock-mode', 'minimal');
+    await expect(dock(page).locator('.chip-row')).toHaveCount(0);
+    await promptAboveDock(page);
+  });
+});
+
+test.describe('the dock on a desktop', { tag: '@smoke' }, () => {
+  test.beforeEach(() => {
+    test.skip(isPhone(), 'a mouse');
+  });
+
+  test('is not there, unless asked for with ?dock=1', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('[data-completion="ready"]')).toHaveCount(1);
+    await expect(dock(page)).toHaveCount(0);
+    await page.goto('/?dock=1');
+    await expect(chip(page, 'Run: help')).toBeVisible();
+    // A click on a key keeps the focus, and the line, in the prompt.
+    await expect(prompt(page)).toBeFocused();
+    await page.keyboard.type('theme s');
+    await key(page, 'Tab: complete').click();
+    await expect(prompt(page)).toHaveValue('theme set ');
+    await expect(prompt(page)).toBeFocused();
+  });
+});

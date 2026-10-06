@@ -125,6 +125,37 @@ describe('appearance', () => {
     return { theme, cathode, cathodeQuality, crtTier, appearance };
   };
 
+  it('reads and sets the key bar, which a hardware keyboard hides under auto', () => {
+    const { appearance } = make();
+    // Without the stores, the bar is auto and cannot be changed.
+    expect(appearance.keyBar()).toEqual({ mode: 'auto', hardware: false, shown: true });
+    expect(appearance.setKeyBar('on')).toBe(false);
+
+    const keyBar = writable<'auto' | 'on' | 'off'>('auto');
+    const hardwareKeyboard = writable(false);
+    const first = themes[0];
+    if (first === undefined) throw new Error('no themes');
+    const keys = createAppearance({
+      theme: writable(first),
+      themes,
+      defaultTheme: first,
+      cathode: writable('off'),
+      cathodeModes: [{ name: 'off', summary: 'none' }],
+      keyBar,
+      keyBarModes: ['auto', 'on', 'off'],
+      hardwareKeyboard,
+    });
+    expect(keys.keyBarModes()).toEqual(['auto', 'on', 'off']);
+    hardwareKeyboard.set(true);
+    expect(keys.keyBar()).toEqual({ mode: 'auto', hardware: true, shown: false });
+    expect(keys.setKeyBar(' ON ')).toBe(true);
+    expect(get(keyBar)).toBe('on');
+    expect(keys.keyBar()).toEqual({ mode: 'on', hardware: true, shown: true });
+    expect(keys.setKeyBar('sometimes')).toBe(false);
+    expect(keys.setKeyBar('off')).toBe(true);
+    expect(keys.keyBar().shown).toBe(false);
+  });
+
   it('sets the theme by name, ignoring case', () => {
     const { theme, appearance } = make();
     expect(appearance.setTheme('WOMBAT')).toBe(true);

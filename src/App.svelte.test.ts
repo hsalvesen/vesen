@@ -81,6 +81,23 @@ describe('App', () => {
   });
 
 
+  it('with ?dock=1, draws the chips in the dock under the screen, not under the prompt', async () => {
+    window.history.replaceState(null, '', '/?dock=1');
+    try {
+      const { container } = renderApp();
+      const slot = container.querySelector('.dock-slot');
+      expect(container.querySelector('.shell')?.classList.contains('has-dock')).toBe(true);
+      await vi.waitFor(() => expect(slot?.querySelector('.dock')).not.toBeNull());
+      // The dock is outside <main>, so the vintage CRT's filter there never captures it.
+      expect(container.querySelector('main .dock')).toBeNull();
+      await vi.waitFor(() => expect(slot?.querySelectorAll('[role="option"]').length).toBeGreaterThan(0));
+      expect(container.querySelector('[data-prompt-area] [role="listbox"]')).toBeNull();
+      expect(slot?.querySelector('[role="toolbar"]')).not.toBeNull();
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
   it('cancels a running command when the processing line is tapped', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
@@ -265,9 +282,11 @@ describe('Tab completion and the completion row', () => {
     vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('coarse'), media: query, addEventListener() {}, removeEventListener() {} }));
     await ready();
     await settle();
+    // In the dock, under the screen.
+    await vi.waitFor(() => expect(document.querySelector('.dock-slot [role="listbox"]')).not.toBeNull());
     const names = screen.getAllByRole('option').map((o) => o.getAttribute('aria-label'));
-    expect(names).toEqual(['Run help', 'Run cat README.md', 'Run fastfetch', 'Run ls', 'Run theme ls', 'Run cathode ls']);
-    await fireEvent.click(screen.getByRole('option', { name: 'Run ls' }));
+    expect(names).toEqual(['Run: help', 'Run: cat README.md', 'Run: fastfetch', 'Run: ls', 'Run: theme ls', 'Run: cathode ls']);
+    await fireEvent.click(screen.getByRole('option', { name: 'Run: ls' }));
     await vi.waitFor(() => expect(transcript.entries().map((e) => e.line)).toEqual(['ls']));
     expect(document.activeElement).not.toBe(promptBox());
   });

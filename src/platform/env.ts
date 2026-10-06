@@ -27,3 +27,19 @@ export function coarsePointer(win: Pick<Window, 'matchMedia'> | undefined): bool
     return false;
   }
 }
+
+/**
+ * The phone dock shows on a touch screen, or anywhere with ?dock=1 (to work on it with a mouse).
+ * ?dock=0 turns it off.
+ */
+export function dockWanted(win: (Pick<Window, 'matchMedia'> & { readonly location?: { readonly search: string } }) | undefined): boolean {
+  let asked: string | null = null;
+  try {
+    asked = new URLSearchParams(win?.location?.search ?? '').get('dock');
+  } catch {
+    asked = null;
+  }
+  if (asked === '1') return true;
+  if (asked === '0') return false;
+  return coarsePointer(win);
+}

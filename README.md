@@ -45,6 +45,8 @@ Type `help` in the terminal to see every command by category, `man <command>` fo
 
 At the prompt, Tab completes, ↑ and ↓ step through the history lines that start with what is typed, Ctrl+R searches the history, and grey text offers the rest of a past line (→ takes it). While the prompt has focus, the readline keys edit the line: Ctrl+A, E, U, K, Y, L and D everywhere, Ctrl+W, P, N, F, B and T on a Mac, and Alt+B, F, D, Y, . and Backspace. Ctrl+C copies selected text, and otherwise stops the running command. Escape then Tab leaves the terminal for the rest of the page.
 
+On a phone, a dock rides above the keyboard. Its chips run a starter command in one tap without opening the keyboard, offer what comes next after a command (every theme after `theme ls`), and build a line by tapping: a completion goes on the line as Tab would put it, and one that finishes the line runs it. Holding a chip that runs puts it at the prompt instead. The key bar has tab, ↑, ↓, ^C, clear, ••• for symbols and ⌄ to put the keyboard away; holding ↑ opens a list of past commands. A hardware keyboard hides the key bar; `keys on|off|auto` chooses. Open the page with `?dock=1` to see the dock on a desktop.
+
 ## Themes
 
 ![themes](/docs/themes/themes.gif)
@@ -61,7 +63,7 @@ src/
 ├── app/bootstrap.ts              # Composition root: host redirect, storage and its migrations, theme and CRT
 │                                 # applied to the page, stale-chunk reload, the banner
 ├── App.svelte                    # The app shell: the screen frame (transcript, prompt, new-output pill,
-│                                 # CRT overlay) above an empty slot for the phone dock
+│                                 # CRT overlay) above the phone dock, which loads in its own chunk
 ├── app.css                       # Imports the style sheets below
 ├── styles/                       # tokens.css (Vesen Mono, --term-font, --term-fs, --term-lh),
 │                                 # terminal.css (base type, the .art class for banners, logos and charts),
@@ -101,7 +103,7 @@ src/
 │                                 # stat, cd, pwd), text/ (echo, printf), shell/ (help, man, whatis,
 │                                 # apropos, history, clear, reset, alias, unalias, export, unset, env,
 │                                 # printenv, set, source, type, which, command, true, false, test, exit,
-│                                 # login, sleep), system/ (date); lib/ is what they share, the banner
+│                                 # login, sleep), system/ (date, keys); lib/ is what they share, the banner
 │                                 # included; legacy.ts wraps the commands not yet ported
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette
@@ -112,7 +114,8 @@ src/
 │                                 # head.ts (palette colours, theme-color, favicon), theme-apply.ts (the
 │                                 # role colours), perf.ts (the CRT tier: full, lite or off, and why),
 │                                 # crt.ts (CRT classes), measure.ts (--input-scale for the 16px touch
-│                                 # input), viewport.ts (--app-h, --app-top and --kb-h from visualViewport)
+│                                 # input), viewport.ts (--app-h, --app-top and --kb-h from visualViewport,
+│                                 # and the dock's layout for the visible height)
 ├── services/
 │   ├── net.ts                    # fetch with timeouts, cancelling, byte caps and typed network errors
 │   ├── storage.ts                # localStorage and sessionStorage with a memory fallback; one-time migrations
@@ -121,13 +124,17 @@ src/
 │   ├── weather/                  # Weather's sources (forecast, geocoding, IP location), place resolution,
 │   │                             # units and WMO codes, and the view model a weather card draws
 │   └── market/contract.ts        # The stock Worker's wire format, shared by the Worker and the app
-├── stores/                       # Svelte stores, pure state: screen (the transcript), term, theme, cathode
+├── stores/                       # Svelte stores, pure state: screen (the transcript), term, theme, cathode,
+│                                 # prefs (the key bar setting), viewport (the visible height)
 ├── ui/
 │   ├── prompt/                   # The prompt: promptController.svelte.ts (the line, its keys, Tab,
 │   │                             # history, search, type-ahead, ^C, reads and secrets), LineEditor.svelte
 │   │                             # (a real input; with a mouse, over a mirror with a block cursor and
 │   │                             # the ghost) and PromptLine.svelte (PS1, the running line, the status)
 │   ├── CompletionRow.svelte      # The chips under the prompt, and Tab's list
+│   ├── dock/                     # The phone dock: Dock.svelte (its layouts), ChipRow.svelte, KeyBar.svelte
+│   │                             # (keys.ts says what each key does), HistorySheet.svelte, press.ts (tap,
+│   │                             # hold, long press and repeat, never taking focus from the prompt)
 │   ├── Transcript.svelte         # Each entry: the prompt it was typed at, the line, its output
 │   ├── Prompt.svelte             # guest@vesen:~/documents$, live under the transcript and as each entry's snapshot
 │   ├── OutputView.svelte         # Draws output blocks with text interpolation only

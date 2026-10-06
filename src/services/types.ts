@@ -223,7 +223,17 @@ export interface CathodeTier {
   readonly quality: string;
 }
 
-/** Theme and CRT state, over the stores. Commands reach appearance only through this. */
+/** The phone dock's key bar (`keys`): the setting, and what it comes to on this device. */
+export interface KeyBarState {
+  /** auto, on or off. */
+  readonly mode: string;
+  /** A hardware keyboard has been used on this touch screen, which hides the bar under auto. */
+  readonly hardware: boolean;
+  /** The bar shows above a soft keyboard: on, or auto with no hardware keyboard seen. */
+  readonly shown: boolean;
+}
+
+/** Theme, CRT and key bar state, over the stores. Commands reach appearance only through this. */
 export interface Appearance {
   themes(): readonly ThemeInfo[];
   currentTheme(): string;
@@ -239,6 +249,12 @@ export interface Appearance {
   setCathodeQuality(quality: string): boolean;
   /** The tier in force, and why. */
   cathodeTier(): CathodeTier;
+  /** The phone dock's key bar. */
+  keyBar(): KeyBarState;
+  /** The key bar settings: auto, on, off. */
+  keyBarModes(): readonly string[];
+  /** Case-insensitive; false when it is not a setting. Saved, and the dock follows at once. */
+  setKeyBar(mode: string): boolean;
   /** `reset`: restores the default theme, as reset always has; the CRT mode stays the visitor's choice. */
   resetDefaults(): void;
 }

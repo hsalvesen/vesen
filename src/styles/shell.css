@@ -6,7 +6,9 @@
    platform/viewport.ts measures into --app-h and --app-top; without them it
    falls back to 100dvh, then 100vh. Inside it, App.svelte's .shell is a
    column: the screen frame (the transcript and the CRT overlay) and the dock
-   slot. The transcript, <main>, is the only thing that scrolls.
+   slot, so the phone dock sits right above the soft keyboard and the screen
+   gives it room: it never covers the prompt. The transcript, <main>, is the
+   only thing that scrolls.
    ========================================================================== */
 
 html,
@@ -83,6 +85,12 @@ body {
 
 .dock-slot {
   flex: none;
+  min-width: 0;
+}
+
+/* The phone dock pads itself for the home indicator, so it reaches the bottom edge. */
+.shell.has-dock {
+  padding-bottom: 0;
 }
 
 @media (min-width: 640px) {

@@ -46,6 +46,21 @@ export interface ValueContext {
   readonly appearance?: Appearance;
 }
 
+/** What a spec's next() may read when it makes the chips that follow a run. */
+export interface NextContext extends ValueContext {
+  /**
+   * The entries of a folder, relative to the working folder or absolute, `~` included; null when
+   * it cannot be listed. Never throws.
+   */
+  readonly list?: (path: string) => readonly { readonly name: string; readonly type: 'file' | 'dir' }[] | null;
+}
+
+/**
+ * A word that may go into a tappable line as it is: no space, quote, `$`, glob, `;` or `|`, and
+ * no leading `-` or `~` that would make it a flag or a home folder (02, section 6).
+ */
+export const PLAIN_ARG = /^[\w.,:@%+=/][\w.,:@%+=/~-]*$/;
+
 /** Where completion finds values for an argument or a flag value. */
 export type ValueSource =
   | { readonly kind: 'path'; readonly accept?: 'any' | 'file' | 'dir' | 'exec'; readonly includeParent?: boolean }
@@ -162,8 +177,12 @@ export interface CommandSpec {
 
   /** A URL to open synchronously inside the Enter or tap gesture, before the job starts. */
   opens?(argv: readonly string[]): string | null;
-  /** Follow-up chip lines after a run. */
-  next?(result: { status: ExitCode; argv: readonly string[] }): string[];
+  /**
+   * Follow-up chip lines after a run, each a line to run in one tap. Every word placed in a line
+   * from data (a file or theme name) must match a plain pattern, so no tap can carry a quote,
+   * a `$` or a `;` (02, section 6). Must not throw.
+   */
+  next?(result: { status: ExitCode; argv: readonly string[] }, context?: NextContext): string[];
   /** For values a ValueSource cannot describe. */
   readonly complete?: Completer;
 

@@ -13,7 +13,7 @@ theme    change the colour theme
 Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
 Text: echo head printf wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
-System: date
+System: date keys
 Network: fetch
 
 help --all lists every command with what it does.
@@ -28,7 +28,7 @@ theme    change the colour theme
 Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
 Text: echo head printf wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
-System: date
+System: date keys
 Network: fetch
 
 help --all lists every command with what it does.
@@ -42,7 +42,7 @@ banner   show the welcome banner        cathode  trial a retro CRT display      
 Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
 Text: echo head printf wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
-System: date
+System: date keys
 Network: fetch
 
 help --all lists every command with what it does.
@@ -57,7 +57,7 @@ theme    change the colour theme
 Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
 Text: echo head printf wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
-System: date
+System: date keys
 Network: fetch
 
 help --all lists every command with what it does.
@@ -123,6 +123,7 @@ Examples:
 See also: pwd, ls
 ? 0
 $ help keys
+[terminal]
 Enter                                    run the line
 Tab                                      complete; again to list the choices, again to step through them
 Shift+Tab                                step back through the choices
@@ -158,6 +159,71 @@ Escape, Ctrl+G                           in a search: put back what you typed
 Escape, Tab                              leave the terminal for the rest of the page
 
 !! runs the last line again, and !n line n of history.
+
+  keys - show or hide the key bar on touch screens
+  On a touch screen, a bar of keys rides above the keyboard: tab, ↑ and ↓ for history (hold ↑ for the list), ^C, clear, ••• for symbols, and ⌄ to put the keyboard away. With 'auto', the default, it goes once a hardware keyboard is used, and the suggestion chips stay; 'on' always shows it and 'off' never does. The setting is remembered. With no argument, says which is in force.
+[Usage:]
+  keys
+  keys auto|on|off
+
+  Options:
+        --help  display the keys and this help, and exit
+[Examples:]
+    keys  which is in force
+    keys on  always show the key bar
+    keys auto  the default
+See also: help
+? 0
+[pipe]
+Enter                                    run the line
+Tab                                      complete; again to list the choices, again to step through them
+Shift+Tab                                step back through the choices
+Ctrl+C                                   stop the running command, or abandon the line; with text selected, copy it
+Escape                                   stop the running command; in the choices, put back what you typed
+Ctrl+L                                   clear the screen, keeping the line
+Ctrl+D                                   on an empty line, exit; otherwise delete the character under the cursor
+→                                        at the end of the line, take the grey suggestion
+Alt+→                                    at the end of the line, take one word of it
+Ctrl+A, Home                             go to the start of the line
+Ctrl+E, End                              go to the end of the line
+Ctrl+B (Mac)                             back one character
+Ctrl+F (Mac)                             forward one character
+Alt+B, Alt+←                             back one word
+Alt+F, Alt+→                             forward one word
+Ctrl+U                                   cut to the start of the line
+Ctrl+K                                   cut to the end of the line
+Ctrl+W (Mac)                             cut back to the last space
+Alt+Backspace, Ctrl+Backspace (not Mac)  cut the word before the cursor
+Alt+D                                    cut the word after the cursor
+Ctrl+Y                                   paste what was cut last
+Alt+Y                                    after Ctrl+Y, swap in what was cut before it
+Ctrl+T (Mac)                             swap the two characters at the cursor
+Alt+.                                    insert the last word of the line before; again for older lines
+↑, Ctrl+P (Mac)                          an older line from history, starting with what is typed
+↓, Ctrl+N (Mac)                          a newer line; past the newest, what you were typing
+Ctrl+R                                   search the history: (reverse-i-search)
+Enter                                    in a search: run the line found
+Ctrl+R                                   in a search: an older line
+Ctrl+S                                   in a search: a newer line
+Escape, Ctrl+G                           in a search: put back what you typed
+← → ↑ ↓                                  in a search: edit the line found
+Escape, Tab                              leave the terminal for the rest of the page
+
+!! runs the last line again, and !n line n of history.
+
+keys - show or hide the key bar on touch screens
+On a touch screen, a bar of keys rides above the keyboard: tab, ↑ and ↓ for history (hold ↑ for the list), ^C, clear, ••• for symbols, and ⌄ to put the keyboard away. With 'auto', the default, it goes once a hardware keyboard is used, and the suggestion chips stay; 'on' always shows it and 'off' never does. The setting is remembered. With no argument, says which is in force.
+Usage:
+keys
+keys auto|on|off
+
+Options:
+      --help  display the keys and this help, and exit
+Examples:
+  keys  which is in force
+  keys on  always show the key bar
+  keys auto  the default
+See also: help
 ? 0
 $ help nope
 ! help: no help topics match 'nope'

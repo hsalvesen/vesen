@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { fakeVisualViewport } from './viewport';
 
 // The app shell, viewport, focus and scroll (docs/plan/04, slice "App shell, viewport, focus and
 // scroll").
@@ -57,50 +58,6 @@ async function scrollToTop(page: Page): Promise<void> {
   await page.locator('main').evaluate((main) => {
     main.dispatchEvent(new WheelEvent('wheel', { deltaY: -main.scrollHeight, bubbles: true }));
     main.scrollTop = 0;
-  });
-}
-
-declare global {
-  interface Window {
-    /** Moves the stand-in visualViewport installed by fakeVisualViewport. */
-    __vv?: { set(next: { height?: number; offsetTop?: number }): void };
-  }
-}
-
-/** Replaces window.visualViewport, before the app starts, with one the test moves by hand. */
-async function fakeVisualViewport(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    const events = new EventTarget();
-    let height: number | null = null;
-    let offsetTop = 0;
-    const visual = {
-      get height() {
-        return height ?? window.innerHeight;
-      },
-      get width() {
-        return window.innerWidth;
-      },
-      get offsetTop() {
-        return offsetTop;
-      },
-      get pageTop() {
-        return offsetTop;
-      },
-      offsetLeft: 0,
-      pageLeft: 0,
-      scale: 1,
-      addEventListener: events.addEventListener.bind(events),
-      removeEventListener: events.removeEventListener.bind(events),
-      dispatchEvent: events.dispatchEvent.bind(events),
-    };
-    Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => visual });
-    window.__vv = {
-      set(next) {
-        if (next.height !== undefined) height = next.height;
-        if (next.offsetTop !== undefined) offsetTop = next.offsetTop;
-        events.dispatchEvent(new Event('resize'));
-      },
-    };
   });
 }
 

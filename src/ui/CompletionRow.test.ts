@@ -59,7 +59,7 @@ describe('CompletionRow', () => {
     render(CompletionRow, {
       props: { chips: [chip('help', { kind: 'starter', action: { kind: 'run', line: 'help' } }), chip('pwd', { kind: 'didyoumean', action: { kind: 'run', line: 'pwd' } })] },
     });
-    expect(screen.getByRole('option', { name: 'Run help' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Run: help' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Did you mean pwd?' })).toBeInTheDocument();
   });
 

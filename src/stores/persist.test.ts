@@ -141,3 +141,45 @@ describe('persistCathode', () => {
     expect([get(fresh.cathode), get(fresh.cathodeQuality)]).toEqual(['scanlines', 'off']);
   });
 });
+
+describe('persistPrefs', () => {
+  const PREFS = STORAGE_KEYS.prefs.key;
+
+  it('restores the key bar setting, and saves a change beside the other preferences', async () => {
+    const { keyBar, persistPrefs } = await import('./prefs');
+    const { storage, items } = storageWith({ [PREFS]: JSON.stringify({ keys: 'off', bell: 'visual' }) });
+    const stop = persistPrefs(storage.local);
+    expect(get(keyBar)).toBe('off');
+    // Restoring writes nothing.
+    expect(JSON.parse(items.get(PREFS) ?? '{}')).toEqual({ keys: 'off', bell: 'visual' });
+    keyBar.set('on');
+    expect(JSON.parse(items.get(PREFS) ?? '{}')).toEqual({ keys: 'on', bell: 'visual' });
+    stop();
+    keyBar.set('auto');
+    expect(JSON.parse(items.get(PREFS) ?? '{}').keys).toBe('on');
+  });
+
+  it('keeps auto for anything unreadable, and nothing is saved until the visitor chooses', async () => {
+    const { keyBar, persistPrefs } = await import('./prefs');
+    for (const raw of ['not json', '[1]', JSON.stringify({ keys: 'sometimes' })]) {
+      const { storage, items } = storageWith({ [PREFS]: raw });
+      persistPrefs(storage.local)();
+      expect(get(keyBar), raw).toBe('auto');
+      expect(items.get(PREFS)).toBe(raw);
+    }
+  });
+
+  it('works with storage blocked, in memory', async () => {
+    const { keyBar, persistPrefs } = await import('./prefs');
+    const { storage } = storageWith({}, true);
+    const stop = persistPrefs(storage.local);
+    keyBar.set('off');
+    expect(get(keyBar)).toBe('off');
+    stop();
+  });
+
+  it('shows the key bar unless it is off, or auto after a hardware keyboard', async () => {
+    const { keyBarShown } = await import('./prefs');
+    expect([keyBarShown('auto', false), keyBarShown('auto', true), keyBarShown('on', true), keyBarShown('off', false)]).toEqual([true, false, true, false]);
+  });
+});

@@ -190,6 +190,8 @@ function classify(input: readonly string[], word: CursorWord, env: CompletionEnv
   let sub: string | undefined;
   let subSpec: SubcommandSpec | undefined;
   const flags = (): FlagSpec[] => [...(spec.flags ?? []), ...(subSpec?.flags ?? [])];
+  // A subcommand takes only its own operands: `theme ls` takes none, so offers no theme names.
+  const operands = (): readonly ArgSpec[] => (sub === undefined ? (spec.args ?? []) : (subSpec?.args ?? []));
   const used = new Set<FlagSpec>();
   let positional = 0;
   let endOfOptions = false;
@@ -217,7 +219,7 @@ function classify(input: readonly string[], word: CursorWord, env: CompletionEnv
       subSpec = spec.subcommands[w];
       continue;
     }
-    if (argFor(subSpec?.args ?? spec.args ?? [], positional, w).reenter && depth < MAX_DEPTH) {
+    if (argFor(operands(), positional, w).reenter && depth < MAX_DEPTH) {
       return classify(words.slice(i), word, env, depth + 1);
     }
     positional += 1;
@@ -240,7 +242,7 @@ function classify(input: readonly string[], word: CursorWord, env: CompletionEnv
   const subcommands = spec.subcommands === undefined ? [] : Object.keys(spec.subcommands);
   if (positional === 0 && sub === undefined && subcommands.length > 0) return { ...base, slot: 'subcommand', argIndex: 0 };
 
-  const target = argFor(subSpec?.args ?? spec.args ?? [], positional, word.value);
+  const target = argFor(operands(), positional, word.value);
   if (target.reenter && depth < MAX_DEPTH) return classify([], word, env, depth + 1);
   if (target.arg === undefined) return { ...base, slot: 'none', argIndex: positional };
   return { ...base, slot: 'arg', argIndex: positional, source: target.arg.source, valueName: target.arg.name };

@@ -9,7 +9,7 @@ describe('the command catalogue', () => {
     // Each port adds one, and this list grows.
     expect(specFiles().map((found) => found.name).sort()).toEqual([
       'alias', 'apropos', 'banner', 'cat', 'cathode', 'cd', 'clear', 'command', 'cp', 'date', 'echo', 'env', 'exit', 'export',
-      'false', 'help', 'history', 'ln', 'login', 'ls', 'man', 'mkdir', 'mv', 'printenv', 'printf', 'pwd', 'reset', 'rm',
+      'false', 'help', 'history', 'keys', 'ln', 'login', 'ls', 'man', 'mkdir', 'mv', 'printenv', 'printf', 'pwd', 'reset', 'rm',
       'rmdir', 'set', 'sleep', 'source', 'stat', 'sudo', 'test', 'theme', 'touch', 'true', 'type', 'unalias', 'unset', 'whatis',
       'which',
     ]);

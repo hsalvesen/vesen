@@ -37,7 +37,7 @@ describe('stores', () => {
 
     vi.resetModules();
     const stores = import.meta.glob(['./*.ts', '!./*.test.ts']);
-    expect(Object.keys(stores).sort()).toEqual(['./cathode.ts', './screen.ts', './term.ts', './theme.ts']);
+    expect(Object.keys(stores).sort()).toEqual(['./cathode.ts', './prefs.ts', './screen.ts', './term.ts', './theme.ts', './viewport.ts']);
     for (const load of Object.values(stores)) await expect(load()).resolves.toBeTypeOf('object');
 
     expect(touched).toEqual([]);

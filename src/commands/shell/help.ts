@@ -3,7 +3,7 @@
 // help never disagrees with the commands (F042, F043).
 
 import { out } from '../../output/model';
-import { defineCommand } from '../../shell/types';
+import { defineCommand, PLAIN_ARG } from '../../shell/types';
 
 export default defineCommand({
   name: 'help',
@@ -24,6 +24,14 @@ export default defineCommand({
     { line: 'help keys', note: 'the keys', offline: true },
   ],
   seeAlso: ['man', 'whatis', 'apropos'],
+  // A few places to start after the index; a command's manual after its help.
+  next: ({ status, argv }) => {
+    if (status !== 0) return [];
+    const topics = argv.slice(1).filter((word) => !word.startsWith('-'));
+    if (topics.length === 0) return ['cat README.md', 'ls', 'fastfetch', 'theme ls', 'man ls'];
+    const [topic] = topics;
+    return topics.length === 1 && topic !== undefined && topic !== 'keys' && PLAIN_ARG.test(topic) ? [`man ${topic}`] : [];
+  },
   async run(ctx) {
     const help = await import('../../shell/help');
     if (ctx.args.length === 0) {
@@ -33,7 +41,8 @@ export default defineCommand({
     let status = 0;
     for (const topic of ctx.args) {
       if (topic === 'keys') {
-        for (const block of help.keysHelp({ touch: ctx.tty.touch })) await ctx.stdout.block(block);
+        const keys = ctx.shell.registry.get('keys');
+        for (const block of help.keysTopic({ touch: ctx.tty.touch, ...(keys === undefined ? {} : { spec: keys }) })) await ctx.stdout.block(block);
         continue;
       }
       const spec = ctx.shell.registry.get(topic);

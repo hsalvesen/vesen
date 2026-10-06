@@ -1,14 +1,16 @@
 <!--
-  The app shell: a column of the screen and, below it, the dock (empty until the phone dock
-  lands). The screen frame holds the scrolling transcript, the new-output pill and the CRT
+  The app shell: a column of the screen and, below it, the phone dock (on a touch screen, or with
+  ?dock=1). The screen frame holds the scrolling transcript, the new-output pill and the CRT
   overlay, so the overlay covers the terminal and never the dock. The shell itself is sized to
-  the visible viewport by styles/shell.css and platform/viewport.ts.
+  the visible viewport by styles/shell.css and platform/viewport.ts, so the dock rides on top of
+  the soft keyboard. The dock loads in its own chunk, so a desktop never downloads it; until it
+  arrives its room is kept, so nothing jumps, and if it never does the chips stay under the prompt.
 -->
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import Cathode from './components/Cathode.svelte';
   import type { Action } from './output/model';
-  import { coarsePointer, keyPlatform } from './platform/env';
+  import { coarsePointer, dockWanted, keyPlatform } from './platform/env';
   import type { ShellPort } from './shell/index';
   import { screen as transcript } from './stores/screen';
   import CompletionRow from './ui/CompletionRow.svelte';
@@ -21,10 +23,24 @@
   let { shell }: { shell: ShellPort } = $props();
 
   const win = typeof window === 'undefined' ? undefined : window;
+  const dock = dockWanted(win);
   // The prompt: the line being typed, its keys, the running line and everything Tab offers.
   // svelte-ignore state_referenced_locally
-  const prompt = new PromptController({ shell, screen: transcript, platform: keyPlatform(win?.navigator), touch: coarsePointer(win) });
+  const prompt = new PromptController({ shell, screen: transcript, platform: keyPlatform(win?.navigator), touch: coarsePointer(win), dock });
   onDestroy(() => prompt.destroy());
+
+  // The dock's chunk, on a touch screen only.
+  let Dock: typeof import('./ui/dock/Dock.svelte').default | null = $state(null);
+  let dockFailed = $state(false);
+  if (dock) {
+    import('./ui/dock/Dock.svelte').then(
+      (module) => (Dock = module.default),
+      () => (dockFailed = true),
+    );
+  }
+  // Under the prompt: every chip but Stop (the status line stops a command), unless the dock
+  // draws them.
+  const inlineChips = $derived(Dock === null ? prompt.chipList.chips.filter((chip) => chip.action.kind !== 'interrupt') : []);
 
   let screen: HTMLElement | undefined = $state();
   let newOutput = $state(false);
@@ -56,7 +72,7 @@
   }
 </script>
 
-<div class="shell" use:focusPolicy={{ input: () => prompt.element }}>
+<div class="shell" class:has-dock={dock && !dockFailed} use:focusPolicy={{ input: () => prompt.element }}>
   <div class="screen-frame">
     <main
       bind:this={screen}
@@ -76,8 +92,8 @@
 
           <!-- Tab's list, the chips while typing, and the starters on an empty phone prompt. -->
           <CompletionRow
-            chips={prompt.chipList.chips}
-            more={prompt.chipList.more}
+            chips={inlineChips}
+            more={Dock === null ? prompt.chipList.more : 0}
             listed={prompt.listed}
             question={prompt.question}
             announce={prompt.announce}
@@ -103,11 +119,18 @@
     <Cathode />
   </div>
 
-  <!-- The phone dock goes here (docs/plan/04-phone-and-instagram.md). -->
-  <div class="dock-slot"></div>
+  <!-- The phone dock (docs/plan/04-phone-and-instagram.md): chips, keys and the history sheet. -->
+  <div class="dock-slot" class:pending={dock && Dock === null && !dockFailed}>
+    {#if Dock}<Dock controller={prompt} />{/if}
+  </div>
 </div>
 
 <style>
+  /* The dock's room, kept while its chunk loads: the chip row over the closed bar. */
+  .dock-slot.pending {
+    min-height: calc(93px + env(safe-area-inset-bottom));
+  }
+
   .new-output {
     position: absolute;
     z-index: 3;

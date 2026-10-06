@@ -4,7 +4,7 @@
 // every earlier listing (F075, F030, F009). The theme is remembered by name.
 
 import { out, type Line, type SpanStyle } from '../../output/model';
-import { defineCommand, type ArgSpec, type CommandContext, type EnumValue, type ExitCode, type ValueContext } from '../../shell/types';
+import { defineCommand, PLAIN_ARG, type ArgSpec, type CommandContext, type EnumValue, type ExitCode, type ValueContext } from '../../shell/types';
 
 /** The mark beside the current theme in a listing. */
 export const CURRENT_MARK = '› ';
@@ -72,6 +72,14 @@ export default defineCommand({
     { line: 'theme swamphen', note: 'the default, without set', offline: true },
   ],
   seeAlso: ['cathode', 'reset'],
+  // After the list, every theme is one tap away.
+  next: ({ status, argv }, context) => {
+    if (status !== 0 || argv[1] !== 'ls' || argv.length > 2) return [];
+    return (context?.appearance?.themes() ?? [])
+      .map((theme) => theme.name.toLowerCase())
+      .filter((name) => PLAIN_ARG.test(name))
+      .map((name) => `theme set ${name}`);
+  },
   async run(ctx) {
     if (ctx.sub === 'ls') {
       if (ctx.args.length > 0) return ctx.usage(`ls: extra operand '${ctx.args[0] ?? ''}'`);

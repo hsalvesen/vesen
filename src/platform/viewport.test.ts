@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   applyViewport,
   computeViewport,
+  dockMode,
+  type VisibleArea,
   FOCUS_REMEASURE_MS,
   INITIAL_VIEWPORT,
   KEYBOARD_THRESHOLD_PX,
@@ -278,6 +280,35 @@ describe('startViewport', () => {
     expect(root.style.getPropertyValue('--app-top')).toBe('0px');
   });
 
+  it('tells the dock the visible height and the keyboard, at once and on each change', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) => ({ matches: query === '(any-pointer: coarse)' }) as MediaQueryList,
+    );
+    const heard: VisibleArea[] = [];
+    stop = startViewport(window, { onChange: (area) => heard.push(area) });
+    expect(heard).toEqual([{ height: 664, keyboardOpen: false }]);
+
+    const input = document.body.appendChild(document.createElement('input'));
+    input.focus();
+    visual.set({ height: 330 });
+    flushFrames();
+    expect(heard[heard.length - 1]).toEqual({ height: 330, keyboardOpen: true });
+    const count = heard.length;
+    // The same reading again says nothing new; a zoom says nothing at all.
+    visual.set({ height: 330 });
+    flushFrames();
+    visual.set({ height: 165, scale: 2 });
+    flushFrames();
+    expect(heard).toHaveLength(count);
+  });
+
+  it("reports the window's height where there is no visualViewport", () => {
+    Reflect.deleteProperty(window, 'visualViewport');
+    const heard: VisibleArea[] = [];
+    stop = startViewport(window, { onChange: (area) => heard.push(area) });
+    expect(heard).toEqual([{ height: 664, keyboardOpen: false }]);
+  });
+
   it('stops listening, and writes nothing when there is no visualViewport', () => {
     stop = startViewport(window);
     stop();
@@ -289,5 +320,14 @@ describe('startViewport', () => {
     Reflect.deleteProperty(window, 'visualViewport');
     stop = startViewport(window);
     expect(root.getAttribute('style')).toBeNull();
+  });
+});
+
+describe('dockMode', () => {
+  it('lays the dock out by the visible height: two rows, one row, or the keys only', () => {
+    expect([1000, 460, 459, 300, 299, 120].map(dockMode)).toEqual(['full', 'full', 'compact', 'compact', 'minimal', 'minimal']);
+    // Not measured yet: the full dock.
+    expect(dockMode(0)).toBe('full');
+    expect(dockMode(Number.NaN)).toBe('full');
   });
 });

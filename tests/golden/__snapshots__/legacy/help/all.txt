@@ -11,7 +11,7 @@ whoami  meet the developer; in a pipe, your user name
 Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
 Text: echo printf
 Shell: alias apropos clear command env exit export false help history man printenv reset set sleep source sudo test true type unalias unset whatis which
-System: date fastfetch poweroff
+System: date fastfetch keys poweroff
 Network: curl speedtest stock weather
 
 help --all lists every command with what it does.
