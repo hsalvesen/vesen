@@ -53,7 +53,7 @@ View all themes: [Vesen themes](/docs/themes)
 ### Project structure
 ```bash
 src/
-├── main.ts                       # Sends alias hosts to www.vesen.app, reloads on stale chunks, mounts the app
+├── main.ts                       # Sends alias hosts to www.vesen.app, reloads on stale chunks, drops old storage keys, mounts the app
 ├── App.svelte                    # Layout: scrollback, prompt, suggestions, running-command line
 ├── app.css                       # Global styles and the CRT (cathode) effect
 ├── constants.ts                  # Repository URL
@@ -65,9 +65,19 @@ src/
 │   ├── CommandSuggestionsRow.svelte  # Suggestions while typing
 │   └── Cathode.svelte            # CRT overlay
 ├── interfaces/                   # TypeScript interfaces (command, theme)
-├── output/escape.ts              # HTML escaping for command output
-├── platform/                     # Browser-facing helpers: canonical host redirect, stale-chunk reload
-├── services/net.ts               # fetch with timeouts, cancelling and typed network errors
+├── shell/                        # Contracts for the DOM-free shell kernel (docs/adr/0001-architecture.md)
+│   ├── types.ts                  # CommandSpec, command context, registry, history, TTY, streams, identity
+│   └── lexer-types.ts            # The lexer's result and tokens
+├── output/                       # DOM-free output
+│   ├── model.ts                  # Spans, blocks, actions, the `out` builders and plain()
+│   ├── html-to-text.ts           # Plain text of legacy HTML output, for pipes
+│   └── escape.ts                 # HTML escaping for command output
+├── vfs/types.ts                  # The file system contract
+├── platform/                     # Browser-facing helpers: canonical host redirect, stale-chunk reload, legacy keys
+├── services/
+│   ├── net.ts                    # fetch with timeouts, cancelling, byte caps and typed network errors
+│   ├── types.ts                  # Service interfaces: net, storage, bell, opener, clipboard, clock, system info
+│   └── storage-keys.ts           # Every browser storage key, in one registry
 ├── stores/                       # Svelte stores: history, the running job, theme, cathode
 ├── testing/                      # Test setup
 └── utils/
@@ -84,8 +94,11 @@ public/                           # README.md, history.txt and linux.txt for cat
 themes.json                       # The ten colour themes
 tests/                            # Golden snapshots of command output, network fixtures, hosting checks, helpers
 e2e/                              # Playwright end-to-end tests
-scripts/                          # Checks: module boundaries, bundle budget, theme contrast
-docs/                             # Theme screenshots and the improvement plan
+scripts/                          # Checks: module boundaries, bundle budget, theme contrast (and its baseline)
+docs/
+├── adr/                          # Architecture decision records; 0001 fixes the shared contracts
+├── plan/                         # The improvement plan
+└── themes/                       # Theme screenshots
 ```
 
 ### Available scripts
@@ -94,13 +107,15 @@ npm run dev               # Start development server on port 3000
 npm run build             # Build for production into dist/
 npm run preview           # Serve the production build
 npm run check             # Svelte and TypeScript checking (svelte-check)
-npm run check:strict      # Strict TypeScript for the new folders, scripts and tests
-npm run check:boundaries  # Keep the DOM-free folders free of browser globals and Svelte
+npm run check:strict      # Strict TypeScript: the new browser folders with no Node types, then the
+                          # unit tests, test helpers, scripts and config files with Node types
+npm run check:boundaries  # Keep the DOM-free folders free of browser globals, Svelte and imports that reach them
 npm run check:bundle      # Initial JS budget (60 kB gzip); run after build
-npm run check:contrast    # WCAG contrast of every theme (add -- --strict to enforce)
+npm run check:contrast    # WCAG contrast of every theme: fails if any pair is worse than
+                          # scripts/contrast-baseline.json (add -- --strict to require 4.5:1 everywhere)
 npm test                  # Unit tests (Vitest)
 npm run test:e2e          # End-to-end tests (Playwright: desktop Chrome, iPhone Instagram, Pixel 7)
-npm run test:smoke        # The @smoke end-to-end tests on desktop Chrome, as CI runs them
+npm run test:smoke        # The @smoke end-to-end tests on all three projects, as CI runs them
 ```
 
 Install the Playwright browsers once with `npx playwright install chromium webkit`.

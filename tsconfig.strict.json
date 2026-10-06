@@ -1,7 +1,12 @@
 {
-  // Strict checking for every folder written during the overhaul, from day one.
+  // Strict checking for the browser code written during the overhaul, from day one.
   // The legacy code (src/utils, src/components, src/interfaces) stays under tsconfig.json
   // until it is ported. Globs that match nothing yet are fine.
+  //
+  // No ambient types: Node's would let `process`, `Buffer` and Array.prototype.at (which
+  // @types/node adds to ES2021) through, and Safari 15 has none of them. vite/client and svelte
+  // come in through src/global.d.ts. Tests, scripts and config files are checked under Node's
+  // types by tsconfig.strict.node.json.
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "strict": true,
@@ -11,7 +16,7 @@
     "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
     "checkJs": true,
-    "types": ["node"]
+    "types": []
   },
   "include": [
     "src/global.d.ts",
@@ -23,19 +28,11 @@
     "src/platform/**/*.ts",
     "src/commands/**/*.ts",
     "src/stores/**/*.ts",
-    "src/testing/**/*.ts",
     "src/constants.ts",
     "src/utils/beep.ts",
-    "src/utils/beep.test.ts",
-    "scripts/**/*.mjs",
-    "scripts/**/*.ts",
-    "worker/**/*.ts",
-    "tests/hosting/**/*.ts",
-    "e2e/**/*.ts",
-    "playwright.config.ts",
-    "vite.config.ts"
+    "worker/**/*.ts"
   ],
   // history.ts predates the overhaul and pulls in the legacy commands; drop it from this
   // list when the store is rewritten.
-  "exclude": ["**/node_modules", "dist", "src/stores/history.ts"]
+  "exclude": ["**/node_modules", "dist", "**/*.test.ts", "src/stores/history.ts"]
 }

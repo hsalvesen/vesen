@@ -1,0 +1,32 @@
+{
+  // The strict settings of tsconfig.strict.json for code that runs under Node or Vitest:
+  // the unit tests of the strict folders, the test helpers, scripts and config files.
+  // tests/golden/legacy.test.ts stays under tsconfig.json while it imports legacy code.
+  "extends": "./tsconfig.strict.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": [
+    "src/global.d.ts",
+    "src/shell/**/*.test.ts",
+    "src/output/**/*.test.ts",
+    "src/vfs/**/*.test.ts",
+    "src/lib/**/*.test.ts",
+    "src/services/**/*.test.ts",
+    "src/platform/**/*.test.ts",
+    "src/commands/**/*.test.ts",
+    "src/stores/**/*.test.ts",
+    "src/utils/beep.test.ts",
+    "src/testing/**/*.ts",
+    "scripts/**/*.mjs",
+    "scripts/**/*.ts",
+    "tests/hosting/**/*.ts",
+    "tests/support/**/*.ts",
+    "tests/golden/format.ts",
+    "tests/golden/html-to-text.test.ts",
+    "e2e/**/*.ts",
+    "playwright.config.ts",
+    "vite.config.ts"
+  ],
+  "exclude": ["**/node_modules", "dist", "src/stores/history.ts"]
+}

@@ -19,20 +19,42 @@ const qrExamples = [
   'qr commandlinefu.com',
 ];
 
-function getCurrentDirectoryEntries(kind: 'all' | 'files' | 'directories' = 'all'): string[] {
+/** The most files or folders listed at once; the rest are counted on one line. */
+const MAX_ENTRY_SUGGESTIONS = 6;
+
+/**
+ * The current folder's entries that start with `prefix`. Dot entries stay hidden, as in `ls`,
+ * unless the prefix starts with a dot. Names sort by code point, like `ls` in the C locale, so
+ * README.md comes before the lower-case names.
+ */
+function getCurrentDirectoryEntries(kind: 'all' | 'files' | 'directories' = 'all', prefix = ''): string[] {
   const dir = getCurrentDirectory();
   if (!dir?.children) return [];
+  const showHidden = prefix.startsWith('.');
 
   return Object.keys(dir.children)
-    .sort((a, b) => a.localeCompare(b))
     .filter((name) => {
       const node = dir.children?.[name];
-      if (!node) return false;
+      if (!node || !name.startsWith(prefix)) return false;
+      if (name.startsWith('.') && !showHidden) return false;
 
       if (kind === 'all') return true;
       if (kind === 'directories') return node.type === 'directory';
       return node.type !== 'directory';
-    });
+    })
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+}
+
+/** `cd` also offers the parent folder, when the prefix allows it. */
+function cdTargets(prefix: string): string[] {
+  const parent = '..'.startsWith(prefix) ? ['..'] : [];
+  return [...parent, ...getCurrentDirectoryEntries('directories', prefix)];
+}
+
+/** Keeps a list of files or folders to a few lines on a phone: the first few, then a count. */
+function capped(lines: string[]): string[] {
+  if (lines.length <= MAX_ENTRY_SUGGESTIONS) return lines;
+  return [...lines.slice(0, MAX_ENTRY_SUGGESTIONS), `… ${lines.length - MAX_ENTRY_SUGGESTIONS} more`];
 }
 
 export function getCommandSuggestions(input: string, commandNames: string[]): string[] {
@@ -61,19 +83,17 @@ export function getCommandSuggestions(input: string, commandNames: string[]): st
     }
 
     if (command === 'cd') {
-      const dirs = getCurrentDirectoryEntries('directories');
-      return ['..', ...dirs].map((name) => `cd ${name}`);
+      return capped(cdTargets('').map((name) => `cd ${name}`));
     }
 
     if (command === 'cat') {
-      const files = getCurrentDirectoryEntries('files');
-      return files.map((name) => `cat ${name}`);
+      return capped(getCurrentDirectoryEntries('files').map((name) => `cat ${name}`));
     }
 
     if (command === 'rm') {
       const files = getCurrentDirectoryEntries('files').map((name) => `rm ${name}`);
       const dirs = getCurrentDirectoryEntries('directories').map((name) => `rm -r ${name}`);
-      return [...files, ...dirs];
+      return capped([...files, ...dirs]);
     }
 
     const matches = commandNames
@@ -118,25 +138,11 @@ export function getCommandSuggestions(input: string, commandNames: string[]): st
   }
 
   if (command === 'cd') {
-    const prefix = parts[1] ?? '';
-
-    const entries = ['..', ...getCurrentDirectoryEntries('directories')];
-    if (!prefix && endsWithSpace) {
-      return entries.map((name) => `cd ${name}`);
-    }
-
-    return entries.filter((name) => name.startsWith(prefix)).map((name) => `cd ${name}`);
+    return capped(cdTargets(parts[1] ?? '').map((name) => `cd ${name}`));
   }
 
   if (command === 'cat') {
-    const prefix = parts[1] ?? '';
-
-    const entries = getCurrentDirectoryEntries('files');
-    if (!prefix && endsWithSpace) {
-      return entries.map((name) => `cat ${name}`);
-    }
-
-    return entries.filter((name) => name.startsWith(prefix)).map((name) => `cat ${name}`);
+    return capped(getCurrentDirectoryEntries('files', parts[1] ?? '').map((name) => `cat ${name}`));
   }
 
   if (command === 'rm') {
@@ -149,26 +155,13 @@ export function getCommandSuggestions(input: string, commandNames: string[]): st
       }
 
       if (arg1 === '-f') {
-        const prefix = parts[2] ?? '';
-        const entries = getCurrentDirectoryEntries('directories');
-
-        if (!prefix && endsWithSpace) {
-          return entries.map((name) => `rm -f ${name}`);
-        }
-
-        return entries.filter((name) => name.startsWith(prefix)).map((name) => `rm -f ${name}`);
+        return capped(getCurrentDirectoryEntries('directories', parts[2] ?? '').map((name) => `rm -f ${name}`));
       }
 
       return [];
     }
 
-    const prefix = arg1;
-    const entries = getCurrentDirectoryEntries('files');
-    if (!prefix && endsWithSpace) {
-      return entries.map((name) => `rm ${name}`);
-    }
-
-    return entries.filter((name) => name.startsWith(prefix)).map((name) => `rm ${name}`);
+    return capped(getCurrentDirectoryEntries('files', arg1).map((name) => `rm ${name}`));
   }
 
   if (command === 'theme') {

@@ -22,11 +22,15 @@ interface Viewport {
   height: number;
 }
 
-/** A phone, a small laptop window and a desktop: 41, 95 and 120 columns by the legacy formula. */
+/**
+ * The plan's 40, 80 and 120 columns. The legacy code turns width into columns as
+ * floor((innerWidth - 40) / 8), so these are exactly 360, 680 and 1000 px: a small phone, a
+ * large phone or small tablet (the legacy code treats up to 768 px as mobile), and a desktop.
+ */
 const VIEWPORTS: readonly Viewport[] = [
-  { width: 375, height: 812 },
-  { width: 800, height: 1000 },
-  { width: 1280, height: 800 },
+  { width: 360, height: 780 },
+  { width: 680, height: 1000 },
+  { width: 1000, height: 800 },
 ];
 
 interface GoldenCase {
@@ -53,7 +57,7 @@ const CASES: GoldenCase[] = [
   { slug: 'cathode-ls', lines: ['cathode ls'] },
   {
     slug: 'history',
-    // The long echo is wider than a phone's 41 columns, so history wraps it there.
+    // The long echo is wider than a phone's 40 columns, so history wraps it there.
     lines: ['pwd', 'cd documents', 'echo the quick brown fox jumps over the lazy dog, twice over', 'cd ..', 'history'],
     responsive: true,
   },

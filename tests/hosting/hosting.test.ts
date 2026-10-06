@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -51,7 +52,7 @@ function walk(dir: string): string[] {
 }
 
 const publicHtml = walk('public').filter((path) => path.endsWith('.html'));
-const csp = parseCsp(header('**', 'Content-Security-Policy-Report-Only') ?? '');
+const csp = parseCsp(header('**', 'Content-Security-Policy') ?? '');
 
 describe('firebase.json', () => {
   it('serves dist with no catch-all rewrite, so missing files get the 404 page', () => {
@@ -67,8 +68,10 @@ describe('firebase.json', () => {
     expect(header('**', 'X-Content-Type-Options')).toBe('nosniff');
   });
 
-  it('ships the content security policy as Report-Only', () => {
-    expect(header('**', 'Content-Security-Policy')).toBeUndefined();
+  // Enforced from the first deploy: a Report-Only policy with no reporting endpoint collects
+  // nothing, and e2e/hosting.spec.ts runs the app, the probe and the 404 page under it.
+  it('enforces the content security policy', () => {
+    expect(header('**', 'Content-Security-Policy-Report-Only')).toBeUndefined();
     expect(Object.fromEntries([...csp].filter(([name]) => name !== 'script-src'))).toEqual({
       'default-src': ["'self'"],
       'style-src': ["'self'", "'unsafe-inline'"],
@@ -112,6 +115,39 @@ describe('standalone pages', () => {
     const html = read('public/404.html');
     expect(html).toContain('vesen: <span data-path>this path</span>: No such file or directory');
     expect(html).toContain('<a href="/">');
+  });
+
+  describe('the path the 404 page shows', () => {
+    /** Runs the page's inline script for `href` and returns what each [data-path] span says. */
+    function shownPath(href: string): string[] {
+      const script = /<script>([\s\S]*?)<\/script>/.exec(read('public/404.html'))?.[1] ?? '';
+      const spans = [{ textContent: '' }, { textContent: '' }];
+      // The browser hands the page its pathname percent-encoded, as WHATWG URL does here.
+      runInNewContext(script, { location: { pathname: new URL(href).pathname }, document: { querySelectorAll: () => spans } });
+      return spans.map((span) => span.textContent);
+    }
+
+    it('is the path as typed for an ordinary missing file', () => {
+      expect(shownPath('https://www.vesen.app/robots.txt')).toEqual(['/robots.txt', '/robots.txt']);
+    });
+
+    it('stays encoded, so a crafted link cannot spell out a sentence', () => {
+      const [shown] = shownPath('https://www.vesen.app/Your Instagram login expired - verify at instagram-help.example');
+      expect(shown).not.toContain(' ');
+      expect(shown?.startsWith('/Your%20Instagram%20login')).toBe(true);
+    });
+
+    it('keeps bidi and control characters encoded', () => {
+      const [shown] = shownPath('https://www.vesen.app/%E2%80%AEtxt.exe%00');
+      expect(shown).toBe('/%E2%80%AEtxt.exe%00');
+      expect(shown).not.toMatch(/[\u0000-\u001f\u202a-\u202e\u2066-\u2069]/);
+    });
+
+    it('is cut to 60 characters', () => {
+      const [shown] = shownPath(`https://www.vesen.app/${'a'.repeat(500)}`);
+      expect(shown).toHaveLength(60);
+      expect(shown?.endsWith('…')).toBe(true);
+    });
   });
 
   it('the probe stays under 20 kB', () => {

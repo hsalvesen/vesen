@@ -81,12 +81,15 @@
     <CommandSuggestionsRow {command} {isProcessing} {isPasswordMode} on:show={onSuggestionsShow} on:hide={onSuggestionsHide} on:update={onSuggestionsUpdate} />
 
     {#if isProcessing && loadingText}
-      <!-- pointerdown is cancelled so the tap does not take focus, and the keyboard, from the prompt. -->
+      <!--
+        mousedown is cancelled so the tap does not take focus, and the keyboard, from the prompt.
+        Not pointerdown: WebKit on iOS drops the whole tap, click included, when pointerdown is cancelled.
+      -->
       <button
         type="button"
         class="processing font-mono mt-1"
         aria-label="Cancel running command"
-        onpointerdown={(event) => event.preventDefault()}
+        onmousedown={(event) => event.preventDefault()}
         onclick={() => interruptJob()}
       >{loadingText} ({cancelHint})</button>
     {/if}

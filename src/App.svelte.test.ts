@@ -26,6 +26,11 @@ describe('App', () => {
     const cancel = screen.getByRole('button', { name: 'Cancel running command' });
     expect(cancel).toHaveTextContent(/Processing… \((tap|Ctrl\+C) to cancel\)/);
 
+    // A tap must not be cancelled at pointerdown: WebKit on iOS then never sends the click.
+    expect(await fireEvent.pointerDown(cancel)).toBe(true);
+    // Cancelling mousedown keeps focus, and the phone keyboard, on the prompt.
+    expect(await fireEvent.mouseDown(cancel)).toBe(false);
+
     await fireEvent.click(cancel);
     await settle();
 

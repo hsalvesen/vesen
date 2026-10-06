@@ -5,6 +5,7 @@ import {
   combineSignals,
   fetchJson,
   fetchText,
+  fetchTextCapped,
   fetchWithTimeout,
   isOnline,
 } from './net';
@@ -236,6 +237,58 @@ describe('fetchText and fetchJson', () => {
     expect(await rejectionOf(fetchJson('https://api.allorigins.win/get'))).toMatchObject({
       kind: 'parse',
       host: 'api.allorigins.win',
+    });
+  });
+});
+
+describe('fetchTextCapped', () => {
+  /**
+   * A 64-piece body of `chunk`-byte pieces that counts how many were pulled and whether it was
+   * cancelled. Finite, so a reader that ignores the cap fails the test rather than hanging it.
+   */
+  function largeBody(chunk: number) {
+    const state = { pulls: 0, cancelled: false };
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        state.pulls += 1;
+        controller.enqueue(new Uint8Array(chunk).fill(0x61));
+        if (state.pulls === 64) controller.close();
+      },
+      cancel() {
+        state.cancelled = true;
+      },
+    });
+    return { body, state };
+  }
+
+  it('reads a body under the cap in full', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('héllo')));
+
+    await expect(fetchTextCapped('https://httpbin.org/get', { maxBytes: 1024 })).resolves.toEqual({
+      text: 'héllo',
+      truncated: false,
+    });
+  });
+
+  it('stops reading at the cap and cancels the rest of the body', async () => {
+    const { body, state } = largeBody(64 * 1024);
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(body)));
+
+    const result = await fetchTextCapped('https://speed.cloudflare.com/__down?bytes=1000000000', { maxBytes: 100_000 });
+
+    expect(result.truncated).toBe(true);
+    expect(result.text).toHaveLength(100_000);
+    expect(state.pulls).toBeLessThanOrEqual(3);
+    expect(state.cancelled).toBe(true);
+  });
+
+  it('drops a character the cap splits rather than garbling it', async () => {
+    // "é" is two bytes in UTF-8; a 2-byte cap ends inside it.
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('aé')));
+
+    await expect(fetchTextCapped('https://example.com', { maxBytes: 2 })).resolves.toEqual({
+      text: 'a',
+      truncated: true,
     });
   });
 });

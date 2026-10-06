@@ -25,7 +25,8 @@
     "noUnusedParameters": false,
     "exactOptionalPropertyTypes": false
   },
-  // tests/ stays here rather than in tsconfig.strict.json while the goldens import legacy code.
+  // tests/ is listed here too because tests/golden/legacy.test.ts imports legacy code; the rest of
+  // tests/ is also checked strictly by tsconfig.strict.node.json.
   "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte", "tests/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

@@ -4,32 +4,31 @@ import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from '.
 import { history } from '../../stores/history';
 import { commandHelp } from '../helpTexts';
 import { playBeep } from '../beep';
+import { fetchText, isNetError } from '../../services/net';
+import { cancelledNotice, errorLine } from '../notice';
 
-// Helper function to load real file content
-async function loadRealFile(filePath: string): Promise<string> {
-  try {
-    // Try multiple possible paths for different environments
-    const possiblePaths = [
-      filePath,
-      filePath.startsWith('/') ? '.' + filePath : filePath,
-      filePath.startsWith('/') ? filePath.substring(1) : filePath
-    ];
-    
-    for (const path of possiblePaths) {
-      try {
-        const response = await fetch(path);
-        if (response.ok) {
-          return await response.text();
-        }
-      } catch (e) {
-        // Continue to next path
-      }
+/**
+ * Loads a file that public/ serves, such as /README.md. Each request has the default 8 s deadline
+ * and the command's cancel. Only a missing file (an HTTP error) moves on to the next candidate path;
+ * a timeout, a cancel or a failed connection would fail the same way for every path.
+ */
+async function loadRealFile(filePath: string, signal?: AbortSignal): Promise<string> {
+  const possiblePaths = [
+    filePath,
+    filePath.startsWith('/') ? '.' + filePath : filePath,
+    filePath.startsWith('/') ? filePath.substring(1) : filePath
+  ];
+
+  let lastError: unknown;
+  for (const path of possiblePaths) {
+    try {
+      return await fetchText(path, { signal });
+    } catch (error) {
+      lastError = error;
+      if (!isNetError(error) || error.kind !== 'http') break;
     }
-    
-    throw new Error(`Failed to load file from any path: ${possiblePaths.join(', ')}`);
-  } catch (error) {
-    return `Error loading file: ${error}`;
   }
+  throw lastError;
 }
 
 // Helper function to find similar files/directories with case-insensitive matching
@@ -144,7 +143,7 @@ export const fileSystemCommands = {
     return lines.join('\n');
   },
   
-  cat: async (args: string[]) => {
+  cat: async (args: string[], signal?: AbortSignal) => {
     if (args.length === 0) {
       return commandHelp.cat;
     }
@@ -180,9 +179,12 @@ export const fileSystemCommands = {
     // Handle files with filePath property
     if (current.filePath) {
       try {
-        content = await loadRealFile(current.filePath);
+        content = await loadRealFile(current.filePath, signal);
       } catch (error) {
-        return `cat: ${args[0]}: Error reading file`;
+        if (signal?.aborted || (isNetError(error) && error.kind === 'abort')) return cancelledNotice('cat');
+        playBeep();
+        const reason = isNetError(error) ? error.message : 'the file could not be read';
+        return errorLine(`cat: ${args[0]}: ${reason}`);
       }
     } else {
       content = current.content || '';

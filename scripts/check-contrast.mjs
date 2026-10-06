@@ -1,12 +1,17 @@
 #!/usr/bin/env node
-// WCAG 2.x contrast of each theme's text colours against its background.
-// Prints a table and, with --strict, exits non-zero when any value is under 4.5:1
-// (the AA threshold for normal-size text). Zero dependencies.
-import { readFileSync } from 'node:fs';
+// WCAG 2.x contrast of each theme's text colours against its background. Prints a table, then:
+//   - by default, fails when a pair drops below 4.5:1 (the AA threshold for normal-size text)
+//     that is not in the committed baseline, or a baselined pair gets worse;
+//   - with --strict, fails when any pair is below 4.5:1;
+//   - with --update-baseline, records today's failing pairs as the baseline.
+// The baseline lists the pairs that failed before the palette work; it should only shrink.
+// Zero dependencies.
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const BASELINE_PATH = join(ROOT, 'scripts', 'contrast-baseline.json');
 
 /** Palette slots that render text, checked against `background`. */
 export const TEXT_ROLES = /** @type {const} */ (['foreground', 'white', 'brightBlack', 'cyan', 'yellow', 'green', 'red']);
@@ -69,8 +74,50 @@ export function measureThemes(themes) {
   );
 }
 
+/** Ratios are compared and stored to two decimals, as the table prints them. */
+const round2 = (/** @type {number} */ ratio) => Math.round(ratio * 100) / 100;
+
+/** @param {Measurement} m */
+const pairKey = (m) => `${m.theme}/${m.role}`;
+
+/**
+ * The failing pairs as a baseline: `theme/role` -> ratio, sorted by key.
+ * @param {Measurement[]} measurements
+ * @returns {Record<string, number>}
+ */
+export function baselineOf(measurements) {
+  const failing = measurements.filter((m) => m.ratio < AA_NORMAL).sort((a, b) => pairKey(a).localeCompare(pairKey(b)));
+  return Object.fromEntries(failing.map((m) => [pairKey(m), round2(m.ratio)]));
+}
+
+/**
+ * Compares measurements with the baseline of known failures.
+ * `regressions` fail the check: a new pair below AA, or a known one that got worse.
+ * `cleared` are known pairs that now pass or no longer exist; the baseline can drop them.
+ * @param {Measurement[]} measurements
+ * @param {Record<string, number>} baseline
+ * @returns {{ regressions: string[], cleared: string[] }}
+ */
+export function compareWithBaseline(measurements, baseline) {
+  /** @type {string[]} */
+  const regressions = [];
+  const failing = new Set();
+  for (const m of measurements) {
+    if (m.ratio >= AA_NORMAL) continue;
+    const key = pairKey(m);
+    failing.add(key);
+    const known = baseline[key];
+    const ratio = round2(m.ratio);
+    if (known === undefined) regressions.push(`${key} is ${ratio.toFixed(2)}:1, below ${AA_NORMAL}:1`);
+    else if (ratio < known) regressions.push(`${key} fell from ${known.toFixed(2)}:1 to ${ratio.toFixed(2)}:1`);
+  }
+  const cleared = Object.keys(baseline).filter((key) => !failing.has(key));
+  return { regressions, cleared };
+}
+
 function main() {
   const strict = process.argv.includes('--strict');
+  const update = process.argv.includes('--update-baseline');
   /** @type {ThemeColours[]} */
   const themes = JSON.parse(readFileSync(join(ROOT, 'themes.json'), 'utf8'));
   const measurements = measureThemes(themes);
@@ -88,11 +135,32 @@ function main() {
 
   const failures = measurements.filter((m) => m.ratio < AA_NORMAL);
   console.log(`\n* below ${AA_NORMAL}:1 (WCAG AA, normal text): ${failures.length} of ${measurements.length}`);
-  if (failures.length > 0 && strict) {
-    console.error('check-contrast: failing because --strict is set.');
+
+  if (update) {
+    writeFileSync(BASELINE_PATH, `${JSON.stringify(baselineOf(measurements), null, 2)}\n`);
+    console.log(`check-contrast: baseline updated with ${failures.length} pair(s).`);
+    return;
+  }
+  if (strict) {
+    if (failures.length > 0) {
+      console.error('check-contrast: failing because --strict is set.');
+      process.exit(1);
+    }
+    return;
+  }
+
+  /** @type {Record<string, number>} */
+  const baseline = JSON.parse(readFileSync(BASELINE_PATH, 'utf8'));
+  const { regressions, cleared } = compareWithBaseline(measurements, baseline);
+  if (cleared.length > 0) {
+    console.log(`check-contrast: ${cleared.join(', ')} now pass; run with --update-baseline to drop them.`);
+  }
+  if (regressions.length > 0) {
+    console.error(`check-contrast: ${regressions.length} pair(s) worse than the baseline:`);
+    for (const regression of regressions) console.error(`  ${regression}`);
     process.exit(1);
   }
-  if (failures.length > 0) console.log('check-contrast: report only; pass --strict to enforce.');
+  console.log(`check-contrast: no pair worse than the baseline (${Object.keys(baseline).length} known); --strict enforces 4.5:1 everywhere.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

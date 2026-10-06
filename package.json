@@ -18,16 +18,15 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "check:strict": "tsc -p tsconfig.strict.json --noEmit",
+    "check:strict": "tsc -p tsconfig.strict.json --noEmit && tsc -p tsconfig.strict.node.json --noEmit",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:bundle": "node scripts/check-bundle.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:smoke": "playwright test --grep @smoke --project desktop-chrome"
+    "test:smoke": "playwright test --grep @smoke"
   },
   "dependencies": {
-    "dompurify": "^3.4.16",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
@@ -39,9 +38,7 @@
     "@tsconfig/svelte": "^5.0.8",
     "@types/node": "^22.20.5",
     "@types/qrcode": "^1.5.6",
-    "fast-check": "^4.10.2",
     "happy-dom": "^20.14.5",
-    "jsqr": "^1.4.0",
     "svelte": "^5.57.1",
     "svelte-check": "^4.7.6",
     "tailwindcss": "^4.3.3",

@@ -4,7 +4,7 @@ import { get } from 'svelte/store';
 import { commandHelp } from '../helpTexts';
 import { playBeep } from '../beep';
 import { shouldUseStackedLayout, getAvailableWidth, isMobileDevice } from '../mobile';
-import { fetchJson, fetchText, fetchWithTimeout, isNetError } from '../../services/net';
+import { fetchJson, fetchText, fetchTextCapped, fetchWithTimeout, isNetError } from '../../services/net';
 import { escapeHtml } from '../../output/escape';
 import { cancelledNotice, errorLine } from '../notice';
 
@@ -13,6 +13,11 @@ const WEATHER_TIMEOUT_MS = 8000;
 const CURL_TIMEOUT_MS = 10000;
 const STOCK_TIMEOUT_MS = 8000;
 const SPEEDTEST_TIMEOUT_MS = 15000;
+
+// curl reads at most this much of a body (docs/plan/designs/shell-architecture.md), and shows
+// at most CURL_MAX_CHARS of it.
+const CURL_MAX_BYTES = 1024 * 1024;
+const CURL_MAX_CHARS = 10000;
 
 // Interim source for stock until the owned Worker lands (docs/plan/07-stock-and-proxy.md).
 const ALLORIGINS = 'https://api.allorigins.win/get';
@@ -48,8 +53,11 @@ function curlFailure(error: unknown, host: string): string {
       case 'offline':
         return `curl: (6) Could not resolve host: ${host} (you appear to be offline)`;
       case 'cors':
+        // DNS, TLS, refused connections and missing CORS headers all reach the page as the same
+        // TypeError, so curl cannot tell them apart.
+        return `curl: (7) ${host}: blocked by CORS or unreachable (the browser does not say which)`;
       case 'network':
-        return `curl: (7) blocked by CORS: ${host} does not allow browser requests`;
+        return `curl: (7) Failed to connect to ${host}`;
     }
   }
   return `curl: (56) Failure when receiving data from ${host}`;
@@ -85,16 +93,20 @@ function speedtestFailure(error: unknown): string {
   }
 }
 
-interface YahooMeta {
-  symbol?: unknown;
-  longName?: unknown;
-  shortName?: unknown;
-  regularMarketPrice?: number;
-  previousClose?: number;
-  regularMarketVolume?: number;
-  regularMarketDayHigh?: number;
-  regularMarketDayLow?: number;
-  regularMarketOpen?: number;
+/** Yahoo's chart metadata as it arrives: relayed by a third-party proxy, so nothing is trusted. */
+type YahooMeta = Record<string, unknown>;
+
+/** The fields the card shows, each checked: a number is a finite number, text is a string. */
+interface Quote {
+  symbol: string | null;
+  longName: string | null;
+  shortName: string | null;
+  price: number;
+  previousClose: number | undefined;
+  volume: number | undefined;
+  high: number | undefined;
+  low: number | undefined;
+  open: number | undefined;
 }
 
 interface AllOriginsEnvelope {
@@ -103,17 +115,38 @@ interface AllOriginsEnvelope {
 }
 
 type QuoteLookup =
-  | { kind: 'ok'; meta: YahooMeta }
+  | { kind: 'ok'; quote: Quote }
   | { kind: 'not-found' }
   | { kind: 'upstream'; status: number }
   | { kind: 'unreadable' };
+
+const num = (value: unknown): number | undefined =>
+  typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+const str = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
+
+/** Checks every field the card uses. No price means the response is unreadable. */
+function readQuote(meta: YahooMeta): Quote | null {
+  const price = num(meta.regularMarketPrice);
+  if (price === undefined) return null;
+  return {
+    symbol: str(meta.symbol),
+    longName: str(meta.longName),
+    shortName: str(meta.shortName),
+    price,
+    previousClose: num(meta.previousClose),
+    volume: num(meta.regularMarketVolume),
+    high: num(meta.regularMarketDayHigh),
+    low: num(meta.regularMarketDayLow),
+    open: num(meta.regularMarketOpen),
+  };
+}
 
 /** Checks the proxy's envelope and Yahoo's chart response inside it. */
 function readQuoteEnvelope(envelope: AllOriginsEnvelope | null): QuoteLookup {
   const code = envelope?.status?.http_code;
   const upstreamStatus = typeof code === 'number' && (code < 200 || code >= 300) ? code : null;
 
-  let chart: { error?: unknown; result?: { meta?: YahooMeta }[] } | undefined;
+  let chart: { error?: unknown; result?: { meta?: unknown }[] } | undefined;
   if (typeof envelope?.contents === 'string' && envelope.contents !== '') {
     try {
       chart = JSON.parse(envelope.contents)?.chart;
@@ -126,7 +159,8 @@ function readQuoteEnvelope(envelope: AllOriginsEnvelope | null): QuoteLookup {
   if (chart && (chart.error || !Array.isArray(chart.result) || chart.result.length === 0)) return { kind: 'not-found' };
   if (upstreamStatus !== null) return { kind: 'upstream', status: upstreamStatus };
   const meta = chart?.result?.[0]?.meta;
-  return meta ? { kind: 'ok', meta } : { kind: 'unreadable' };
+  const quote = meta && typeof meta === 'object' ? readQuote(meta as YahooMeta) : null;
+  return quote ? { kind: 'ok', quote } : { kind: 'unreadable' };
 }
 
 function quoteLookupFailure(lookup: Exclude<QuoteLookup, { kind: 'ok' }>, ticker: string): string {
@@ -145,26 +179,17 @@ function quoteLookupFailure(lookup: Exclude<QuoteLookup, { kind: 'ok' }>, ticker
 }
 
 /** The legacy stock card: price, change, day range, trends and a small OHLC chart. */
-function renderQuote(meta: YahooMeta, ticker: string): string {
-  // Extract stock data with proper null checks
-  const symbol = escapeHtml(String(meta.symbol ?? ticker));
-  const longName = typeof meta.longName === 'string' ? meta.longName : '';
-  const shortName = typeof meta.shortName === 'string' ? meta.shortName : '';
-  const companyName = longName ? escapeHtml(longName) : shortName ? escapeHtml(shortName) : symbol;
-  const price = meta.regularMarketPrice || 0;
-  const previousClose = meta.previousClose || 0;
+function renderQuote(quote: Quote, ticker: string): string {
+  const symbol = escapeHtml(quote.symbol ?? ticker);
+  const companyName = escapeHtml(quote.longName ?? quote.shortName ?? quote.symbol ?? ticker);
+  const price = quote.price;
+  const previousClose = quote.previousClose || 0;
   const change = price - previousClose;
   const changePercent = previousClose > 0 ? ((change / previousClose) * 100) : 0;
-  const volume = meta.regularMarketVolume || 0;
-  const high = meta.regularMarketDayHigh || price;
-  const low = meta.regularMarketDayLow || price;
-  const open = meta.regularMarketOpen || price;
-
-  // Ensure we have valid numbers
-  if (isNaN(price) || isNaN(low) || isNaN(high)) {
-    playBeep();
-    return `<span style="color: var(--theme-red); font-weight: bold;">Invalid data received for ticker: ${escapeHtml(ticker)}</span>\n<span style="color: var(--theme-yellow);">Please try again later.</span>`;
-  }
+  const volume = quote.volume === undefined ? '—' : quote.volume.toLocaleString();
+  const high = quote.high || price;
+  const low = quote.low || price;
+  const open = quote.open || price;
 
   // Determine if stock is up or down
   const isPositive = change >= 0;
@@ -280,7 +305,7 @@ function renderQuote(meta: YahooMeta, ticker: string): string {
 
     output += `<span style="color: var(--theme-cyan);">Open:</span> <span style="color: var(--theme-white);">$${open.toFixed(2)}</span>\n`;
     output += `<span style="color: var(--theme-cyan);">Previous Close:</span> <span style="color: var(--theme-white);">$${previousClose.toFixed(2)}</span>\n`;
-    output += `<span style="color: var(--theme-cyan);">Volume:</span> <span style="color: var(--theme-white);">${volume.toLocaleString()}</span>\n\n`;
+    output += `<span style="color: var(--theme-cyan);">Volume:</span> <span style="color: var(--theme-white);">${volume}</span>\n\n`;
 
     const trendFromOpen = price - open;
     const trendFromPrevious = change;
@@ -308,7 +333,7 @@ function renderQuote(meta: YahooMeta, ticker: string): string {
 
     output += `<span style="color: var(--theme-cyan);">Open:</span> <span style="color: var(--theme-white);">$${open.toFixed(2)}</span>\n`;
     output += `<span style="color: var(--theme-cyan);">Previous Close:</span> <span style="color: var(--theme-white);">$${previousClose.toFixed(2)}</span>\n`;
-    output += `<span style="color: var(--theme-cyan);">Volume:</span> <span style="color: var(--theme-white);">${volume.toLocaleString()}</span>\n\n`;
+    output += `<span style="color: var(--theme-cyan);">Volume:</span> <span style="color: var(--theme-white);">${volume}</span>\n\n`;
 
     const trendFromOpen = price - open;
     const trendFromPrevious = change;
@@ -429,27 +454,39 @@ export const networkCommands = {
       url = 'https://' + url;
     }
 
-    let host: string;
+    let target: URL;
     try {
-      host = new URL(url).host;
+      target = new URL(url);
     } catch {
       playBeep();
       return errorLine('curl: (3) URL rejected: Malformed input to a URL function');
     }
+    const host = target.host;
+
+    // The browser blocks http:// from an https page as mixed content; that is not the site's doing.
+    if (target.protocol === 'http:' && typeof location !== 'undefined' && location.protocol === 'https:') {
+      playBeep();
+      return errorLine(`curl: (1) http:// is blocked on an https page; try ${target.href.replace(/^http:/, 'https:')}`);
+    }
 
     let data: string;
+    let truncated: boolean;
     try {
       // Like curl without -f, an HTTP error status still prints the body.
-      data = await fetchText(url, { signal, timeoutMs: CURL_TIMEOUT_MS, throwHttpErrors: false });
+      ({ text: data, truncated } = await fetchTextCapped(url, {
+        signal,
+        timeoutMs: CURL_TIMEOUT_MS,
+        throwHttpErrors: false,
+        maxBytes: CURL_MAX_BYTES,
+      }));
     } catch (error) {
       if (wasCancelled(error, signal)) return cancelledNotice('curl');
       playBeep();
       return errorLine(curlFailure(error, host));
     }
 
-    // Truncate if too long (more than 10000 characters)
-    if (data.length > 10000) {
-      data = data.substring(0, 10000) + '\n\n[Output truncated - content too long]';
+    if (truncated || data.length > CURL_MAX_CHARS) {
+      data = data.substring(0, CURL_MAX_CHARS) + '\n\n[Output truncated - content too long]';
     }
 
     // Use mobile-responsive styling
@@ -485,7 +522,7 @@ export const networkCommands = {
       playBeep();
       return quoteLookupFailure(lookup, ticker);
     }
-    return renderQuote(lookup.meta, ticker);
+    return renderQuote(lookup.quote, ticker);
   },
 
   speedtest: async (args: string[], signal?: AbortSignal) => {

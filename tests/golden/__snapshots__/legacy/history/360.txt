@@ -7,6 +7,6 @@ $ cd ..
 $ history
    1  pwd
    2  cd documents
-   3  echo the quick brown fox jumps over
-       the lazy dog, twice over
+   3  echo the quick brown fox jumps ove
+      r the lazy dog, twice over
    4  cd ..

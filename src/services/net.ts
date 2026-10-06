@@ -100,6 +100,42 @@ export function fetchText(url: string, options: FetchOptions = {}): Promise<stri
   return fetchAndRead(url, options, (response) => response.text());
 }
 
+export interface CappedText {
+  readonly text: string;
+  /** True when the body was longer than the cap; the rest was never downloaded. */
+  readonly truncated: boolean;
+}
+
+/**
+ * Fetches `url` and reads at most `maxBytes` of the body as UTF-8 text, all within one deadline.
+ * Reading stops at the cap, so a huge response cannot fill the tab's memory.
+ */
+export function fetchTextCapped(url: string, options: FetchOptions & { maxBytes: number }): Promise<CappedText> {
+  const { maxBytes, ...rest } = options;
+  return fetchAndRead(url, rest, (response) => readCapped(response, maxBytes));
+}
+
+async function readCapped(response: Response, maxBytes: number): Promise<CappedText> {
+  if (!response.body) return { text: '', truncated: false };
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let text = '';
+  let received = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) return { text: text + decoder.decode(), truncated: false };
+    const room = maxBytes - received;
+    if (value.byteLength > room) {
+      // A character split by the cap stays in the decoder and is dropped, not shown as U+FFFD.
+      text += decoder.decode(value.subarray(0, room), { stream: true });
+      reader.cancel().catch(() => {});
+      return { text, truncated: true };
+    }
+    received += value.byteLength;
+    text += decoder.decode(value, { stream: true });
+  }
+}
+
 /** Fetches `url` and parses the body as JSON, all within one deadline. Malformed JSON fails with kind `parse`. */
 export function fetchJson<T = unknown>(url: string, options: FetchOptions = {}): Promise<T> {
   return fetchAndRead(url, options, (response) => response.json() as Promise<T>);

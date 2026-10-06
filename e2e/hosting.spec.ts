@@ -6,16 +6,14 @@ interface HeaderRule {
   headers: { key: string; value: string }[];
 }
 
-/** The headers firebase.json sends on every path, with the Report-Only CSP enforced. */
+/** The headers firebase.json sends on every path, the content security policy included. */
 function firebaseHeaders(): Record<string, string> {
   const config = JSON.parse(readFileSync(new URL('../firebase.json', import.meta.url), 'utf8')) as {
     hosting: { headers: HeaderRule[] };
   };
   const all = config.hosting.headers.find((rule) => rule.source === '**');
   const headers: Record<string, string> = {};
-  for (const { key, value } of all?.headers ?? []) {
-    headers[key.replace(/-Report-Only$/, '').toLowerCase()] = value;
-  }
+  for (const { key, value } of all?.headers ?? []) headers[key.toLowerCase()] = value;
   return headers;
 }
 
@@ -61,13 +59,26 @@ test.describe('production headers', { tag: '@smoke' }, () => {
 
   test('the device probe runs under the production CSP and reports the user agent', async ({ page, baseURL }) => {
     const problems = await servedLikeFirebase(page, new URL(baseURL ?? '').origin);
-    await page.goto('/probe/');
+    // How a link tapped in Instagram arrives: with per-click tracking ids.
+    await page.goto('/probe/?utm_source=ig&fbclid=PAZXh0bgNhZW0CLICKID&igsh=MTExYWJj');
 
     const out = page.locator('#out');
     await expect(out).toContainText('"userAgent"');
-    const results = JSON.parse((await out.textContent()) ?? '{}') as { ua?: { userAgent?: string } };
+    const json = (await out.textContent()) ?? '{}';
+    const results = JSON.parse(json) as {
+      url?: string;
+      queryKeys?: string[];
+      csp?: unknown[];
+      ua?: { userAgent?: string };
+    };
     expect(results.ua?.userAgent).toBe(await page.evaluate(() => navigator.userAgent));
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex');
+
+    // The results are pasted into the public repo: parameter names only, never their values.
+    expect(results.url).toBe(`${new URL(baseURL ?? '').origin}/probe/`);
+    expect(results.queryKeys).toEqual(['utm_source', 'fbclid', 'igsh']);
+    expect(json).not.toMatch(/CLICKID|MTExYWJj/);
+    expect(results.csp).toEqual([]);
 
     expect(problems).toEqual([]);
   });

@@ -33,7 +33,7 @@ test.describe('smoke', { tag: '@smoke' }, () => {
     expect(errors).toEqual([]);
   });
 
-  test('a hung request is cancelled from the processing line, and the prompt stays usable', async ({ page }) => {
+  test('a hung request is cancelled from the processing line, and the prompt stays usable', async ({ page, hasTouch }) => {
     // The stock proxy accepts the request and never answers.
     await page.route('https://api.allorigins.win/**', () => {});
     await page.goto('/');
@@ -46,10 +46,32 @@ test.describe('smoke', { tag: '@smoke' }, () => {
     const cancel = page.getByRole('button', { name: 'Cancel running command' });
     await expect(cancel).toBeVisible();
     await expect(prompt).toBeEnabled();
-    await cancel.click();
+    // Phones tap. A mouse click would hide a tap that WebKit drops before it becomes a click.
+    if (hasTouch) await cancel.tap();
+    else await cancel.click();
 
     await expect(page.getByText('Stock request cancelled')).toBeVisible();
     await expect(cancel).toBeHidden();
     await expect(prompt).toBeFocused();
+  });
+
+  test('type-ahead stays visible beside a long running command', async ({ page }) => {
+    // httpbin accepts the request and never answers, so curl keeps running.
+    await page.route('https://httpbin.org/**', () => {});
+    await page.goto('/');
+
+    const prompt = page.locator('input.command-input');
+    await prompt.click();
+    await prompt.fill('curl https://httpbin.org/get');
+    await prompt.press('Enter');
+    await expect(page.getByRole('button', { name: 'Cancel running command' })).toBeVisible();
+
+    await prompt.pressSequentially('ls -a');
+    await expect(prompt).toHaveValue('ls -a');
+    // The input wraps under the running line rather than shrinking to nothing: it keeps at
+    // least 8ch, which is more than four ems in a monospace font.
+    const width = (await prompt.boundingBox())?.width ?? 0;
+    const fourEms = await prompt.evaluate((input) => 4 * parseFloat(getComputedStyle(input).fontSize));
+    expect(width, 'type-ahead input width in px').toBeGreaterThanOrEqual(fourEms);
   });
 });

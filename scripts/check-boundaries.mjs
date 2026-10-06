@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 // Enforces the module boundaries from docs/plan/02-architecture-and-contracts.md:
-//   1. The DOM-free folders never reference browser globals or import Svelte.
+//   1. The DOM-free folders never reference browser globals or import Svelte, and import only
+//      each other plus the service interfaces, so nothing reaches the DOM through an import.
 //   2. No new `{@html}` blocks appear outside the few files allowed to render HTML.
+//   3. Nothing in src uses AbortSignal.any or AbortSignal.timeout, which Instagram's WKWebView
+//      before iOS 17.4 lacks.
 // Zero dependencies; run with `npm run check:boundaries`.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join, relative, sep } from 'node:path';
+import { dirname, join, posix, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -12,8 +15,30 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 /** Folders that must stay free of the DOM, browser storage and Svelte. */
 export const DOM_FREE_DIRS = ['src/shell', 'src/output', 'src/vfs', 'src/lib', 'src/commands'];
 
-/** Browser globals the DOM-free folders may not reference. */
-export const FORBIDDEN_GLOBALS = ['window', 'document', 'navigator', 'localStorage', 'sessionStorage'];
+/** Modules outside those folders that DOM-free code may import: the service contracts, which are types and constants only. */
+export const DOM_FREE_IMPORTABLE = ['src/services/types', 'src/services/storage-keys'];
+
+/** Browser globals the DOM-free folders may not reference. Services reach the browser for them. */
+export const FORBIDDEN_GLOBALS = [
+  'window',
+  'document',
+  'navigator',
+  'localStorage',
+  'sessionStorage',
+  'globalThis',
+  'self',
+  'location',
+  'matchMedia',
+  'DOMParser',
+  'fetch',
+  'XMLHttpRequest',
+  'indexedDB',
+];
+
+/** APIs no source file may use, with the reason. */
+export const FORBIDDEN_APIS = [
+  { pattern: /\bAbortSignal\s*\??\.\s*(?:any|timeout)\b/g, reason: "Instagram's WKWebView before iOS 17.4 lacks it; use combineSignals from services/net" },
+];
 
 /** The only files allowed to contain `{@html`. The two legacy ones go away in Phase 5. */
 export const HTML_ALLOWLIST = [
@@ -163,30 +188,104 @@ function lineAt(text, index) {
 }
 
 /**
- * Finds browser globals and Svelte imports in one DOM-free source file.
+ * Names a file declares for itself, so a local `location` or `fetch` is not mistaken for the
+ * browser global: declarations, destructuring declarations, imports, a first typed parameter and
+ * a lone arrow parameter. Other parameters are not recognised; rename them if they clash.
+ * @param {string} code source with comments and literals masked
+ * @param {readonly string[]} names
+ */
+function declaredNames(code, names) {
+  return new Set(
+    names.filter((name) =>
+      [
+        `\\b(?:const|let|var|function|class)\\s+${name}\\b`,
+        `\\b(?:const|let|var)\\s*[{[][^=;]*\\b${name}\\b[^=;]*=`,
+        `\\bimport\\s+(?:type\\s+)?(?:${name}\\b|\\*\\s*as\\s+${name}\\b|\\{[^}]*\\b${name}\\b[^}]*\\})`,
+        `\\(\\s*${name}\\s*\\??:(?!:)`,
+        `(?:^|[^\\w$.])${name}\\s*=>`,
+      ].some((pattern) => new RegExp(pattern, 'm').test(code)),
+    ),
+  );
+}
+
+/**
+ * Where a relative import lands, as a repo path without its extension, or null for a package.
+ * @param {string} file repo path of the importing file, such as `src/shell/types.ts`
+ * @param {string} specifier
+ */
+export function resolveImport(file, specifier) {
+  if (!specifier.startsWith('.') && !specifier.startsWith('/')) return null;
+  const joined = specifier.startsWith('/') ? specifier.slice(1) : posix.join(posix.dirname(file), specifier);
+  return posix.normalize(joined).replace(/\.(?:[cm]?[jt]s)$/, '').replace(/\/index$/, '');
+}
+
+/**
+ * True when DOM-free code may import the module at `target` (a repo path from resolveImport).
+ * @param {string} target
+ */
+function isDomFreeTarget(target) {
+  return (
+    DOM_FREE_DIRS.some((dir) => target === dir || target.startsWith(`${dir}/`)) ||
+    DOM_FREE_IMPORTABLE.includes(target)
+  );
+}
+
+/**
+ * Finds browser globals and imports that leave the DOM-free folders in one DOM-free source file.
  * @param {string} source
+ * @param {string} [file] the file's repo path; when given, relative imports are resolved and checked
  * @returns {{ line: number, message: string }[]}
  */
-export function findBoundaryViolations(source) {
+export function findBoundaryViolations(source, file) {
   /** @type {{ line: number, message: string }[]} */
   const problems = [];
   const code = maskSource(source, { keepStrings: false });
+  const local = declaredNames(code, FORBIDDEN_GLOBALS);
   const globals = new RegExp(`(?<![\\w$.])(?:${FORBIDDEN_GLOBALS.join('|')})(?![\\w$])`, 'g');
   for (const match of code.matchAll(globals)) {
-    problems.push({ line: lineAt(code, match.index), message: `references \`${match[0]}\`` });
+    const name = match[0];
+    const after = code.slice(match.index + name.length);
+    // An object key or a property signature (`{ location: ... }`) names a property, not the global.
+    const isKey = /^\s*\??:(?!:)/.test(after);
+    if (local.has(name) || isKey) continue;
+    problems.push({ line: lineAt(code, match.index), message: `references \`${name}\`` });
   }
 
   const withStrings = maskSource(source, { keepStrings: true });
   const imports = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)(['"])([^'"\n]+)\1/g;
   for (const match of withStrings.matchAll(imports)) {
     const specifier = match[2] ?? '';
+    const line = lineAt(withStrings, match.index);
     const isSvelte =
       specifier === 'svelte' || specifier.startsWith('svelte/') || /\.svelte(?:\.[jt]s)?$/.test(specifier);
     if (isSvelte) {
-      problems.push({ line: lineAt(withStrings, match.index), message: `imports '${specifier}'` });
+      problems.push({ line, message: `imports '${specifier}'` });
+      continue;
+    }
+    const target = file ? resolveImport(file, specifier) : null;
+    if (target !== null && !isDomFreeTarget(target)) {
+      problems.push({
+        line,
+        message: `imports '${specifier}' (${target}); DOM-free code may import only ${DOM_FREE_DIRS.join(', ')} and ${DOM_FREE_IMPORTABLE.join(', ')}`,
+      });
     }
   }
   return problems.sort((a, b) => a.line - b.line);
+}
+
+/**
+ * Finds uses of FORBIDDEN_APIS in any source file.
+ * @param {string} source
+ * @returns {{ line: number, message: string }[]}
+ */
+export function findForbiddenApis(source) {
+  const code = maskSource(source, { keepStrings: false });
+  return FORBIDDEN_APIS.flatMap(({ pattern, reason }) =>
+    [...code.matchAll(pattern)].map((match) => ({
+      line: lineAt(code, match.index),
+      message: `uses ${match[0].replace(/\s+/g, '')}: ${reason}`,
+    })),
+  );
 }
 
 /**
@@ -221,20 +320,28 @@ function main() {
     for (const file of walk(join(ROOT, dir))) {
       if (TEST_FILE.test(file)) continue;
       scanned += 1;
+      const repoPath = toRepoPath(file);
       if (file.endsWith('.svelte')) {
-        failures.push(`${toRepoPath(file)}:1 is a Svelte component inside a DOM-free folder`);
+        failures.push(`${repoPath}:1 is a Svelte component inside a DOM-free folder`);
         continue;
       }
-      for (const problem of findBoundaryViolations(readFileSync(file, 'utf8'))) {
-        failures.push(`${toRepoPath(file)}:${problem.line} ${problem.message}`);
+      if (/\.svelte\.[cm]?[jt]s$/.test(file)) {
+        failures.push(`${repoPath}:1 is a Svelte rune module inside a DOM-free folder`);
+        continue;
+      }
+      for (const problem of findBoundaryViolations(readFileSync(file, 'utf8'), repoPath)) {
+        failures.push(`${repoPath}:${problem.line} ${problem.message}`);
       }
     }
   }
 
   for (const file of walk(join(ROOT, 'src'))) {
     const repoPath = toRepoPath(file);
-    if (HTML_ALLOWLIST.includes(repoPath)) continue;
     const source = readFileSync(file, 'utf8');
+    if (!TEST_FILE.test(file)) {
+      for (const problem of findForbiddenApis(source)) failures.push(`${repoPath}:${problem.line} ${problem.message}`);
+    }
+    if (HTML_ALLOWLIST.includes(repoPath)) continue;
     for (const match of source.matchAll(/\{@html\b/g)) {
       failures.push(`${repoPath}:${lineAt(source, match.index)} uses {@html}; render through the output model instead`);
     }

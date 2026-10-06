@@ -35,7 +35,8 @@ jobs:
       - run: npm run check:bundle
       - run: npm run check:contrast
 
-      - run: npx playwright install --with-deps chromium
+      # WebKit for the iPhone Instagram project: the main audience, and the engine where taps differ.
+      - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:smoke
 
       - name: Upload Playwright report
@@ -57,8 +58,12 @@ jobs:
 
   deploy-preview:
     needs: check
-    # Forks have no access to the Firebase secret.
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    # Forks have no access to the Firebase secret, and neither do runs for Dependabot's pull
+    # requests, whose dependency updates should not deploy with the credential before review.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       checks: write

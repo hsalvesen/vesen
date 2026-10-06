@@ -22,11 +22,11 @@ The overhaul is split into workstreams: shell, terminal input, phone and Instagr
 10. **One token namespace.** Palette colours stay as `--theme-*`. A `--role-*` layer names what text is for. Spans carry token names, never hex values.
 11. **Help comes only from specs.** `help`, `--help`, `man`, `whatis`, `apropos`, Tab descriptions and starter chips are all generated from `CommandSpec`.
 12. **Secret input.** The sudo prompt uses a masked text field that password managers ignore. It is never written to history, snapshots, the kill ring or storage, and its copy says it is a joke.
-13. **Security and cache headers.** One CSP and the other security headers are set in `firebase.json`. `index.html` is not cached and hashed assets are immutable. A `404.html` replaces the catch-all rewrite, and stale chunks trigger one reload.
+13. **Security and cache headers.** One CSP and the other security headers are set in `firebase.json`. `index.html` is not cached and hashed assets are immutable. A `404.html` replaces the catch-all rewrite. A stale chunk prints "vesen was updated, reloading…" and triggers one reload.
 14. **One test stack.** Vitest runs in node for DOM-free code and in happy-dom for UI code, and Playwright runs end-to-end tests. CI gates every change on svelte-check, strict types, module boundaries, unit tests, the build, a bundle budget, the Playwright smoke test and contrast.
 15. **One identity.** The visitor is `guest` (uid 1000, `HOME=/home/guest`, with `/home/user` as a symlink). The prompt host is `vesen` on every domain, and `/home/has` holds the owner's read-only portfolio.
 
-**Module rule.** `shell/`, `output/`, `vfs/`, `lib/` and `commands/` never touch `window`, `document`, `navigator`, browser storage or Svelte. Only `services/` and `platform/` reach browser APIs, and only `app/bootstrap.ts` builds them. `npm run check:boundaries` and `tsconfig.strict.json` enforce this.
+**Module rule.** `shell/`, `output/`, `vfs/`, `lib/` and `commands/` never touch `window`, `document`, `navigator`, browser storage or Svelte. Only `services/` and `platform/` reach browser APIs, and only `app/bootstrap.ts` builds them. `npm run check:boundaries` enforces this, including what those folders import: each other and the service contracts (`services/types.ts`, `services/storage-keys.ts`) only. `tsconfig.strict.json` checks them with no Node types, so Node-only globals and ES2022 calls fail to compile.
 
 ## Where the contracts live
 
@@ -44,3 +44,11 @@ The overhaul is split into workstreams: shell, terminal input, phone and Instagr
 - Workstreams build against these types and do not redefine them. A change to a contract is a change to this record and to the full text.
 - Ports are incremental: a legacy adapter wraps every existing command on day one of the kernel. Each port deletes that command's legacy function and help text, and is compared with the golden snapshots.
 - No renderer, chip executor, status store, viewport tracker or editor is built before its contract exists.
+
+## Amendments
+
+Changes to the contracts since the full text was written. Where an amendment and the full text disagree, the amendment wins.
+
+- **`NetError` has a seventh kind, `network`.** Section 9 of the full text lists six kinds: offline, timeout, cors, http, parse and abort. `NetErrorKind` in `src/services/types.ts` adds `network`, a failed same-origin request while the browser reports being online. `cors` stays for failed cross-origin requests, which browsers do not explain further. Every kind-to-message map, such as weather's, stock's and curl's, handles all seven.
+- **The stale-chunk reload does not restore the session yet.** Section 13 of the full text reloads and restores the session from the snapshot. Phase 0 prints the notice and reloads once (`src/platform/chunkReload.ts`). The restore arrives with the `vesen:session:v1` snapshot in Phase 3; until then the reload starts a fresh transcript.
+- **The CSP is enforced from the first deploy.** Section 13 of the full text ships it as Report-Only for one deploy first. With no reporting endpoint, a Report-Only policy reports only to each visitor's own console, so the trial would collect nothing, and Instagram's in-app browsers cannot be inspected remotely. Instead the end-to-end tests run the app, the device probe and the 404 page under the enforced policy in Chromium and WebKit, and the device probe records every violation in its results, so a probe run from Instagram shows anything the policy blocks there.

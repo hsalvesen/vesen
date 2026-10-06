@@ -85,10 +85,10 @@
     </main>
     <script>
       (function () {
+        // The path stays percent-encoded, as the browser gives it, and is cut short, so a crafted
+        // link cannot spell out a message on this domain or reorder it with bidi controls.
         var path = location.pathname;
-        try {
-          path = decodeURIComponent(path);
-        } catch (e) {}
+        if (path.length > 60) path = path.slice(0, 59) + '\u2026';
         var nodes = document.querySelectorAll('[data-path]');
         for (var i = 0; i < nodes.length; i++) nodes[i].textContent = path;
       })();

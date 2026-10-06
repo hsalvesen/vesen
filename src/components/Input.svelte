@@ -579,7 +579,7 @@
   <input
     bind:this={input}
     bind:value={command}
-    class="bg-transparent outline-none flex-1 min-w-0 prompt-text command-input"
+    class="bg-transparent outline-none prompt-text command-input"
     style="color: var(--theme-white); opacity: 1;"
     type={isPasswordMode ? "password" : "text"}
     autocomplete="off"
@@ -591,11 +591,19 @@
 </div>
 
 <style>
+  /* Wraps, so a long running line pushes the type-ahead input onto its own line instead of
+     squeezing it to nothing. */
   .prompt-line {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 1ch;
+    gap: 0 1ch;
     min-width: 0;
+  }
+
+  .command-input {
+    flex: 1 1 8ch;
+    min-width: 8ch;
   }
 
   .prompt-text {

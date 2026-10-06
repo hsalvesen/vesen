@@ -79,9 +79,19 @@
   var $ = function (id) { return document.getElementById(id); };
   var nav = navigator;
   var ua = nav.userAgent;
+  // Results go into the public repo; Instagram links carry per-click ids (fbclid, igsh) in the
+  // query. So URLs keep only origin and path, and the query only its parameter names.
+  function noQuery(v) { try { var u = new URL(v); return u.origin + u.pathname; } catch (e) { return String(v || '').split('?')[0]; } }
   // Key order is the order of the copied JSON: notes first, the tests last.
-  var R = { probe: 1, loadedAt: new Date().toISOString(), url: location.href, notes: '' };
+  var R = { probe: 1, loadedAt: new Date().toISOString(), url: noQuery(location.href), queryKeys: Array.from(new URLSearchParams(location.search).keys()), notes: '', csp: [] };
   var pending = null;
+
+  // What the CSP blocks, such as scripts an in-app browser injects. Rendering waits for R.actions,
+  // which is set once the stored actions are read.
+  document.addEventListener('securitypolicyviolation', function (e) {
+    R.csp.push({ directive: e.effectiveDirective || e.violatedDirective, blocked: noQuery(e.blockedURI), source: noQuery(e.sourceFile), disposition: e.disposition });
+    if (R.actions) render();
+  });
 
   function err(e) { return e ? (e.name || 'Error') + ': ' + (e.message || String(e)) : String(e); }
   function attempt(fn) { try { return fn(); } catch (e) { return 'threw ' + err(e); } }
@@ -206,7 +216,7 @@
   var c = nav.connection;
   R.connection = c ? { effectiveType: c.effectiveType, saveData: c.saveData, type: c.type, downlink: c.downlink, rtt: c.rtt } : null;
   R.navigation = {
-    referrer: document.referrer,
+    referrer: noQuery(document.referrer),
     historyLength: history.length,
     hasOpener: attempt(function () { return !!window.opener; }),
     type: attempt(function () { var n = performance.getEntriesByType('navigation')[0]; return n ? n.type : null; })
