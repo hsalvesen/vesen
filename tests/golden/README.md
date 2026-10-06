@@ -1,6 +1,6 @@
 # Golden snapshots
 
-These files record what the legacy terminal does: the output of each line typed at the prompt, plus one rendering of `History.svelte`. They were first taken before the overhaul changed any behaviour, and every port is checked against them. They document current behaviour, bugs included, so a golden that looks wrong is still correct until a commit fixes the bug on purpose.
+These files record what the legacy terminal does: the output of each line typed at the prompt, plus one rendering of the transcript (`src/ui/Transcript.svelte`). They were first taken before the overhaul changed any behaviour, and every port is checked against them. They document current behaviour, bugs included, so a golden that looks wrong is still correct until a commit fixes the bug on purpose.
 
 Lines run through the shell kernel (`src/shell`), as `Input.svelte` runs them, and the legacy commands through the legacy adapter (`src/commands/legacy.ts`). A legacy command's output is its HTML exactly as the adapter hands it to the screen, so these goldens prove the adapter renders every legacy command as before.
 
@@ -25,7 +25,7 @@ On CI (`CI=true`) a missing golden fails instead of being written.
 
 - **Variant `360`, `680`, `1000`:** the window width, for output that depends on it. The legacy code turns width into columns as `floor((innerWidth - 40) / 8)`, so these widths give exactly the plan's 40, 80 and 120 columns. (`history` clamps columns to 100, so it lays out its 120-column golden at 100.) Only `help`, `ls` and `history` still lay out columns from the width; weather, stock, curl and fastfetch wrap with CSS instead, so they are recorded once.
 - **Variant `all`:** the output is identical at all three widths, and the test asserts that. If a change makes such a case width-dependent on purpose, mark it `responsive: true`.
-- **`rendered-session/<width>.html`:** the markup `History.svelte` renders after boot, `ls`, `cd documents` and `pwd`, one history entry per line. Svelte's comment anchors and scoped `svelte-<hash>` classes are stripped.
+- **`rendered-session/<width>.html`:** the markup `Transcript.svelte` renders after boot, `ls`, `cd documents` and `pwd`, one entry per line, each with the prompt it was typed at. Svelte's comment anchors and scoped `svelte-<hash>` classes are stripped.
 
 ## Format
 
@@ -34,7 +34,7 @@ On CI (`CI=true`) a missing golden fails instead of being written.
 
 ## What keeps them deterministic
 
-- Each session is a fresh page load. Storage is emptied, `vi.resetModules()` runs, and the legacy modules are imported again, because the file system and current path are module singletons.
+- Each session is a fresh page load. Storage is emptied, `vi.resetModules()` runs, and the legacy modules are imported again, because the legacy shim over the VFS and the transcript are module singletons. `~/.bashrc` is sourced, as at boot.
 - Lines run the way `Input.svelte`'s Enter handler runs them: through `shell.run`, which records each line in the shell's history before it runs, so `history` sees earlier lines and itself, as in bash.
 - The clock is frozen at 2026-10-06 09:00 Sydney time, `Math.random()` returns 0.5, `__APP_VERSION__` reads `0.0.0-golden`, numbers format as `en-US`, and the page URL is `https://www.vesen.app/`.
 - The browser is a fixed device from `tests/support/devices.ts`. Chrome on a Mac is the default, and one `fastfetch` case uses Instagram's in-app browser on an iPhone.

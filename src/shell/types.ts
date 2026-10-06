@@ -4,6 +4,7 @@
 
 import type { Block, Colour, Span } from '../output/model';
 import type { Appearance, Clock, Net, SysInfo } from '../services/types';
+import { GUEST as IDENTITY_GUEST, HOST, OWNER } from '../vfs/identity';
 import type { BoundVfs } from '../vfs/types';
 
 // ── Status ─────────────────────────────────────────────────────────────────────────────────
@@ -305,21 +306,17 @@ export interface User {
   readonly shell: string;
 }
 
+// The visitor, the prompt's host and the owner's home come from the one identity module
+// (src/vfs/identity.ts), which the prompt, /etc/passwd and fastfetch read too.
+
 /** The visitor. `/home/user` remains as a symlink to the home folder. */
-export const GUEST: User = {
-  name: 'guest',
-  uid: 1000,
-  gid: 1000,
-  groups: [1000],
-  home: '/home/guest',
-  shell: '/bin/bash',
-};
+export const GUEST: User = IDENTITY_GUEST;
 
 /** The prompt's host: the brand, the same on every domain. */
-export const PROMPT_HOST = 'vesen';
+export const PROMPT_HOST = HOST;
 
 /** The owner's read-only portfolio files, for `finger has` and exploring. */
-export const OWNER_HOME = '/home/has';
+export const OWNER_HOME: string = OWNER.home;
 
 // ── Terminal ───────────────────────────────────────────────────────────────────────────────
 

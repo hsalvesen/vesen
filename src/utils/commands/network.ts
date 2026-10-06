@@ -1,4 +1,4 @@
-import { speedtestPhase } from '../../stores/history';
+import { speedtestPhase } from '../legacyStores';
 import { commandHelp } from '../helpTexts';
 import { playBeep } from '../beep';
 import { fetchJson, fetchText, fetchTextCapped, fetchWithTimeout, isNetError } from '../../services/net';

@@ -100,7 +100,7 @@ test.describe('the terminal font', { tag: '@smoke' }, () => {
 
   test('the prompt names the brand as the host', async ({ page }) => {
     await page.goto('/');
-    const ps1 = page.locator('.prompt-area span.font-bold').first();
+    const ps1 = page.locator('.prompt-area .prompt').first();
     await expect(ps1).toHaveText(/^guest\s*@\s*vesen\s*:\s*~\s*\$$/);
   });
 

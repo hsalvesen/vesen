@@ -95,17 +95,10 @@ describe('the adapter', () => {
     expect(texts(result.blocks)).toEqual(['weather: timed out after 25 s']);
   });
 
-  it('turns clear and reset into shell effects', async () => {
+  it('turns clear into a shell effect', async () => {
     const legacyFn = vi.fn(() => '');
-    const { run, appearance } = harness({
-      specs: [
-        legacy('clear', legacyFn, { category: 'shell', summary: 'x', effect: 'clearScreen' }),
-        legacy('reset', legacyFn, { category: 'shell', summary: 'x', effect: 'resetSession' }),
-      ],
-    });
+    const { run } = harness({ specs: [legacy('clear', legacyFn, { category: 'shell', summary: 'x', effect: 'clearScreen' })] });
     expect((await run('echo a; clear')).screen).toBe('clear');
-    expect((await run('reset')).screen).toBe('reset');
-    expect(appearance.resets).toBe(1);
     expect(legacyFn).not.toHaveBeenCalled();
   });
 
@@ -160,10 +153,12 @@ function fakeSource(): LegacySource & { calls: string[] } {
 }
 
 describe('the legacy table', () => {
-  it('wraps all 26 commands, each once, with a category and a summary', () => {
+  it('wraps the 23 commands not yet ported, each once, with a category and a summary', () => {
     const specs = legacySpecs(fakeSource());
-    expect(specs).toHaveLength(26);
-    expect(new Set(specs.map((spec) => spec.name)).size).toBe(26);
+    expect(specs).toHaveLength(23);
+    expect(new Set(specs.map((spec) => spec.name)).size).toBe(23);
+    // Ported to src/commands: cd and pwd (files) and reset (shell).
+    expect(specs.map((spec) => spec.name)).not.toContain('cd');
     const registry = new CommandRegistry(specs);
     expect(registry.validate()).toEqual([]);
     expect(specs.every((spec) => takesRawArgs(spec))).toBe(true);
@@ -173,7 +168,7 @@ describe('the legacy table', () => {
     expect(registry.get('stock')).toMatchObject({ network: true, budgetMs: 10_000 });
     expect(registry.get('curl')?.network).toBe(true);
     expect(registry.get('repo')?.opens?.(['repo'])).toBe('https://github.com/hsalvesen/vesen');
-    expect(registry.get('pwd')?.summary).toBe('pwd');
+    expect(registry.get('rm')?.summary).toBe('rm');
   });
 
   it('describes arguments and subcommands for completion', () => {
@@ -182,7 +177,7 @@ describe('the legacy table', () => {
     expect(Object.keys(theme?.subcommands ?? {})).toEqual(['ls', 'set']);
     const source = theme?.subcommands?.set?.args?.[0]?.source;
     expect(source?.kind === 'enum' && source.values().map((value) => value.value)).toEqual(['swamphen', 'wombat']);
-    expect(registry.get('cd')?.args?.[0]?.source).toEqual({ kind: 'path', accept: 'dir', includeParent: true });
+    expect(registry.get('ls')?.args?.[0]?.source).toEqual({ kind: 'path', accept: 'dir', includeParent: true });
     expect(registry.get('help')?.args?.[0]?.source).toEqual({ kind: 'command' });
   });
 
@@ -193,18 +188,42 @@ describe('the legacy table', () => {
     expect(source.calls).toEqual(['theme set wombat']);
   });
 
-  it('sends cd home with $HOME, clears history with history -c, and copies stdin for cat', async () => {
+  it('clears history with history -c, and copies stdin for cat', async () => {
     const source = fakeSource();
     const { run, shell } = harness({ specs: legacySpecs(source) });
-    await run('cd');
-    await run('cd docs');
-    expect(source.calls).toEqual(['cd /home/guest', 'cd docs']);
+    await run('echo one');
     expect(shell.history.list().length).toBeGreaterThan(0);
     await run('history -c');
     expect(shell.history.list()).toEqual([]);
     expect((await run('cat a.txt | cat')).stdout).toBe('cat:a.txt');
     expect(source.calls.filter((call) => call.startsWith('cat'))).toEqual(['cat a.txt']);
     expect((await run('cat README.md')).blocks).toEqual([{ type: 'legacyHtml', html: 'cat:README.md' }]);
+  });
+
+  it('draws an owner document on a terminal from its styled lines, and gives a pipe its text', async () => {
+    const source = fakeSource();
+    const h = harness({ specs: legacySpecs(source) });
+    const node = h.tree.children?.home?.children?.guest?.children?.['a.txt'];
+    if (node === undefined) throw new Error('no a.txt');
+    node.styled = [[{ text: 'alpha', style: { fg: 'yellow', bold: true } }]];
+    const result = await h.run('cat a.txt');
+    expect(result.blocks).toEqual([{ type: 'lines', stream: 'stdout', lines: [[{ text: 'alpha', style: { fg: 'yellow', bold: true } }]] }]);
+    expect(source.calls).toEqual([]);
+    // Piped, or with more than one file, the legacy cat prints the plain text.
+    await h.run('cat a.txt | cat');
+    await h.run('cat a.txt b.txt');
+    expect(source.calls).toEqual(['cat a.txt', 'cat a.txt b.txt']);
+  });
+
+  it('answers help NAME for a ported command from its spec', async () => {
+    const source = fakeSource();
+    const pwd = { name: 'pwd', category: 'files' as const, summary: 'print the working directory', run: () => 0 };
+    const { run } = harness({ specs: [...legacySpecs(source), pwd] });
+    const result = await run('help pwd');
+    expect(result.stdout).toContain('print the working directory');
+    expect(source.calls).toEqual([]);
+    await run('help ls');
+    expect(source.calls).toEqual(['help ls']);
   });
 
   it('prints guest for whoami in a pipe, as the Linux command does', async () => {

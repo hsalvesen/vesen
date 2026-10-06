@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { lineText, out } from '../output/model';
-import { LegacyTreeFs, type LegacyNode } from '../vfs/legacy-tree';
-import { VfsError } from '../vfs/types';
+import { VfsError, type VirtualFile } from '../vfs/types';
+import { Vfs } from '../vfs/vfs';
 import {
   AsyncPipe,
   CaptureOut,
@@ -159,13 +159,13 @@ describe('out streams off the screen', () => {
   });
 });
 
-function home(): { fs: LegacyTreeFs; tree: LegacyNode } {
-  const tree: LegacyNode = {
+function home(): { fs: Vfs } {
+  const tree = (): VirtualFile => ({
     name: '',
     type: 'directory',
-    children: { home: { name: 'home', type: 'directory', children: { f: { name: 'f', type: 'file', content: 'old\n' } } } },
-  };
-  return { fs: new LegacyTreeFs({ root: tree, cwd: [] }), tree };
+    children: { home: { name: 'home', type: 'directory', owner: 'guest', children: { f: { name: 'f', type: 'file', content: 'old\n' } } } },
+  });
+  return { fs: new Vfs({ seed: tree }) };
 }
 
 describe('redirection targets', () => {

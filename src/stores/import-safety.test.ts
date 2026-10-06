@@ -37,7 +37,7 @@ describe('stores', () => {
 
     vi.resetModules();
     const stores = import.meta.glob(['./*.ts', '!./*.test.ts']);
-    expect(Object.keys(stores).sort()).toEqual(['./cathode.ts', './history.ts', './theme.ts']);
+    expect(Object.keys(stores).sort()).toEqual(['./cathode.ts', './screen.ts', './term.ts', './theme.ts']);
     for (const load of Object.values(stores)) await expect(load()).resolves.toBeTypeOf('object');
 
     expect(touched).toEqual([]);
@@ -50,10 +50,10 @@ describe('stores', () => {
     const { get } = await import('svelte/store');
     const { theme } = await import('./theme');
     const { cathode } = await import('./cathode');
-    const { history } = await import('./history');
+    const { screen } = await import('./screen');
 
     expect(get(theme).name).toBe('swamphen');
     expect(get(cathode)).toBe('scanlines');
-    expect(get(history)).toEqual([]);
+    expect(get(screen)).toEqual([]);
   });
 });

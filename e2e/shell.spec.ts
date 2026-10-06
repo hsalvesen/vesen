@@ -26,6 +26,29 @@ async function fillTranscript(page: Page): Promise<void> {
 }
 
 /**
+ * Holds `curl https://slow.example/` until released, then answers with some lines of text: a
+ * command whose output lands a while after Enter. `hold` starts holding the next request.
+ */
+async function slowCurl(page: Page): Promise<{ hold(): void; release(): void; line: string }> {
+  let release = () => {};
+  let held = Promise.resolve();
+  await page.route('https://slow.example/**', async (route) => {
+    await held;
+    const body = Array.from({ length: 40 }, (_, i) => `line ${i + 1} of a slow answer`).join('\n');
+    await route
+      .fulfill({ status: 200, contentType: 'text/plain', headers: { 'access-control-allow-origin': '*' }, body })
+      .catch(() => {});
+  });
+  return {
+    hold: () => {
+      held = new Promise<void>((resolve) => (release = resolve));
+    },
+    release: () => release(),
+    line: 'curl https://slow.example/',
+  };
+}
+
+/**
  * Scrolls the transcript to the top as a visitor does, with a wheel turn and the scroll it makes.
  * The input matters: a scroll with none, in the frame new output arrives, is taken as the
  * engine's own (ui/actions/stickToBottom.ts).
@@ -258,7 +281,7 @@ test.describe('focus', { tag: '@smoke' }, () => {
     await banner.tap();
     await expect(prompt(page)).not.toBeFocused();
 
-    await page.locator('.prompt-area span.font-bold').first().tap();
+    await page.locator('.prompt-area .prompt').first().tap();
     await expect(prompt(page)).toBeFocused();
 
     // A command keeps the keyboard open when it was open at submit.
@@ -300,8 +323,8 @@ test.describe('focus', { tag: '@smoke' }, () => {
     }
     expect(await overflows(), 'the transcript scrolls').toBe(true);
 
-    // cat fetches its file, so the output lands a moment after Enter, together with the running
-    // line and the cancel button going away. Typed at a person's pace, as on a phone.
+    // Each output lands together with the running line and the cancel button going away. Typed
+    // at a person's pace, as on a phone.
     for (const line of ['cat README.md', 'cat history.txt']) {
       const echoes = page.locator('[role="log"] .command-input-display');
       const before = await echoes.count();
@@ -336,20 +359,12 @@ test.describe('focus', { tag: '@smoke' }, () => {
     await page.goto('/');
     await focusPrompt(page);
 
-    // README.md is held until released; `hold` starts holding the next request.
-    let release = () => {};
-    let held = Promise.resolve();
-    const hold = () => {
-      held = new Promise<void>((resolve) => (release = resolve));
-    };
-    await page.route('**/README.md', async (route) => {
-      await held;
-      await route.continue();
-    });
+    // The answer is held until released.
+    const { hold, release, line } = await slowCurl(page);
 
     // The visitor puts the keyboard away to read, and the command finishes.
     hold();
-    await prompt(page).fill('cat README.md');
+    await prompt(page).fill(line);
     await prompt(page).press('Enter');
     await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'true');
     await prompt(page).evaluate((input) => input.blur());
@@ -360,7 +375,7 @@ test.describe('focus', { tag: '@smoke' }, () => {
     // Or the visitor taps the cancel line after putting the keyboard away.
     hold();
     await focusPrompt(page);
-    await prompt(page).fill('cat README.md');
+    await prompt(page).fill(line);
     await prompt(page).press('Enter');
     await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'true');
     await prompt(page).evaluate((input) => input.blur());
@@ -441,20 +456,16 @@ test.describe('keys on other controls', { tag: '@smoke' }, () => {
     await page.goto('/');
     await fillTranscript(page);
 
-    let release = () => {};
-    const held = new Promise<void>((resolve) => (release = resolve));
-    await page.route('**/history.txt', async (route) => {
-      await held;
-      await route.continue();
-    });
-    await prompt(page).fill('cat history.txt');
+    const slow = await slowCurl(page);
+    slow.hold();
+    await prompt(page).fill(slow.line);
     await prompt(page).press('Enter');
     await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'true');
     // A line typed ahead, which Enter on the pill must not run. Typing brings the view down, so
     // it comes before scrolling up.
     await prompt(page).fill('echo typed');
     await scrollToTop(page);
-    release();
+    slow.release();
     const pill = page.getByRole('button', { name: 'Scroll to new output' });
     await expect(pill).toBeVisible();
 
@@ -469,8 +480,8 @@ test.describe('keys on other controls', { tag: '@smoke' }, () => {
   test('Enter on the cancel button cancels the running command', async ({ page }) => {
     test.skip(isPhone(), 'a hardware keyboard');
     await page.goto('/');
-    await page.route('**/README.md', () => new Promise(() => {}));
-    await prompt(page).fill('cat README.md');
+    await page.route('https://slow.example/**', () => new Promise(() => {}));
+    await prompt(page).fill('curl https://slow.example/');
     await prompt(page).press('Enter');
     const cancel = page.getByRole('button', { name: 'Cancel running command' });
     await cancel.focus();
@@ -486,22 +497,16 @@ test.describe('scrolling', { tag: '@smoke' }, () => {
     await focusPrompt(page);
     await fillTranscript(page);
 
-    // cat fetches the file; hold the response while the visitor scrolls up.
-    let release = () => {};
-    const held = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    await page.route('**/history.txt', async (route) => {
-      await held;
-      await route.continue();
-    });
-    await prompt(page).fill('cat history.txt');
+    // Hold the answer while the visitor scrolls up.
+    const slow = await slowCurl(page);
+    slow.hold();
+    await prompt(page).fill(slow.line);
     await prompt(page).press('Enter');
     await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'true');
 
     const main = page.locator('main');
     await scrollToTop(page);
-    release();
+    slow.release();
     await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
 
     const pill = page.getByRole('button', { name: 'Scroll to new output' });

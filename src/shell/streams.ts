@@ -289,7 +289,7 @@ export interface WriteHandle {
   close(): void;
 }
 
-/** Where redirections write. The VFS provides it from the next step; until then, the legacy tree. */
+/** Where redirections write: the VFS (Vfs.openWrite), or any file system with writeFile in tests. */
 export interface WriteTarget {
   /**
    * Opens `path` (absolute) for writing, creating it, and truncating it unless `append` is set.

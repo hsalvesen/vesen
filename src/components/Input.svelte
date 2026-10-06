@@ -1,8 +1,10 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte";
-  import { history, commandHistory, speedtestPhase } from "../stores/history";
-  import { commands } from "../utils/commands";
+  import { screen } from "../stores/screen";
+  import { commandHistory, speedtestPhase } from "../utils/legacyStores";
+  import { commandNames } from "../utils/commands";
   import { virtualFileSystem, currentPath } from "../utils/virtualFileSystem";
+  import { outputBlocks } from "../interfaces/command";
   import themes from "../../themes.json";
   import { cathodeModes, crtQualities } from "../stores/cathode";
   import type { JobOrigin, ShellPort } from "../shell/index";
@@ -57,7 +59,7 @@
   ): string[] => {
     if (!isFilePath) {
       // Command completion
-      return Object.keys(commands).filter((cmd) => cmd.startsWith(input));
+      return commandNames().filter((cmd) => cmd.startsWith(input));
     }
 
     // File path completion using actual virtual file system
@@ -118,14 +120,8 @@
     pendingSudoCommand = "";
     passwordInput = "";
 
-    // Append interrupt message to the last history entry using a highlighted block
-    history.update((h) => {
-      if (h.length === 0) return h;
-      const last = { ...h[h.length - 1] };
-      const outputs = [...last.outputs, notice("sudo: password entry cancelled")];
-      const newLast = { ...last, outputs };
-      return [...h.slice(0, -1), newLast];
-    });
+    // Append the interrupt notice to the sudo line's entry, in a highlighted block
+    screen.appendToLast(outputBlocks(notice("sudo: password entry cancelled")));
 
     // Reset input state
     command = "";
@@ -153,7 +149,7 @@
       shell.abort();
     } else {
       // Like bash: echo the abandoned line with ^C under a fresh prompt. It is not kept in history.
-      $history = [...$history, { command: `${command}^C`, outputs: [] }];
+      screen.push({ prompt: shell.renderPrompt(), line: `${command}^C`, blocks: [], status: 130 });
       command = "";
       historyIndex = -1;
     }
@@ -235,7 +231,7 @@
     // Handle Ctrl+L globally
     if (event.ctrlKey && event.key === "l") {
       event.preventDefault();
-      $history = [];
+      screen.clear();
       return;
     }
 
@@ -267,8 +263,8 @@
 
       // Check if command is empty or only whitespace
       if (!command.trim()) {
-        // Just add an empty entry to history to show a new prompt line
-        $history = [...$history, { command: "", outputs: [""] }];
+        // Just add an empty entry to show a new prompt line
+        screen.push({ prompt: shell.renderPrompt(), line: "", blocks: [] });
         command = "";
         return;
       }
@@ -286,7 +282,7 @@
         pendingSudoCommand = args.join(" ");
         isPasswordMode = true;
         shell.remember(line);
-        $history = [...$history, { command: line, outputs: [] }];
+        screen.push({ prompt: shell.renderPrompt(), line, blocks: [] });
         command = "";
         return;
       }

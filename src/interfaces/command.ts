@@ -7,17 +7,6 @@ import type { Block } from '../output/model';
  */
 export type CommandOutput = string | readonly Block[];
 
-/** One transcript entry: the line typed and what it printed. */
-export interface Command {
-  command: string;
-  outputs: CommandOutput[];
-  /**
-   * False when the line cleared the screen before printing (`clear; ls`): the output stays and
-   * the prompt line it was typed at does not, as in a terminal.
-   */
-  echo?: boolean;
-}
-
 /** The blocks to render for an output; anything else a legacy command returned is stringified first. */
 export function outputBlocks(output: CommandOutput): readonly Block[] {
   // A literal rather than out.legacyHtml, which would pull every builder into the initial chunk.

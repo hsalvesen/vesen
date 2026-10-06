@@ -1,6 +1,7 @@
 // fastfetch: the device and browser details beside an OS logo. It loads the first time it runs
 // (commands/system.ts), with its logos, which keeps it out of the initial chunk.
 import { theme } from '../../stores/theme';
+import { GUEST, HOST } from '../../vfs/identity';
 import { get } from 'svelte/store';
 import { fetchJson, isNetError } from '../../services/net';
 import { escapeHtml } from '../../output/escape';
@@ -521,10 +522,8 @@ export async function fastfetch(args: string[], signal?: AbortSignal): Promise<s
           }
         }
 
-        // Dynamic username/hostname
-        const username = 'user';
-        const hostname = window.location.hostname || 'localhost';
-        const userHost = `${username}@${hostname}`;
+        // The visitor and the host, as the prompt and /etc/passwd name them (F024).
+        const userHost = `${GUEST.name}@${HOST}`;
 
         // ASCII art colour blocks (now using CSS variables for dynamic themes)
         const colourBlocksAscii = `

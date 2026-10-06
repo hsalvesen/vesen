@@ -6,8 +6,12 @@ const spec = (name: string, extra: Partial<CommandSpec> = {}): CommandSpec => ({
 
 describe('the command catalogue', () => {
   it('finds the spec files under src/commands/<category>/', () => {
-    // None are ported yet; each port adds one, and this list grows.
-    expect(specFiles().map((found) => found.name)).toEqual([]);
+    // Each port adds one, and this list grows.
+    expect(specFiles().map((found) => found.name).sort()).toEqual(['alias', 'cd', 'export', 'pwd', 'reset']);
+  });
+
+  it('has spec files that pass the registry lint', () => {
+    expect(buildRegistry([], specFiles()).validate()).toEqual([]);
   });
 
   it('lets a spec file replace the legacy command of the same name', () => {

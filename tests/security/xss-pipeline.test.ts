@@ -1,6 +1,6 @@
 // Script injection through the whole pipeline: lines typed at the prompt run through the shell
 // exactly as Input.svelte runs them (legacy commands through the adapter), and the transcript is
-// mounted with the real History component, which renders the shell's own output as text and
+// mounted with the real Transcript component, which renders the shell's own output as text and
 // legacy output through OutputView's sanitising legacy block.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { blocksToGoldenHtml } from '../golden/format';
@@ -9,7 +9,7 @@ import { activeContent, xssCorpus } from '../support/xss';
 interface Session {
   /** Runs one line through the shell, which records it in the transcript; returns its output as HTML. */
   run(line: string): Promise<string>;
-  /** Mounts History over everything run so far. */
+  /** Mounts the transcript over everything run so far. */
   render(): Promise<HTMLElement>;
   /** Adds a file straight into the home folder, as persisted or imported files would arrive. */
   plant(name: string): void;
@@ -31,10 +31,10 @@ async function boot(): Promise<Session> {
     async render() {
       // Imported after the reset so the component shares this session's stores.
       const { mount, unmount, flushSync } = await import('svelte');
-      const { default: History } = await import('../../src/components/History.svelte');
+      const { default: Transcript } = await import('../../src/ui/Transcript.svelte');
       const target = document.createElement('div');
       document.body.append(target);
-      const component = mount(History, { target });
+      const component = mount(Transcript, { target });
       flushSync();
       disposers.push(() => {
         unmount(component);
@@ -45,7 +45,7 @@ async function boot(): Promise<Session> {
       return target;
     },
     plant(name) {
-      const home = virtualFileSystem.children?.home?.children?.user?.children;
+      const home = virtualFileSystem.children?.home?.children?.guest?.children;
       if (!home) throw new Error('no home folder');
       home[name] = { name, type: 'file', content: '' };
     },

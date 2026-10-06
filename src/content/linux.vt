@@ -1,0 +1,74 @@
+{brightCyan,bold}Arch Linux Beginner Notes{/}
+{cyan}═══════════════════════════{/}
+
+{brightYellow,bold}Initial Setup & Customisation{/}
+{yellow}─────────────────────────────────{/}
+{green}□{/} Install yay (AUR helper): {cyan}git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si{/}
+{green}□{/} Update system: {cyan}sudo pacman -Syu{/}
+{green}□{/} Install essential packages: {cyan}sudo pacman -S vim git htop neofetch{/}
+{green}□{/} Configure .bashrc with aliases and PS1 customization
+{green}□{/} Install and configure zsh with oh-my-zsh
+{green}□{/} Set up dotfiles repository for configuration management
+
+{brightYellow,bold}Desktop Environment & Window Manager{/}
+{yellow}───────────────────────────────────────{/}
+{green}□{/} Install i3wm: {cyan}sudo pacman -S i3-wm i3status i3lock dmenu{/}
+{green}□{/} Configure i3 config file: {blue}~/.config/i3/config{/}
+{green}□{/} Install polybar for better status bar
+{green}□{/} Set up rofi as application launcher
+{green}□{/} Configure picom for transparency and effects
+{green}□{/} Install and configure nitrogen for wallpapers
+
+{brightYellow,bold}Cron Jobs & Automation{/}
+{yellow}─────────────────────────{/}
+{green}□{/} Edit crontab: {cyan}crontab -e{/}
+{green}□{/} System updates: {purple}0 2 * * 0{/} {cyan}yay -Syu --noconfirm{/}
+{green}□{/} Backup home directory: {purple}0 3 * * 1{/} {cyan}rsync -av /home/user/ /backup/{/}
+{green}□{/} Clean package cache: {purple}0 4 * * *{/} {cyan}paccache -r{/}
+{green}□{/} Check disk usage: {purple}0 9 * * *{/} {cyan}df -h | mail -s "Disk Usage" user@localhost{/}
+
+{brightRed,bold}Common Errors & Solutions{/}
+{red}────────────────────────────{/}
+
+{brightWhite,bold}1.{/} {red}"error: failed to commit transaction (conflicting files)"{/}
+   {green,bold}Solution:{/} {cyan}sudo pacman -S --overwrite '*' package-name{/}
+
+{brightWhite,bold}2.{/} {red}"error: could not lock database"{/}
+   {green,bold}Solution:{/} {cyan}sudo rm /var/lib/pacman/db.lck{/}
+
+{brightWhite,bold}3.{/} {red}"error: target not found"{/}
+   {green,bold}Solution:{/} {cyan}sudo pacman -Sy{/} then retry installation
+
+{brightWhite,bold}4.{/} {red}AUR package build fails{/}
+   {green,bold}Solution:{/} Check dependencies, install base-devel group
+
+{brightWhite,bold}5.{/} {red}"No space left on device"{/}
+   {green,bold}Solution:{/} Clean package cache with {cyan}paccache -r{/}, remove orphaned packages
+
+{brightWhite,bold}6.{/} {red}X11 won't start after update{/}
+   {green,bold}Solution:{/} Check Xorg logs, reinstall graphics drivers
+
+{brightWhite,bold}7.{/} {red}Sound not working{/}
+   {green,bold}Solution:{/} Install {cyan}alsa-utils{/}, run {cyan}alsamixer{/}, unmute channels
+
+{brightWhite,bold}8.{/} {red}Network issues after boot{/}
+   {green,bold}Solution:{/} Enable NetworkManager: {cyan}sudo systemctl enable NetworkManager{/}
+
+{brightBlue,bold}Useful Commands{/}
+{blue}──────────────────{/}
+{white}•{/} List installed packages: {cyan}pacman -Q{/}
+{white}•{/} Find package files: {cyan}pacman -Ql package-name{/}
+{white}•{/} Search for package: {cyan}pacman -Ss search-term{/}
+{white}•{/} Remove orphaned packages: {cyan}sudo pacman -Rns $(pacman -Qtdq){/}
+{white}•{/} Check system logs: {cyan}journalctl -xe{/}
+{white}•{/} Monitor system resources: {cyan}htop{/}
+{white}•{/} Check running services: {cyan}systemctl list-units --type=service{/}
+
+{brightPurple,bold}Tips for Beginners{/}
+{purple}─────────────────────{/}
+{white}•{/} Always read the {brightCyan}Arch Wiki{/} before making changes
+{white}•{/} Keep a backup of working configurations
+{white}•{/} Test new configurations in a virtual machine first
+{white}•{/} Join the Arch Linux forums and IRC for help
+{white}•{/} Use {cyan}timeshift{/} for system snapshots
+{white}•{/} {red,bold}Don't run random commands from the internet without understanding them{/}

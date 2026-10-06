@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isTrustedAction, lineText, type Block, type Span } from '../output/model';
 import type { Opener } from '../services/types';
 import { harness, sampleTree } from '../testing/shell-harness';
-import { LegacyTreeFs, type LegacyNode } from '../vfs/legacy-tree';
+import type { VirtualFile } from '../vfs/types';
 import { MAX_SCRIPT_DEPTH } from './executor';
 import { defineCommand } from './types';
 
@@ -77,7 +77,7 @@ describe('pipelines', () => {
 });
 
 describe('redirection', () => {
-  it('writes a file that cat reads back, through the legacy tree adapter', async () => {
+  it('writes a file that cat reads back, through the VFS', async () => {
     const { run, tree } = harness();
     expect(await run('echo hi > f; cat f')).toMatchObject({ status: 0, stdout: 'hi' });
     expect(tree.children?.home?.children?.guest?.children?.f?.content).toBe('hi\n');
@@ -360,15 +360,15 @@ describe('effects', () => {
   });
 
   it('reset restores the session: variables, history, files, theme and folder', async () => {
-    const h = harness({ fs: (tree, cwd) => new LegacyTreeFs({ root: tree, cwd, restore: () => (tree.children = sampleTree().children) }) });
+    const h = harness();
     await h.run('A=1; echo x > new.txt; cd /etc');
     const result = await h.run('reset');
     expect(result.screen).toBe('reset');
     expect(h.appearance.resets).toBe(1);
     expect(h.shell.history.list()).toEqual([]);
     expect(h.shell.cwd.get()).toBe('/home/guest');
-    expect(h.cwd).toEqual(['home', 'guest']);
     expect((await h.run('echo "[$A]"; cat new.txt')).stdout).toBe('[]');
+    expect(h.fs.exists('/home/guest/a.txt')).toBe(true);
   });
 });
 
@@ -406,65 +406,74 @@ describe('the folder', () => {
     expect(await run('cd /etc/hostname')).toMatchObject({ status: 1, stderr: 'cd: /etc/hostname: Not a directory' });
   });
 
-  it('follows a legacy command that moved the legacy folder itself', async () => {
-    const legacyCd = defineCommand({
-      name: 'legacy-cd',
-      category: 'files',
-      summary: 'x',
-      run: () => {
-        cwd.splice(0, cwd.length, 'etc');
-      },
-    });
-    const h = harness({ specs: [legacyCd] });
-    const cwd = h.cwd;
-    await h.run('legacy-cd');
-    expect(h.shell.cwd.get()).toBe('/etc');
+  it('needs x to enter a folder, and keeps a dangling folder when it goes', async () => {
+    const h = harness();
+    h.fs.mkdir('/home/guest/locked');
+    h.fs.chmod('/home/guest/locked', 0o600);
+    expect(await h.run('cd locked')).toMatchObject({ status: 1, stderr: 'cd: locked: Permission denied' });
+    await h.run('cd docs');
+    h.fs.rmdir('/home/guest/docs');
+    expect(h.shell.cwd.get()).toBe('/home/guest/docs');
+    expect((await h.run('pwd')).stdout).toBe('/home/guest/docs');
+  });
+});
+
+describe('/usr/bin stubs', () => {
+  it('run the command they stand for, by path', async () => {
+    const tree = (): VirtualFile => {
+      const base = sampleTree();
+      const children = base.children ?? {};
+      children.usr = {
+        name: 'usr',
+        type: 'directory',
+        children: { bin: { name: 'bin', type: 'directory', children: { pwd: { name: 'pwd', type: 'file', mode: 0o755, builtin: 'pwd', content: '#!/bin/vesh\n' } } } },
+      };
+      children.bin = { name: 'bin', type: 'symlink', target: 'usr/bin' };
+      return base;
+    };
+    const h = harness({ tree });
+    expect(await h.run('/bin/pwd; /usr/bin/pwd')).toMatchObject({ status: 0, stdout: '/home/guest\n/home/guest' });
   });
 });
 
 describe('scripts', () => {
-  /** A tree where files starting with #! are executable, as the VFS's x bit will make them. */
-  const scripts = (tree: LegacyNode, cwd: string[]): LegacyTreeFs => {
-    class Executable extends LegacyTreeFs {
-      isExecutable(path: string): boolean {
-        try {
-          return this.readFile(path).startsWith('#!');
-        } catch {
-          return false;
-        }
-      }
-    }
-    return new Executable({ root: tree, cwd });
+  /** Writes a file and sets its mode, as chmod would. */
+  const script = (h: ReturnType<typeof harness>, path: string, text: string, mode = 0o755): void => {
+    h.fs.writeFile(path, text);
+    h.fs.chmod(path, mode);
   };
 
-  it('run line by line with $1..$9 and $#, from a path or from $PATH', async () => {
-    const h = harness({ fs: scripts });
-    h.fs.writeFile('/home/guest/greet.sh', '#!/bin/vesh\necho "hello $1 and $2"\necho $# $0\n');
+  it('run line by line with $1..$9 and $#, from a path or from $PATH, when the x bit is set', async () => {
+    const h = harness();
+    script(h, '/home/guest/greet.sh', '#!/bin/vesh\necho "hello $1 and $2"\necho $# $0\n');
     h.fs.writeFile('/home/guest/plain.txt', 'echo not a script\n');
     expect((await h.run('./greet.sh a b')).stdout).toBe('hello a and b\n2 ./greet.sh');
     expect(await h.run('./plain.txt')).toMatchObject({ status: 126, stderr: 'vesen: ./plain.txt: Permission denied' });
     h.fs.mkdir('/home/guest/bin');
-    h.fs.writeFile('/home/guest/bin/hi', "#!/bin/vesh\necho 'multi\nline'\n");
+    script(h, '/home/guest/bin/hi', "#!/bin/vesh\necho 'multi\nline'\n");
     expect((await h.run('hi')).stdout).toBe('multi\nline');
   });
 
   it(`stop at a depth of ${MAX_SCRIPT_DEPTH}`, async () => {
-    const h = harness({ fs: scripts });
-    h.fs.writeFile('/home/guest/loop.sh', '#!/bin/vesh\n./loop.sh\n');
+    const h = harness();
+    script(h, '/home/guest/loop.sh', '#!/bin/vesh\n./loop.sh\n');
     const result = await h.run('./loop.sh');
     expect(result.stderr).toBe(`vesen: ./loop.sh: scripts nested more than ${MAX_SCRIPT_DEPTH} deep`);
   });
 
   it('report a syntax error with its line', async () => {
-    const h = harness({ fs: scripts });
-    h.fs.writeFile('/home/guest/bad.sh', '#!/bin/vesh\necho ok\n| oops\n');
+    const h = harness();
+    script(h, '/home/guest/bad.sh', '#!/bin/vesh\necho ok\n| oops\n');
     expect(await h.run('./bad.sh')).toMatchObject({ status: 2, stdout: 'ok', stderr: "./bad.sh: line 3: syntax error near unexpected token '|'" });
   });
 
-  it('are not looked for while nothing is executable', async () => {
+  it('are refused without the x bit, and not found on $PATH without it', async () => {
     const h = harness();
     h.fs.writeFile('/home/guest/greet.sh', '#!/bin/vesh\necho hi\n');
-    expect((await h.run('./greet.sh')).status).toBe(127);
+    expect(await h.run('./greet.sh')).toMatchObject({ status: 126, stderr: 'vesen: ./greet.sh: Permission denied' });
+    h.fs.mkdir('/home/guest/bin');
+    h.fs.writeFile('/home/guest/bin/hidden', '#!/bin/vesh\necho hi\n');
+    expect((await h.run('hidden')).status).toBe(127);
   });
 });
 

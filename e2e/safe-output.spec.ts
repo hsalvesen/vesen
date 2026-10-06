@@ -82,37 +82,45 @@ test.describe('safe output', { tag: '@smoke' }, () => {
     expect(await planted(page)).toEqual([]);
   });
 
-  test("the browser's own parser cannot smuggle markup past the legacy sanitiser", async ({ page }) => {
-    // README.md is one of the owner's styled documents, so cat renders it as HTML through the
-    // sanitiser. Serving the corpus in its place runs every payload through the real parser.
-    await page.route('**/README.md', (route) =>
-      route.fulfill({ contentType: 'text/markdown', body: xssCorpus('alert(1)').join('\n') }),
-    );
+  /**
+   * Puts text in ~/README.md before the page loads, as a saved file would arrive: the overlay
+   * under vesen:fs:v1 is the visitor's own browser storage, which anything could have written.
+   */
+  async function saveReadme(page: Page, content: string): Promise<void> {
+    const saved = {
+      v: 1,
+      seedVersion: 'planted',
+      savedAt: 0,
+      overlay: { '/home/guest/README.md': { type: 'file', mode: 0o644, mtime: 0, content } },
+    };
+    await page.addInitScript((value) => localStorage.setItem('vesen:fs:v1', value), JSON.stringify(saved));
+  }
+
+  test('a saved file full of payloads prints as text, which the browser never parses as markup', async ({ page }) => {
+    // The owner's documents were HTML once; every file is now text, written into text nodes.
+    await saveReadme(page, xssCorpus('alert(1)').join('\n'));
     const dialogs = watchDialogs(page);
     await page.goto('/');
 
     await run(page, 'cat README.md');
-    await expect(page.getByRole('log')).toContainText('ok');
+    const log = page.getByRole('log');
+    await expect(log).toContainText('<img src=x onerror=alert(1)');
+    await expect(log).toContainText('ok');
     await page.waitForTimeout(500);
 
     expect(dialogs).toEqual([]);
     expect(await planted(page)).toEqual([]);
-    // The safe link in the corpus survives, opening in a new tab without an opener.
-    const link = page.locator('main a[href="https://ok.example/"]');
-    await expect(link).toHaveAttribute('target', '_blank');
-    await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    // Not even the safe link in the corpus becomes one.
+    await expect(page.locator('main a[href="https://ok.example/"]')).toHaveCount(0);
   });
 
   test('no output can lay a link over the prompt', async ({ page }) => {
-    // Served on their own: in the whole corpus an unclosed <math> swallows whatever follows it.
-    await page.route('**/README.md', (route) =>
-      route.fulfill({ contentType: 'text/markdown', body: `before\n${OVERLAY_PAYLOADS.join('\n')}\nafter` }),
-    );
+    await saveReadme(page, `before\n${OVERLAY_PAYLOADS.join('\n')}\nafter`);
     await page.goto('/');
     await run(page, 'cat README.md');
     const log = page.getByRole('log');
     await expect(log).toContainText('after');
-    await expect(page.locator('main a[href="https://evil.example/"]')).toHaveCount(OVERLAY_PAYLOADS.length);
+    await expect(page.locator('main a[href="https://evil.example/"]')).toHaveCount(0);
     expect(await planted(page)).toEqual([]);
 
     // A tap anywhere on the prompt still reaches the input.

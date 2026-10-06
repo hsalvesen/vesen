@@ -1,3 +1,3 @@
 $ ls -a
 README.md  history.txt  documents/  projects/  desktop/  downloads/  pictures/  music/  videos/  public/  templates/
-bin/  src/  scripts/  config/  .bashrc  .profile  .vimrc  .gitconfig  .ssh/  .local/
+bin/  src/  scripts/  config/  .bashrc  .profile  .vimrc  .gitconfig  .ssh/  .local/  .bash_history

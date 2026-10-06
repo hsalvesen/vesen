@@ -1,6 +1,6 @@
-// A shell for kernel tests: a registry of tiny stand-in commands, a small legacy-shaped file
-// tree, and fakes for every service. run(line) returns the status and what reached the screen,
-// split by stream.
+// A shell for kernel tests: a registry of tiny stand-in commands, a small file tree in the VFS,
+// and fakes for every service. run(line) returns the status and what reached the screen, split
+// by stream.
 
 import { lineText, plain, type Block } from '../output/model';
 import { createClock } from '../services/clock';
@@ -11,8 +11,8 @@ import { createShell, type JobResult, type ScreenCommit, type Shell, type Termin
 import { CommandRegistry } from '../shell/registry';
 import { defineCommand, type CommandContext, type CommandSpec } from '../shell/types';
 import { strerror } from '../vfs/errors';
-import { LegacyTreeFs, type LegacyNode } from '../vfs/legacy-tree';
-import { VfsError } from '../vfs/types';
+import { VfsError, type VirtualFile } from '../vfs/types';
+import { Vfs } from '../vfs/vfs';
 
 /** Reads the files named in ctx.args, or stdin when there are none; reports missing files. */
 async function inputs(ctx: CommandContext, each: (text: string) => Promise<void>): Promise<number> {
@@ -197,8 +197,8 @@ export function stubCommands(): CommandSpec[] {
   ];
 }
 
-/** A home folder with two text files and a dotfile, under a legacy-shaped tree. */
-export function sampleTree(): LegacyNode {
+/** A home folder with two text files and a dotfile, the visitor's; the rest is root's. */
+export function sampleTree(): VirtualFile {
   return {
     name: '',
     type: 'directory',
@@ -210,6 +210,8 @@ export function sampleTree(): LegacyNode {
           guest: {
             name: 'guest',
             type: 'directory',
+            owner: 'guest',
+            group: 'guest',
             children: {
               'a.txt': { name: 'a.txt', type: 'file', content: 'alpha\n' },
               'b.txt': { name: 'b.txt', type: 'file', content: 'beta\n' },
@@ -220,6 +222,7 @@ export function sampleTree(): LegacyNode {
         },
       },
       etc: { name: 'etc', type: 'directory', children: { hostname: { name: 'hostname', type: 'file', content: 'vesen\n' } } },
+      tmp: { name: 'tmp', type: 'directory', mode: 0o1777, children: {} },
     },
   };
 }
@@ -247,8 +250,8 @@ export function stubAppearance(): Appearance & { resets: number } {
 
 export interface HarnessOptions {
   readonly specs?: readonly CommandSpec[];
-  readonly tree?: LegacyNode;
-  readonly fs?: (tree: LegacyNode, cwd: string[]) => LegacyTreeFs;
+  /** The seed; a fresh copy is built again for `reset`. */
+  readonly tree?: () => VirtualFile;
   readonly net?: Net;
   readonly clock?: Clock;
   readonly storage?: KV<'local'> | null;
@@ -276,9 +279,8 @@ export function screenText(blocks: readonly Block[], stream: 'stdout' | 'stderr'
 }
 
 export function harness(options: HarnessOptions = {}) {
-  const tree = options.tree ?? sampleTree();
-  const cwd: string[] = [];
-  const fs = options.fs ? options.fs(tree, cwd) : new LegacyTreeFs({ root: tree, cwd });
+  const fs = new Vfs({ seed: options.tree ?? sampleTree, now: () => Date.UTC(2026, 9, 6, 9, 0, 0) });
+  const tree = fs.root;
   const commits: ScreenCommit[] = [];
   let bells = 0;
   const appearance = stubAppearance();
@@ -304,7 +306,6 @@ export function harness(options: HarnessOptions = {}) {
     shell,
     fs,
     tree,
-    cwd,
     commits,
     appearance,
     run,

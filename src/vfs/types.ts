@@ -3,9 +3,50 @@
 // already resolved unless a method says otherwise.
 
 import type { Line } from '../output/model';
+import type { SysSnapshot } from '../services/types';
 
 export type NodeType = 'file' | 'directory' | 'symlink' | 'device';
 export type DeviceName = 'null' | 'zero' | 'random' | 'urandom' | 'tty';
+
+/** What a generated file (/proc) is made from each time it is read. */
+export interface GenerateContext {
+  /** Milliseconds since the epoch. */
+  readonly now: number;
+  /** When the page booted, in milliseconds since the epoch. */
+  readonly bootTime: number;
+  /** The device's facts; null when they are not known. */
+  readonly sys: SysSnapshot | null;
+  /** A number in [0, 1). */
+  random(): number;
+}
+
+/**
+ * One node of the file tree: the shape of the legacy tree literal (name, type, content,
+ * children), plus the fields the VFS fills with defaults when it adopts a tree. Children are
+ * null-prototype records, so `children['constructor']` is never an inherited function (F031).
+ */
+export interface VirtualFile {
+  name: string;
+  type: NodeType;
+  content?: string;
+  children?: Record<string, VirtualFile>;
+  /** A symbolic link's target, as written: relative to the link's folder, or absolute. */
+  target?: string;
+  /** Permission bits, such as 0o644; 0o1777 for a sticky folder. */
+  mode?: number;
+  owner?: string;
+  group?: string;
+  /** Milliseconds since the epoch. */
+  mtime?: number;
+  /** The owner's styled version of a seed document, for cat on a terminal; cleared on any write. */
+  styled?: readonly Line[];
+  /** /proc: made on every read, never stored or persisted. */
+  generate?: (context: GenerateContext) => string;
+  /** /dev: what reading and writing it does. */
+  device?: DeviceName;
+  /** /usr/bin: the registry command this stub stands for. */
+  builtin?: string;
+}
 
 export interface Stat {
   readonly path: string;

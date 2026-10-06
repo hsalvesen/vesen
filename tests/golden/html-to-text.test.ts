@@ -11,7 +11,7 @@ import { htmlToPlainText, parseHtmlTranscript } from './format';
 const LEGACY = join(dirname(fileURLToPath(import.meta.url)), '__snapshots__', 'legacy');
 
 const steps = readdirSync(LEGACY)
-  // The rendered session is the DOM after History.svelte, not command output.
+  // The rendered session is the DOM of the transcript (ui/Transcript.svelte), not command output.
   .filter((name) => name !== 'rendered-session')
   .flatMap((name) =>
     readdirSync(join(LEGACY, name))

@@ -2,7 +2,7 @@
 // services are built and the stores are connected to the page. main.ts calls bootstrap() before
 // it mounts the app; nothing else has side effects at import time.
 import { get } from 'svelte/store';
-import type { CommandOutput } from '../interfaces/command';
+import { outputBlocks, type CommandOutput } from '../interfaces/command';
 import { applyCathode } from '../platform/crt';
 import { installChunkReload } from '../platform/chunkReload';
 import { applyTheme } from '../platform/head';
@@ -16,14 +16,19 @@ import { createOpener } from '../services/opener';
 import { createStorage, runMigrations } from '../services/storage';
 import { createSysInfoStub } from '../services/sysinfo';
 import type { StorageService } from '../services/types';
-import type { ShellFs, ShellPort, TerminalInfo } from '../shell/index';
+import type { Shell, ShellPort, TerminalInfo } from '../shell/index';
+import { promptLine } from '../shell/prompt';
 import type { CommandSpec, InAppBrowser } from '../shell/types';
 import { cathode, cathodeModes, cathodeQuality, crtTier, DEFAULT_CATHODE_MODE, persistCathode } from '../stores/cathode';
-import { history } from '../stores/history';
+import { screen } from '../stores/screen';
+import { columns } from '../stores/term';
 import { DEFAULT_THEME_NAME, persistTheme, theme, themes } from '../stores/theme';
 import { markCurrentCathode, markCurrentTheme } from '../ui/legacy-highlights';
 import { playBeep } from '../utils/beep';
 import { notice } from '../utils/notice';
+import { GUEST } from '../vfs/identity';
+import type { VirtualFile } from '../vfs/types';
+import type { Vfs } from '../vfs/vfs';
 import { lazyShell } from './lazy-shell';
 
 export interface BootOptions {
@@ -33,17 +38,19 @@ export interface BootOptions {
   /** The welcome banner that opens the transcript. */
   readonly banner: () => CommandOutput;
   /**
-   * Migration only: loads the legacy commands and file tree (src/utils/legacyShell.ts). main.ts
-   * hands it in, so this strictly typed module never imports src/utils. Without it the shell has
-   * only the spec files and an empty home folder.
+   * Migration only: loads the legacy commands and the shim over the VFS
+   * (src/utils/legacyShell.ts). main.ts hands it in, so this strictly typed module never imports
+   * src/utils. Without it the shell has only the spec files.
    */
   readonly legacy?: () => Promise<LegacyParts>;
 }
 
-/** The legacy commands as specs, and the legacy file tree. */
+/** The legacy commands as specs, and how the legacy code reaches the VFS and the shell. */
 export interface LegacyParts {
   readonly specs: readonly CommandSpec[];
-  readonly fs: ShellFs;
+  /** The tree the legacy code walks, which the VFS fills. */
+  readonly root: VirtualFile;
+  readonly bind: (parts: { readonly vfs: Vfs; readonly shell: Shell }) => () => void;
 }
 
 export interface Booted {
@@ -89,7 +96,7 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
 
   const stops = [
     installChunkReload(win, storage.session, build, (message) => {
-      history.update((entries) => [...entries, { command: '', outputs: [notice(message)] }]);
+      screen.push({ prompt: shell.renderPrompt(), line: '', blocks: outputBlocks(notice(message)) });
     }),
     persistTheme(storage.local),
     persistCathode(storage.local),
@@ -112,6 +119,8 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
     startMeasuring(win),
     // The shell's height and position: the part of the page above the toolbars and keyboard.
     startViewport(win),
+    // The terminal's width in cells, for the prompt.
+    trackColumns(win),
   ];
 
   // The kernel loads now, in its own chunk, so it is not in the way of the first paint.
@@ -126,31 +135,50 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
   let stopped = false;
   const shell = lazyShell(
     async () => {
-      const [{ createAppShell }, { createNet }, { createClock }, { emptyHome }, parts] = await Promise.all([
+      const [{ createAppShell }, { createNet }, { createClock }, parts] = await Promise.all([
         import('./shell'),
         import('../services/net'),
         import('../services/clock'),
-        import('../vfs/legacy-tree'),
         legacy?.() ?? Promise.resolve(null),
       ]);
       const app = createAppShell({
         ...services,
-        fs: parts?.fs ?? emptyHome(),
         specs: parts?.specs ?? [],
+        ...(parts ? { root: parts.root, bind: parts.bind } : {}),
         net: createNet(),
         clock: createClock(),
       });
-      if (stopped) app.stop();
-      else stops.push(app.stop);
+      // A page put away or closed saves what is waiting to be saved.
+      const flush = (): void => app.persistence.flush();
+      win.addEventListener('pagehide', flush);
+      const stop = (): void => {
+        win.removeEventListener('pagehide', flush);
+        app.stop();
+      };
+      if (stopped) stop();
+      else stops.push(stop);
+      // ~/.bashrc first, so a line typed while the chunk loaded already has ll and la.
+      await app.boot();
       return app.shell;
     },
     {
       // Only if the kernel's chunk never arrives: the line that waited for it says so.
-      screen: { commit: ({ line, blocks }) => history.update((entries) => [...entries, { command: line, outputs: [blocks] }]) },
+      screen: {
+        commit: ({ line, blocks, prompt, status, origin, startedAt, endedAt }) =>
+          screen.push({ prompt, line, blocks, status, origin, startedAt, endedAt }),
+      },
+      columns: () => get(columns),
     },
   );
 
-  history.set([{ command: 'banner', outputs: [banner()] }]);
+  screen.clear();
+  screen.push({
+    prompt: promptLine({ cwd: GUEST.home, status: 0, columns: get(columns) }),
+    line: 'banner',
+    blocks: outputBlocks(banner()),
+    origin: 'boot',
+    status: 0,
+  });
 
   return {
     storage,
@@ -159,6 +187,26 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
       stopped = true;
       for (const stop of stops) stop();
     },
+  };
+}
+
+/** Keeps the columns store at the transcript's width, measured at most once a frame. */
+function trackColumns(win: Window): () => void {
+  let frame = 0;
+  const measure = (): void => {
+    frame = 0;
+    columns.set(transcriptColumns(win));
+  };
+  const schedule = (): void => {
+    if (frame === 0) frame = win.requestAnimationFrame(measure);
+  };
+  measure();
+  win.addEventListener('resize', schedule);
+  // Once the app has mounted, <main> can be measured rather than estimated.
+  schedule();
+  return () => {
+    win.cancelAnimationFrame(frame);
+    win.removeEventListener('resize', schedule);
   };
 }
 

@@ -67,12 +67,10 @@ src/
 │                                 # edge to edge, the desktop framed), components.css (output in role
 │                                 # colours: errors, panels, list markers, swatches, the scrollbar) and
 │                                 # crt.css (the CRT effect, by tier)
-├── constants.ts                  # Repository URL and the prompt's host
+├── constants.ts                  # Repository URL (the prompt's host is in vfs/identity.ts)
 ├── global.d.ts                   # Build-time globals
 ├── components/
-│   ├── History.svelte            # Scrollback of commands, each output drawn by ui/OutputView
 │   ├── Input.svelte              # The prompt: keys, history, Tab completion, running and cancelling commands
-│   ├── Ps1.svelte                # The prompt string
 │   ├── CommandSuggestionsRow.svelte  # Suggestions while typing
 │   └── Cathode.svelte            # CRT overlay, inside the screen frame
 ├── interfaces/                   # TypeScript interfaces (command, theme)
@@ -84,7 +82,13 @@ src/
 │   ├── html-to-text.ts           # Plain text of legacy HTML output, for pipes
 │   ├── legacy-policy.ts          # What the legacy HTML shim keeps: tags, attributes, classes, styles
 │   └── escape.ts                 # HTML escaping for command output
-├── vfs/types.ts                  # The file system contract
+├── vfs/                          # The virtual file system, DOM-free: vfs.ts (permissions, symlinks,
+│                                 # devices, /proc, a 512 KB quota), path.ts, seed.ts (the tree a session
+│                                 # starts with: /home/guest, /home/has, /etc, /proc, /dev, /usr/bin),
+│                                 # special.ts (/proc and /dev), persist.ts (files under ~ kept across
+│                                 # reloads as an overlay on the seed), identity.ts (guest@vesen)
+├── content/                      # The owner's styled documents (README, history, linux notes) in {colour}
+│                                 # markup, converted once from HTML by scripts/convert-content.mjs
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette
 │                                 # where themes.json does not set them, and the contrast each must meet);
@@ -103,8 +107,10 @@ src/
 │   ├── weather/                  # Weather's sources (forecast, geocoding, IP location), place resolution,
 │   │                             # units and WMO codes, and the view model a weather card draws
 │   └── market/contract.ts        # The stock Worker's wire format, shared by the Worker and the app
-├── stores/                       # Svelte stores, pure state: history, the running job, theme, cathode
+├── stores/                       # Svelte stores, pure state: screen (the transcript), term, theme, cathode
 ├── ui/
+│   ├── Transcript.svelte         # Each entry: the prompt it was typed at, the line, its output
+│   ├── Prompt.svelte             # guest@vesen:~/documents$, live under the transcript and as each entry's snapshot
 │   ├── OutputView.svelte         # Draws output blocks with text interpolation only
 │   ├── SpanView.svelte           # One styled span: link, trusted action button or live theme binding
 │   ├── legacy-html.ts            # use:legacyHtml, which rebuilds legacy HTML from the allowlist
@@ -118,13 +124,13 @@ src/
     ├── commands.ts               # Command table and dispatcher; the network commands load on first use
     ├── commands/                 # Commands: file system, network, system, QR; fastfetch and the network
     │                             # commands load on first use
-    ├── virtualFileSystem.ts      # The in-memory file system
+    ├── virtualFileSystem.ts      # A shim over the VFS for the legacy commands not yet ported
     ├── helpTexts.ts              # Help for each command
     ├── commandSuggestions.ts     # Suggestions while typing
     ├── notice.ts                 # The one notice panel and the one error style (cmd: message, then a hint)
     ├── beep.ts                   # The terminal bell
     └── osLogos.ts                # fastfetch's logos, loaded with it
-public/                           # README.md, history.txt and linux.txt for cat; 404.html; fonts/ (Vesen Mono
+public/                           # 404.html; fonts/ (Vesen Mono
                                   # and its licence, OFL.txt); icons/ and og.png (generated, see scripts/);
                                   # manifest.webmanifest; probe/ (device capability probe, not linked from the app)
 assets-src/fonts/                 # The source font Vesen Mono is built from (not served)

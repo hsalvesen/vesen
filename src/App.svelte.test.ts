@@ -2,8 +2,9 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.svelte';
+import { outputBlocks } from './interfaces/command';
 import type { Shell } from './shell/index';
-import { history } from './stores/history';
+import { screen as transcript } from './stores/screen';
 import { systemCommands } from './utils/commands/system';
 import { legacyAppShell } from './utils/legacyShell';
 
@@ -26,7 +27,7 @@ afterEach(() => {
   stopShell();
   vi.unstubAllGlobals();
   // The transcript is a module store, so each test starts from an empty screen.
-  history.set([]);
+  transcript.clear();
 });
 
 const renderApp = () => render(App, { props: { shell } });
@@ -50,7 +51,7 @@ describe('App', () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
     // What app/bootstrap.ts puts in the transcript before the app mounts.
-    history.set([{ command: 'banner', outputs: [systemCommands.banner()] }]);
+    transcript.push({ prompt: shell.renderPrompt(), line: 'banner', blocks: outputBlocks(systemCommands.banner()) });
     const { container } = renderApp();
 
     const headings = container.querySelectorAll('h1');
@@ -117,5 +118,35 @@ describe('App', () => {
 
     await fireEvent.click(suggestion);
     await vi.waitFor(() => expect(screen.getByText('/home/guest')).toBeInTheDocument());
+  });
+
+  it('shows ~/documents in the prompt after cd, and earlier prompts keep their folder (F023)', async () => {
+    const { container } = renderApp();
+    const prompt = screen.getByRole('textbox');
+    await fireEvent.input(prompt, { target: { value: 'cd documents' } });
+    await fireEvent.keyDown(prompt, { key: 'Enter' });
+    await vi.waitFor(() => expect(container.querySelectorAll('.entry')).toHaveLength(1));
+    await fireEvent.input(prompt, { target: { value: 'pwd' } });
+    await fireEvent.keyDown(prompt, { key: 'Enter' });
+    await vi.waitFor(() => expect(container.querySelectorAll('.entry')).toHaveLength(2));
+    await settle();
+
+    const text = (element: Element | null | undefined) => element?.textContent?.replace(/\s+/g, '') ?? '';
+    const prompts = Array.from(container.querySelectorAll('.entry .prompt'), (element) => text(element));
+    expect(prompts).toEqual(['guest@vesen:~$', 'guest@vesen:~/documents$']);
+    expect(text(container.querySelector('[data-prompt-area] .prompt'))).toBe('guest@vesen:~/documents$');
+  });
+
+  it('turns the live $ red after a failure', async () => {
+    const { container } = renderApp();
+    const dollar = () => {
+      const spans = container.querySelectorAll('[data-prompt-area] .prompt span');
+      return spans[spans.length - 1]?.getAttribute('style') ?? '';
+    };
+    expect(dollar()).toContain('--role-fg-strong');
+    const prompt = screen.getByRole('textbox');
+    await fireEvent.input(prompt, { target: { value: 'cd nowhere' } });
+    await fireEvent.keyDown(prompt, { key: 'Enter' });
+    await vi.waitFor(() => expect(dollar()).toContain('--role-error'));
   });
 });

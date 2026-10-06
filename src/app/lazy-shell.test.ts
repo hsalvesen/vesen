@@ -32,6 +32,7 @@ function fakeShell() {
     run: (line) => shell.start(line).done,
     abort: () => false,
     remember: (line) => remembered.push(line),
+    renderPrompt: () => [{ text: 'from the shell' }],
   };
   return { shell, started, aborted, remembered };
 }
@@ -104,7 +105,19 @@ describe('lazyShell', () => {
     expect(result.status).toBe(1);
     expect(commits).toHaveLength(1);
     expect(commits[0]?.blocks[0]).toMatchObject({ type: 'lines', stream: 'stderr' });
+    // The prompt it was typed at, drawn from the lazy shell's own stores.
+    expect(commits[0]?.prompt.map((span) => span.text).join('')).toBe('guest@vesen:~$');
     expect(lazy.job.get()).toBeNull();
+  });
+
+  it('draws the prompt itself until the shell is here, then asks the shell', async () => {
+    const fake = fakeShell();
+    const loading = deferred<ShellPort>();
+    const lazy = lazyShell(() => loading.promise, { columns: () => 30 });
+    expect(lazy.renderPrompt().map((span) => span.text).join('')).toBe('guest@vesen:~$');
+    loading.resolve(fake.shell);
+    await lazy.ready;
+    expect(lazy.renderPrompt()).toEqual([{ text: 'from the shell' }]);
   });
 
   it('forwards the kernel’s stores once it is here', async () => {

@@ -5,13 +5,13 @@
   the visible viewport by styles/shell.css and platform/viewport.ts.
 -->
 <script lang="ts">
-  import Ps1 from './components/Ps1.svelte';
   import Input from './components/Input.svelte';
-  import History from './components/History.svelte';
   import CommandSuggestionsRow from './components/CommandSuggestionsRow.svelte';
   import Cathode from './components/Cathode.svelte';
   import type { Action } from './output/model';
   import type { ShellPort } from './shell/index';
+  import Prompt from './ui/Prompt.svelte';
+  import Transcript from './ui/Transcript.svelte';
   import { focusPolicy } from './ui/actions/focusPolicy';
   import { scrollToEnd, stickToBottom } from './ui/actions/stickToBottom';
 
@@ -69,14 +69,14 @@
 
         <!-- Announced politely as entries are added; held back while a command is still running. -->
         <div role="log" aria-live="polite" aria-relevant="additions" aria-busy={isProcessing} aria-label="Terminal output">
-          <History {onaction} />
+          <Transcript {onaction} />
         </div>
 
         <div class="prompt-area" data-prompt-area>
           <!-- minmax(0, 1fr) and min-w-0 let the input shrink, so the row never overflows at 320px. -->
           <div class="grid items-center gap-x-1" style="grid-template-columns: max-content minmax(0, 1fr);">
             <div class="flex items-center">
-              <Ps1 {isPasswordMode} />
+              <Prompt cwd={shell.cwd} status={shell.lastStatus} secret={isPasswordMode} />
             </div>
             <div class="min-w-0">
               <Input bind:this={prompt} {shell} bind:command bind:isPasswordMode bind:isProcessing bind:loadingText />

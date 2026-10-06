@@ -4,7 +4,8 @@ import { get } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { lineText, type Block } from '../output/model';
 import type { Shell } from '../shell/index';
-import { commandHistory, history } from '../stores/history';
+import { screen as transcript } from '../stores/screen';
+import { commandHistory } from '../utils/legacyStores';
 import { legacyAppShell } from '../utils/legacyShell';
 import Input from './Input.svelte';
 
@@ -26,7 +27,12 @@ function ctrlC(): KeyboardEvent {
   return new KeyboardEvent('keydown', { key: 'c', ctrlKey: true, bubbles: true, cancelable: true });
 }
 
-const lastEntry = () => get(history).at(-1);
+const lastEntry = () => {
+  const entries = transcript.entries();
+  return entries[entries.length - 1];
+};
+const entries = () => transcript.entries();
+const promptOf = (entry: ReturnType<typeof lastEntry>) => entry?.prompt?.map((span) => span.text).join('');
 
 /** The text of an entry's output, which the shell records as blocks. */
 const outputText = (output: unknown): string =>
@@ -41,7 +47,7 @@ function renderInput() {
 }
 
 beforeEach(() => {
-  history.set([]);
+  transcript.clear();
   commandHistory.set([]);
   const app = legacyAppShell({ banner: () => 'BANNER', yieldToHost: () => Promise.resolve() });
   shell = app.shell;
@@ -74,7 +80,7 @@ describe('Ctrl+C', () => {
     await settle();
 
     expect(event.defaultPrevented).toBe(false);
-    expect(get(history)).toEqual([]);
+    expect(entries()).toEqual([]);
     expect(prompt().value).toBe('echo hello');
   });
 
@@ -89,7 +95,7 @@ describe('Ctrl+C', () => {
     await settle();
 
     expect(event.defaultPrevented).toBe(false);
-    expect(get(history)).toEqual([]);
+    expect(entries()).toEqual([]);
   });
 
   it('with nothing selected, abandons the line with ^C and keeps it out of history', async () => {
@@ -101,7 +107,8 @@ describe('Ctrl+C', () => {
     await settle();
 
     expect(event.defaultPrevented).toBe(true);
-    expect(lastEntry()).toEqual({ command: 'echo hello^C', outputs: [] });
+    expect(lastEntry()).toMatchObject({ line: 'echo hello^C', blocks: [] });
+    expect(promptOf(lastEntry())).toBe('guest@vesen:~$');
     expect(prompt().value).toBe('');
     expect(get(commandHistory)).toEqual([]);
   });
@@ -122,13 +129,13 @@ describe('a running command', () => {
     await settle();
 
     expect(screen.getByText('stock AAPL')).toBeInTheDocument();
-    expect(get(history)).toEqual([]);
+    expect(entries()).toEqual([]);
 
     prompt().dispatchEvent(ctrlC());
-    await vi.waitFor(() => expect(lastEntry()?.command).toBe('stock AAPL'));
+    await vi.waitFor(() => expect(lastEntry()?.line).toBe('stock AAPL'));
 
     // The prompt returns at once with ^C, and the late output of the request is dropped.
-    expect(outputText(lastEntry()?.outputs[0])).toBe('^C');
+    expect(outputText(lastEntry()?.blocks)).toBe('^C');
     expect(get(commandHistory)).toEqual(['stock AAPL']);
     expect(screen.queryByText('stock AAPL')).not.toBeInTheDocument();
   });
@@ -140,9 +147,9 @@ describe('a running command', () => {
     await settle();
 
     await fireEvent.keyDown(prompt(), { key: 'Escape' });
-    await vi.waitFor(() => expect(lastEntry()?.command).toBe('curl example.com'));
+    await vi.waitFor(() => expect(lastEntry()?.line).toBe('curl example.com'));
 
-    expect(outputText(lastEntry()?.outputs[0])).toBe('^C');
+    expect(outputText(lastEntry()?.blocks)).toBe('^C');
   });
 
   it('keeps the prompt enabled and takes type-ahead, but ignores Enter until it finishes', async () => {
@@ -159,11 +166,11 @@ describe('a running command', () => {
     const enterWhileBusy = await fireEvent.keyDown(prompt(), { key: 'Enter' });
     await settle();
     expect(enterWhileBusy).toBe(false); // the default was prevented
-    expect(get(history)).toEqual([]);
+    expect(entries()).toEqual([]);
 
     prompt().dispatchEvent(ctrlC());
-    await vi.waitFor(() => expect(get(history)).toHaveLength(1));
-    expect(lastEntry()?.command).toBe('weather Oslo');
+    await vi.waitFor(() => expect(entries()).toHaveLength(1));
+    expect(lastEntry()?.line).toBe('weather Oslo');
     expect(prompt().value).toBe('ls');
   });
 });
@@ -177,7 +184,7 @@ describe('sudo', () => {
       await settle();
       // A password field is no longer a textbox to assistive technology.
       expect(document.querySelector('input.command-input')?.getAttribute('type'), line).toBe('password');
-      expect(lastEntry()).toEqual({ command: line, outputs: [] });
+      expect(lastEntry()).toMatchObject({ line, blocks: [] });
       unmount();
     }
     expect(get(commandHistory)).toEqual(['sudo ls', "'sudo' ls"]);
@@ -187,7 +194,7 @@ describe('sudo', () => {
     renderInput();
     await type('sudo --help');
     await fireEvent.keyDown(prompt(), { key: 'Enter' });
-    await vi.waitFor(() => expect(lastEntry()?.command).toBe('sudo --help'));
+    await vi.waitFor(() => expect(lastEntry()?.line).toBe('sudo --help'));
     expect(prompt().type).toBe('text');
   });
 });
@@ -210,13 +217,13 @@ describe('focus', () => {
     renderInput();
     await type('echo one');
     await fireEvent.keyDown(prompt(), { key: 'Enter' });
-    await vi.waitFor(() => expect(lastEntry()?.command).toBe('echo one'));
+    await vi.waitFor(() => expect(lastEntry()?.line).toBe('echo one'));
     expect(document.activeElement).toBe(prompt());
 
     prompt().blur();
     await type('echo two');
     await fireEvent.keyDown(prompt(), { key: 'Enter' });
-    await vi.waitFor(() => expect(lastEntry()?.command).toBe('echo two'));
+    await vi.waitFor(() => expect(lastEntry()?.line).toBe('echo two'));
     expect(document.activeElement).not.toBe(prompt());
   });
 
@@ -225,13 +232,13 @@ describe('focus', () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => (answer = resolve))));
     renderInput();
     prompt().focus();
-    await type('cat README.md');
+    await type('curl https://example.com');
     await fireEvent.keyDown(prompt(), { key: 'Enter' });
     await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
 
     prompt().blur();
     answer(new Response('# readme'));
-    await vi.waitFor(() => expect(lastEntry()?.command).toBe('cat README.md'));
+    await vi.waitFor(() => expect(lastEntry()?.line).toBe('curl https://example.com'));
     await settle();
     expect(document.activeElement).not.toBe(prompt());
   });
@@ -240,13 +247,13 @@ describe('focus', () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
     renderInput();
     prompt().focus();
-    await type('cat README.md');
+    await type('curl https://example.com');
     await fireEvent.keyDown(prompt(), { key: 'Enter' });
     await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
 
     prompt().blur();
     shell.abort();
-    await vi.waitFor(() => expect(lastEntry()?.command).toBe('cat README.md'));
+    await vi.waitFor(() => expect(lastEntry()?.line).toBe('curl https://example.com'));
     await settle();
     expect(document.activeElement).not.toBe(prompt());
   });
@@ -293,7 +300,7 @@ describe('keys meant for other controls', () => {
     const enter = key(button, { key: 'Enter' });
     await settle();
     expect(enter.defaultPrevented).toBe(false);
-    expect(get(history)).toEqual([]);
+    expect(entries()).toEqual([]);
     expect(prompt().value).toBe('echo hello');
 
     expect(key(button, { key: 'ArrowUp' }).defaultPrevented).toBe(false);
@@ -303,7 +310,7 @@ describe('keys meant for other controls', () => {
   it('leaves Enter on the cancel button to it while a command runs', async () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
     renderInput();
-    await type('cat README.md');
+    await type('curl https://example.com');
     await fireEvent.keyDown(prompt(), { key: 'Enter' });
     await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
 
@@ -312,6 +319,6 @@ describe('keys meant for other controls', () => {
     document.body.append(button);
     expect(key(button, { key: 'Enter' }).defaultPrevented).toBe(false);
     shell.abort();
-    await vi.waitFor(() => expect(lastEntry()?.command).toBe('cat README.md'));
+    await vi.waitFor(() => expect(lastEntry()?.line).toBe('curl https://example.com'));
   });
 });

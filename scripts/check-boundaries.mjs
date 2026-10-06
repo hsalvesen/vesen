@@ -13,8 +13,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-/** Folders that must stay free of the DOM, browser storage and Svelte. */
-export const DOM_FREE_DIRS = ['src/shell', 'src/output', 'src/vfs', 'src/lib', 'src/commands'];
+/**
+ * Folders that must stay free of the DOM, browser storage and Svelte. src/content holds only the
+ * owner's documents as text (imported with ?raw), so DOM-free code may import it.
+ */
+export const DOM_FREE_DIRS = ['src/shell', 'src/output', 'src/vfs', 'src/lib', 'src/commands', 'src/content'];
 
 /**
  * Modules outside those folders that DOM-free code may import: the service contracts, which are

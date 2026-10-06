@@ -1,0 +1,30 @@
+{brightBlue,bold}╔══════════════════════════════════════╗{/}
+{brightBlue,bold}║{/} {yellow,bold}History of the Terminal{/}              {brightBlue,bold}║{/}
+{brightBlue,bold}╠══════════════════════════════════════╣{/}
+{brightBlue,bold}║{/} {white}${/} {brightCyan}user@machine:~/project${/}            {brightBlue,bold}║{/}
+{brightBlue,bold}║{/} {green}> npm start                        {/}  {brightBlue,bold}║{/}
+{brightBlue,bold}║{/} {white}✓ Ready on port 3000 {/}                {brightBlue,bold}║{/}
+{brightBlue,bold}║{/} {white}${/} {brightGreen}█{/}                                  {brightBlue,bold}║{/}
+{brightBlue,bold}╚══════════════════════════════════════╝{/}
+
+{white}The computer terminal has evolved from humble beginnings in the{/} {yellow,bold}1960s{/}{white}.{/}
+{white}Originally, terminals were physical devices -- teletypewriters that{/}
+{white}allowed users to interact with mainframe computers through typed commands.{/}
+
+{white}The first video terminals appeared in the{/} {yellow,bold}1970s{/}{white} replacing paper printouts{/}
+{white}with cathode-ray tube displays. Then, with the rise of personal computers{/}
+{white}in the{/} {yellow,bold}1980s{/}{white}, terminal emulators brought command-line interfaces to{/}
+{white}graphical environments.{/} {brightGreen,bold}Unix{/} {white}systems{/} popularised shells like {brightCyan,bold}sh{/}{white},{/}{brightCyan,bold} csh{/}{white}, and{/}
+{white}later {/}{brightCyan,bold}bash{/}{white}, making terminals powerful tools for system administration and{/}{white}
+{/}{white}development.{/}{white}
+
+{/}{white}Today's terminals blend their classic functionality with modern features{/}{white}
+{/}{white}-- syntax highlighting, tabs, themes, and web-based implementations like{/}{white}
+{/}{white}this one. Despite decades of GUI evolution, the terminal remains an{/}{white}
+{/}{white}essential tool for developers, system admins, and power users worldwide.
+
+{/}{white}The command line endures because text is universal, scriptable, and{/}{white}
+{/}{white}efficient, proving that sometimes the oldest interfaces are the most{/}{white} 
+{/}{brightGreen,bold}timeless{/}{white}.{/}{white}
+
+{/}

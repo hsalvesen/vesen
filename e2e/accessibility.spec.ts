@@ -131,7 +131,7 @@ test.describe('accessibility', { tag: '@smoke' }, () => {
       const result = {
         error: [colourOf(span('vesen: lss: command not found')), resolve(root.getPropertyValue('--role-error'))],
         hint: [colourOf(span('Did you mean ')), resolve(root.getPropertyValue('--role-muted'))],
-        user: [colourOf(document.querySelector('.user')), resolve(root.getPropertyValue('--role-prompt-user'))],
+        user: [colourOf(document.querySelector('.prompt-area .prompt span')), resolve(root.getPropertyValue('--role-prompt-user'))],
       };
       probe.remove();
       return result;

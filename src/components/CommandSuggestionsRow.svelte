@@ -1,12 +1,13 @@
 <script lang="ts">
-  import { commands } from "../utils/commands";
+  import { commandNames } from "../utils/commands";
   import { getCommandSuggestions } from "../utils/commandSuggestions";
 
   let { command = "", isProcessing = false, isPasswordMode = false } = $props();
 
-  const commandNames = Object.keys(commands);
+  // Every registered command, read when the line changes, so commands that arrive with the
+  // shell's chunk are offered too.
   const suggestions = $derived(
-    isProcessing || isPasswordMode ? [] : getCommandSuggestions(command, commandNames),
+    isProcessing || isPasswordMode ? [] : getCommandSuggestions(command, commandNames()),
   );
 </script>
 

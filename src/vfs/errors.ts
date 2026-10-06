@@ -28,3 +28,19 @@ export function isVfsError(error: unknown): error is VfsError {
 export function vfsMessage(error: VfsError, path: string = error.path): string {
   return `${path}: ${strerror(error.code)}`;
 }
+
+/**
+ * Why rm refuses an operand before touching anything, in GNU rm's words, or null when it may
+ * try. `.` and `..` are never removed (F020), and `/` only with a flag vesen does not have.
+ * `operand` is the path as typed; `resolved` is where it leads.
+ */
+export function rmRefusal(operand: string, resolved: string, recursive: boolean): string[] | null {
+  const last = operand.replace(/\/+$/, '').split('/').pop();
+  if (last === '.' || last === '..') return [`rm: refusing to remove '.' or '..' directory: skipping '${operand}'`];
+  if (resolved === '/') {
+    return recursive
+      ? ["rm: it is dangerous to operate recursively on '/'", 'rm: use --no-preserve-root to override this failsafe']
+      : [`rm: cannot remove '${operand}': Is a directory`];
+  }
+  return null;
+}

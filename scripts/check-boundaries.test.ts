@@ -77,6 +77,8 @@ describe('findBoundaryViolations: imports', () => {
     expect(importing('src/commands/network/stock.ts', '../../services/market/contract')).toEqual([]);
     expect(importing('src/commands/net/qr.ts', '../../lib/qr')).toEqual([]);
     expect(importing('src/lib/qr/index.ts', 'some-package')).toEqual([]);
+    // The owner's documents are text, imported with ?raw.
+    expect(importing('src/vfs/seed.ts', '../content/README.vt?raw')).toEqual([]);
   });
 
   it('flags stores, concrete services, legacy code and data outside those folders', () => {
@@ -84,7 +86,7 @@ describe('findBoundaryViolations: imports', () => {
       ['src/shell/violate.ts', '../stores/job'],
       ['src/shell/violate.ts', '../stores/theme.ts'],
       ['src/commands/system/violate.ts', '../../services/net'],
-      ['src/commands/system/violate.ts', '../../stores/history'],
+      ['src/commands/system/violate.ts', '../../stores/screen'],
       ['src/output/violate.ts', '../utils/commands'],
       ['src/vfs/violate.ts', '../platform/hosts'],
       ['src/commands/theme.ts', '../../themes.json'],

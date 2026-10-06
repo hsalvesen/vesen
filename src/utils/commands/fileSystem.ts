@@ -1,56 +1,68 @@
-import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from '../virtualFileSystem';
+import { legacyFs, currentDirectory } from '../virtualFileSystem';
 import { commandHelp } from '../helpTexts';
 import { playBeep } from '../beep';
-import { fetchText, isNetError } from '../../services/net';
-import { cancelledNotice, errorLine } from '../notice';
+import { errorLine } from '../notice';
 import { escapeHtml } from '../../output/escape';
 import { transcriptColumns } from '../../platform/measure';
+import { rmRefusal, strerror } from '../../vfs/errors';
+import { VfsError, type VfsCode } from '../../vfs/types';
 
-/**
- * Loads a file that public/ serves, such as /README.md. Each request has the default 8 s deadline
- * and the command's cancel. Only a missing file (an HTTP error) moves on to the next candidate path;
- * a timeout, a cancel or a failed connection would fail the same way for every path.
- */
-async function loadRealFile(filePath: string, signal?: AbortSignal): Promise<string> {
-  const possiblePaths = [
-    filePath,
-    filePath.startsWith('/') ? '.' + filePath : filePath,
-    filePath.startsWith('/') ? filePath.substring(1) : filePath
-  ];
+// The legacy file commands, reading and writing through the VFS (src/vfs/vfs.ts) so they share
+// its permissions, symbolic links, /proc and persistence. Their output is unchanged until each
+// is ported to a spec in src/commands/files.
 
-  let lastError: unknown;
-  for (const path of possiblePaths) {
-    try {
-      return await fetchText(path, { signal });
-    } catch (error) {
-      lastError = error;
-      if (!isNetError(error) || error.kind !== 'http') break;
-    }
-  }
-  throw lastError;
+const HOME = '/home/guest';
+
+/** A path typed at the prompt, as an absolute path. */
+function absolute(path: string): string {
+  return legacyFs().resolve(path, currentDirectory(), HOME);
+}
+
+/** The code of a VFS error; anything else is rethrown. */
+function codeOf(error: unknown): VfsCode {
+  if (error instanceof VfsError) return error.code;
+  throw error;
+}
+
+/** The folder a path is in, as an absolute path. */
+function parentOf(path: string): string {
+  const cut = path.lastIndexOf('/');
+  return cut <= 0 ? '/' : path.slice(0, cut);
 }
 
 // Helper function to find similar files/directories with case-insensitive matching
-function findSimilarFile(target: string, directory: VirtualFile): string | null {
-  if (!directory.children) return null;
-  
+function findSimilarFile(target: string, directory: string, want: 'any' | 'directory' = 'any'): string | null {
+  const fs = legacyFs();
+  let children: string[];
+  try {
+    children = fs.readdir(directory, { all: true });
+  } catch {
+    return null;
+  }
+  const isWanted = (name: string): boolean => {
+    if (want === 'any') return true;
+    try {
+      return fs.stat(`${directory === '/' ? '' : directory}/${name}`).type === 'directory';
+    } catch {
+      return false;
+    }
+  };
   const targetLower = target.toLowerCase();
-  const children = Object.keys(directory.children);
-  
+
   // First try exact case-insensitive match
   for (const child of children) {
-    if (child.toLowerCase() === targetLower) {
+    if (child.toLowerCase() === targetLower && isWanted(child)) {
       return child;
     }
   }
-  
+
   // If no exact match, try partial matches (starts with)
   for (const child of children) {
-    if (child.toLowerCase().startsWith(targetLower)) {
+    if (child.toLowerCase().startsWith(targetLower) && isWanted(child)) {
       return child;
     }
   }
-  
+
   return null;
 }
 
@@ -84,59 +96,50 @@ function findRedirect(text: string, respectQuotes = true): { index: number; appe
 }
 
 export const fileSystemCommands = {
-  pwd: () => {
-    return escapeHtml('/' + currentPath.join('/'));
-  },
-  
   ls: (args: string[]) => {
-    let targetPath: string[];
-    
+    const fs = legacyFs();
+
     // Check for -a flag to show hidden files
     const showHidden = args.includes('-a') || args.includes('--all');
-    
+
     // Filter out flags to get the actual path argument
     const pathArgs = args.filter(arg => !arg.startsWith('-'));
-    
-    if (pathArgs.length === 0) {
-      targetPath = currentPath;
-    } else {
-      targetPath = resolvePath(pathArgs[0]);
-    }
-    
-    let current = virtualFileSystem;
-    for (const segment of targetPath) {
-      if (current.children && current.children[segment]) {
-        current = current.children[segment];
-      } else {
-        playBeep();
-        const pathStr = pathArgs.length === 0 ? '.' : pathArgs[0];
-        return errorLine(`ls: cannot access '${pathStr}': No such file or directory`);
+    const pathStr = pathArgs.length === 0 ? '.' : pathArgs[0];
+    const target = absolute(pathStr);
+
+    let names: string[];
+    try {
+      if (fs.stat(target).type !== 'directory') {
+        return errorLine(`ls: cannot access '${pathStr}': Not a directory`);
       }
+      names = fs.readdir(target, { all: showHidden });
+    } catch (error) {
+      const code = codeOf(error);
+      playBeep();
+      if (code === 'EACCES') return errorLine(`ls: cannot open directory '${pathStr}': Permission denied`);
+      return errorLine(`ls: cannot access '${pathStr}': ${strerror(code)}`);
     }
-    
-    if (current.type !== 'directory') {
-      const pathStr = pathArgs.length === 0 ? '.' : pathArgs[0];
-      return errorLine(`ls: cannot access '${pathStr}': Not a directory`);
-    }
-    
-    if (!current.children) {
-      return '';
-    }
-    
-    // Filter out hidden files unless -a flag is used. Names are text: a file may be called <b>.
-    const items = Object.values(current.children)
-      .filter((item: VirtualFile) => showHidden || !item.name.startsWith('.'))
-      .map((item: VirtualFile) => {
-        // Directories in the link role, files in strong text: roles, so a listing follows the theme.
-        const isDirectory = item.type === 'directory';
-        const suffix = isDirectory ? '/' : '';
-        return {
-          html: isDirectory
-            ? `<span style="color: var(--role-link); font-weight: bold;">${escapeHtml(item.name)}${suffix}</span>`
-            : `<span class="out-strong">${escapeHtml(item.name)}</span>`,
-          width: item.name.length + suffix.length,
-        };
-      });
+
+    const isDirectory = (name: string): boolean => {
+      try {
+        return fs.stat(`${target === '/' ? '' : target}/${name}`).type === 'directory';
+      } catch {
+        return false;
+      }
+    };
+
+    // Names are text: a file may be called <b>.
+    const items = names.map((name) => {
+      // Directories in the link role, files in strong text: roles, so a listing follows the theme.
+      const directory = isDirectory(name);
+      const suffix = directory ? '/' : '';
+      return {
+        html: directory
+          ? `<span style="color: var(--role-link); font-weight: bold;">${escapeHtml(name)}${suffix}</span>`
+          : `<span class="out-strong">${escapeHtml(name)}</span>`,
+        width: name.length + suffix.length,
+      };
+    });
     
     // The transcript's width in cells
     const terminalWidth = transcriptColumns(window);
@@ -171,95 +174,30 @@ export const fileSystemCommands = {
     return lines.join('\n');
   },
   
-  cat: async (args: string[], signal?: AbortSignal) => {
+  // On a terminal the owner's styled documents are drawn by the legacy adapter from the VFS's
+  // styled lines (src/commands/legacy.ts); this prints any file as the text it holds.
+  cat: (args: string[]) => {
     if (args.length === 0) {
       return commandHelp.cat;
     }
-    
-    const targetPath = resolvePath(args[0]);
-    
-    let current = virtualFileSystem;
-    for (let i = 0; i < targetPath.length; i++) {
-      const segment = targetPath[i];
-      if (current.children && current.children[segment]) {
-        current = current.children[segment];
-      } else {
+
+    let content: string;
+    const target = absolute(args[0]);
+    try {
+      content = legacyFs().readFile(target);
+    } catch (error) {
+      const code = codeOf(error);
+      playBeep();
+      if (code === 'ENOENT') {
         // Check for case sensitivity issue
-        if (current.children) {
-          const similarFile = findSimilarFile(segment, current);
-          if (similarFile) {
-            playBeep();
-            return errorLine(`cat: ${args[0]}: No such file or directory`, `Did you mean ${similarFile}?`);
-          }
-        }
-        playBeep();
-        return errorLine(`cat: ${args[0]}: No such file or directory`);
+        const similarFile = findSimilarFile(target.slice(target.lastIndexOf('/') + 1), parentOf(target));
+        if (similarFile) return errorLine(`cat: ${args[0]}: No such file or directory`, `Did you mean ${similarFile}?`);
       }
+      return errorLine(`cat: ${args[0]}: ${strerror(code)}`);
     }
-    
-    if (current.type !== 'file') {
-      return errorLine(`cat: ${args[0]}: Is a directory`);
-    }
-    
-    let content = '';
-    // Only the owner's styled documents are markup; any other file shows exactly as written.
-    const isOwnerHtml = current.format === 'html' && Boolean(current.filePath);
-    
-    // Handle files with filePath property
-    if (current.filePath) {
-      try {
-        content = await loadRealFile(current.filePath, signal);
-      } catch (error) {
-        if (signal?.aborted || (isNetError(error) && error.kind === 'abort')) return cancelledNotice('cat');
-        playBeep();
-        const reason = isNetError(error) ? error.message : 'the file could not be read';
-        return errorLine(`cat: ${args[0]}: ${reason}`);
-      }
-    } else {
-      content = current.content || '';
-    }
-    
+
     // Convert newlines to HTML line breaks for proper display in web terminal
-    return (isOwnerHtml ? content : escapeHtml(content)).replace(/\n/g, '<br>');
-  },
-  
-  cd: (args: string[]) => {
-    if (args.length === 0) {
-      // Go to home directory
-      currentPath.length = 0;
-      currentPath.push('home', 'user');
-      return '';
-    }
-    
-    const targetPath = resolvePath(args[0]);
-    
-    let current = virtualFileSystem;
-    for (let i = 0; i < targetPath.length; i++) {
-      const segment = targetPath[i];
-      if (current.children && current.children[segment]) {
-        current = current.children[segment];
-      } else {
-        // Check for case sensitivity issue
-        if (current.children) {
-          const similarDir = findSimilarFile(segment, current);
-          if (similarDir && current.children[similarDir].type === 'directory') {
-            playBeep();
-            return errorLine(`cd: ${args[0]}: No such file or directory`, `Did you mean ${similarDir}?`);
-          }
-        }
-        playBeep();
-        return errorLine(`cd: ${args[0]}: No such file or directory`);
-      }
-    }
-    
-    if (current.type !== 'directory') {
-      return errorLine(`cd: ${args[0]}: Not a directory`);
-    }
-    
-    // Update current path
-    currentPath.length = 0;
-    currentPath.push(...targetPath);
-    return '';
+    return escapeHtml(content).replace(/\n/g, '<br>');
   },
   
   rm: (args: string[]) => {
@@ -279,34 +217,26 @@ export const fileSystemCommands = {
       targetFile = args[1];
     }
     
-    const targetPath = resolvePath(targetFile);
-    const fileName = targetPath[targetPath.length - 1];
-    const parentPath = targetPath.slice(0, -1);
-    
-    // Navigate to parent directory
-    let parent = virtualFileSystem;
-    for (const segment of parentPath) {
-      if (parent.children && parent.children[segment]) {
-        parent = parent.children[segment];
-      } else {
-        playBeep();
-        return errorLine(`rm: cannot remove '${targetFile}': No such file or directory`);
-      }
-    }
-    
-    if (!parent.children || !parent.children[fileName]) {
+    const fs = legacyFs();
+    const target = absolute(targetFile);
+
+    // `.`, `..` and `/` are refused before anything is touched (F020).
+    const refusal = rmRefusal(targetFile, target, recursive);
+    if (refusal !== null) {
       playBeep();
-      return errorLine(`rm: cannot remove '${targetFile}': No such file or directory`);
+      return refusal.map((line) => errorLine(line)).join('\n');
     }
-    
-    const target = parent.children[fileName];
-    
-    if (target.type === 'directory' && !recursive) {
-      return errorLine(`rm: cannot remove '${targetFile}': Is a directory (use -r to remove directories)`);
+
+    try {
+      if (fs.lstat(target).type === 'directory' && !recursive) {
+        return errorLine(`rm: cannot remove '${targetFile}': Is a directory (use -r to remove directories)`);
+      }
+      fs.rm(target, { recursive });
+    } catch (error) {
+      const code = codeOf(error);
+      playBeep();
+      return errorLine(`rm: cannot remove '${targetFile}': ${strerror(code)}`);
     }
-    
-    // Delete the file or directory
-    delete parent.children[fileName];
     
     return `rm: removed '${escapeHtml(targetFile)}'`;
   },
@@ -315,42 +245,28 @@ export const fileSystemCommands = {
     if (args.length === 0) {
       return commandHelp.touch;
     }
-    
-    const targetPath = resolvePath(args[0]);
-    const fileName = targetPath[targetPath.length - 1];
-    const parentPath = targetPath.slice(0, -1);
-    
-    // Navigate to parent directory
-    let parent = virtualFileSystem;
-    for (const segment of parentPath) {
-      if (parent.children && parent.children[segment]) {
-        parent = parent.children[segment];
-      } else {
-        playBeep();
-        return errorLine(`touch: cannot touch '${args[0]}': No such file or directory`);
-      }
-    }
-    
-    if (!parent.children) {
-      return errorLine(`touch: cannot touch '${args[0]}': Parent is not a directory`);
-    }
-    
-    // Check if file already exists
-    if (parent.children[fileName]) {
-      if (parent.children[fileName].type === 'directory') {
+
+    const fs = legacyFs();
+    const target = absolute(args[0]);
+    let existed = false;
+    try {
+      if (fs.stat(target).type === 'directory') {
         return errorLine(`touch: cannot touch '${args[0]}': Is a directory`);
       }
-      return `touch: '${escapeHtml(args[0])}' timestamp updated`;
+      existed = true;
+    } catch {
+      // Not there yet, or not reachable: touch creates it, or says why it cannot.
     }
-    
-    // Create new empty file
-    parent.children[fileName] = {
-      name: fileName,
-      type: 'file',
-      content: ''
-    };
-    
-    return `touch: created '${escapeHtml(args[0])}'`;
+
+    try {
+      fs.touch(target);
+    } catch (error) {
+      const code = codeOf(error);
+      playBeep();
+      return errorLine(`touch: cannot touch '${args[0]}': ${strerror(code)}`);
+    }
+
+    return existed ? `touch: '${escapeHtml(args[0])}' timestamp updated` : `touch: created '${escapeHtml(args[0])}'`;
   },
   
   mkdir: (args: string[]) => {
@@ -358,36 +274,15 @@ export const fileSystemCommands = {
       return commandHelp.mkdir;
     }
 
-    const targetPath = resolvePath(args[0]);
-    const dirName = targetPath[targetPath.length - 1];
-    const parentPath = targetPath.slice(0, -1);
-
-    // Navigate to parent directory
-    let parent = virtualFileSystem;
-    for (const segment of parentPath) {
-      if (parent.children && parent.children[segment]) {
-        parent = parent.children[segment];
-      } else {
-        playBeep();
-        return errorLine(`mkdir: cannot create directory '${args[0]}': No such file or directory`);
-      }
+    const fs = legacyFs();
+    const target = absolute(args[0]);
+    try {
+      fs.mkdir(target);
+    } catch (error) {
+      const code = codeOf(error);
+      if (code !== 'EEXIST') playBeep();
+      return errorLine(`mkdir: cannot create directory '${args[0]}': ${strerror(code)}`);
     }
-
-    if (!parent.children) {
-      return errorLine(`mkdir: cannot create directory '${args[0]}': Parent is not a directory`);
-    }
-
-    // Check if directory already exists
-    if (parent.children[dirName]) {
-      return errorLine(`mkdir: cannot create directory '${args[0]}': File exists`);
-    }
-
-    // Create new directory
-    parent.children[dirName] = {
-      name: dirName,
-      type: 'directory',
-      children: {}
-    };
 
     return `mkdir: created directory '${escapeHtml(args[0])}'`;
   },
@@ -433,42 +328,25 @@ export const fileSystemCommands = {
                     .replace(/\\r/g, '\r')
                     .replace(/\\\\/g, '\\');
       
-      // Resolve the target file path
-      const targetPath = resolvePath(filename);
-      const fileName = targetPath[targetPath.length - 1];
-      const parentPath = targetPath.slice(0, -1);
-  
-      // Navigate to parent directory
-      let parent = virtualFileSystem;
-      for (const segment of parentPath) {
-        if (parent.children && parent.children[segment]) {
-          parent = parent.children[segment];
+      // Create, overwrite, or append to the file, through the VFS.
+      const fs = legacyFs();
+      const target = absolute(filename);
+      try {
+        if (isAppend) {
+          let existing = '';
+          try {
+            existing = fs.readFile(target);
+          } catch (error) {
+            if (codeOf(error) === 'EISDIR') throw error;
+          }
+          fs.writeFile(target, (existing ? '\n' : '') + content, { append: true });
         } else {
-          return errorLine(`echo: cannot create '${filename}': No such file or directory`);
+          fs.writeFile(target, content);
         }
-      }
-  
-      if (!parent.children) {
-        return errorLine(`echo: cannot create '${filename}': Parent is not a directory`);
-      }
-  
-      // Check if target exists and is a directory
-      if (parent.children[fileName] && parent.children[fileName].type === 'directory') {
-        return errorLine(`echo: cannot write to '${filename}': Is a directory`);
-      }
-  
-      // Create, overwrite, or append to the file
-      if (isAppend && parent.children[fileName] && parent.children[fileName].type === 'file') {
-        // Append to existing file
-        const existingContent = parent.children[fileName].content || '';
-        parent.children[fileName].content = existingContent + (existingContent ? '\n' : '') + content;
-      } else {
-        // Create or overwrite the file
-        parent.children[fileName] = {
-          name: fileName,
-          type: 'file',
-          content: content
-        };
+      } catch (error) {
+        const code = codeOf(error);
+        if (code === 'EISDIR') return errorLine(`echo: cannot write to '${filename}': Is a directory`);
+        return errorLine(`echo: cannot create '${filename}': ${strerror(code)}`);
       }
   
       const action = isAppend ? 'appended to' : 'written to';

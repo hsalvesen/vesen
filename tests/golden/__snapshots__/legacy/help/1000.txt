@@ -1,4 +1,5 @@
 $ help
-banner       cat          cathode      cd           clear        curl         echo         email        fastfetch
-help         history      ls           mkdir        poweroff     pwd          qr           repo         reset
-rm           speedtest    stock        sudo         theme        touch        weather      whoami
+alias        banner       cat          cathode      cd           clear        curl         echo         email
+export       fastfetch    help         history      ls           mkdir        poweroff     pwd          qr
+repo         reset        rm           speedtest    stock        sudo         theme        touch        weather
+whoami

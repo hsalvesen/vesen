@@ -1,26 +1,31 @@
-// Migration only: what the shell needs from the legacy code in src/utils: the 26 commands as
-// specs, through the DOM-free adapter (src/commands/legacy.ts), and the legacy file tree behind
-// the Vfs contract (src/vfs/legacy-tree.ts). main.ts hands this to bootstrap, so the strictly
+// Migration only: what the shell needs from the legacy code in src/utils: the legacy commands as
+// specs, through the DOM-free adapter (src/commands/legacy.ts), and the shim that lets them reach
+// the VFS (src/utils/virtualFileSystem.ts). main.ts hands this to bootstrap, so the strictly
 // typed app code never imports src/utils. Deleted with the adapter once the last command is
-// ported and the VFS has landed.
+// ported.
 
 import { createAppShell, type AppShell, type AppShellOptions } from '../app/shell';
 import { LEGACY_NAMES, legacySpecs, type LegacyFn, type LegacyName, type LegacySource } from '../commands/legacy';
 import { REPO_URL } from '../constants';
+import type { Shell } from '../shell/index';
 import type { CommandSpec, EnumValue } from '../shell/types';
 import { cathodeModeInfo, crtQualities } from '../stores/cathode';
 import { themes } from '../stores/theme';
-import { addGuestHome, LegacyTreeFs } from '../vfs/legacy-tree';
-import { commands, emailHref, legacyHelpHtml } from './commands';
+import type { VirtualFile } from '../vfs/types';
+import type { Vfs } from '../vfs/vfs';
+import { commands, emailHref, legacyHelpHtml, setCommandCatalogue } from './commands';
 import { LINKEDIN_URL } from './commands/system';
 import { commandDescriptions } from './helpTexts';
-import { createInitialFileSystem, currentPath, virtualFileSystem } from './virtualFileSystem';
+import { commandHistory } from './legacyStores';
+import { bindLegacyVfs, mirrorCwd, virtualFileSystem } from './virtualFileSystem';
 
 export interface LegacyBindings {
-  /** The 26 legacy commands as specs. */
+  /** The legacy commands as specs. */
   readonly specs: CommandSpec[];
-  /** The legacy file tree, with /home/guest as the visitor's home. */
-  readonly fs: LegacyTreeFs;
+  /** The tree the legacy code walks, which the VFS fills. */
+  readonly root: VirtualFile;
+  /** Connects the legacy code to the built VFS and shell; returns a function that disconnects it. */
+  bind(parts: { readonly vfs: Vfs; readonly shell: Shell }): () => void;
 }
 
 function legacyFunction(name: LegacyName): LegacyFn {
@@ -48,23 +53,30 @@ export function legacySource(): LegacySource {
   };
 }
 
-/** The legacy commands and file tree, ready for createAppShell. */
+/** The legacy commands, and the hooks that keep the legacy code in step with the shell. */
 export function legacyBindings(): LegacyBindings {
-  // The visitor's home is /home/guest; until the VFS lands it shares the legacy /home/user.
-  addGuestHome(virtualFileSystem);
-  const fs = new LegacyTreeFs({
+  return {
+    specs: legacySpecs(legacySource()),
     root: virtualFileSystem,
-    cwd: currentPath,
-    restore: () => {
-      virtualFileSystem.children = createInitialFileSystem().children;
-      addGuestHome(virtualFileSystem);
+    bind({ vfs, shell }) {
+      bindLegacyVfs(vfs);
+      // help, Tab and the suggestions list every registered command, ported ones included.
+      setCommandCatalogue(() => shell.registry.names());
+      const stops = [
+        shell.cwd.subscribe((cwd) => mirrorCwd(cwd)),
+        // A reset puts the seed back under the same cwd; the mirror resolves it again.
+        vfs.onChange(() => mirrorCwd(shell.cwd.get())),
+        shell.history.subscribe((entries) => commandHistory.set(entries.map((entry) => entry.line))),
+      ];
+      return () => {
+        for (const stop of stops) stop();
+      };
     },
-  });
-  return { specs: legacySpecs(legacySource()), fs };
+  };
 }
 
 /** The app's shell over the legacy commands, built at once: for tests that mount the terminal. */
-export function legacyAppShell(options: Omit<AppShellOptions, 'fs' | 'specs'> & { readonly specs?: readonly CommandSpec[] }): AppShell {
+export function legacyAppShell(options: Omit<AppShellOptions, 'specs' | 'root' | 'bind'> & { readonly specs?: readonly CommandSpec[] }): AppShell {
   const legacy = legacyBindings();
-  return createAppShell({ ...options, fs: legacy.fs, specs: [...(options.specs ?? []), ...legacy.specs] });
+  return createAppShell({ ...options, root: legacy.root, bind: legacy.bind, specs: [...(options.specs ?? []), ...legacy.specs] });
 }

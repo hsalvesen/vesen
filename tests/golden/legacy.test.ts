@@ -130,7 +130,7 @@ function useDevice(device: DeviceProfile) {
 interface LegacyTerminal {
   /** Runs a line through the shell, as Input.svelte does, legacy commands through the adapter. */
   type(line: string): Promise<Step>;
-  /** Mounts History.svelte over everything typed so far and returns one line per entry. */
+  /** Mounts the transcript (ui/Transcript.svelte) over everything typed so far and returns one line per entry. */
   renderHistory(): Promise<string>;
 }
 
@@ -144,19 +144,23 @@ async function boot(viewport: Viewport): Promise<LegacyTerminal> {
   const { legacyAppShell } = await import('../../src/utils/legacyShell');
   const { createBell } = await import('../../src/services/bell');
   const { playBeep } = await import('../../src/utils/beep');
-  const { history } = await import('../../src/stores/history');
+  const { screen } = await import('../../src/stores/screen');
+  const { outputBlocks } = await import('../../src/interfaces/command');
   const { systemCommands } = await import('../../src/utils/commands/system');
-  // What app/bootstrap.ts puts in the transcript before the app mounts, and the CRT tier it
-  // decides for the device, which `cathode ls` reports.
-  history.set([{ command: 'banner', outputs: [systemCommands.banner()] }]);
   const { crtTier } = await import('../../src/stores/cathode');
   const { decideTier, readSignals } = await import('../../src/platform/perf');
   crtTier.set(decideTier(readSignals(window)));
-  const { shell } = legacyAppShell({
+  const app = legacyAppShell({
     banner: () => systemCommands.banner(),
     bell: createBell({ play: playBeep }),
     yieldToHost: () => Promise.resolve(),
   });
+  const { shell } = app;
+  // What app/bootstrap.ts does before the app mounts: the banner at the first prompt, and
+  // ~/.bashrc sourced. The CRT tier it decides for the device is what `cathode ls` reports.
+  screen.clear();
+  screen.push({ prompt: shell.renderPrompt(), line: 'banner', blocks: outputBlocks(systemCommands.banner()), origin: 'boot' });
+  await app.boot();
 
   return {
     async type(line) {
@@ -169,10 +173,10 @@ async function boot(viewport: Viewport): Promise<LegacyTerminal> {
     async renderHistory() {
       // Imported after the reset so the component shares this boot's stores.
       const { mount, unmount, flushSync } = await import('svelte');
-      const { default: History } = await import('../../src/components/History.svelte');
+      const { default: Transcript } = await import('../../src/ui/Transcript.svelte');
       const target = document.createElement('div');
       document.body.append(target);
-      const component = mount(History, { target });
+      const component = mount(Transcript, { target });
       flushSync();
       const entries = Array.from(target.children, (entry) => normaliseSvelteMarkup(entry.outerHTML));
       unmount(component);

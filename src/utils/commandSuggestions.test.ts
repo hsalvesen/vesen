@@ -1,11 +1,14 @@
 // @vitest-environment happy-dom
-// The legacy file system reads window and navigator when it is built, so it needs a DOM.
+// The legacy commands read window when they lay out output, so they need a DOM.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Suggest = (input: string) => string[];
 
 async function freshSuggestions(): Promise<Suggest> {
   vi.resetModules();
+  // The suggestions walk the VFS's tree through the legacy shim, which the shell fills.
+  const { legacyAppShell } = await import('./legacyShell');
+  legacyAppShell({ banner: () => '' });
   const { getCommandSuggestions } = await import('./commandSuggestions');
   const { commands } = await import('./commands');
   const names = Object.keys(commands);
@@ -24,7 +27,7 @@ describe('file and folder suggestions in the home folder', () => {
   });
 
   it('shows dotfiles once the typed name starts with a dot', () => {
-    expect(suggest('cat .')).toEqual(['cat .bashrc', 'cat .gitconfig', 'cat .profile', 'cat .vimrc']);
+    expect(suggest('cat .')).toEqual(['cat .bash_history', 'cat .bashrc', 'cat .gitconfig', 'cat .profile', 'cat .vimrc']);
     expect(suggest('cd .')).toEqual(['cd ..', 'cd .local', 'cd .ssh']);
   });
 

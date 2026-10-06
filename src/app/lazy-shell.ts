@@ -3,8 +3,10 @@
 // paint instead of before it: the banner and the prompt appear at once, and a line typed before
 // the chunk arrives runs as soon as it does. ^C still works on such a line.
 
+import type { Line } from '../output/model';
 import type { JobHandle, JobOrigin, JobResult, PreflightResult, ScreenSink, ShellPort } from '../shell/index';
 import { readonly, writable, type Readable } from '../shell/observable';
+import { promptLine } from '../shell/prompt';
 import { GUEST, type ExitCode, type JobInfo } from '../shell/types';
 
 export interface LazyShell extends ShellPort {
@@ -31,6 +33,8 @@ export interface LazyShellOptions {
   /** Where a line that waited for a chunk that never came is recorded. */
   readonly screen?: ScreenSink;
   readonly now?: () => number;
+  /** The terminal's width, for the prompt until the shell is here. */
+  readonly columns?: () => number;
 }
 
 export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOptions = {}): LazyShell {
@@ -45,7 +49,10 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
   const waiting: Waiting[] = [];
   let nextId = 0;
 
-  const failure = (line: string, origin: JobOrigin | undefined, id: number, error: unknown): JobResult => {
+  const renderPrompt = (): Line =>
+    shell?.renderPrompt() ?? promptLine({ cwd: cwd.get(), status: lastStatus.get(), columns: options.columns?.() ?? 80 });
+
+  const failure = (line: string, origin: JobOrigin | undefined, id: number, error: unknown, prompt: Line, startedAt: number): JobResult => {
     const message = error instanceof Error ? error.message : String(error);
     const text = `vesen: the shell could not load (${message}). Reload the page to try again.`;
     const result: JobResult = {
@@ -54,7 +61,7 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
       screen: 'keep',
       blocks: [{ type: 'lines', stream: 'stderr', lines: [[{ text, style: { fg: 'error' } }]] }],
     };
-    options.screen?.commit({ ...result, id, line, origin: origin ?? 'keyboard' });
+    options.screen?.commit({ ...result, id, line, origin: origin ?? 'keyboard', prompt, startedAt, endedAt: now() });
     return result;
   };
 
@@ -87,7 +94,9 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
     if (shell !== null) return shell.start(line, origin);
     nextId -= 1;
     const id = nextId;
-    job.set({ name: line.trim().split(/\s+/)[0] ?? '', label: null, startedAt: now() });
+    const prompt = renderPrompt();
+    const startedAt = now();
+    job.set({ name: line.trim().split(/\s+/)[0] ?? '', label: null, startedAt });
     let entry: Waiting | undefined;
     const done = new Promise<JobResult>((resolve) => {
       entry = {
@@ -95,7 +104,7 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
         origin,
         cancelled: false,
         started: (handle) => resolve(handle.done),
-        failed: (error) => resolve(failure(line, origin, id, error)),
+        failed: (error) => resolve(failure(line, origin, id, error, prompt, startedAt)),
       };
     });
     const waits = entry as Waiting;
@@ -127,5 +136,6 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
       if (shell !== null) shell.remember(line);
       else remembered.push(line);
     },
+    renderPrompt,
   };
 }

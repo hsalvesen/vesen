@@ -1,31 +1,34 @@
+<!--
+  The transcript: every entry of the screen store, each with the prompt it was typed at, the
+  line, and its output. Replaces components/History.svelte.
+-->
 <script lang="ts">
-  import { history } from '../stores/history';
-  import { outputBlocks } from '../interfaces/command';
   import type { Action } from '../output/model';
-  import OutputView from '../ui/OutputView.svelte';
-  import Ps1 from './Ps1.svelte';
+  import { screen } from '../stores/screen';
+  import OutputView from './OutputView.svelte';
+  import Prompt from './Prompt.svelte';
 
   let { onaction }: { onaction?: (action: Action) => void } = $props();
 </script>
 
-{#each $history as { command, outputs, echo }}
+{#each $screen as entry (entry.id)}
   <div class="entry">
     <!-- A line that cleared the screen keeps its output, not the prompt it was typed at. -->
-    {#if echo !== false}
+    {#if entry.prompt !== null}
       <div class="flex flex-row">
-        <Ps1 />
+        <Prompt line={entry.prompt} />
 
         <div class="flex flex-1 min-w-0">
-          <span class="command-input-display" style="margin-left: 0.25rem;">{command}</span>
+          <span class="command-input-display" style="margin-left: 0.25rem;">{entry.line}</span>
         </div>
       </div>
     {/if}
 
-    {#each outputs as output}
+    {#if entry.blocks.length > 0}
       <div class="command-output">
-        <OutputView blocks={outputBlocks(output)} {onaction} />
+        <OutputView blocks={entry.blocks} {onaction} />
       </div>
-    {/each}
+    {/if}
   </div>
 {/each}
 

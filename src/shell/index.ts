@@ -12,8 +12,9 @@ import { Executor, Interrupted, TOP_FRAME, failureMessage, type Io, type Job, ty
 import { expandHistory } from './histexpand';
 import { readonly, type Readable } from './observable';
 import { parse } from './parser';
+import { promptLine } from './prompt';
 import { Session, type HistoryStore, type JobState } from './session';
-import { JobDetached, TtyIn, TtyOut, TtySink, vfsWriteTarget, type ScreenAction, type WriteTarget } from './streams';
+import { JobDetached, NullOut, StringIn, TtyIn, TtyOut, TtySink, vfsWriteTarget, type ScreenAction, type WriteTarget } from './streams';
 import { EXIT, type CommandSpec, type Env, type ExitCode, type JobInfo, type Registry, type User } from './types';
 
 export type { ShellFs, TerminalInfo } from './executor';
@@ -37,6 +38,10 @@ export interface ScreenCommit extends JobResult {
   readonly id: number;
   readonly line: string;
   readonly origin: JobOrigin;
+  /** The prompt the line was typed at, as it looked then: its folder and the status before it. */
+  readonly prompt: Line;
+  readonly startedAt: number;
+  readonly endedAt: number;
 }
 
 /** The transcript, provided by the UI: it records each line once it has finished. */
@@ -82,6 +87,8 @@ export interface ShellPort {
   abort(): boolean;
   /** Adds a line to history without running it, as the sudo password prompt does. */
   remember(line: string): void;
+  /** The prompt as it looks now, for a line the UI records itself (an empty line, ^C). */
+  renderPrompt(): Line;
 }
 
 export interface Shell extends ShellPort {
@@ -91,12 +98,18 @@ export interface Shell extends ShellPort {
   readonly aliases: Map<string, string>;
   /** `reset` without a job: variables, files, history and the theme, as a new session has them. */
   reset(options?: { files?: boolean }): void;
+  /**
+   * Runs a file's lines in this session, as `source` does, outside any job: at boot, for
+   * /etc/profile and ~/.bashrc. With `quiet`, nothing it prints is shown. It is interrupted
+   * after `timeoutMs` (2 s), so a saved ~/.bashrc that never ends cannot stop the shell starting.
+   */
+  source(path: string, options?: { quiet?: boolean; timeoutMs?: number }): Promise<ExitCode>;
 }
 
 export interface ShellDeps {
   readonly registry: Registry;
   readonly fs: ShellFs;
-  /** Where redirections write; defaults to fs.writeFile. */
+  /** Where redirections write; defaults to the file system's openWrite, or its writeFile. */
   readonly files?: WriteTarget;
   /** Keeps history across reloads; null keeps it for the session only. */
   readonly storage?: KV<'local'> | null;
@@ -113,6 +126,9 @@ export interface ShellDeps {
   /** Lets the browser run between large writes to the screen; tests pass a resolved promise. */
   readonly yieldToHost?: () => Promise<void>;
 }
+
+/** How long a file sourced at boot may run before it is interrupted. */
+export const SOURCE_TIMEOUT_MS = 2000;
 
 const DEFAULT_TERMINAL: TerminalInfo = { size: () => ({ cols: 80, rows: 24 }), touch: false, inApp: null };
 
@@ -134,7 +150,7 @@ export function createShell(deps: ShellDeps): Shell {
     session,
     registry: deps.registry,
     fs: deps.fs,
-    files: deps.files ?? vfsWriteTarget(deps.fs),
+    files: deps.files ?? writeTarget(deps.fs),
     net: deps.net,
     clock: deps.clock,
     sys: deps.sys,
@@ -144,8 +160,8 @@ export function createShell(deps: ShellDeps): Shell {
     clipboard: deps.clipboard,
     bell: deps.bell,
   });
-  // The legacy commands start where the session does.
-  deps.fs.setLegacyCwd?.(session.currentDir);
+  const renderPrompt = (): Line =>
+    promptLine({ cwd: session.currentDir, status: session.status, columns: terminal.size().cols, home: session.user.home });
 
   let pending: (Preflighted & { readonly line: string }) | null = null;
 
@@ -182,7 +198,9 @@ export function createShell(deps: ShellDeps): Shell {
     const preflighted = pending?.line === line ? pending : null;
     pending = null;
     const first = line.trim().split(/\s+/)[0] ?? '';
-    const { id, signal } = session.jobs.begin(first, deps.clock.now());
+    const prompt = renderPrompt();
+    const startedAt = deps.clock.now();
+    const { id, signal } = session.jobs.begin(first, startedAt);
     let belled = false;
     const sink = new TtySink({
       onStderr: () => job.bell(),
@@ -242,7 +260,7 @@ export function createShell(deps: ShellDeps): Shell {
       session.setStatus(status);
       session.jobs.end(id);
       const result: JobResult = { status, interrupted, blocks: shown, screen };
-      deps.screen?.commit({ ...result, id, line, origin });
+      deps.screen?.commit({ ...result, id, line, origin, prompt, startedAt, endedAt: deps.clock.now() });
       return result;
     })();
 
@@ -300,5 +318,42 @@ export function createShell(deps: ShellDeps): Shell {
     abort: () => session.jobs.abort(),
     remember: (line) => session.history.add(line),
     reset: (options) => executor.reset(null, options),
+    renderPrompt,
+    source: async (path, options = {}) => {
+      // Its own job, which nothing on the screen shows; ^C cannot reach it, the deadline can.
+      const controller = new AbortController();
+      const deadline = setTimeout(() => controller.abort(), options.timeoutMs ?? SOURCE_TIMEOUT_MS);
+      const sink = new TtySink({ ...(deps.yieldToHost ? { yieldToHost: deps.yieldToHost } : {}) });
+      const job: Job = {
+        id: 0,
+        signal: controller.signal,
+        sink,
+        preflight: { current: null },
+        bell: () => {},
+        describe: () => {},
+      };
+      const columns = (): number => terminal.size().cols;
+      const io: Io = options.quiet
+        ? { stdin: new StringIn(''), stdout: new NullOut(), stderr: new NullOut() }
+        : { stdin: new StringIn(''), stdout: new TtyOut(sink, 'stdout', columns), stderr: new TtyOut(sink, 'stderr', columns) };
+      try {
+        const work = executor.source(path, job, io, TOP_FRAME);
+        work.catch(() => {});
+        return await Promise.race([work, whenAborted(controller.signal).then(() => EXIT.interrupted)]);
+      } catch {
+        return EXIT.error;
+      } finally {
+        clearTimeout(deadline);
+        controller.abort();
+        sink.finish();
+      }
+    },
   };
+}
+
+/** Where redirections write: the file system's own handles when it has them. */
+function writeTarget(fs: ShellFs): WriteTarget {
+  const open = fs.openWrite;
+  if (open === undefined) return vfsWriteTarget(fs);
+  return { open: (path, options) => open.call(fs, path, options) };
 }

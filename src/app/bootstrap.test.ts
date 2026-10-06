@@ -50,7 +50,7 @@ async function load() {
   const app = await import('./bootstrap');
   const { theme, findTheme } = await import('../stores/theme');
   const { cathode, cathodeQuality, crtTier } = await import('../stores/cathode');
-  const { history } = await import('../stores/history');
+  const { screen } = await import('../stores/screen');
   const boot = (options: Partial<BootOptions> = {}) => {
     booted = app.bootstrap({ window, build: '/assets/index-test.js', banner: () => 'BANNER', ...options });
     return booted;
@@ -60,7 +60,15 @@ async function load() {
     if (!found) throw new Error(`no theme ${name}`);
     theme.set(found);
   };
-  return { ...app, boot, theme, setTheme, cathode, cathodeQuality, crtTier, history };
+  return { ...app, boot, theme, setTheme, cathode, cathodeQuality, crtTier, screen };
+}
+
+/** What an entry shows: its prompt and line, then any legacy HTML. */
+function shown(entry: { prompt: readonly { text: string }[] | null; line: string; blocks: readonly { type: string; html?: string }[] }): string[] {
+  return [
+    ...(entry.prompt === null ? [] : [`${entry.prompt.map((span) => span.text).join('')} ${entry.line}`]),
+    ...entry.blocks.map((block) => (block.type === 'legacyHtml' ? (block.html ?? '') : `[${block.type}]`)),
+  ];
 }
 
 const themeColor = () => document.querySelector('meta[name="theme-color"]')?.getAttribute('content');
@@ -69,12 +77,12 @@ const svgIcon = () => document.querySelector('link[type="image/svg+xml"]')?.getA
 describe('bootstrap', () => {
   it('boots with the defaults and the banner when storage is blocked', async () => {
     blockStorage();
-    const { boot, history, setTheme } = await load();
+    const { boot, screen, setTheme } = await load();
 
     const result = boot();
 
     expect(result?.storage.local.persistent).toBe(false);
-    expect(get(history)).toEqual([{ command: 'banner', outputs: ['BANNER'] }]);
+    expect(screen.entries().map(shown)).toEqual([['guest@vesen:~$ banner', 'BANNER']]);
     expect(themeColor()).toBe('#222235');
     expect(svgIcon()).toBe('/icons/theme/swamphen.svg');
     expect(document.documentElement.style.colorScheme).toBe('dark');
@@ -185,32 +193,61 @@ describe('bootstrap', () => {
 
   it('announces a reload for a stale chunk in the transcript', async () => {
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 0);
-    const { boot, history } = await load();
+    const { boot, screen } = await load();
     boot();
 
     const event = new Event('vite:preloadError', { cancelable: true });
     window.dispatchEvent(event);
 
     expect(event.defaultPrevented).toBe(true);
-    const last = get(history).at(-1);
-    expect(last?.command).toBe('');
-    expect(String(last?.outputs[0])).toContain('vesen was updated, reloading…');
+    const entries = screen.entries();
+    const last = entries[entries.length - 1];
+    expect(last?.line).toBe('');
+    expect(shown(last ?? { prompt: null, line: '', blocks: [] }).join('\n')).toContain('vesen was updated, reloading…');
   });
 
   it('runs lines through the shell, whose kernel loads after the first paint, and keeps history', async () => {
-    const { boot, history } = await load();
+    const { boot, screen } = await load();
     const result = await boot()?.shell.run('lss');
     expect(result?.status).toBe(127);
-    expect(get(history).at(-1)?.command).toBe('lss');
+    const entries = screen.entries();
+    expect(entries[entries.length - 1]?.line).toBe('lss');
     expect(JSON.parse(localStorage.getItem('vesen:history:v1') ?? '')).toEqual({ v: 1, lines: ['lss'] });
   });
 
-  it('runs the legacy commands main.ts hands in, over their file tree', async () => {
+  it('runs the legacy commands main.ts hands in, and binds them to the VFS and the shell', async () => {
     const { boot } = await load();
-    const { emptyHome } = await import('../vfs/legacy-tree');
     const spec = { name: 'hello', category: 'fun' as const, summary: 'say hello', run: () => 3 };
-    const booted = boot({ legacy: () => Promise.resolve({ specs: [spec], fs: emptyHome() }) });
+    const root = { name: '', type: 'directory' as const };
+    const bound: string[] = [];
+    const booted = boot({
+      legacy: () =>
+        Promise.resolve({
+          specs: [spec],
+          root,
+          bind: ({ vfs }) => {
+            bound.push(vfs.readdir('/home').join(' '));
+            return () => bound.push('unbound');
+          },
+        }),
+    });
     expect((await booted?.shell.run('hello'))?.status).toBe(3);
+    // The VFS keeps its tree in the legacy code's object.
+    expect(Object.keys(root)).toContain('children');
+    expect(bound).toEqual(['guest has user']);
+    booted?.stop();
+    expect(bound).toEqual(['guest has user', 'unbound']);
+  });
+
+  it('sources ~/.bashrc before the first line, and saves files under ~ when the page is hidden', async () => {
+    const { boot } = await load();
+    const booted = boot();
+    expect((await booted?.shell.run('alias ll'))?.status).toBe(0);
+    await booted?.shell.run('pwd > where.txt');
+    expect(localStorage.getItem('vesen:fs:v1')).toBeNull();
+    window.dispatchEvent(new Event('pagehide'));
+    const saved = JSON.parse(localStorage.getItem('vesen:fs:v1') ?? '{}') as { overlay?: Record<string, { content?: string }> };
+    expect(saved.overlay?.['/home/guest/where.txt']?.content).toBe('/home/guest\n');
   });
 
   it('keeps history for the session when storage is blocked', async () => {
@@ -223,13 +260,12 @@ describe('bootstrap', () => {
 
   it('sends an alias host to the canonical origin and boots nothing', async () => {
     const replace = vi.fn();
-    const { bootstrap } = await load();
-    const { history } = await import('../stores/history');
+    const { bootstrap, screen } = await load();
     const alias = { location: { href: 'https://vesen.app/docs?x=1#top', replace } } as unknown as Window;
 
     expect(bootstrap({ window: alias, build: 'b', banner: () => 'BANNER' })).toBeNull();
     expect(replace).toHaveBeenCalledWith('https://www.vesen.app/docs?x=1#top');
-    expect(get(history)).toEqual([]);
+    expect(screen.entries()).toEqual([]);
   });
 });
 

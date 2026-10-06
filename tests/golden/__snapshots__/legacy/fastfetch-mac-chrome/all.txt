@@ -20,7 +20,7 @@ $ fastfetch
 
 ████████████████████████
 ████████████████████████
-user@www.vesen.app
+guest@vesen
 OS:macOS macOS 26 26.0+ arm64
 Host:MacBook Pro (14-inch, M2 Pro)
 Kernel:Darwin

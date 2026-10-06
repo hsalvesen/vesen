@@ -1,2 +1,2 @@
 $ ls /home
-user/  guest/
+guest/  has/  user/

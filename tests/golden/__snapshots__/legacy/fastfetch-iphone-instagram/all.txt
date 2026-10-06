@@ -20,7 +20,7 @@ $ fastfetch
 
 ████████████████████████
 ████████████████████████
-user@www.vesen.app
+guest@vesen
 OS:iOS 17.5 arm64
 Host:iPhone
 Kernel:Darwin

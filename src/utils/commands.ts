@@ -1,5 +1,5 @@
 import themes from '../../themes.json';
-import { commandHistory } from '../stores/history';
+import { commandHistory } from './legacyStores';
 import { systemCommands } from './commands/system';
 import { fileSystemCommands } from './commands/fileSystem';
 import type { networkCommands as NetworkCommands } from './commands/network';
@@ -24,7 +24,7 @@ import { transcriptColumns } from '../platform/measure';
 // Terminal-specific commands that don't fit in other modules
 const terminalCommands = {
   help: (args: string[] = []) => {
-    const commandList = Object.keys(commands).sort((a, b) => a.localeCompare(b));
+    const commandList = commandNames();
     const target = args[0];
 
     if (target && commandList.includes(target)) {
@@ -115,9 +115,6 @@ const terminalCommands = {
     return '';
   },
 
-  // The shell runs reset as an effect (ShellApi.reset): banner, default theme, home folder,
-  // original files and an empty history. The entry stays so the name is listed.
-  reset: () => '',
 };
 
 /** The palette slots `theme ls` previews, in terminal order, each as a two-cell swatch. */
@@ -428,6 +425,22 @@ const qrCommands = {
     return module.qrCommands.qr(args);
   },
 };
+
+/** Where the names of every command come from: the shell's registry, once it has loaded. */
+let catalogue: () => readonly string[] = () => Object.keys(commands);
+
+/**
+ * Every command name, sorted: the legacy commands until the shell has loaded, then the
+ * registry's, so commands ported to specs (cd, pwd, reset) stay in help and completion.
+ */
+export function commandNames(): string[] {
+  return [...new Set(catalogue())].sort((a, b) => a.localeCompare(b));
+}
+
+/** Lists the registry's commands from now on (legacyShell.ts calls it once the shell is built). */
+export function setCommandCatalogue(names: () => readonly string[]): void {
+  catalogue = names;
+}
 
 // Combine all commands
 export const commands: Record<string, (args: string[], signal?: AbortSignal) => Promise<string> | string> = {

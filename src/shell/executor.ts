@@ -74,14 +74,14 @@ const ACCENT: SpanStyle = { fg: 'accent' };
 /** Words safe to repeat in a did-you-mean line: no quotes, operators or expansions. */
 const PLAIN_WORD = /^[\w.,:@%+=/~-]+$/;
 
-/** The file system the kernel runs on, with the hooks the migration needs. */
+/** The file system the kernel runs on: the VFS, or a stand-in for tests. */
 export interface ShellFs extends BoundVfs {
-  /** Migration only: the legacy commands' current folder, which they change themselves. */
-  legacyCwd?(): string;
-  /** Migration only: moves the legacy commands' current folder. */
-  setLegacyCwd?(path: string): void;
   /** True when `path` is a file the visitor may run as a script. */
   isExecutable?(path: string): boolean;
+  /** The registry command a /usr/bin stub stands for, so `/bin/ls` runs ls. */
+  builtinAt?(path: string): string | undefined;
+  /** Opens a file for `>` and `>>`. */
+  openWrite?(path: string, options: { append: boolean; noclobber: boolean }): { write(text: string): void; close(): void };
   /** `reset`: the seed files again. */
   restore?(): void;
 }
@@ -278,7 +278,7 @@ export class Executor {
       }
 
       const env = Object.keys(assigned).length > 0 ? this.session.env.child(assigned) : this.session.env;
-      const spec = this.deps.registry.get(name);
+      const spec = this.deps.registry.get(name) ?? this.stubSpec(name);
       if (spec !== undefined) return await this.runSpec(spec, name, argv, cmdIo, env, job, frame);
 
       const script = this.findScript(name);
@@ -291,6 +291,13 @@ export class Executor {
     } finally {
       for (const file of opened) file.close();
     }
+  }
+
+  /** The command a path such as /bin/ls names, through its /usr/bin stub. */
+  private stubSpec(name: string): CommandSpec | undefined {
+    if (!name.includes('/')) return undefined;
+    const builtin = this.deps.fs.builtinAt?.(this.resolve(name));
+    return builtin === undefined ? undefined : this.deps.registry.get(builtin);
   }
 
   private expander(job: Job, io: Io, frame: Frame): Expander {
@@ -489,7 +496,6 @@ export class Executor {
       return await this.commandError(error, name, io, job, budget?.signal);
     } finally {
       budget?.cancel();
-      this.reconcileCwd();
     }
   }
 
@@ -506,12 +512,6 @@ export class Executor {
     const winner = await Promise.race([running, spent]);
     if (winner === BUDGET_SPENT) running.catch(() => {});
     return winner;
-  }
-
-  /** After a legacy command, the shell's folder follows wherever the legacy cd went. */
-  private reconcileCwd(): void {
-    const legacy = this.deps.fs.legacyCwd?.();
-    if (legacy !== undefined && legacy !== this.session.currentDir) this.session.moveTo(legacy);
   }
 
   private async printHelp(spec: CommandSpec, stdout: OutStream): Promise<void> {
@@ -678,8 +678,8 @@ export class Executor {
       throw error;
     }
     if (type !== 'directory') throw new VfsError('ENOTDIR', path, 'chdir');
+    if (!this.deps.fs.access(target, 'x')) throw new VfsError('EACCES', path, 'chdir');
     this.session.moveTo(target);
-    this.deps.fs.setLegacyCwd?.(target);
   }
 
   /** `reset`: a new session's variables, the seed files, no history, the default theme, the banner. */
@@ -688,7 +688,6 @@ export class Executor {
     session.reset();
     session.history.clear();
     if (options.files !== false) fs.restore?.();
-    fs.setLegacyCwd?.(session.currentDir);
     appearance.resetDefaults();
     job?.sink.reset();
   }
@@ -728,6 +727,27 @@ export class Executor {
       return error.code === 'ENOENT' ? EXIT.notFound : EXIT.denied;
     }
     const child: Frame = { argv0: name, args: argv.slice(1), depth: frame.depth + 1, interactive: false };
+    return this.runText(text, name, job, io, child);
+  }
+
+  /**
+   * `source`: runs a file's lines in this session, so its aliases and variables stay. Used at
+   * boot for /etc/profile and ~/.bashrc. A missing or unreadable file is status 1.
+   */
+  async source(path: string, job: Job, io: Io, frame: Frame = TOP_FRAME): Promise<ExitCode> {
+    let text: string;
+    try {
+      text = this.deps.fs.readFile(this.resolve(path));
+    } catch (error) {
+      if (!(error instanceof VfsError)) throw error;
+      await say(io.stderr, [span(`vesen: ${path}: ${strerror(error.code)}`, ERROR)]);
+      return EXIT.error;
+    }
+    return this.runText(text, path, job, io, { ...frame, interactive: false });
+  }
+
+  /** Runs text as a script: one parsed line at a time, joining lines that continue. */
+  private async runText(text: string, name: string, job: Job, io: Io, frame: Frame): Promise<ExitCode> {
     const lines = text.split('\n');
     if (lines[0]?.startsWith('#!')) lines[0] = '';
     let status: ExitCode = EXIT.ok;
@@ -744,7 +764,7 @@ export class Executor {
         return EXIT.usage;
       }
       pending = '';
-      status = await this.runList(parsed.ast, job, io, child);
+      status = await this.runList(parsed.ast, job, io, frame);
     }
     if (pending.trim() !== '') {
       const parsed = parse(pending);
