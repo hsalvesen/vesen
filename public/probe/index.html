@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#222235" />
+    <link rel="icon" href="data:," />
+    <title>vesen device probe</title>
+    <style>
+      html { background: #222235; color: #fff; font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+      body { margin: 0 auto; max-width: 720px; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left)); }
+      h1 { font-size: 1.2em; color: #06c993; margin: 0 0 8px; }
+      h2 { font-size: 1em; color: #f69154; margin: 24px 0 8px; }
+      p { margin: 0 0 8px; color: #d0d4ee; }
+      .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+      button, .btn { font: inherit; color: #fff; background: #2f2f48; border: 1px solid #959dcb; border-radius: 6px; padding: 10px 12px; min-height: 44px; box-sizing: border-box; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; }
+      button:active, .btn:active { background: #3f3f54; }
+      input, textarea { color: #fff; background: #1a1a29; border: 1px solid #959dcb; border-radius: 4px; padding: 6px; font-family: inherit; box-sizing: border-box; }
+      textarea { width: 100%; font-size: 16px; }
+      label { color: #d0d4ee; }
+      #status { color: #06c993; }
+      img { width: 150px; height: 150px; image-rendering: pixelated; image-rendering: crisp-edges; border: 8px solid #fff; display: block; }
+      pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #1a1a29; padding: 12px; border-radius: 6px; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <h1>vesen device probe</h1>
+    <p>Open this page from an Instagram DM. Tap each test, write what you saw in Notes, then copy the results.</p>
+    <div class="row"><button id="copy" type="button">Copy results</button><span id="status" role="status"></span></div>
+
+    <h2>Keyboard and zoom</h2>
+    <div class="row"><label>16px <input id="in16" style="font-size: 16px; width: 9em" /></label><button type="button" data-act="focus16">Focus 16px input</button></div>
+    <div class="row"><label>12px <input id="in12" style="font-size: 12px; width: 9em" /></label><button type="button" data-act="focus12">Focus 12px input</button></div>
+    <div class="row"><button type="button" data-act="measure">Measure viewport now</button></div>
+
+    <h2>Links, clipboard and permissions</h2>
+    <div class="row">
+      <button type="button" data-act="clipboard">Clipboard write</button>
+      <button type="button" data-act="windowOpen">window.open</button>
+      <a class="btn" data-act="targetBlank" href="./?via=target-blank" target="_blank">target=_blank link</a>
+      <a class="btn" data-act="mailto" href="mailto:has@salvesen.app?subject=vesen%20probe">mailto: link</a>
+      <button type="button" data-act="geolocation">Geolocation (8 s)</button>
+    </div>
+    <p>mailto: cannot be detected from the page. Note whether a mail app opened.</p>
+
+    <h2>Saving an image</h2>
+    <div class="row">
+      <a class="btn" id="dl-data" data-act="downloadData" download="vesen-probe.png">Download data: PNG</a>
+      <button type="button" data-act="downloadBlob">Download blob: PNG</button>
+      <button type="button" data-act="share">Share PNG file</button>
+    </div>
+    <p>Long-press the image. Does Save, Add to Photos or Download appear?</p>
+    <img id="target" alt="QR-style test image for long-press saving" />
+
+    <h2>Escape to the browser (tap only)</h2>
+    <div class="row">
+      <a class="btn" id="esc-ig" data-act="instagramExtbrowser">instagram://extbrowser/</a>
+      <a class="btn" id="esc-intent" data-act="androidIntent">Android intent://</a>
+      <a class="btn" id="esc-chrome" data-act="androidIntentChrome">intent:// (Chrome)</a>
+      <a class="btn" id="esc-safari" data-act="xSafari">x-safari-https://</a>
+    </div>
+
+    <h2>Notes</h2>
+    <textarea id="notes" rows="3" placeholder="e.g. mailto opened Mail; long-press offered Save to Photos"></textarea>
+
+    <h2>Results</h2>
+    <pre id="out"></pre>
+    <p>If Copy fails, select all of this box and copy it by hand:</p>
+    <textarea id="fallback" rows="6" readonly aria-label="Results as text"></textarea>
+
+    <script>
+(function () {
+  'use strict';
+  var KEY = 'vesen-probe:';
+  var PNG = 'iVBORw0KGgoAAAANSUhEUgAAABkAAAAZAQAAAADskrjOAAAAeElEQVR42mP4//9/AwOYOFDM2MBwv7C2geGir2sDw0V3EJHp2sBwP7C2geFAKGMDw/+L/xsY/hqdbGB4NDu6geGp6dUGhmuz1jcw/I0928Dw/69/A8MBZ9UGhvtJ5xsYLoLELuZcbmC4mCLYwHDfMR5kyn2obSACANXwPZNVwxM/AAAAAElFTkSuQmCC';
+  var PNG_URL = 'data:image/png;base64,' + PNG;
+  var $ = function (id) { return document.getElementById(id); };
+  var nav = navigator;
+  var ua = nav.userAgent;
+  // Key order is the order of the copied JSON: notes first, the tests last.
+  var R = { probe: 1, loadedAt: new Date().toISOString(), url: location.href, notes: '' };
+  var pending = null;
+
+  function err(e) { return e ? (e.name || 'Error') + ': ' + (e.message || String(e)) : String(e); }
+  function attempt(fn) { try { return fn(); } catch (e) { return 'threw ' + err(e); } }
+  function round(n, d) { var f = Math.pow(10, d || 0); return typeof n === 'number' ? Math.round(n * f) / f : n; }
+  function store(key, value) { try { localStorage.setItem(KEY + key, value); return true; } catch (e) { return false; } }
+
+  function render() {
+    R.notes = $('notes').value;
+    var json = JSON.stringify(R, null, 2);
+    $('out').textContent = json;
+    $('fallback').value = json;
+    store('actions', JSON.stringify({ at: Date.now(), actions: R.actions }));
+  }
+
+  function viewport() {
+    var v = window.visualViewport;
+    return {
+      innerWidth: innerWidth,
+      innerHeight: innerHeight,
+      clientHeight: document.documentElement.clientHeight,
+      scrollY: round(scrollY),
+      visualViewport: v ? { width: round(v.width, 1), height: round(v.height, 1), offsetTop: round(v.offsetTop, 1), pageTop: round(v.pageTop, 1), scale: round(v.scale, 3) } : null,
+      orientation: attempt(function () { return screen.orientation ? screen.orientation.type : String(window.orientation); })
+    };
+  }
+
+  function media(q) { return attempt(function () { return matchMedia('(' + q + ')').matches; }); }
+  function supports(prop, value) { return attempt(function () { return CSS.supports(prop, value); }); }
+
+  function pngBytes() {
+    var bin = atob(PNG), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+
+  // Runs `fn(record)` for a test and re-renders; the record is created first so a test that
+  // navigates away still leaves a trace in localStorage.
+  function run(name, fn) {
+    var rec = { at: new Date().toISOString() };
+    R.actions[name] = rec;
+    pending = { rec: rec, t0: Date.now() };
+    render();
+    try { fn(rec); } catch (e) { rec.error = err(e); }
+    render();
+  }
+
+  // Did the tap send the visitor to another app, tab or sheet? Recorded for the latest test.
+  function leftPage(event) {
+    if (!pending || Date.now() - pending.t0 > 5000 || pending.rec.leftPage) return;
+    if (event.type === 'visibilitychange' && document.visibilityState !== 'hidden') return;
+    pending.rec.leftPage = event.type;
+    pending.rec.leftAfterMs = Date.now() - pending.t0;
+    render();
+  }
+  function cameBack() {
+    if (!pending || !pending.rec.leftPage || document.visibilityState !== 'visible') return;
+    pending.rec.backAfterMs = Date.now() - pending.t0;
+    render();
+  }
+  ['blur', 'pagehide'].forEach(function (t) { window.addEventListener(t, leftPage); });
+  document.addEventListener('visibilitychange', function (e) { leftPage(e); cameBack(); });
+  window.addEventListener('focus', cameBack);
+
+  function execCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    var ok = attempt(function () { return document.execCommand('copy'); });
+    ta.remove();
+    return ok;
+  }
+
+  // --- On load -------------------------------------------------------------------------
+  R.ua = {
+    userAgent: ua,
+    userAgentData: nav.userAgentData ? { brands: nav.userAgentData.brands, mobile: nav.userAgentData.mobile, platform: nav.userAgentData.platform } : null,
+    platform: nav.platform,
+    vendor: nav.vendor,
+    maxTouchPoints: nav.maxTouchPoints,
+    languages: nav.languages,
+    locale: attempt(function () { return Intl.DateTimeFormat().resolvedOptions().locale; })
+  };
+  R.inApp = {
+    instagram: /\bInstagram\b/.test(ua),
+    facebook: /FBAN|FBAV|FB_IAB|FBIOS/.test(ua),
+    messenger: /FBAN\/Messenger|Orca-Android/.test(ua),
+    tiktok: /musical_ly|BytedanceWebview|TikTok/.test(ua),
+    threads: /Barcelona/.test(ua),
+    androidWebView: /; wv\)/.test(ua),
+    iosWebView: /\b(iPhone|iPad|iPod)\b/.test(ua) && /AppleWebKit/.test(ua) && !/Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua)
+  };
+  R.display = {
+    devicePixelRatio: window.devicePixelRatio,
+    screen: { width: screen.width, height: screen.height, availWidth: screen.availWidth, availHeight: screen.availHeight }
+  };
+  R.viewport = { atLoad: viewport() };
+  R.css = {
+    'container-type: inline-size': supports('container-type', 'inline-size'),
+    '100dvh': supports('height', '100dvh'),
+    '1lh': supports('height', '1lh'),
+    'color-mix(in srgb, red, blue)': supports('color', 'color-mix(in srgb, red, blue)'),
+    ':has(*)': attempt(function () { return CSS.supports('selector(:has(*))'); })
+  };
+  R.apis = {
+    'AbortSignal.any': typeof AbortSignal !== 'undefined' && typeof AbortSignal.any === 'function',
+    'AbortSignal.timeout': typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function',
+    share: typeof nav.share === 'function',
+    canShareFiles: attempt(function () { return typeof nav.canShare === 'function' ? nav.canShare({ files: [new File([''], 'x.png', { type: 'image/png' })] }) : 'no canShare'; }),
+    clipboardWriteText: !!(nav.clipboard && nav.clipboard.writeText),
+    geolocation: 'geolocation' in nav,
+    downloadAttribute: 'download' in document.createElement('a'),
+    wakeLock: 'wakeLock' in nav,
+    isSecureContext: window.isSecureContext,
+    standalone: nav.standalone
+  };
+  R.media = {};
+  ['pointer: coarse', 'pointer: fine', 'any-pointer: fine', 'hover: hover', 'hover: none', 'prefers-reduced-motion: reduce', 'prefers-contrast: more', 'forced-colors: active', 'prefers-color-scheme: dark', 'display-mode: standalone'].forEach(function (q) { R.media[q] = media(q); });
+  var c = nav.connection;
+  R.connection = c ? { effectiveType: c.effectiveType, saveData: c.saveData, type: c.type, downlink: c.downlink, rtt: c.rtt } : null;
+  R.navigation = {
+    referrer: document.referrer,
+    historyLength: history.length,
+    hasOpener: attempt(function () { return !!window.opener; }),
+    type: attempt(function () { var n = performance.getEntriesByType('navigation')[0]; return n ? n.type : null; })
+  };
+  // A timestamp from an earlier visit proves localStorage survives closing the app.
+  try {
+    var previous = localStorage.getItem(KEY + 'last-visit');
+    var visits = Number(localStorage.getItem(KEY + 'visits') || 0) + 1;
+    localStorage.setItem(KEY + 'last-visit', R.loadedAt);
+    localStorage.setItem(KEY + 'visits', String(visits));
+    R.storage = { localStorage: true, previousVisit: previous, visits: visits };
+    var before = JSON.parse(localStorage.getItem(KEY + 'actions') || 'null');
+    // Tests that navigate away (window.open in place, escapes, Back) leave their record here.
+    if (before && Date.now() - before.at < 30 * 60 * 1000 && Object.keys(before.actions).length) R.previousActions = before.actions;
+  } catch (e) {
+    R.storage = { localStorage: false, error: err(e) };
+  }
+  R.storage.sessionStorage = attempt(function () { sessionStorage.setItem(KEY + 't', '1'); return sessionStorage.getItem(KEY + 't') === '1'; });
+  R.actions = {};
+
+  if (nav.userAgentData && nav.userAgentData.getHighEntropyValues) {
+    nav.userAgentData.getHighEntropyValues(['model', 'platformVersion', 'fullVersionList']).then(function (v) { R.ua.highEntropy = v; render(); }, function () {});
+  }
+  if (nav.permissions && nav.permissions.query) {
+    nav.permissions.query({ name: 'geolocation' }).then(function (s) { R.apis.geolocationPermission = s.state; render(); }, function (e) { R.apis.geolocationPermission = err(e); render(); });
+  }
+
+  // --- Tests ---------------------------------------------------------------------------
+  function focusTest(input, name) {
+    input.addEventListener('focus', function () {
+      var at = new Date().toISOString(), before = viewport(), v = window.visualViewport;
+      var maxScale = v ? v.scale : 1, events = 0;
+      function onChange() { events++; if (v.scale > maxScale) maxScale = v.scale; }
+      if (v) { v.addEventListener('resize', onChange); v.addEventListener('scroll', onChange); }
+      setTimeout(function () {
+        if (v) { v.removeEventListener('resize', onChange); v.removeEventListener('scroll', onChange); }
+        var after = viewport(), bv = before.visualViewport, av = after.visualViewport;
+        R.actions[name] = {
+          at: at,
+          before: before,
+          after: after,
+          zoomedOnFocus: bv && av ? Math.max(av.scale, maxScale) > bv.scale + 0.01 : 'no visualViewport',
+          maxScale: round(maxScale, 3),
+          layoutViewportShrank: after.innerHeight < before.innerHeight,
+          visualViewportShrank: bv && av ? round(bv.height - av.height, 1) : null,
+          viewportEvents: events,
+          stillFocused: document.activeElement === input
+        };
+        render();
+      }, 1200);
+    });
+  }
+  focusTest($('in16'), 'focus16');
+  focusTest($('in12'), 'focus12');
+
+  var tests = {
+    focus16: function () { $('in16').focus(); },
+    focus12: function () { $('in12').focus(); },
+    measure: function (rec) { rec.viewport = viewport(); },
+    clipboard: function (rec) {
+      var text = 'vesen probe ' + R.loadedAt;
+      var promise = null;
+      // writeText must start inside the tap, before anything is awaited.
+      try { promise = nav.clipboard && nav.clipboard.writeText ? nav.clipboard.writeText(text) : null; } catch (e) { rec.writeText = err(e); }
+      rec.execCommandCopy = execCopy(text);
+      if (!promise) { rec.writeText = rec.writeText || 'unavailable'; return; }
+      rec.writeText = 'pending';
+      promise.then(function () { rec.writeText = 'ok'; render(); }, function (e) { rec.writeText = err(e); render(); });
+    },
+    windowOpen: function (rec) {
+      var w = window.open(location.pathname + '?via=window-open', '_blank');
+      rec.returned = w === null ? 'null' : typeof w;
+      rec.returnedWindow = !!w && typeof w === 'object';
+      setTimeout(function () { rec.closedAfter1500ms = w ? attempt(function () { return w.closed; }) : null; render(); }, 1500);
+    },
+    geolocation: function (rec) {
+      if (!nav.geolocation) { rec.result = 'unavailable'; return; }
+      var t0 = Date.now();
+      rec.result = 'pending';
+      var timer = setTimeout(function () { rec.watchdog = 'no callback within 8 s'; render(); }, 8000);
+      // Only the accuracy is kept, never the coordinates: these results get pasted into the repo.
+      nav.geolocation.getCurrentPosition(function (p) {
+        clearTimeout(timer);
+        rec.result = 'ok';
+        rec.ms = Date.now() - t0;
+        rec.accuracyMetres = Math.round(p.coords.accuracy);
+        render();
+      }, function (e) {
+        clearTimeout(timer);
+        rec.result = 'error ' + e.code + ': ' + e.message;
+        rec.ms = Date.now() - t0;
+        render();
+      }, { maximumAge: 0 });
+    },
+    downloadBlob: function (rec) {
+      var url = URL.createObjectURL(new Blob([pngBytes()], { type: 'image/png' }));
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'vesen-probe-blob.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      rec.clicked = true;
+      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    },
+    share: function (rec) {
+      if (typeof nav.share !== 'function') { rec.result = 'unavailable'; return; }
+      var data = { files: [new File([pngBytes()], 'vesen-probe.png', { type: 'image/png' })], title: 'vesen probe' };
+      rec.canShare = attempt(function () { return typeof nav.canShare === 'function' ? nav.canShare(data) : 'no canShare'; });
+      rec.shared = rec.canShare === true ? 'file' : 'url';
+      rec.result = 'pending';
+      nav.share(rec.canShare === true ? data : { title: 'vesen probe', url: location.href }).then(function () { rec.result = 'ok'; render(); }, function (e) { rec.result = err(e); render(); });
+    }
+  };
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-act]'), function (el) {
+    var name = el.getAttribute('data-act');
+    // Links and anchors need only the record and the leave watcher.
+    el.addEventListener('click', function () { run(name, tests[name] || function () {}); });
+  });
+
+  // --- Links that only act when tapped -------------------------------------------------
+  var here = location.href.split('#')[0];
+  var scheme = location.protocol.replace(':', '');
+  var target = location.host + location.pathname + location.search;
+  var fallback = ';S.browser_fallback_url=' + encodeURIComponent(here) + ';end';
+  $('esc-ig').href = 'instagram://extbrowser/?url=' + encodeURIComponent(here);
+  $('esc-intent').href = 'intent://' + target + '#Intent;scheme=' + scheme + ';action=android.intent.action.VIEW' + fallback;
+  $('esc-chrome').href = 'intent://' + target + '#Intent;scheme=' + scheme + ';package=com.android.chrome' + fallback;
+  $('esc-safari').href = 'x-safari-' + here;
+  $('dl-data').href = PNG_URL;
+  $('target').src = PNG_URL;
+  $('target').addEventListener('contextmenu', function () { R.actions.longPressContextMenu = { at: new Date().toISOString() }; render(); });
+
+  $('notes').addEventListener('input', render);
+  $('copy').addEventListener('click', function () {
+    render();
+    var json = $('out').textContent, status = $('status');
+    function byHand() {
+      var ta = $('fallback');
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      var ok = attempt(function () { return document.execCommand('copy'); });
+      status.textContent = ok === true ? 'Copied.' : 'Copy failed: copy the text box at the bottom by hand.';
+    }
+    if (nav.clipboard && nav.clipboard.writeText) {
+      nav.clipboard.writeText(json).then(function () { status.textContent = 'Copied.'; }, byHand);
+    } else {
+      byHand();
+    }
+  });
+
+  render();
+})();
+    </script>
+  </body>
+</html>

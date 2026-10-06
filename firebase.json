@@ -1,16 +1,33 @@
 {
   "hosting": {
     "public": "dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "rewrites": [
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "headers": [
       {
         "source": "**",
-        "destination": "/index.html"
-      }
+        "headers": [
+          {
+            "key": "Content-Security-Policy-Report-Only",
+            "value": "default-src 'self'; script-src 'self' 'sha256-2R60cDu29fOMgnV88NcOg/jLpvH53uRnzDGspIbwUfY=' 'sha256-Yp/kW34BKBqg8HCbRW4vtO/huooMo3luHQ39tI7L/ns='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "geolocation=(self), screen-wake-lock=(self), clipboard-write=(self), camera=(), microphone=(), payment=(), usb=()"
+          },
+          { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+          { "key": "X-Content-Type-Options", "value": "nosniff" }
+        ]
+      },
+      { "source": "/", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "/index.html", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "/probe/", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "/probe/index.html", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      {
+        "source": "/assets/**",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      },
+      { "source": "/favicons/**", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
+      { "source": "/fonts/**", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
     ]
   }
 }

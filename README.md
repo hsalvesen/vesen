@@ -53,7 +53,7 @@ View all themes: [Vesen themes](/docs/themes)
 ### Project structure
 ```bash
 src/
-├── main.ts                       # Mounts the app
+├── main.ts                       # Sends alias hosts to www.vesen.app, reloads on stale chunks, mounts the app
 ├── App.svelte                    # Layout: scrollback, prompt, suggestions, running-command line
 ├── app.css                       # Global styles and the CRT (cathode) effect
 ├── constants.ts                  # Repository URL
@@ -66,6 +66,7 @@ src/
 │   └── Cathode.svelte            # CRT overlay
 ├── interfaces/                   # TypeScript interfaces (command, theme)
 ├── output/escape.ts              # HTML escaping for command output
+├── platform/                     # Browser-facing helpers: canonical host redirect, stale-chunk reload
 ├── services/net.ts               # fetch with timeouts, cancelling and typed network errors
 ├── stores/                       # Svelte stores: history, the running job, theme, cathode
 ├── testing/                      # Test setup
@@ -78,9 +79,10 @@ src/
     ├── notice.ts                 # Shared notices (cancelled commands, errors)
     ├── beep.ts                   # The terminal bell
     └── mobile.ts, textWrap.ts, osLogos.ts
-public/                           # README.md, history.txt and linux.txt for cat; favicons; font
+public/                           # README.md, history.txt and linux.txt for cat; favicons; font;
+                                  # 404.html; probe/ (device capability probe, not linked from the app)
 themes.json                       # The ten colour themes
-tests/                            # Golden snapshots of command output, network fixtures, helpers
+tests/                            # Golden snapshots of command output, network fixtures, hosting checks, helpers
 e2e/                              # Playwright end-to-end tests
 scripts/                          # Checks: module boundaries, bundle budget, theme contrast
 docs/                             # Theme screenshots and the improvement plan

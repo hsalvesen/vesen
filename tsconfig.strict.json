@@ -30,6 +30,7 @@
     "scripts/**/*.mjs",
     "scripts/**/*.ts",
     "worker/**/*.ts",
+    "tests/hosting/**/*.ts",
     "e2e/**/*.ts",
     "playwright.config.ts",
     "vite.config.ts"
