@@ -1,6 +1,4 @@
-import { theme } from '../../stores/theme';
 import { speedtestPhase } from '../../stores/history';
-import { get } from 'svelte/store';
 import { commandHelp } from '../helpTexts';
 import { playBeep } from '../beep';
 import { fetchJson, fetchText, fetchTextCapped, fetchWithTimeout, isNetError } from '../../services/net';
@@ -55,7 +53,7 @@ function weatherFailure(error: unknown): string {
 }
 
 function unknownLocation(place: string): string {
-  return `<span style="color: var(--theme-red); font-weight: bold;">Weather data not available for "${escapeHtml(place)}"</span>\n<span style="color: var(--theme-yellow);">Please check the city name and try again.</span>\n<span style="color: var(--theme-cyan);">Example: weather Oslo</span>`;
+  return errorLine(`weather: no weather data for "${place}"`, 'Check the place name and try again, for example: weather Oslo');
 }
 
 function curlFailure(error: unknown, host: string): string {
@@ -179,7 +177,7 @@ function readQuoteEnvelope(envelope: AllOriginsEnvelope | null): QuoteLookup {
 function quoteLookupFailure(lookup: Exclude<QuoteLookup, { kind: 'ok' }>, ticker: string): string {
   switch (lookup.kind) {
     case 'not-found':
-      return `<span style="color: var(--theme-red); font-weight: bold;">No data found for ticker: ${escapeHtml(ticker)}</span>\n<span style="color: var(--theme-yellow);">Please verify the ticker symbol is correct.</span>`;
+      return errorLine(`stock: no data found for ticker ${ticker}`, 'Check the ticker symbol and try again, for example: stock AAPL');
     case 'upstream':
       return errorLine(
         lookup.status === 429
@@ -450,9 +448,7 @@ export const networkCommands = {
     }
 
     // Wraps at the edge of the screen, whatever its width.
-    const currentTheme = get(theme);
-
-    return `<pre style="color: ${currentTheme.foreground}; white-space: pre-wrap; word-wrap: break-word; word-break: break-word; max-width: 100%; overflow-wrap: break-word;">${escapeHtml(data)}</pre>`;
+    return `<pre style="color: var(--role-fg); white-space: pre-wrap; word-wrap: break-word; word-break: break-word; max-width: 100%; overflow-wrap: break-word;">${escapeHtml(data)}</pre>`;
   },
 
   stock: async (args: string[], signal?: AbortSignal) => {
@@ -484,8 +480,6 @@ export const networkCommands = {
   },
 
   speedtest: async (args: string[], signal?: AbortSignal) => {
-    const currentTheme = get(theme);
-
     const downUrl = 'https://speed.cloudflare.com/__down';
     const upUrl = 'https://speed.cloudflare.com/__up';
 
@@ -586,7 +580,7 @@ export const networkCommands = {
     try {
       const lines: string[] = [];
 
-      lines.push(`<span style="color: ${currentTheme.cyan};">Cloudflare Speed Test</span>`);
+      lines.push(`<span style="color: var(--role-accent);">Cloudflare Speed Test</span>`);
 
       speedtestPhase.set('Measuring download...');
       const downloadSizes = [5 * 1024 * 1024, 10 * 1024 * 1024, 25 * 1024 * 1024];
@@ -596,7 +590,7 @@ export const networkCommands = {
         downloadSamples.push(m.mbps);
       }
       const dAvg = downloadSamples.reduce((a, b) => a + b, 0) / downloadSamples.length;
-      lines.push(`<span style="color: ${currentTheme.green};">Download:</span> ${dAvg.toFixed(1)} Mbps (avg of ${downloadSamples.length} samples)`);
+      lines.push(`<span style="color: var(--role-ok);">Download:</span> ${dAvg.toFixed(1)} Mbps (avg of ${downloadSamples.length} samples)`);
 
       speedtestPhase.set('Measuring upload...');
       const uploadSizes = [64 * 1024, 256 * 1024, 1 * 1024 * 1024];
@@ -615,14 +609,14 @@ export const networkCommands = {
       if (uploadSamples.length > 0) {
         const uAvg = uploadSamples.reduce((a, b) => a + b, 0) / uploadSamples.length;
         const note = uploadErrors > 0 ? ` (some samples blocked)` : '';
-        lines.push(`<span style="color: ${currentTheme.blue};">Upload:</span> ${uAvg.toFixed(1)} Mbps (avg of ${uploadSamples.length} samples)${note}`);
+        lines.push(`<span style="color: var(--role-link);">Upload:</span> ${uAvg.toFixed(1)} Mbps (avg of ${uploadSamples.length} samples)${note}`);
       } else {
-        lines.push(`<span style="color: ${currentTheme.blue};">Upload:</span> unavailable due to browser/network restrictions`);
+        lines.push(`<span style="color: var(--role-link);">Upload:</span> unavailable due to browser/network restrictions`);
       }
 
       speedtestPhase.set('Measuring latency...');
       const lat = await measureLatency(10);
-      lines.push(`<span style="color: ${currentTheme.red};">Ping:</span> avg ${lat.avg.toFixed(0)} ms, min ${lat.min.toFixed(0)} ms, max ${lat.max.toFixed(0)} ms`);
+      lines.push(`<span style="color: var(--role-warn);">Ping:</span> avg ${lat.avg.toFixed(0)} ms, min ${lat.min.toFixed(0)} ms, max ${lat.max.toFixed(0)} ms`);
 
       speedtestPhase.set('');
       return `<div>${lines.join('<br>')}</div>`;

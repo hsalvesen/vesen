@@ -46,7 +46,9 @@ Type `help` in the terminal to see all available commands, or explore the file s
 ## Themes
 
 ![themes](/docs/themes/themes.gif)
-View all themes: [Vesen themes](/docs/themes)
+View all themes: [Vesen themes](/docs/themes), or run `theme ls` in the terminal to see each one's colours.
+
+The CRT effect (`cathode ls`) shows in full on a desktop, in a lighter static form on phones and in in-app browsers, and not at all when the system asks for reduced motion, more contrast or forced colours. `cathode quality auto|full|lite|off` overrides that choice.
 
 ##  Development
 
@@ -58,11 +60,13 @@ src/
 │                                 # applied to the page, stale-chunk reload, the banner
 ├── App.svelte                    # The app shell: the screen frame (transcript, prompt, new-output pill,
 │                                 # CRT overlay) above an empty slot for the phone dock
-├── app.css                       # Global styles and the CRT (cathode) effect
+├── app.css                       # Imports the style sheets below
 ├── styles/                       # tokens.css (Vesen Mono, --term-font, --term-fs, --term-lh),
-│                                 # terminal.css (base type, the .art class for banners, logos and charts)
-│                                 # and shell.css (the fixed shell sized to the visible viewport; phones
-│                                 # edge to edge, the desktop framed)
+│                                 # terminal.css (base type, the .art class for banners, logos and charts),
+│                                 # shell.css (the fixed shell sized to the visible viewport; phones
+│                                 # edge to edge, the desktop framed), components.css (output in role
+│                                 # colours: errors, panels, list markers, swatches, the scrollbar) and
+│                                 # crt.css (the CRT effect, by tier)
 ├── constants.ts                  # Repository URL and the prompt's host
 ├── global.d.ts                   # Build-time globals
 ├── components/
@@ -81,11 +85,14 @@ src/
 │   ├── legacy-policy.ts          # What the legacy HTML shim keeps: tags, attributes, classes, styles
 │   └── escape.ts                 # HTML escaping for command output
 ├── vfs/types.ts                  # The file system contract
-├── lib/colour.ts                  # Luminance and the light or dark color-scheme of a background
+├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
+│                                 # and roles.ts (each theme's --role-* colours, computed from its palette
+│                                 # where themes.json does not set them, and the contrast each must meet)
 ├── platform/                     # Browser-facing helpers: canonical host redirect, stale-chunk reload,
-│                                 # head.ts (theme colours, theme-color, favicon), crt.ts (CRT classes),
-│                                 # measure.ts (--input-scale for the 16px touch input), viewport.ts
-│                                 # (--app-h, --app-top and --kb-h from visualViewport)
+│                                 # head.ts (palette colours, theme-color, favicon), theme-apply.ts (the
+│                                 # role colours), perf.ts (the CRT tier: full, lite or off, and why),
+│                                 # crt.ts (CRT classes), measure.ts (--input-scale for the 16px touch
+│                                 # input), viewport.ts (--app-h, --app-top and --kb-h from visualViewport)
 ├── services/
 │   ├── net.ts                    # fetch with timeouts, cancelling, byte caps and typed network errors
 │   ├── storage.ts                # localStorage and sessionStorage with a memory fallback; one-time migrations
@@ -104,30 +111,33 @@ src/
 ├── testing/                      # Test setup
 └── utils/
     ├── commands.ts               # Command table and dispatcher; the network commands load on first use
-    ├── commands/                 # Commands: file system, network, system, QR
+    ├── commands/                 # Commands: file system, network, system, QR; fastfetch and the network
+    │                             # commands load on first use
     ├── virtualFileSystem.ts      # The in-memory file system
     ├── helpTexts.ts              # Help for each command
     ├── commandSuggestions.ts     # Suggestions while typing
-    ├── notice.ts                 # Shared notices (cancelled commands, errors)
+    ├── notice.ts                 # The one notice panel and the one error style (cmd: message, then a hint)
     ├── beep.ts                   # The terminal bell
     └── osLogos.ts                # fastfetch's logos, loaded with it
 public/                           # README.md, history.txt and linux.txt for cat; 404.html; fonts/ (Vesen Mono
                                   # and its licence, OFL.txt); icons/ and og.png (generated, see scripts/);
                                   # manifest.webmanifest; probe/ (device capability probe, not linked from the app)
 assets-src/fonts/                 # The source font Vesen Mono is built from (not served)
-themes.json                       # The ten colour themes
+themes.json                       # The ten colour themes: each palette, and any role colours a theme sets itself
 tests/                            # Golden snapshots and their parity check, XSS tests, network fixtures, hosting checks, helpers
 e2e/                              # Playwright end-to-end tests
 scripts/                          # Checks: module boundaries, bundle budget, theme contrast (and its baseline);
                                   # vite-plugin-boot.ts (emits /boot.js, which paints the saved theme before
                                   # the app loads); icons.mjs and og.mjs (regenerate public/icons and
                                   # public/og.png with `node scripts/icons.mjs` or `node scripts/og.mjs`);
+                                  # theme-screenshots.mjs (regenerates docs/themes/screenshots after
+                                  # `npm run build`);
                                   # fonts/build-vesen-mono.py (rebuilds public/fonts/VesenMono.woff2; needs
                                   # `pip install fonttools brotli`)
 docs/
 ├── adr/                          # Architecture decision records; 0001 fixes the shared contracts
 ├── plan/                         # The improvement plan
-└── themes/                       # Theme screenshots
+└── themes/                       # Theme screenshots, from scripts/theme-screenshots.mjs
 ```
 
 ### Available scripts
@@ -140,8 +150,11 @@ npm run check:strict      # Strict TypeScript: the new browser folders with no N
                           # unit tests, test helpers, scripts and config files with Node types
 npm run check:boundaries  # Keep the DOM-free folders free of browser globals, Svelte and imports that reach them
 npm run check:bundle      # Initial JS budget (60 kB gzip); run after build
-npm run check:contrast    # WCAG contrast of every theme: fails if any pair is worse than
-                          # scripts/contrast-baseline.json (add -- --strict to require 4.5:1 everywhere)
+npm run check:contrast    # WCAG contrast of every theme: the role colours as applied (4.5:1 for
+                          # text, 3:1 for ghost text and the cursor, 7:1 for QR codes) and the palette
+                          # slots legacy output uses, which must be no worse than
+                          # scripts/contrast-baseline.json; add -- --strict, as CI does, to fail on
+                          # any role below its minimum
 npm test                  # Unit tests (Vitest)
 npm run test:e2e          # End-to-end tests (Playwright: desktop Chrome, iPhone Instagram, Pixel 7)
 npm run test:smoke        # The @smoke end-to-end tests on all three projects, as CI runs them

@@ -45,6 +45,11 @@ describe('htmlToText', () => {
     expect(htmlToText('1 < 2 and 3 <= 4')).toBe('1 < 2 and 3 <= 4');
   });
 
+  it('drops screen-reader-only text, keeping the art it describes', () => {
+    expect(htmlToText('<div class="art" aria-hidden="true">##\n##</div><span class="sr-only">A <b>square</b></span>after')).toBe('##\n##\nafter');
+    expect(htmlToText("<span class='x sr-only'><span>a</span>b</span>c<span class=\"sr-only-ish\">d</span>")).toBe('cd');
+  });
+
   it('drops comments, scripts and styles', () => {
     expect(htmlToText('a<!-- hidden -->b<script>alert(1)</script>c<style>p{}</style>d')).toBe('abcd');
   });

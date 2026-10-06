@@ -1,5 +1,3 @@
-import { theme } from '../../stores/theme';
-import { get } from 'svelte/store';
 import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from '../virtualFileSystem';
 import { history } from '../../stores/history';
 import { commandHelp } from '../helpTexts';
@@ -91,7 +89,6 @@ export const fileSystemCommands = {
   },
   
   ls: (args: string[]) => {
-    const currentTheme = get(theme);
     let targetPath: string[];
     
     // Check for -a flag to show hidden files
@@ -113,13 +110,13 @@ export const fileSystemCommands = {
       } else {
         playBeep();
         const pathStr = pathArgs.length === 0 ? '.' : pathArgs[0];
-        return `ls: cannot access '${escapeHtml(pathStr)}': No such file or directory`;
+        return errorLine(`ls: cannot access '${pathStr}': No such file or directory`);
       }
     }
     
     if (current.type !== 'directory') {
       const pathStr = pathArgs.length === 0 ? '.' : pathArgs[0];
-      return `ls: cannot access '${escapeHtml(pathStr)}': Not a directory`;
+      return errorLine(`ls: cannot access '${pathStr}': Not a directory`);
     }
     
     if (!current.children) {
@@ -130,10 +127,13 @@ export const fileSystemCommands = {
     const items = Object.values(current.children)
       .filter((item: VirtualFile) => showHidden || !item.name.startsWith('.'))
       .map((item: VirtualFile) => {
-        const color = item.type === 'directory' ? currentTheme.brightBlue : currentTheme.white;
-        const suffix = item.type === 'directory' ? '/' : '';
+        // Directories in the link role, files in strong text: roles, so a listing follows the theme.
+        const isDirectory = item.type === 'directory';
+        const suffix = isDirectory ? '/' : '';
         return {
-          html: `<span style="color: ${color}; font-weight: ${item.type === 'directory' ? 'bold' : 'normal'};">${escapeHtml(item.name)}${suffix}</span>`,
+          html: isDirectory
+            ? `<span style="color: var(--role-link); font-weight: bold;">${escapeHtml(item.name)}${suffix}</span>`
+            : `<span class="out-strong">${escapeHtml(item.name)}</span>`,
           width: item.name.length + suffix.length,
         };
       });
@@ -192,17 +192,16 @@ export const fileSystemCommands = {
           const similarFile = findSimilarFile(segment, current);
           if (similarFile) {
             playBeep();
-            const currentTheme = get(theme);
-            return `cat: ${escapeHtml(args[0])}: No such file or directory. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${escapeHtml(similarFile)}</span>?`;
+            return errorLine(`cat: ${args[0]}: No such file or directory`, `Did you mean ${similarFile}?`);
           }
         }
         playBeep();
-        return `cat: ${escapeHtml(args[0])}: No such file or directory`;
+        return errorLine(`cat: ${args[0]}: No such file or directory`);
       }
     }
     
     if (current.type !== 'file') {
-      return `cat: ${escapeHtml(args[0])}: Is a directory`;
+      return errorLine(`cat: ${args[0]}: Is a directory`);
     }
     
     let content = '';
@@ -248,17 +247,16 @@ export const fileSystemCommands = {
           const similarDir = findSimilarFile(segment, current);
           if (similarDir && current.children[similarDir].type === 'directory') {
             playBeep();
-            const currentTheme = get(theme);
-            return `cd: ${escapeHtml(args[0])}: No such file or directory. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${escapeHtml(similarDir)}</span>?`;
+            return errorLine(`cd: ${args[0]}: No such file or directory`, `Did you mean ${similarDir}?`);
           }
         }
         playBeep();
-        return `cd: ${escapeHtml(args[0])}: No such file or directory`;
+        return errorLine(`cd: ${args[0]}: No such file or directory`);
       }
     }
     
     if (current.type !== 'directory') {
-      return `cd: ${escapeHtml(args[0])}: Not a directory`;
+      return errorLine(`cd: ${args[0]}: Not a directory`);
     }
     
     // Update current path
@@ -295,19 +293,19 @@ export const fileSystemCommands = {
         parent = parent.children[segment];
       } else {
         playBeep();
-        return `rm: cannot remove '${escapeHtml(targetFile)}': No such file or directory`;
+        return errorLine(`rm: cannot remove '${targetFile}': No such file or directory`);
       }
     }
     
     if (!parent.children || !parent.children[fileName]) {
       playBeep();
-      return `rm: cannot remove '${escapeHtml(targetFile)}': No such file or directory`;
+      return errorLine(`rm: cannot remove '${targetFile}': No such file or directory`);
     }
     
     const target = parent.children[fileName];
     
     if (target.type === 'directory' && !recursive) {
-      return `rm: cannot remove '${escapeHtml(targetFile)}': Is a directory (use -r to remove directories)`;
+      return errorLine(`rm: cannot remove '${targetFile}': Is a directory (use -r to remove directories)`);
     }
     
     // Delete the file or directory
@@ -332,18 +330,18 @@ export const fileSystemCommands = {
         parent = parent.children[segment];
       } else {
         playBeep();
-        return `touch: cannot touch '${escapeHtml(args[0])}': No such file or directory`;
+        return errorLine(`touch: cannot touch '${args[0]}': No such file or directory`);
       }
     }
     
     if (!parent.children) {
-      return `touch: cannot touch '${escapeHtml(args[0])}': Parent is not a directory`;
+      return errorLine(`touch: cannot touch '${args[0]}': Parent is not a directory`);
     }
     
     // Check if file already exists
     if (parent.children[fileName]) {
       if (parent.children[fileName].type === 'directory') {
-        return `touch: cannot touch '${escapeHtml(args[0])}': Is a directory`;
+        return errorLine(`touch: cannot touch '${args[0]}': Is a directory`);
       }
       return `touch: '${escapeHtml(args[0])}' timestamp updated`;
     }
@@ -374,17 +372,17 @@ export const fileSystemCommands = {
         parent = parent.children[segment];
       } else {
         playBeep();
-        return `mkdir: cannot create directory '${escapeHtml(args[0])}': No such file or directory`;
+        return errorLine(`mkdir: cannot create directory '${args[0]}': No such file or directory`);
       }
     }
 
     if (!parent.children) {
-      return `mkdir: cannot create directory '${escapeHtml(args[0])}': Parent is not a directory`;
+      return errorLine(`mkdir: cannot create directory '${args[0]}': Parent is not a directory`);
     }
 
     // Check if directory already exists
     if (parent.children[dirName]) {
-      return `mkdir: cannot create directory '${escapeHtml(args[0])}': File exists`;
+      return errorLine(`mkdir: cannot create directory '${args[0]}': File exists`);
     }
 
     // Create new directory
@@ -422,7 +420,7 @@ export const fileSystemCommands = {
       const afterRedirect = fullCommand.substring(redirectIndex + (isAppend ? 2 : 1)).trim();
       
       if (!afterRedirect) {
-        return `echo: syntax error: missing filename after ${isAppend ? '>>' : '>'}`;
+        return errorLine(`echo: syntax error: missing filename after ${isAppend ? '>>' : '>'}`);
       }
       
       // Extract filename (first word after redirection)
@@ -452,17 +450,17 @@ export const fileSystemCommands = {
         if (parent.children && parent.children[segment]) {
           parent = parent.children[segment];
         } else {
-          return `echo: cannot create '${escapeHtml(filename)}': No such file or directory`;
+          return errorLine(`echo: cannot create '${filename}': No such file or directory`);
         }
       }
   
       if (!parent.children) {
-        return `echo: cannot create '${escapeHtml(filename)}': Parent is not a directory`;
+        return errorLine(`echo: cannot create '${filename}': Parent is not a directory`);
       }
   
       // Check if target exists and is a directory
       if (parent.children[fileName] && parent.children[fileName].type === 'directory') {
-        return `echo: cannot write to '${escapeHtml(filename)}': Is a directory`;
+        return errorLine(`echo: cannot write to '${filename}': Is a directory`);
       }
   
       // Create, overwrite, or append to the file
@@ -479,9 +477,8 @@ export const fileSystemCommands = {
         };
       }
   
-      const currentTheme = get(theme);
       const action = isAppend ? 'appended to' : 'written to';
-      return `<span style="color: ${currentTheme.green};">Content ${action} '${escapeHtml(filename)}'</span>`;
+      return `<span style="color: var(--role-ok);">Content ${action} '${escapeHtml(filename)}'</span>`;
     }
   
     // Regular echo behavior - remove surrounding quotes and process escape sequences
@@ -502,13 +499,12 @@ export const fileSystemCommands = {
   },
 
   poweroff: (args: string[]) => {
-    const currentTheme = get(theme);
-    
+
     // Check for help flag
     const hasHelpFlag = args.includes('--help') || args.includes('-h');
     
     if (hasHelpFlag) {
-      return `<span style="color: ${currentTheme.cyan}; font-weight: bold;">poweroff</span> - End terminal session<br><span style="color: ${currentTheme.yellow}; font-weight: bold;">Usage:</span> poweroff<br><br><span style="color: ${currentTheme.cyan}; font-weight: bold;">Description:</span> Attempts to close the window, then triggers shutdown sequence.`;
+      return `<span style="color: var(--theme-cyan); font-weight: bold;">poweroff</span> - End terminal session<br><span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> poweroff<br><br><span style="color: var(--theme-cyan); font-weight: bold;">Description:</span> Attempts to close the window, then triggers shutdown sequence.`;
     }
     
     // Disable all inputs immediately to prevent further commands
@@ -574,7 +570,7 @@ export const fileSystemCommands = {
     }, 100);
     
     // Return immediate feedback
-    return `<span style="color: ${currentTheme.yellow};">Terminating session...</span>`;
+    return `<span style="color: var(--role-warn);">Terminating session...</span>`;
   }
   
 };

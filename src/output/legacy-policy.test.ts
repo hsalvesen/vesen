@@ -88,9 +88,14 @@ describe('filterLegacyClasses', () => {
   it('keeps only the class names legacy output uses', () => {
     expect(filterLegacyClasses('theme-name is-current')).toBe('theme-name is-current');
     expect(filterLegacyClasses('  cathode-name  fixed inset-0 z-50 ')).toBe('cathode-name');
-    expect(filterLegacyClasses('sr-only hidden')).toBe('');
+    expect(filterLegacyClasses('sr-only hidden')).toBe('sr-only');
     expect(filterLegacyClasses('art art-fit art-x')).toBe('art art-fit');
-    expect([...LEGACY_CLASSES].sort()).toEqual(['art', 'art-fit', 'cathode-name', 'current-theme-name', 'is-current', 'theme-name']);
+    expect(filterLegacyClasses('out-panel tone-warn fixed')).toBe('out-panel tone-warn');
+    expect([...LEGACY_CLASSES].sort()).toEqual([
+      'art', 'art-fit', 'cathode-name', 'current-theme-name', 'is-current',
+      'out-accent', 'out-error', 'out-muted', 'out-panel', 'out-panel-title', 'out-strong',
+      'sr-only', 'swatches', 'theme-name', 'tone-error', 'tone-link', 'tone-muted', 'tone-ok', 'tone-warn',
+    ]);
   });
 });
 
@@ -116,6 +121,12 @@ describe('legacyAttribute', () => {
     expect(legacyAttribute('data-theme-name', 'swamphen')).toBe('swamphen');
     expect(legacyAttribute('data-cathode-name', 'vintage')).toBe('vintage');
     expect(legacyAttribute('data-theme-name', '"><img src=x onerror=alert(1)>')).toBeNull();
+  });
+
+  it('keeps aria-hidden only as true', () => {
+    expect(legacyAttribute('aria-hidden', 'true')).toBe('true');
+    expect(legacyAttribute('aria-hidden', 'false')).toBeNull();
+    expect(legacyAttribute('aria-label', 'x')).toBeNull();
   });
 
   it('drops every other attribute', () => {

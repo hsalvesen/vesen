@@ -47,3 +47,19 @@ describe('file and folder suggestions in the home folder', () => {
     expect(suggest('rm h')).toEqual(['rm history.txt']);
   });
 });
+
+describe('cathode suggestions', () => {
+  it('offer the quality subcommand and its values', async () => {
+    const suggest = await freshSuggestions();
+    expect(suggest('cathode')).toContain('cathode quality');
+    expect(suggest('cathode q')).toEqual(['cathode quality']);
+    expect(suggest('cathode quality')).toEqual([
+      'cathode quality auto',
+      'cathode quality full',
+      'cathode quality lite',
+      'cathode quality off',
+    ]);
+    expect(suggest('cathode quality l')).toEqual(['cathode quality lite']);
+  });
+});
+

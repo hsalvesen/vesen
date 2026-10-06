@@ -1,3 +1,5 @@
+import type { Role } from '../output/model';
+
 export interface Theme {
   name: string;
   black: string;
@@ -19,4 +21,9 @@ export interface Theme {
   foreground: string;
   background: string;
   cursorColor: string;
+  /**
+   * Role colours this theme sets itself, each a hex colour or the name of a palette slot above.
+   * The rest are computed from the palette (src/lib/roles.ts).
+   */
+  roles?: Partial<Record<Role, string>>;
 }

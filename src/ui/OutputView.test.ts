@@ -171,9 +171,9 @@ describe('OutputView: layout blocks', () => {
   });
 
   it('draws a panel in its tone with a title', async () => {
-    const panel = (await view([out.panel('warn', [[out.span('Request cancelled')]], 'stock')])).querySelector('.panel');
-    expect(styleOf(panel)).toBe('--tone: var(--role-warn, var(--theme-yellow))');
-    expect(panel?.querySelector('.panel-title')?.textContent).toBe('stock');
+    const panel = (await view([out.panel('warn', [[out.span('Request cancelled')]], 'stock')])).querySelector('.out-panel');
+    expect(styleOf(panel)).toBe('--panel-tone: var(--role-warn, var(--theme-yellow))');
+    expect(panel?.querySelector('.out-panel-title')?.textContent).toBe('stock');
     expect(Array.from(panel?.querySelectorAll('.text') ?? [], (row) => row.textContent)).toEqual(['stock', 'Request cancelled']);
   });
 
@@ -211,7 +211,7 @@ describe('OutputView: live bindings', () => {
     theme.set(themeNamed('swamphen'));
     flushSync();
     expect(current()).toEqual(['swamphen']);
-    expect(styleOf(root.querySelector('[aria-current="true"]'))).toBe('color: var(--theme-bright-cyan)');
+    expect(styleOf(root.querySelector('[aria-current="true"]'))).toBe('color: var(--role-accent, var(--theme-cyan))');
 
     theme.set(themeNamed('cockatoo'));
     flushSync();

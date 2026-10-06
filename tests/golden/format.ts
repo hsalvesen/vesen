@@ -36,6 +36,7 @@ const BLOCK_TAGS = new Set(['DIV', 'P', 'PRE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6
 /**
  * Approximates what a reader sees: text in document order, <br> and block boundaries as
  * newlines, non-breaking spaces as spaces, and trailing whitespace trimmed from each line.
+ * Screen-reader-only text (.sr-only, the alternative to art) is not on screen, so it is left out.
  */
 export function htmlToPlainText(html: string): string {
   const template = document.createElement('template');
@@ -51,6 +52,7 @@ export function htmlToPlainText(html: string): string {
     }
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     const tag = (node as Element).tagName;
+    if ((node as Element).classList.contains('sr-only')) return;
     if (tag === 'BR') {
       out += '\n';
       return;

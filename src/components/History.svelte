@@ -1,6 +1,5 @@
 <script lang="ts">
   import { history } from '../stores/history';
-  import { theme } from '../stores/theme';
   import { outputBlocks } from '../interfaces/command';
   import type { Action } from '../output/model';
   import OutputView from '../ui/OutputView.svelte';
@@ -10,7 +9,7 @@
 </script>
 
 {#each $history as { command, outputs }}
-  <div style={`color: ${$theme.foreground}`}>
+  <div class="entry">
     <div class="flex flex-row">
       <Ps1 />
 
@@ -28,6 +27,10 @@
 {/each}
 
 <style>
+  .entry {
+    color: var(--role-fg);
+  }
+
   /* Long commands wrap like a terminal line instead of being cut off with an ellipsis. */
   .command-input-display {
     min-width: 0;

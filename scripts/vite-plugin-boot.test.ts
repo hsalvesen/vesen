@@ -69,7 +69,7 @@ describe('boot script', () => {
         colorScheme: 'light',
         '--theme-background': '#e8ddd0',
         '--theme-foreground': '#45373c',
-        '--theme-green': '#858162',
+        '--theme-green': '#5f5c46',
       },
       themeColor: '#e8ddd0',
       icon: '/icons/theme/cockatoo.svg',

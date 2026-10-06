@@ -1,5 +1,5 @@
 import themes from '../../themes.json';
-import { cathodeModes } from '../stores/cathode';
+import { cathodeModes, crtQualities } from '../stores/cathode';
 import { getCurrentDirectory } from './virtualFileSystem';
 
 const themeNames = themes.map((t) => t.name);
@@ -71,7 +71,7 @@ export function getCommandSuggestions(input: string, commandNames: string[]): st
     }
 
     if (command === 'cathode') {
-      return ['cathode ls', 'cathode set', 'cathode off'];
+      return ['cathode ls', 'cathode set', 'cathode off', 'cathode quality'];
     }
 
     if (command === 'weather') {
@@ -180,6 +180,11 @@ export function getCommandSuggestions(input: string, commandNames: string[]): st
       return subcommands.filter((s) => s.startsWith(subcommand)).map((s) => `theme ${s}`);
     }
 
+    if (parts.length === 3 && parts[1] === 'quality') {
+      const prefix = (parts[2] ?? '').toLowerCase();
+      return crtQualities.filter((quality) => quality.startsWith(prefix)).map((quality) => `cathode quality ${quality}`);
+    }
+
     if (parts.length >= 3 && parts[1] === 'set') {
       const themePrefix = parts[2] ?? '';
       const prefixLower = themePrefix.toLowerCase();
@@ -195,7 +200,7 @@ export function getCommandSuggestions(input: string, commandNames: string[]): st
   }
 
   if (command === 'cathode') {
-    const subcommands = ['ls', 'set', 'off'];
+    const subcommands = ['ls', 'set', 'off', 'quality'];
     const subcommand = parts[1] ?? '';
 
     if (parts.length === 2) {
@@ -203,11 +208,20 @@ export function getCommandSuggestions(input: string, commandNames: string[]): st
         return cathodeVariations.map((name) => `cathode set ${name}`);
       }
 
+      if (subcommand === 'quality') {
+        return crtQualities.map((quality) => `cathode quality ${quality}`);
+      }
+
       if (subcommands.includes(subcommand)) {
         return [];
       }
 
       return subcommands.filter((s) => s.startsWith(subcommand)).map((s) => `cathode ${s}`);
+    }
+
+    if (parts.length === 3 && parts[1] === 'quality') {
+      const prefix = (parts[2] ?? '').toLowerCase();
+      return crtQualities.filter((quality) => quality.startsWith(prefix)).map((quality) => `cathode quality ${quality}`);
     }
 
     if (parts.length >= 3 && parts[1] === 'set') {

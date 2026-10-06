@@ -71,18 +71,28 @@ describe('applyCathode', () => {
   it('sets one crt-<mode> class plus crt-on, and none when off', () => {
     const root = document.documentElement;
     applyCathode(root, 'vintage');
-    expect([...root.classList].sort()).toEqual(['crt-on', 'crt-vintage']);
+    expect([...root.classList].sort()).toEqual(['crt-on', 'crt-tier-full', 'crt-vintage']);
     applyCathode(root, 'scanlines');
-    expect([...root.classList].sort()).toEqual(['crt-on', 'crt-scanlines']);
+    expect([...root.classList].sort()).toEqual(['crt-on', 'crt-scanlines', 'crt-tier-full']);
     applyCathode(root, 'off');
-    expect([...root.classList]).toEqual([]);
+    expect([...root.classList]).toEqual(['crt-tier-full']);
+  });
+
+  it('marks the tier, and shows nothing on the off tier whatever the mode', () => {
+    const root = document.documentElement;
+    applyCathode(root, 'vintage', 'lite');
+    expect([...root.classList].sort()).toEqual(['crt-on', 'crt-tier-lite', 'crt-vintage']);
+    applyCathode(root, 'vintage', 'off');
+    expect([...root.classList]).toEqual(['crt-tier-off']);
+    applyCathode(root, 'scanlines', 'full');
+    expect([...root.classList].sort()).toEqual(['crt-on', 'crt-scanlines', 'crt-tier-full']);
   });
 
   it('leaves other classes alone', () => {
     const root = document.documentElement;
     root.classList.add('touch');
-    applyCathode(root, 'phosphor');
-    applyCathode(root, 'off');
-    expect([...root.classList]).toEqual(['touch']);
+    applyCathode(root, 'phosphor', 'lite');
+    applyCathode(root, 'off', 'lite');
+    expect([...root.classList]).toEqual(['touch', 'crt-tier-lite']);
   });
 });

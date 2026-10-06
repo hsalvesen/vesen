@@ -154,7 +154,7 @@ describe('typed and file text shows exactly as written', () => {
     await session.run('ls');
     await session.run('history');
     const text = (await session.render()).textContent ?? '';
-    expect(text).toContain(`Command '${typed}' not found.`);
+    expect(text).toContain(`vesen: ${typed}: command not found`);
     expect(text).toContain('<u>planted</u>');
     expect(text).toMatch(/1 {2}<img\/src\/onerror=window\.__x=1>/);
   });

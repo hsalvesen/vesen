@@ -85,9 +85,9 @@
     <span class="sr-only">{block.alt}</span>
   </div>
 {:else if block.type === 'panel'}
-  <div class="panel" style="--tone: {cssColour(block.tone)}">
+  <div class="out-panel" style="--panel-tone: {cssColour(block.tone)}">
     {#if block.title !== undefined}
-      <div class="text panel-title">{block.title}</div>
+      <div class="text out-panel-title">{block.title}</div>
     {/if}
     {#each block.body as line}
       <div class="text">{#if line.length === 0}<br />{:else}<LineView {line} {onaction} />{/if}</div>
@@ -227,34 +227,6 @@
 
   .art-wrap {
     max-width: 100%;
-  }
-
-  /* The one callout style: a 4px left border and a 12% tint, for help, notices and cancellations. */
-  .panel {
-    position: relative;
-    margin: 8px 0;
-    padding: 8px 10px;
-    border-left: 4px solid var(--tone);
-    border-radius: 4px;
-  }
-
-  .panel::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 4px;
-    background: var(--tone);
-    opacity: 0.12;
-    pointer-events: none;
-  }
-
-  .panel > * {
-    position: relative;
-  }
-
-  .panel-title {
-    color: var(--tone);
-    font-weight: bold;
   }
 
   .chips {

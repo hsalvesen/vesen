@@ -1,16 +1,19 @@
 // The composition root (docs/plan/02-architecture-and-contracts.md): the one place the browser
 // services are built and the stores are connected to the page. main.ts calls bootstrap() before
 // it mounts the app; nothing else has side effects at import time.
+import { get } from 'svelte/store';
 import type { CommandOutput } from '../interfaces/command';
 import { applyCathode } from '../platform/crt';
 import { installChunkReload } from '../platform/chunkReload';
 import { applyTheme } from '../platform/head';
+import { decideTier, NO_SIGNALS, startPerf, type PerfSignals } from '../platform/perf';
+import { applyRoles } from '../platform/theme-apply';
 import { canonicalRedirect } from '../platform/hosts';
 import { startMeasuring } from '../platform/measure';
 import { startViewport } from '../platform/viewport';
 import { createStorage, runMigrations } from '../services/storage';
 import type { StorageService } from '../services/types';
-import { cathode, cathodeModes, DEFAULT_CATHODE_MODE, persistCathode } from '../stores/cathode';
+import { cathode, cathodeModes, cathodeQuality, crtTier, DEFAULT_CATHODE_MODE, persistCathode } from '../stores/cathode';
 import { history } from '../stores/history';
 import { DEFAULT_THEME_NAME, persistTheme, theme, themes } from '../stores/theme';
 import { markCurrentCathode, markCurrentTheme } from '../ui/legacy-highlights';
@@ -52,20 +55,38 @@ export function bootstrap({ window: win, build, banner }: BootOptions): Booted |
   });
 
   const doc = win.document;
+  const root = doc.documentElement;
+
+  // The CRT tier follows the quality setting and the device's own settings, which can change
+  // while the page is open (reduced motion switched on, say).
+  let signals: PerfSignals = NO_SIGNALS;
+  const showCathode = () => {
+    const decision = decideTier(signals, get(cathodeQuality));
+    crtTier.set(decision);
+    applyCathode(root, get(cathode), decision.tier);
+  };
+
   const stops = [
     installChunkReload(win, storage.session, build, (message) => {
       history.update((entries) => [...entries, { command: '', outputs: [notice(message)] }]);
     }),
     persistTheme(storage.local),
     persistCathode(storage.local),
+    // Both colour layers: the palette (--theme-*) and the roles (--role-*).
     theme.subscribe((value) => {
       applyTheme(doc, value);
+      applyRoles(root, value);
       markCurrentTheme(doc, value.name);
     }),
+    startPerf(win, (next) => {
+      signals = next;
+      showCathode();
+    }),
     cathode.subscribe((mode) => {
-      applyCathode(doc.documentElement, mode);
+      showCathode();
       markCurrentCathode(doc, mode);
     }),
+    cathodeQuality.subscribe(showCathode),
     // The touch input's scale and the font's cell width, as CSS variables.
     startMeasuring(win),
     // The shell's height and position: the part of the page above the toolbars and keyboard.

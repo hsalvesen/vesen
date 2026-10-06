@@ -1,0 +1,223 @@
+/* ==========================================================================
+   Cathode (CRT) display effect (docs/plan/09-visual-and-accessibility.md,
+   deliverable 3)
+   --------------------------------------------------------------------------
+   platform/crt.ts puts the state on <html>:
+     crt-tier-full | crt-tier-lite | crt-tier-off   how much the device shows
+     crt-<mode> and crt-on                          only while an effect shows
+     crt-paused                                     while the page is hidden
+   platform/perf.ts picks the tier and sizes the lite scanlines to whole
+   device pixels (--crt-scan-period, --crt-scan-line).
+
+   Two things combine to sell the effect:
+     1. Glow and colour fringing on the scrolled content (.scrollback), so
+        they track each themed colour. Never on the scrolling container
+        itself, which would repaint on every scroll.
+     2. A pointer-events:none overlay of stacked layers (scanlines, shadow
+        mask, refresh sweep, flicker, vignette) over the screen frame only
+        (it is absolute inside .screen-frame), never the gutter or the dock,
+        so its sizes are percentages of the frame.
+   ========================================================================== */
+
+/* --- Text treatments ------------------------------------------------------ */
+
+/* Phosphor and vintage: a soft bloom in each element's own colour. */
+:is(html.crt-phosphor, html.crt-vintage) .scrollback {
+  text-shadow: 0 0 1px currentColor, 0 0 6px currentColor;
+}
+
+/* Vintage also splits the colour channels, like a mistuned tube, and lifts saturation. */
+html.crt-vintage .scrollback {
+  text-shadow:
+    0.6px 0 0 rgba(255, 45, 90, 0.5),
+    -0.6px 0 0 rgba(60, 190, 255, 0.5),
+    0 0 6px currentColor;
+  filter: saturate(1.15) contrast(1.05);
+}
+
+/* --- Overlay scaffold ----------------------------------------------------- */
+
+.crt-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none; /* never steal clicks or scrolling from the terminal */
+  overflow: hidden;
+}
+
+html.crt-on .crt-overlay {
+  display: block;
+}
+
+.crt-layer {
+  position: absolute;
+  inset: 0;
+}
+
+html.crt-paused .crt-layer {
+  animation-play-state: paused;
+}
+
+/* Scanlines: faint horizontal gaps between raster lines, in every mode. */
+.crt-layer-scanlines {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0) 1.5px,
+    rgba(0, 0, 0, 0.28) 1.5px,
+    rgba(0, 0, 0, 0.28) 3px
+  );
+}
+
+html.crt-phosphor .crt-layer-scanlines {
+  opacity: 0.55; /* the glow is the star here, so the lines ease off */
+}
+
+/* Shadow mask: vertical RGB triads, for vintage only. */
+.crt-layer-mask {
+  display: none;
+  background: repeating-linear-gradient(
+    to right,
+    rgba(255, 0, 0, 0.06) 0,
+    rgba(0, 255, 0, 0.06) 1px,
+    rgba(0, 0, 255, 0.06) 2px,
+    rgba(0, 0, 0, 0) 3px
+  );
+}
+
+/* Refresh sweep: a soft bright band rolling slowly down the screen. */
+.crt-layer-sweep {
+  display: none;
+  top: 0;
+  height: 45%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.035) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  will-change: transform;
+  animation: crt-sweep 7s linear infinite;
+}
+
+/* Flicker: the beam wavering a little. Four steps every 1.6 s is 2.5 changes a second, well
+   under the 3 a second that photosensitivity guidance draws the line at, and each step moves the
+   brightness by at most 2.4%. */
+.crt-layer-flicker {
+  display: none;
+  background: rgba(0, 0, 0, 0.12);
+  animation: crt-flicker 1.6s step-end infinite;
+}
+
+/* Vignette: darker corners, as if the picture bows into the tube. */
+.crt-layer-vignette {
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 58%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+html.crt-vintage .crt-layer-vignette {
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 48%, rgba(0, 0, 0, 0.68) 100%);
+}
+
+/* --- The layers each mode switches on ------------------------------------- */
+
+/* scanlines: static lines, the rolling sweep and a gentle vignette. */
+html.crt-scanlines .crt-layer-sweep {
+  display: block;
+}
+
+/* phosphor: the glow (above), softened lines and a slight flicker. */
+html.crt-phosphor .crt-layer-flicker {
+  display: block;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* vintage: everything at once. */
+html.crt-vintage .crt-layer-mask,
+html.crt-vintage .crt-layer-sweep,
+html.crt-vintage .crt-layer-flicker {
+  display: block;
+}
+
+/* Percentages of the band's own height (45% of the frame): from just above the frame to just
+   below it, 100 / 45 band heights down. */
+@keyframes crt-sweep {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(222.23%);
+  }
+}
+
+@keyframes crt-flicker {
+  0% {
+    opacity: 0.2;
+  }
+  25% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.15;
+  }
+  75% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0.2;
+  }
+}
+
+/* --- The lite tier --------------------------------------------------------
+   Phones, in-app browsers, Save-Data and low memory: whatever the mode, one
+   static vignette and fine scanlines on whole device pixels, a small glow, and
+   nothing that animates or filters. More specific than the mode rules above. */
+
+html.crt-on.crt-tier-lite .crt-layer-sweep,
+html.crt-on.crt-tier-lite .crt-layer-flicker,
+html.crt-on.crt-tier-lite .crt-layer-mask {
+  display: none;
+  animation: none;
+}
+
+html.crt-on.crt-tier-lite .crt-layer-scanlines {
+  opacity: 1;
+  background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) var(--crt-scan-line, 1.5px),
+      rgba(0, 0, 0, 0.18) var(--crt-scan-line, 1.5px)
+    )
+    0 0 / 100% var(--crt-scan-period, 3px);
+}
+
+html.crt-on.crt-tier-lite .crt-layer-vignette {
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 62%, rgba(0, 0, 0, 0.3) 100%);
+}
+
+html.crt-on.crt-tier-lite:is(.crt-phosphor, .crt-vintage) .scrollback {
+  text-shadow: 0 0 2px currentColor;
+  filter: none;
+}
+
+/* --- Safety nets ----------------------------------------------------------
+   platform/perf.ts already picks the off tier for these, but `cathode quality`
+   can override it: motion still stops, and forced colours still win. */
+
+@media (prefers-reduced-motion: reduce) {
+  .crt-layer-sweep,
+  .crt-layer-flicker {
+    animation: none;
+    display: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .crt-overlay {
+    display: none !important;
+  }
+
+  .scrollback {
+    text-shadow: none !important;
+    filter: none !important;
+  }
+}

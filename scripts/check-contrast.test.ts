@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { baselineOf, compareWithBaseline, contrastRatio, measureThemes, parseHex } from './check-contrast.mjs';
+import { fileURLToPath } from 'node:url';
+import { deriveRoles, roleChecks, type ThemeColours } from '../src/lib/roles';
+import {
+  baselineOf,
+  compareWithBaseline,
+  contrastRatio,
+  importTranspiled,
+  invalidRoleOverrides,
+  measureRoles,
+  measureThemes,
+  parseHex,
+} from './check-contrast.mjs';
+
+const themes: ThemeColours[] = JSON.parse(readFileSync(new URL('../themes.json', import.meta.url), 'utf8'));
 
 describe('contrastRatio', () => {
   it('spans 1:1 to 21:1', () => {
@@ -58,9 +71,53 @@ describe('compareWithBaseline', () => {
   });
 
   it('matches the committed baseline for today\'s themes', () => {
-    const themes = JSON.parse(readFileSync(new URL('../themes.json', import.meta.url), 'utf8'));
     const committed = JSON.parse(readFileSync(new URL('./contrast-baseline.json', import.meta.url), 'utf8'));
     expect(compareWithBaseline(measureThemes(themes), committed).regressions).toEqual([]);
     expect(Object.keys(baselineOf(measureThemes(themes)))).toEqual(Object.keys(committed));
   });
 });
+
+describe('measureRoles', () => {
+  it('measures the colours the app applies, with the same requirements', () => {
+    const measured = measureRoles(themes);
+    for (const theme of themes) {
+      const applied = deriveRoles(theme);
+      const checks = roleChecks(theme, applied);
+      const own = measured.filter((m) => m.theme === theme.name);
+      expect(own.map(({ role, against, ratio, min }) => ({ role, against, ratio, min }))).toEqual(checks);
+      for (const m of own) expect(m.colour).toBe(applied[m.role as keyof typeof applied]);
+    }
+  });
+
+  it('finds every role in every committed theme at or above its minimum, as --strict requires', () => {
+    expect(measureRoles(themes).filter((m) => m.ratio < m.min)).toEqual([]);
+    expect(invalidRoleOverrides(themes)).toEqual([]);
+  });
+
+  it('reports a hex override that fails, since the app uses a theme\'s own hex as it is', () => {
+    const swamphen = themes.find((t) => t.name === 'swamphen');
+    if (!swamphen) throw new Error('no swamphen');
+    const failing = measureRoles([{ ...swamphen, roles: { error: '#2a2a40' } }]).filter((m) => m.ratio < m.min);
+    expect(failing.map((m) => `${m.role} on ${m.against}`)).toContain('error on background');
+  });
+
+  it('flags overrides that name no role or no colour', () => {
+    const swamphen = themes.find((t) => t.name === 'swamphen');
+    if (!swamphen) throw new Error('no swamphen');
+    const odd = { ...swamphen, roles: { warn: 'orange', glow: '#ffffff', sun: 'blue', rain: '#abc' } } as unknown as ThemeColours;
+    expect(invalidRoleOverrides([odd])).toEqual([
+      "swamphen: warn is 'orange', neither a hex colour nor a palette slot",
+      "swamphen: 'glow' is not a role",
+    ]);
+  });
+});
+
+describe('importTranspiled', () => {
+  it('loads the role code on a Node without type stripping, giving the same colours', async () => {
+    const transpiled = (await importTranspiled(fileURLToPath(new URL('../src/lib/roles.ts', import.meta.url)))) as {
+      deriveRoles: typeof deriveRoles;
+    };
+    expect(themes.map((theme) => transpiled.deriveRoles(theme))).toEqual(themes.map((theme) => deriveRoles(theme)));
+  });
+});
+

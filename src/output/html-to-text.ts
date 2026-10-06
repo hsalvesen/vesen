@@ -50,14 +50,29 @@ export function decodeEntities(text: string): string {
   });
 }
 
+const CLASS_ATTRIBUTE = /\sclass\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i;
+
+/** True when a start tag has the `sr-only` class: text for screen readers, the alternative to art. */
+function isScreenReaderOnly(tag: string): boolean {
+  const match = CLASS_ATTRIBUTE.exec(tag);
+  const classes = match?.[1] ?? match?.[2] ?? match?.[3] ?? '';
+  return classes.split(/\s+/).includes('sr-only');
+}
+
+/** Elements that never hold children, so they open nothing to close. */
+const VOID_TAGS: ReadonlySet<string> = new Set(['br', 'hr', 'img', 'input', 'wbr', 'meta', 'link', 'area', 'col', 'embed', 'source', 'track']);
+
 /**
  * Approximates what a reader sees in an HTML fragment: text in document order, `<br>` and block
  * boundaries as newlines, non-breaking spaces as spaces, trailing whitespace trimmed from each
- * line and trailing blank lines removed. Script and style contents are dropped.
+ * line and trailing blank lines removed. Script and style contents are dropped, and so is
+ * screen-reader-only text: a pipe receives the art itself, not its description.
  */
 export function htmlToText(html: string): string {
   let out = '';
-  let hiddenUntil: string | null = null;
+  // The element being skipped, and how many elements of its name are open inside it. Script and
+  // style hold raw text, so only their end tag counts.
+  let hidden: { name: string; depth: number; raw: boolean } | null = null;
   const breakLine = (): void => {
     if (out !== '' && !out.endsWith('\n')) out += '\n';
   };
@@ -67,8 +82,14 @@ export function htmlToText(html: string): string {
     if (token.startsWith('<!--')) continue;
     const name = rawName?.toLowerCase();
 
-    if (hiddenUntil !== null) {
-      if (closing === '/' && name === hiddenUntil) hiddenUntil = null;
+    if (hidden !== null) {
+      if (name === hidden.name && closing === '/') hidden.depth -= 1;
+      else if (name === hidden.name && !hidden.raw && !/\/\s*>$/.test(token)) hidden.depth += 1;
+      if (hidden.depth === 0) hidden = null;
+      continue;
+    }
+    if (name !== undefined && closing !== '/' && !VOID_TAGS.has(name) && isScreenReaderOnly(token)) {
+      if (!/\/\s*>$/.test(token)) hidden = { name, depth: 1, raw: false };
       continue;
     }
     if (name === undefined) {
@@ -77,7 +98,7 @@ export function htmlToText(html: string): string {
       // HTML parsers read a stray `</br>` as `<br>` too.
       out += '\n';
     } else if (HIDDEN_TAGS.has(name)) {
-      if (closing !== '/' && !/\/\s*>$/.test(token)) hiddenUntil = name;
+      if (closing !== '/' && !/\/\s*>$/.test(token)) hidden = { name, depth: 1, raw: true };
     } else if (BLOCK_TAGS.has(name)) {
       breakLine();
     }

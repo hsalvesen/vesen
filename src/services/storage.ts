@@ -138,9 +138,10 @@ export interface MigrationCatalogue {
   readonly defaultCathode: string;
 }
 
-/** The shape of `vesen:cathode:v1`. */
+/** The shape of `vesen:cathode:v1`: the CRT mode, and the quality when it is not `auto`. */
 export interface StoredCathode {
   readonly mode: string;
+  readonly quality?: string;
 }
 
 /**

@@ -49,7 +49,7 @@ function blockStorage(): void {
 async function load() {
   const app = await import('./bootstrap');
   const { theme, findTheme } = await import('../stores/theme');
-  const { cathode } = await import('../stores/cathode');
+  const { cathode, cathodeQuality, crtTier } = await import('../stores/cathode');
   const { history } = await import('../stores/history');
   const boot = (options: Partial<BootOptions> = {}) => {
     booted = app.bootstrap({ window, build: '/assets/index-test.js', banner: () => 'BANNER', ...options });
@@ -60,7 +60,7 @@ async function load() {
     if (!found) throw new Error(`no theme ${name}`);
     theme.set(found);
   };
-  return { ...app, boot, theme, setTheme, cathode, history };
+  return { ...app, boot, theme, setTheme, cathode, cathodeQuality, crtTier, history };
 }
 
 const themeColor = () => document.querySelector('meta[name="theme-color"]')?.getAttribute('content');
@@ -78,7 +78,7 @@ describe('bootstrap', () => {
     expect(themeColor()).toBe('#222235');
     expect(svgIcon()).toBe('/icons/theme/swamphen.svg');
     expect(document.documentElement.style.colorScheme).toBe('dark');
-    expect([...document.documentElement.classList].sort()).toEqual(['crt-on', 'crt-scanlines']);
+    expect([...document.documentElement.classList].sort()).toEqual(['crt-on', 'crt-scanlines', 'crt-tier-full']);
 
     // Themes still change for the session.
     setTheme('cockatoo');
@@ -120,6 +120,67 @@ describe('bootstrap', () => {
     expect(document.querySelector('.theme-name.is-current')?.textContent).toBe('wombat');
     expect(document.querySelector('.cathode-name')?.classList.contains('is-current')).toBe(true);
     expect(document.documentElement.classList.contains('crt-on')).toBe(false);
+  });
+
+  it('applies the role colours with the palette, and again on each theme change', async () => {
+    const { boot, setTheme } = await load();
+    const { deriveRoles } = await import('../lib/roles');
+    const { themes } = await import('../stores/theme');
+    boot();
+    const role = (name: string) => document.documentElement.style.getPropertyValue(`--role-${name}`);
+    const swamphen = deriveRoles(themes.find((t) => t.name === 'swamphen') ?? themes[0]!);
+    expect(role('error')).toBe(swamphen.error);
+    expect(role('warn')).toBe('#f4c95d');
+
+    setTheme('cockatoo');
+    expect(role('fg-strong')).toBe('#20111b');
+    expect(document.documentElement.style.getPropertyValue('--theme-white')).toBe('#625a53');
+  });
+
+  it('decides the CRT tier from the device, follows its settings, and lets the quality override it', async () => {
+    const queries = new Map<string, { matches: boolean; listeners: Set<() => void> }>();
+    vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => {
+      const entry = queries.get(query) ?? { matches: query === '(pointer: coarse)', listeners: new Set<() => void>() };
+      queries.set(query, entry);
+      return {
+        media: query,
+        get matches() {
+          return entry.matches;
+        },
+        addEventListener: (_: string, listener: () => void) => entry.listeners.add(listener),
+        removeEventListener: (_: string, listener: () => void) => entry.listeners.delete(listener),
+      } as unknown as MediaQueryList;
+    });
+    const { boot, cathodeQuality, crtTier } = await load();
+    boot();
+    const classes = () => [...document.documentElement.classList].sort();
+    expect(classes()).toEqual(['crt-on', 'crt-scanlines', 'crt-tier-lite']);
+    expect(get(crtTier)).toEqual({ tier: 'lite', reason: 'a touch screen', quality: 'auto' });
+
+    // Reduced motion switched on while the page is open.
+    const motion = queries.get('(prefers-reduced-motion: reduce)');
+    if (!motion) throw new Error('reduced motion is not watched');
+    motion.matches = true;
+    for (const listener of motion.listeners) listener();
+    expect(classes()).toEqual(['crt-tier-off']);
+
+    cathodeQuality.set('full');
+    expect(classes()).toEqual(['crt-on', 'crt-scanlines', 'crt-tier-full']);
+    expect(localStorage.getItem('vesen:cathode:v1')).toBe('{"mode":"scanlines","quality":"full"}');
+  });
+
+  it('pauses the CRT animations while the page is hidden', async () => {
+    let state: DocumentVisibilityState = 'visible';
+    vi.spyOn(document, 'visibilityState', 'get').mockImplementation(() => state);
+    const { boot } = await load();
+    boot();
+    expect(document.documentElement.classList.contains('crt-paused')).toBe(false);
+    state = 'hidden';
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(document.documentElement.classList.contains('crt-paused')).toBe(true);
+    state = 'visible';
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(document.documentElement.classList.contains('crt-paused')).toBe(false);
   });
 
   it('announces a reload for a stale chunk in the transcript', async () => {

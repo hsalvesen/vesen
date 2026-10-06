@@ -5,7 +5,16 @@ import { fileSystemCommands } from './commands/fileSystem';
 import type { networkCommands as NetworkCommands } from './commands/network';
 import { qrCommands } from './commands/qr';
 import { theme } from '../stores/theme';
-import { cathode, cathodeModes, cathodeModeInfo, type CathodeMode } from '../stores/cathode';
+import {
+  cathode,
+  cathodeModes,
+  cathodeModeInfo,
+  cathodeQuality,
+  crtQualities,
+  crtTier,
+  isCrtQuality,
+  type CathodeMode,
+} from '../stores/cathode';
 import { get } from 'svelte/store';
 import { virtualFileSystem, currentPath, type VirtualFile, resolvePath } from './virtualFileSystem';
 import { commandHelp, commandDescriptions } from './helpTexts';
@@ -51,7 +60,6 @@ const terminalCommands = {
   },
 
   history: (args: string[]) => {
-    const currentTheme = get(theme);
     const commandHistoryData: string[] = get(commandHistory);
 
     if (commandHistoryData.length === 0) {
@@ -72,8 +80,8 @@ const terminalCommands = {
 
     commandHistoryData.forEach((cmd: string, index: number) => {
       const lineNumber = (index + 1).toString().padStart(4, ' ');
-      // Use theme cyan for history numbers instead of brightBlack
-      const prefix = `<span style="color: ${currentTheme.cyan};">${lineNumber}</span>  `;
+      // Numbers in the accent role, commands in strong text.
+      const prefix = `<span class="out-accent">${lineNumber}</span>  `;
 
       // Check if the line is too long and needs wrapping
       const totalLength = lineNumber.length + 2 + cmd.length; // +2 for spacing
@@ -88,16 +96,16 @@ const terminalCommands = {
         }
 
         // First line with line number. Chunks are cut from the typed text, then escaped.
-        historyLines.push(prefix + `<span style="color: ${currentTheme.white};">${escapeHtml(chunks[0])}</span>`);
+        historyLines.push(prefix + `<span class="out-strong">${escapeHtml(chunks[0])}</span>`);
 
         // Continuation lines with proper indentation
         for (let i = 1; i < chunks.length; i++) {
           const indent = '      '; // 6 spaces to align with command text
-          historyLines.push(`<span style="color: ${currentTheme.cyan};">${indent}</span><span style="color: ${currentTheme.white};">${escapeHtml(chunks[i])}</span>`);
+          historyLines.push(`${indent}<span class="out-strong">${escapeHtml(chunks[i])}</span>`);
         }
       } else {
         // Command fits on one line
-        historyLines.push(prefix + `<span style="color: ${currentTheme.white};">${escapeHtml(cmd)}</span>`);
+        historyLines.push(prefix + `<span class="out-strong">${escapeHtml(cmd)}</span>`);
       }
     });
 
@@ -141,6 +149,9 @@ const terminalCommands = {
   }
 };
 
+/** The palette slots `theme ls` previews, in terminal order, each as a two-cell swatch. */
+const SWATCH_SLOTS = ['foreground', 'red', 'green', 'yellow', 'blue', 'purple', 'cyan', 'brightBlack'] as const;
+
 // Project-specific commands
 const projectCommands = {
   theme: (args: string[]) => {
@@ -154,35 +165,37 @@ const projectCommands = {
   theme ls
   theme set swamphen`;
     if (args.length === 0) {
-      return usage;
+      return renderHelp(usage);
     }
 
     switch (args[0]) {
       case 'ls': {
-        const currentTheme = get(theme);
-        const themeList = themes.map((t) => {
-          const themeName = t.name;
-          const isCurrentTheme = t.name.toLowerCase() === currentTheme.name.toLowerCase();
-          // Pre-apply highlight to the current theme; keep markers for dynamic updates
-          return `<span class="theme-name${isCurrentTheme ? ' is-current' : ''}" data-theme-name="${themeName.toLowerCase()}">${themeName}</span>`;
-        }).join(', ');
-
-        let result = themeList;
-        result += `\n<span style="color: var(--theme-cyan);">You can preview all these themes here: ${REPO_URL}/tree/main/docs/themes</span>`;
-
-        return result;
+        // One row per theme: its name, then swatches drawn in its own colours on its own
+        // background (hex on purpose: each row previews that theme, whatever theme is showing).
+        // The stylesheet marks the current theme, and legacy-highlights moves the mark later.
+        const current = get(theme).name.toLowerCase();
+        const width = Math.max(...themes.map((t) => t.name.length));
+        const rows = themes.map((t) => {
+          const name = t.name.toLowerCase();
+          const label = `<span class="theme-name${name === current ? ' is-current' : ''}" data-theme-name="${name}">${escapeHtml(t.name)}</span>`;
+          const swatches = SWATCH_SLOTS.map((slot) => `<span style="color: ${t[slot]};">██</span>`).join('');
+          const preview = `<span class="swatches" aria-hidden="true" style="background-color: ${t.background};"> ${swatches} </span>`;
+          return `${label}${' '.repeat(width - t.name.length + 2)}${preview}`;
+        });
+        return `${rows.join('\n')}\n\n<span class="out-muted">Try one with: theme set [name]</span>`;
       }
 
       case 'set': {
         if (args.length !== 2) {
-          return usage;
+          return renderHelp(usage);
         }
 
         const selectedTheme = args[1];
         const t = themes.find((t) => t.name.toLowerCase() === selectedTheme.toLowerCase());
 
         if (!t) {
-          return `Theme '${escapeHtml(selectedTheme)}' not found. Try 'theme ls' to see all available themes.`;
+          playBeep();
+          return errorLine(`theme: ${selectedTheme}: no such theme`, "Try 'theme ls' to see all available themes.");
         }
 
         theme.set(t);
@@ -191,7 +204,7 @@ const projectCommands = {
       }
 
       default: {
-        return usage;
+        return renderHelp(usage);
       }
     }
   },
@@ -199,13 +212,15 @@ const projectCommands = {
     const usage = `<span style="color: var(--theme-cyan); font-weight: bold;">cathode</span> - Trial a retro CRT (cathode ray tube) display effect
 <span style="color: var(--theme-yellow); font-weight: bold;">Usage:</span> cathode <span style="color: var(--theme-green);">[args]</span>.
   <span style="color: var(--theme-green);">args:</span>
-    ls: list all cathode variations
+    ls: list all cathode variations and the quality in use
     set: set the effect to [variation]
     off: turn the effect off
+    quality: auto, full, lite or off (auto suits the device)
 
 <span style="color: var(--theme-red); font-weight: bold;">Examples:</span>
   cathode ls
   cathode set vintage
+  cathode quality lite
   cathode off`;
 
     const applyMode = (mode: CathodeMode) => {
@@ -216,8 +231,14 @@ const projectCommands = {
       return `Cathode effect set to ${mode}. Try 'cathode ls' to compare the variations.`;
     };
 
+    /** The tier in force and why, such as "lite (auto: a touch screen)". */
+    const describeQuality = () => {
+      const { tier, reason, quality } = get(crtTier);
+      return `${tier} (${quality === 'auto' ? `auto: ${reason}` : reason})`;
+    };
+
     if (args.length === 0) {
-      return usage;
+      return renderHelp(usage);
     }
 
     switch (args[0]) {
@@ -230,25 +251,29 @@ const projectCommands = {
             const isCurrent = name === current;
             const padding = ' '.repeat(nameWidth - name.length + 2);
             const label = `<span class="cathode-name${isCurrent ? ' is-current' : ''}" data-cathode-name="${name}">${name}</span>`;
-            return `  ${label}${padding}<span style="color: var(--theme-white);">${summary}</span>`;
+            return `${label}${padding}<span class="out-strong">${summary}</span>`;
           })
           .join('\n');
 
-        return `<span style="color: var(--theme-cyan);">Cathode variations (current highlighted):</span>
+        return `<span class="out-accent">Cathode variations (current marked):</span>
 ${rows}
 
-<span style="color: var(--theme-yellow);">Trial one with:</span> cathode set <span style="color: var(--theme-green);">[variation]</span>`;
+<span class="out-accent">Quality:</span> <span class="out-strong">${escapeHtml(describeQuality())}</span>
+
+<span class="out-muted">Trial one with: cathode set [variation]</span>
+<span class="out-muted">Change the quality with: cathode quality [auto|full|lite|off]</span>`;
       }
 
       case 'set': {
         if (args.length !== 2) {
-          return usage;
+          return renderHelp(usage);
         }
 
         const requested = args[1].toLowerCase();
         const match = cathodeModes.find((m) => m === requested);
         if (!match) {
-          return `Cathode variation '${escapeHtml(args[1])}' not found. Try 'cathode ls' to see all available variations.`;
+          playBeep();
+          return errorLine(`cathode: ${args[1]}: no such variation`, "Try 'cathode ls' to see all available variations.");
         }
 
         return applyMode(match);
@@ -258,6 +283,20 @@ ${rows}
         return applyMode('off');
       }
 
+      case 'quality': {
+        if (args.length === 1) {
+          return `Cathode quality: ${escapeHtml(describeQuality())}\n<span class="out-muted">Change it with: cathode quality [auto|full|lite|off]</span>`;
+        }
+        const requested = args[1].toLowerCase();
+        if (args.length !== 2 || !isCrtQuality(requested)) {
+          playBeep();
+          return errorLine(`cathode: quality: ${args.slice(1).join(' ')}: not a quality`, `Choose one of: ${crtQualities.join(', ')}.`);
+        }
+        // bootstrap decides the tier again as soon as the quality changes.
+        cathodeQuality.set(requested);
+        return `Cathode quality set to ${requested}: ${escapeHtml(describeQuality())}.`;
+      }
+
       default: {
         // Friendly shortcut: `cathode vintage` behaves like `cathode set vintage`.
         const requested = args[0].toLowerCase();
@@ -265,14 +304,13 @@ ${rows}
         if (match) {
           return applyMode(match);
         }
-        return usage;
+        return renderHelp(usage);
       }
     }
   },
   repo: () => {
-    const currentTheme = get(theme);
     window.open(REPO_URL);
-    return `<span style="color: ${currentTheme.cyan};">Opening Vesen repository...</span>`;
+    return `<span class="out-accent">Opening Vesen repository...</span>`;
   },
 
   email: () => {
@@ -345,28 +383,30 @@ export function processCommand(input: string, signal?: AbortSignal): string | Pr
 
   // Try to find a similar command with different case
   const similarCommand = findSimilarCommand(command);
-  if (similarCommand) {
-    // Play beep sound for unrecognized command
-    playBeep();
-    const currentTheme = get(theme);
-    return `Command '${escapeHtml(command)}' not found. Did you mean <span style="color: var(--theme-cyan); font-weight: bold;">${escapeHtml(similarCommand)}</span>? Type 'help' to see available commands.`;
-  }
-
-  // Play beep sound for unrecognized command
+  // An unknown command rings the bell and says so the way a shell does, with a hint.
   playBeep();
-  return `Command '${escapeHtml(command)}' not found. Type 'help' to see available commands.`;
+  const suggestion = similarCommand ? `Did you mean ${similarCommand}? ` : '';
+  return errorLine(`vesen: ${command}: command not found`, `${suggestion}Type 'help' to see all commands.`);
 }
 
 // Re-export virtualFileSystem and currentPath from the dedicated module
 export { virtualFileSystem, currentPath } from './virtualFileSystem';
 
-// Helper function to provide detailed help for each command
+// Detailed help for a command, from its legacy help text.
 function getCommandHelp(command: string): string {
   const raw = commandHelp[command];
   if (!raw) {
-    return `No help available for command: ${escapeHtml(command)}`;
+    return errorLine(`help: no help available for ${command}`);
   }
+  return renderHelp(raw);
+}
 
+/**
+ * Lays legacy help or usage text out as panels in the one callout style (styles/components.css):
+ * what the command does in the accent tone, its usage in the link tone, and its examples and tips
+ * in the warn tone. Body text is strong text; each panel's title takes its tone.
+ */
+function renderHelp(raw: string): string {
   // Normalize and split into lines
   const normalized = raw.replace(/\n/g, '<br>');
   const lines = normalized.split('<br>');
@@ -376,19 +416,19 @@ function getCommandHelp(command: string): string {
   const examplesIdx = lines.findIndex(l => /Examples:/i.test(l));
   const tipIdx = lines.findIndex(l => /Tip:/i.test(l));
 
-  // Cyan: explanation (everything before Usage:)
+  // What it does: everything before Usage:
   const explanationLines =
     usageIdx > 0 ? lines.slice(0, usageIdx) : (usageIdx === 0 ? [] : lines);
 
-  // Purple: usage (from Usage: to just before Examples:/Tip:)
-  const yellowStartIdx = Math.min(
+  // Usage: from Usage: to just before Examples: or Tip:
+  const usageEnd = Math.min(
     examplesIdx >= 0 ? examplesIdx : lines.length,
     tipIdx >= 0 ? tipIdx : lines.length
   );
   const usageLines =
-    usageIdx >= 0 ? lines.slice(usageIdx, yellowStartIdx) : [];
+    usageIdx >= 0 ? lines.slice(usageIdx, usageEnd) : [];
 
-  // Yellow: examples and/or tips (from Examples:/Tip: onward)
+  // Examples and tips: from Examples: or Tip: onward
   const examplesLines =
     examplesIdx >= 0
       ? lines.slice(examplesIdx + 1, tipIdx >= 0 ? tipIdx : lines.length)
@@ -410,44 +450,22 @@ function getCommandHelp(command: string): string {
     usageContent = [first, rest].filter(Boolean).join('<br>');
   }
 
-  let examplesContent = '';
-  if (examplesIdx >= 0) {
-    examplesContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-bottom: 4px;">Examples:</div>`;
-    examplesContent += `<div style="color: var(--theme-white);">${examplesLines.join('<br>') || ''}</div>`;
-  }
-  let tipsContent = '';
-  if (tipIdx >= 0) {
-    tipsContent += `<div style="color: var(--theme-yellow); font-weight: bold; margin-top: 8px; margin-bottom: 4px;">Tip:</div>`;
-    tipsContent += `<div style="color: var(--theme-white);">${tipsLines.join('<br>') || ''}</div>`;
-  }
+  const title = (text: string) => `<div class="out-panel-title">${text}</div>`;
+  const body = (html: string) => `<div class="out-strong">${html}</div>`;
 
-  // Compose standardized blocks (uniform overlay opacity and spacing)
   let output = '';
-
-  // Cyan: explanation block
   if (explanationLines.length) {
-    output += `<div style="position: relative; border-left: 4px solid var(--theme-cyan); padding: 8px 10px; border-radius: 4px; margin: 8px 0;">`;
-    output += `<div style="position: absolute; inset: 0; background: var(--theme-cyan); opacity: 0.12; border-radius: 4px;"></div>`;
-    output += `<div style="position: relative; color: var(--theme-white);">${explanationLines.join('<br>')}</div>`;
-    output += `</div>`;
+    output += `<div class="out-panel">${body(explanationLines.join('<br>'))}</div>`;
   }
-
-  // Purple: usage block
   if (usageContent) {
-    output += `<div style="position: relative; border-left: 4px solid var(--theme-purple); padding: 8px 10px; border-radius: 4px; margin: 8px 0;">`;
-    output += `<div style="position: absolute; inset: 0; background: var(--theme-purple); opacity: 0.12; border-radius: 4px;"></div>`;
-    output += `<div style="position: relative; color: var(--theme-purple); font-weight: bold; margin-bottom: 4px;">Usage:</div>`;
-    output += `<div style="position: relative; color: var(--theme-white);">${usageContent}</div>`;
+    output += `<div class="out-panel tone-link">${title('Usage:')}${body(usageContent)}</div>`;
+  }
+  if (examplesIdx >= 0 || tipIdx >= 0) {
+    output += `<div class="out-panel tone-warn">`;
+    if (examplesIdx >= 0) output += `${title('Examples:')}${body(examplesLines.join('<br>'))}`;
+    if (tipIdx >= 0) output += `${title('Tip:')}${body(tipsLines.join('<br>'))}`;
     output += `</div>`;
   }
-
-  if (examplesContent || tipsContent) {
-    output += `<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 8px 0;">`;
-    output += `<div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.12; border-radius: 4px;"></div>`;
-    output += `<div style="position: relative;">${examplesContent}${tipsContent}</div>`;
-    output += `</div>`;
-  }
-
   return output;
 }
 

@@ -15,13 +15,13 @@
 {/if}
 
 <style>
+  /* Muted text on nothing: dim, but still 4.5:1 in every theme. */
   .command-suggestions {
-    color: var(--theme-bright-black);
-    opacity: 1;
+    color: var(--role-muted);
     white-space: pre-wrap;
   }
 
   .label {
-    color: var(--theme-cyan);
+    color: var(--role-accent);
   }
 </style>

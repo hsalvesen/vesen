@@ -103,7 +103,7 @@
     border: 0;
     background: none;
     text-align: left;
-    color: var(--theme-cyan);
+    color: var(--role-accent);
     cursor: pointer;
   }
 
@@ -120,10 +120,10 @@
     left: 50%;
     transform: translateX(-50%);
     padding: 4px 12px;
-    border: 1px solid var(--theme-cyan);
+    border: 1px solid var(--role-accent);
     border-radius: 999px;
     background: var(--theme-background);
-    color: var(--theme-cyan);
+    color: var(--role-accent);
     font: inherit;
     white-space: nowrap;
     cursor: pointer;

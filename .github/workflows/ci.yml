@@ -33,7 +33,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run check:bundle
-      - run: npm run check:contrast
+      - run: npm run check:contrast -- --strict
 
       # WebKit for the iPhone Instagram project: the main audience, and the engine where taps differ.
       - run: npx playwright install --with-deps chromium webkit

@@ -21,8 +21,9 @@
     return false;
   });
 
-  // The current entry of a theme or cathode list is drawn the way the legacy lists draw it.
-  const style = $derived(current ? { ...span.style, fg: 'brightCyan' as const, bold: true } : span.style);
+  // The current entry of a theme or cathode list is drawn the way the legacy lists draw it: in the
+  // accent, not bold, since a synthetic bold is wider in WebKit and would push the columns after it.
+  const style = $derived(current ? { ...span.style, fg: 'accent' as const } : span.style);
   const classes = $derived(spanClasses(style) || undefined);
   const css = $derived(spanCss(style));
   // Checked again here: a span is plain data, and only a builder-made action or URL may act.

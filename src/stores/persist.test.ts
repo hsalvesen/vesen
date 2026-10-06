@@ -116,4 +116,28 @@ describe('persistCathode', () => {
     cathode.set('off');
     expect(items.get(CATHODE)).toBe('{"mode":"off"}');
   });
+
+  it('restores and saves the quality beside the mode, leaving auto out', async () => {
+    const { cathode, cathodeQuality, persistCathode } = await import('./cathode');
+    const { storage, items } = storageWith({ [CATHODE]: '{"mode":"phosphor","quality":"lite"}' });
+    persistCathode(storage.local);
+    expect(get(cathode)).toBe('phosphor');
+    expect(get(cathodeQuality)).toBe('lite');
+
+    cathodeQuality.set('full');
+    expect(items.get(CATHODE)).toBe('{"mode":"phosphor","quality":"full"}');
+    cathodeQuality.set('auto');
+    expect(items.get(CATHODE)).toBe('{"mode":"phosphor"}');
+  });
+
+  it('keeps a known mode when the saved quality is unknown, and the reverse', async () => {
+    const { cathode, cathodeQuality, persistCathode } = await import('./cathode');
+    persistCathode(storageWith({ [CATHODE]: '{"mode":"vintage","quality":"ultra"}' }).storage.local);
+    expect([get(cathode), get(cathodeQuality)]).toEqual(['vintage', 'auto']);
+
+    vi.resetModules();
+    const fresh = await import('./cathode');
+    fresh.persistCathode(storageWith({ [CATHODE]: '{"mode":"hologram","quality":"off"}' }).storage.local);
+    expect([get(fresh.cathode), get(fresh.cathodeQuality)]).toEqual(['scanlines', 'off']);
+  });
 });

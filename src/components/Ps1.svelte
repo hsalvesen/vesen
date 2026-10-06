@@ -1,23 +1,41 @@
 <script lang="ts">
   import { HOST } from '../constants';
-  import { theme } from '../stores/theme';
 
   const currentDir = '~';
 
   let { isPasswordMode = false }: { isPasswordMode?: boolean } = $props();
 </script>
 
+<!-- Role colours (--role-prompt-*), so earlier prompts follow the theme too. -->
 {#if isPasswordMode}
   <span class="flex">
-    <span style={`color: ${$theme.white}`}>Password:</span>
+    <span class="punct">Password:</span>
   </span>
 {:else}
   <span class="font-bold flex">
-    <span style={`color: ${$theme.yellow};`}>guest</span>
-    <span style={`color: ${$theme.white}`}>@</span>
-    <span style={`color: ${$theme.green}`}>{HOST}</span>
-    <span style={`color: ${$theme.white}`}>:</span>
-    <span style={`color: ${$theme.blue}`}>{currentDir}</span>
-    <span style={`color: ${$theme.white}`}>$</span>
+    <span class="user">guest</span>
+    <span class="punct">@</span>
+    <span class="host">{HOST}</span>
+    <span class="punct">:</span>
+    <span class="path">{currentDir}</span>
+    <span class="punct">$</span>
   </span>
 {/if}
+
+<style>
+  .user {
+    color: var(--role-prompt-user);
+  }
+
+  .host {
+    color: var(--role-prompt-host);
+  }
+
+  .path {
+    color: var(--role-prompt-path);
+  }
+
+  .punct {
+    color: var(--role-fg-strong);
+  }
+</style>

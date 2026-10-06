@@ -1,30 +1,18 @@
 // How a span's style tokens become CSS. Palette names read var(--theme-*). Role names read
-// var(--role-*), with a palette fallback until the visual workstream defines the roles.
+// var(--role-*), which platform/theme-apply.ts writes, with a palette fallback for the moment
+// before it has.
 
+import { TEXT_ROLE_SOURCES } from '../lib/roles';
 import { colourVar, isRole, type Colour, type Palette, type Role, type SpanStyle } from '../output/model';
 
-/** The palette colour each role falls back to while themes do not set it. */
+/** The palette colour each role falls back to: the slot it is computed from (lib/roles.ts). */
 export const ROLE_FALLBACK: Readonly<Record<Role, Palette>> = {
-  fg: 'foreground',
-  'fg-strong': 'brightWhite',
-  muted: 'brightBlack',
-  accent: 'cyan',
-  ok: 'green',
-  warn: 'yellow',
-  error: 'red',
-  link: 'brightBlue',
+  ...TEXT_ROLE_SOURCES,
   'chip-bg': 'black',
   'chip-fg': 'foreground',
   ghost: 'brightBlack',
   selection: 'brightBlack',
   cursor: 'foreground',
-  'prompt-user': 'yellow',
-  'prompt-host': 'green',
-  'prompt-path': 'blue',
-  sun: 'yellow',
-  rain: 'blue',
-  cold: 'cyan',
-  hot: 'red',
   'qr-ink': 'foreground',
   'qr-paper': 'background',
 };

@@ -4,7 +4,7 @@
   import { commands, processCommand } from "../utils/commands";
   import { virtualFileSystem, currentPath } from "../utils/virtualFileSystem";
   import themes from "../../themes.json";
-  import { cathodeModes } from "../stores/cathode";
+  import { cathodeModes, crtQualities } from "../stores/cathode";
   import { interruptJob, runJob } from "../stores/job";
   import { escapeHtml } from "../output/escape";
   import { cancelledNotice, notice } from "../utils/notice";
@@ -373,8 +373,8 @@
           }
         }
       } else if (commandName === "cathode" && parts.length === 2) {
-        // Complete cathode subcommands (ls, set, off)
-        const cathodeSubcommands = ["ls", "set", "off"];
+        // Complete cathode subcommands (ls, set, off, quality)
+        const cathodeSubcommands = ["ls", "set", "off", "quality"];
         const matchingSubcommands = cathodeSubcommands.filter((sub) =>
           sub.startsWith(currentArg.toLowerCase()),
         );
@@ -396,6 +396,19 @@
           if (commonPrefix.length > currentArg.length) {
             command = `cathode ${commonPrefix}`;
           }
+        }
+      } else if (
+        commandName === "cathode" &&
+        parts.length === 3 &&
+        parts[1] === "quality"
+      ) {
+        // Complete the quality, which has no shared prefixes to extend.
+        const matching = crtQualities.filter((quality) =>
+          quality.startsWith(currentArg.toLowerCase()),
+        );
+        if (matching.length === 1) {
+          parts[parts.length - 1] = matching[0];
+          command = parts.join(" ");
         }
       } else if (
         commandName === "cathode" &&
@@ -546,7 +559,6 @@
       bind:this={input}
       bind:value={command}
       class="bg-transparent outline-none command-input"
-      style="color: var(--theme-white); opacity: 1;"
       type={isPasswordMode ? "password" : "text"}
       aria-label="Terminal command"
       enterkeyhint="go"
@@ -576,13 +588,14 @@
     min-width: 8ch;
   }
 
-  /* The caret takes the theme's cursor colour until the drawn block cursor replaces it. */
+  /* The caret takes the cursor role until the drawn block cursor replaces it. */
   .command-input {
     display: block;
     width: 100%;
     padding: 0;
     border: 0;
-    caret-color: var(--theme-cursor-color, currentColor);
+    color: var(--role-fg-strong);
+    caret-color: var(--role-cursor, currentColor);
   }
 
   /* A whole line to itself, so the input is the same width with or without it. WebKit scrolls
@@ -590,7 +603,7 @@
      to the bottom when the command finishes, away from a visitor reading further up. */
   .running-line {
     flex-basis: 100%;
-    color: var(--theme-white);
+    color: var(--role-fg-strong);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     min-width: 0;

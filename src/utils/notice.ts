@@ -1,9 +1,10 @@
-// Legacy HTML notices. The safe renderer's `panel` block replaces these in Phase 1.
+// Legacy HTML notices and errors, in the one callout style and the one error style of
+// styles/components.css. The safe renderer's `panel` block replaces these as commands are ported.
 import { escapeHtml } from '../output/escape';
 
-/** A one-line notice with a yellow border, the style used when something is cancelled. */
+/** A one-line notice in a warn-toned panel, the style used when something is cancelled. */
 export function notice(message: string): string {
-  return `<div style="position: relative; border-left: 4px solid var(--theme-yellow); padding: 8px 10px; border-radius: 4px; margin: 6px 0; margin-bottom: 20px;"><div style="position: absolute; inset: 0; background: var(--theme-yellow); opacity: 0.08; border-radius: 4px;"></div><div style="position: relative;"><span style="color: var(--theme-white);">${escapeHtml(message)}</span></div></div>`;
+  return `<div class="out-panel tone-warn"><span class="out-strong">${escapeHtml(message)}</span></div>`;
 }
 
 const CANCELLED_MESSAGES: ReadonlyMap<string, string> = new Map([
@@ -19,7 +20,11 @@ export function cancelledNotice(command: string): string {
   return notice(CANCELLED_MESSAGES.get(command) ?? `${command} cancelled`);
 }
 
-/** A red one-line error. The message is plain text and is escaped here. */
-export function errorLine(message: string): string {
-  return `<span style="color: var(--theme-red);">${escapeHtml(message)}</span>`;
+/**
+ * An error: `cmd: message` in the error colour, then optionally a dim hint on the next line.
+ * Both are plain text and are escaped here.
+ */
+export function errorLine(message: string, hint?: string): string {
+  const error = `<span class="out-error">${escapeHtml(message)}</span>`;
+  return hint === undefined ? error : `${error}\n<span class="out-muted">${escapeHtml(hint)}</span>`;
 }

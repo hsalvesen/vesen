@@ -142,8 +142,12 @@ async function boot(viewport: Viewport): Promise<LegacyTerminal> {
   const { processCommand } = await import('../../src/utils/commands');
   const { history, commandHistory } = await import('../../src/stores/history');
   const { systemCommands } = await import('../../src/utils/commands/system');
-  // What app/bootstrap.ts puts in the transcript before the app mounts.
+  // What app/bootstrap.ts puts in the transcript before the app mounts, and the CRT tier it
+  // decides for the device, which `cathode ls` reports.
   history.set([{ command: 'banner', outputs: [systemCommands.banner()] }]);
+  const { crtTier } = await import('../../src/stores/cathode');
+  const { decideTier, readSignals } = await import('../../src/platform/perf');
+  crtTier.set(decideTier(readSignals(window)));
 
   return {
     async type(line) {

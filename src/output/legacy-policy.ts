@@ -18,11 +18,15 @@ export const LEGACY_DROP_WITH_CONTENT: ReadonlySet<string> = new Set([
 
 /**
  * Every class name legacy command output uses: the theme and cathode lists, fastfetch's
- * "WM Theme" value, the highlight the stores toggle on them, and the art classes (the banner,
- * logos, colour blocks, charts and QR codes).
+ * "WM Theme" value, the highlight the stores toggle on them, the art classes (the banner,
+ * logos, colour blocks, charts and QR codes) with their screen-reader text, and the output
+ * components in styles/components.css (role colours, errors, panels and their tones, swatches).
  */
 export const LEGACY_CLASSES: ReadonlySet<string> = new Set([
-  'theme-name', 'cathode-name', 'current-theme-name', 'is-current', 'art', 'art-fit',
+  'theme-name', 'cathode-name', 'current-theme-name', 'is-current', 'art', 'art-fit', 'sr-only',
+  'out-strong', 'out-accent', 'out-muted', 'out-error',
+  'out-panel', 'out-panel-title', 'tone-warn', 'tone-ok', 'tone-error', 'tone-link', 'tone-muted',
+  'swatches',
 ]);
 
 /** Attributes kept besides style, class and href, with the values they may hold. */
@@ -136,6 +140,9 @@ export function legacyAttribute(name: string, value: string): string | null {
       const classes = filterLegacyClasses(value);
       return classes === '' ? null : classes;
     }
+    // Art keeps its glyphs from screen readers, which read its sr-only text instead.
+    case 'aria-hidden':
+      return value === 'true' ? value : null;
     default:
       return DATA_ATTRIBUTES.has(name) && DATA_VALUE.test(value) ? value : null;
   }
