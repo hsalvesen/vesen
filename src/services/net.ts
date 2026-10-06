@@ -5,13 +5,14 @@
 // AbortSignal.any and AbortSignal.timeout are deliberately not used: Instagram's WKWebView on
 // iOS before 17.4 lacks both, so signals are combined and timed by hand.
 
-/** Why a request failed. `cors` is a failed cross-origin request, which browsers do not explain further. */
-export type NetErrorKind = 'timeout' | 'abort' | 'offline' | 'cors' | 'http' | 'network' | 'parse';
+import { REQUEST_TIMEOUT_MS, type NetError as NetErrorContract, type NetErrorKind } from './types';
+
+export type { NetErrorKind };
 
 /** The deadline for one request when the caller does not set one. */
-export const DEFAULT_TIMEOUT_MS = 8000;
+export const DEFAULT_TIMEOUT_MS = REQUEST_TIMEOUT_MS.default;
 
-export class NetError extends Error {
+export class NetError extends Error implements NetErrorContract {
   readonly kind: NetErrorKind;
   /** The host the request went to, such as `wttr.in`, or the URL itself when it could not be parsed. */
   readonly host: string;

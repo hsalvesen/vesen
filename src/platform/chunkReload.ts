@@ -1,5 +1,7 @@
+import { STORAGE_KEYS } from '../services/storage-keys';
+
 /** sessionStorage key holding the build that last reloaded because of a stale chunk. */
-export const CHUNK_RELOAD_KEY = 'vesen:chunk-reload:v1';
+export const CHUNK_RELOAD_KEY = STORAGE_KEYS.chunkReload.key;
 
 export type ReloadTarget = Pick<Window, 'addEventListener' | 'sessionStorage' | 'location'>;
 
