@@ -43,6 +43,8 @@ npm run preview
 ### Getting started
 Type `help` in the terminal to see every command by category, `man <command>` for one command's manual (`man vesen` is about the terminal itself), and `help keys` for the keys. Explore the file system with `ls` and `cd`; `exit` ends the session and offers a new one, and `poweroff` shows a Power on button that starts one with your files kept.
 
+For fun, try `fortune | cowsay`, `figlet hello | lolcat`, `sl` or `cmatrix`; `help --all` lists them all under Fun.
+
 `whoami`, `about` and `contact` say who made vesen, with link cards that have Copy. A desktop browser also opens LinkedIn or the source for `whoami` and `repo`; on phones a link opens only when tapped, and inside Instagram's browser it opens in the same view, so Back brings the terminal back as it was. `privacy` lists every service a command talks to and what it is sent, and `debug report` copies the details a bug report needs.
 
 The network commands do what a browser allows, and say how. `dig`, `host` and `nslookup` ask Cloudflare's DNS over HTTPS (Google's when Cloudflare cannot be reached), and `whois` asks the registries over RDAP. A page cannot send ICMP, so `ping` times HTTPS round trips and labels them so, with ping's statistics at the end or on ^C. `ip addr` and `ifconfig` show a synthetic `eth0`, marked as such, and your public address, which they first say they are asking Cloudflare for. `wget` downloads into your files, with the same CORS rules as `curl`, and `git log` and `git show` in `~/projects/vesen` read this site's newest commits from GitHub. `ssh`, `telnet`, `nc`, `ftp` and `traceroute` say in one line why a browser tab cannot be them.
@@ -182,8 +184,9 @@ src/
 │   │                             # (keys.ts says what each key does), HistorySheet.svelte, press.ts (tap,
 │   │                             # hold, long press and repeat, never taking focus from the prompt)
 │   ├── Transcript.svelte         # Each entry: the prompt it was typed at, the line, its output
-│   ├── AppHost.svelte            # A command's full-screen app over the terminal: apps/Shutdown.svelte and
-│   │                             # apps/QrPresenter.svelte (qr's Present mode)
+│   ├── AppHost.svelte            # A command's full-screen app over the terminal: apps/Shutdown.svelte,
+│   │                             # apps/QrPresenter.svelte (qr's Present mode), apps/Train.svelte (sl) and
+│   │                             # apps/Matrix.svelte (cmatrix)
 │   ├── Cathode.svelte            # The CRT overlay, inside the screen frame
 │   ├── links.ts                  # Where links open and how Copy copies, for the cards and spans
 │   ├── Prompt.svelte             # guest@vesen:~/documents$, live under the transcript and as each entry's snapshot

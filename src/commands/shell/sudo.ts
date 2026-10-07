@@ -46,6 +46,12 @@ export default defineCommand({
       return ctx.fail('a password is required');
     }
 
+    // The one request sudo grants here.
+    if (ctx.args.join(' ').toLowerCase() === 'make me a sandwich') {
+      await ctx.stdout.line('Okay. One sandwich, made with superuser care.');
+      await ctx.stdout.line(out.span(`(${ctx.user.name} is still not in the sudoers file. This one is on the house.)`, { fg: 'muted' }));
+      return 0;
+    }
     await ctx.stderr.line(`${ctx.user.name} is not in the sudoers file. This incident will be reported.`);
     // The card everywhere; on a desktop browser the answer's key press has opened it already.
     const opened = await ctx.tty.open(SUDO_VIDEO, 'sudo');

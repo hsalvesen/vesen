@@ -15,7 +15,7 @@ export default defineCommand({
   helpRank: 1,
   synopsis: ['help [-a]', 'help COMMAND...', 'help keys'],
   description:
-    "With no COMMAND, lists the portfolio commands with what each does, then the names of the rest by category; with -a, every command with what it does. Tap a name to put it at the prompt. With a COMMAND, shows its options and examples, as 'COMMAND --help' does. 'help keys' lists the keys the terminal answers to.",
+    "With no COMMAND, lists the portfolio commands with what each does, then the names of the rest by category (on a narrow screen, the first few of each, then how many more); with -a, every command with what it does. Tap a name to put it at the prompt. With a COMMAND, shows its options and examples, as 'COMMAND --help' does. 'help keys' lists the keys the terminal answers to.",
   featured: true,
   flags: [{ short: 'a', long: 'all', description: 'list every command, each with what it does' }],
   args: [{ name: 'COMMAND', source: { kind: 'command' }, optional: true, variadic: true }],
