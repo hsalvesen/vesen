@@ -44,6 +44,7 @@ const NOTES: readonly string[] = [
   "IP address and location lookups happen only on request: weather with no place, and fastfetch's Public IP.",
   "weather --here asks the browser for this device's location; once you allow it, weather with no place uses it too. It is rounded to about a kilometre before it is used, and no location is ever saved. The last five places you looked up are kept in this browser until weather --forget or reset.",
   'curl and wget fetch the address you give them, straight from your browser.',
+  'qr makes its codes in your browser: nothing you encode is sent anywhere.',
   'Links open only when you tap them, or in a desktop browser when whoami, linkedin, repo or open opens one.',
   'This browser keeps the theme, your settings, history, your files under ~ and recent weather places (local storage), and a snapshot of the screen for Back for 30 minutes (session storage). What you type at sudo is never kept.',
   'No analytics, and no cookies.',

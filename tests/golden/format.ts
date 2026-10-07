@@ -114,7 +114,7 @@ type GoldenBlock =
   | { readonly type: 'lines'; readonly lines: readonly (readonly GoldenSpan[])[] }
   | { readonly type: 'grid'; readonly items: readonly GoldenSpan[]; readonly notes?: readonly (readonly GoldenSpan[])[] }
   | { readonly type: 'art'; readonly text: string; readonly alt: string }
-  | { readonly type: 'component'; readonly name: string; readonly plain: string }
+  | { readonly type: 'component'; readonly name: string; readonly plain: string; readonly alt: string }
   | { readonly type: string };
 
 const ROLES = new Set([
@@ -152,9 +152,9 @@ function spanHtml(span: GoldenSpan): string {
  * command's lines (and the shell's own, such as command not found) as the equivalent spans, a
  * grid (ls) as its items' spans two spaces apart on one line, since the page lays the columns
  * out to its width, a grid with notes (help) as one item and its note per line, art as its
- * hidden text with the alternative, and a component card (weather) as its plain text, which is
- * what a pipe receives. Tap actions and live bindings have no HTML form: a live span is recorded
- * as it read when it was written.
+ * hidden text with the alternative, and a component card (weather, qr) in art's form: its plain
+ * text, which is what a pipe receives, with its screen-reader summary. Tap actions and live
+ * bindings have no HTML form: a live span is recorded as it read when it was written.
  */
 export function blocksToGoldenHtml(blocks: readonly GoldenBlock[]): string {
   return blocks
@@ -166,9 +166,12 @@ export function blocksToGoldenHtml(blocks: readonly GoldenBlock[]): string {
         if (notes === undefined) return block.items.map(spanHtml).join('  ');
         return block.items.map((item, i) => `${spanHtml(item)}  ${(notes[i] ?? []).map(spanHtml).join('')}`).join('\n');
       }
-      if (block.type === 'component' && 'plain' in block) return escapeText(block.plain.replace(/\n$/, ''));
       if ('alt' in block && 'text' in block) {
         return `<div class="art" aria-hidden="true">${escapeText(block.text)}</div><span class="sr-only">${escapeText(block.alt)}</span>`;
+      }
+      if ('plain' in block && 'alt' in block) {
+        // A component card, as the plain text a pipe receives, in art's form, with its summary.
+        return `<div class="art" aria-hidden="true">${escapeText(block.plain.replace(/\n$/, ''))}</div><span class="sr-only">${escapeText(block.alt)}</span>`;
       }
       throw new Error(`no golden form for a ${block.type} block`);
     })

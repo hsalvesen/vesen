@@ -134,14 +134,14 @@ function fakeSource(): LegacySource & { calls: string[] } {
 }
 
 describe('the legacy table', () => {
-  it('wraps the 5 commands not yet ported, each once, with a category and a summary', () => {
+  it('wraps the 4 commands not yet ported, each once, with a category and a summary', () => {
     const specs = legacySpecs(fakeSource());
-    expect(specs).toHaveLength(5);
-    expect(new Set(specs.map((spec) => spec.name)).size).toBe(5);
+    expect(specs).toHaveLength(4);
+    expect(new Set(specs.map((spec) => spec.name)).size).toBe(4);
     expect(specs.every(isLegacySpec)).toBe(true);
     // Ported to src/commands: the file and text core, history, clear, cd, pwd, reset, help, theme,
-    // cathode, banner, sudo, the openers and the power commands.
-    const ported = ['cd', 'ls', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'history', 'clear', 'help', 'theme', 'cathode', 'banner', 'sudo', 'weather'];
+    // cathode, banner, sudo, the openers, the power commands, weather and qr.
+    const ported = ['cd', 'ls', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'history', 'clear', 'help', 'theme', 'cathode', 'banner', 'sudo', 'weather', 'qr'];
     for (const name of [...ported, 'whoami', 'email', 'repo', 'poweroff']) {
       expect(specs.map((spec) => spec.name)).not.toContain(name);
     }
