@@ -11,6 +11,8 @@ declare global {
      * Unset or empty, `stock` uses the interim public proxy (src/services/market/interim.ts).
      */
     readonly VITE_STOCK_API?: string;
+    /** vesen's own fetch proxy for `curl --via-proxy`, such as https://proxy.example/fetch; unset means none. */
+    readonly VITE_FETCH_PROXY?: string;
   }
 }
 

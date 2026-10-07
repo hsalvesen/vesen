@@ -57,8 +57,7 @@ describe('Dock', () => {
     const { dock, input } = await setup();
     expect(document.activeElement).not.toBe(input);
     expect(dock.dataset.dockMode).toBe('full');
-    // fastfetch, a starter too, is a legacy command this shell does not have.
-    expect(chipLabels(dock)).toEqual(['help', 'cat README.md', 'ls', 'theme ls', 'cathode ls']);
+    expect(chipLabels(dock)).toEqual(['help', 'cat README.md', 'fastfetch', 'ls', 'theme ls', 'cathode ls']);
     expect(keyLabels(dock)).toEqual(['⌨ Type a command…', '↑', 'clear']);
     await tap(screen.getByRole('button', { name: 'Type a command' }));
     expect(document.activeElement).toBe(input);

@@ -1,18 +1,18 @@
-// The legacy adapter (docs/plan/designs/shell-architecture.md, section 4). Temporary: it wraps
-// the 26 commands in src/utils so that every one of them runs under the shell kernel, and so
-// gains quotes, pipes, redirection, $? and ^C, until each is ported to its own spec file. It is
-// deleted with the last port.
+// The legacy adapter (docs/plan/designs/shell-architecture.md, section 4). Temporary: it wrapped
+// the 26 commands in src/utils so that every one of them ran under the shell kernel, and so
+// gained quotes, pipes, redirection, $? and ^C, until each was ported to its own spec file. Every
+// command is now ported, so no table remains; the adapter and the legacy HTML block it writes are
+// deleted in the clean-up that follows the last port (docs/plan/08-shell-and-commands.md).
 //
-// This module stays DOM-free: the legacy functions, their help and their descriptions live in
-// src/utils, which touches the page, so the app layer (src/app/legacy-commands.ts) hands them in.
+// This module stays DOM-free: a legacy function and its help are handed in by the caller.
 
 import type { RawArgsSpec } from '../shell/flags';
 import { writeLegacyHtml } from '../shell/streams';
-import type { CommandContext, CommandSpec, Example, ExitCode } from '../shell/types';
+import type { CommandContext, CommandSpec, ExitCode } from '../shell/types';
 
 /**
  * A legacy command: words in, HTML out. The signal aborts on ^C and when the budget runs out;
- * `status` sets what the status line says while it runs (speedtest's phase).
+ * `status` sets what the status line says while it runs.
  */
 export type LegacyFn = (args: string[], signal?: AbortSignal, status?: (text: string | null) => void) => string | Promise<string>;
 
@@ -99,58 +99,4 @@ export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpe
   };
   LEGACY_SPECS.add(spec);
   return spec;
-}
-
-// ── The table ──────────────────────────────────────────────────────────────────────────────
-
-/** The legacy command names, in the order help lists them today. */
-export const LEGACY_NAMES = ['curl', 'fastfetch', 'speedtest'] as const;
-export type LegacyName = (typeof LEGACY_NAMES)[number];
-
-/** What the app layer supplies from src/utils. */
-export interface LegacySource {
-  readonly commands: Readonly<Record<LegacyName, LegacyFn>>;
-  /** The legacy help panels for a command, as `<cmd> --help` showed them. */
-  help(name: LegacyName): string | undefined;
-}
-
-const examples = (...lines: string[]): Example[] => lines.map((line) => ({ line }));
-
-type StaticMeta = Omit<LegacyMeta, 'help'>;
-
-/** Each legacy command's spec fields, until it is ported. */
-const TABLE: Readonly<Record<LegacyName, StaticMeta>> = {
-  curl: {
-    category: 'network',
-    summary: 'transfer a URL',
-    network: true,
-    loadingLabel: (argv) => `fetching ${argv[1] ?? 'the page'}…`,
-    args: [{ name: 'URL', source: { kind: 'url' } }],
-    examples: examples('curl https://httpbin.org/get', 'curl explainshell.com'),
-  },
-  fastfetch: {
-    category: 'system',
-    summary: 'show information about this system',
-    featured: true,
-    loadingLabel: () => 'gathering system information…',
-    examples: [{ line: 'fastfetch', note: 'this system, at a glance', starter: 3 }],
-  },
-  speedtest: {
-    category: 'network',
-    summary: 'measure the speed of the connection',
-    network: true,
-    budgetMs: 120_000,
-    // It downloads megabytes, so only a line typed at the prompt may start it.
-    interactiveOnly: true,
-    loadingLabel: () => 'measuring the connection…',
-    examples: examples('speedtest'),
-  },
-};
-
-/** Every legacy command as a spec. */
-export function legacySpecs(source: LegacySource): CommandSpec[] {
-  return LEGACY_NAMES.map((name) => {
-    const help = source.help(name);
-    return legacy(name, source.commands[name], { ...TABLE[name], ...(help === undefined ? {} : { help }) });
-  });
 }

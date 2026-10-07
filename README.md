@@ -112,20 +112,22 @@ src/
 │                                 # markup, converted once from HTML by scripts/convert-content.mjs
 ├── commands/                     # One CommandSpec per file, DOM-free, by category: portfolio/ (theme,
 │                                 # cathode, banner, whoami, linkedin, about, contact and email, repo, open
-│                                 # and xdg-open), files/ (ls, cat, cp, mv, rm, rmdir, mkdir, touch, ln,
+│                                 # and xdg-open, qr), files/ (ls, cat, cp, mv, rm, rmdir, mkdir, touch, ln,
 │                                 # stat, cd, pwd), text/ (echo, printf), shell/ (help, man, whatis,
 │                                 # apropos, history, clear, reset, alias, unalias, export, unset, env,
 │                                 # printenv, set, source, type, which, command, true, false, test, exit,
 │                                 # login, sleep, sudo), system/ (date, keys, poweroff, reboot, shutdown,
-│                                 # privacy, debug), network/ (weather, and stock with its card's words in
-│                                 # stock/); lib/ is what they share, the banner, the link cards and
-│                                 # weather's way to its service included; legacy.ts wraps the commands not
-│                                 # yet ported
+│                                 # privacy, debug, fastfetch), network/ (weather, curl, speedtest, and
+│                                 # stock with its card's words in stock/); lib/ is what they share: the
+│                                 # banner, the link cards, weather's way to its service, and qr's options
+│                                 # and payloads; legacy.ts, the adapter that ran the commands in
+│                                 # src/utils until each was ported, goes in the clean-up
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette
 │                                 # where themes.json does not set them, and the contrast each must meet);
-│                                 # qr/ (the QR encoder: segments, error correction, masks, and text, SVG
-│                                 # and raster renderers)
+│                                 # qr/ (the QR encoder: segments, error correction, masks, and text, SVG,
+│                                 # raster and PNG renderers, and the view a QR card draws); sysfacts.ts and
+│                                 # sysnames.ts (reading and naming what a browser says about its system)
 ├── platform/                     # Browser-facing helpers: env.ts (touch, the in-app browser and the
 │                                 # system), errors.ts (recent errors for debug report), canonical host
 │                                 # redirect, stale-chunk reload,
@@ -139,12 +141,15 @@ src/
 │   ├── net.ts                    # fetch with timeouts, cancelling, byte caps and typed network errors
 │   ├── storage.ts                # localStorage and sessionStorage with a memory fallback; one-time migrations
 │   ├── types.ts                  # Service interfaces: net, storage, bell, opener, clipboard, clock, system info
+│   ├── sysinfo.ts                # System facts for fastfetch, /proc and debug report: the user agent, the GPU,
+│   │                             # client hints, battery, storage, and the public IP only when asked
 │   ├── opener.ts                 # The in-app link policy: planOpen, the new tab inside the gesture, and the
 │   │                             # escape to the real browser behind a tap
 │   ├── clipboard.ts              # Copy: the Clipboard API, then execCommand
 │   ├── session-snapshot.ts       # The screen saved for Back (vesen:session:v1); session-restore.ts
 │   │                             # rebuilds it, loaded only after Back
 │   ├── storage-keys.ts           # Every browser storage key, in one registry
+│   ├── qr-actions.ts             # Save, Share and Copy for a QR code, black on white, inside the tap
 │   ├── weather/                  # Weather's sources (forecast, geocoding, IP location), place resolution,
 │   │                             # units and WMO codes, the view model a weather card draws, and the
 │   │                             # service the weather command reaches them through (loaded on first use)
@@ -164,7 +169,8 @@ src/
 │   │                             # (keys.ts says what each key does), HistorySheet.svelte, press.ts (tap,
 │   │                             # hold, long press and repeat, never taking focus from the prompt)
 │   ├── Transcript.svelte         # Each entry: the prompt it was typed at, the line, its output
-│   ├── AppHost.svelte            # A command's full-screen app over the terminal; apps/Shutdown.svelte
+│   ├── AppHost.svelte            # A command's full-screen app over the terminal: apps/Shutdown.svelte and
+│   │                             # apps/QrPresenter.svelte (qr's Present mode)
 │   ├── links.ts                  # Where links open and how Copy copies, for the cards and spans
 │   ├── Prompt.svelte             # guest@vesen:~/documents$, live under the transcript and as each entry's snapshot
 │   ├── OutputView.svelte         # Draws output blocks with text interpolation only
@@ -172,23 +178,19 @@ src/
 │   │                             # or theme swatches
 │   ├── legacy-html.ts            # use:legacyHtml, which rebuilds legacy HTML from the allowlist
 │   ├── span-style.ts             # Colour tokens to CSS, with role fallbacks
-│   ├── legacy-highlights.ts      # Renames the theme in earlier legacy fastfetch output
 │   ├── actions/                  # stickToBottom (the one scroll owner, with the new-output pill) and
 │   │                             # focusPolicy (when a click, tap or key puts the caret in the prompt)
 │   └── components/               # LinkCard.svelte (the card block: the link, Copy, the in-app escape);
 │                                 # registry.ts, the rich cards a component block may name, each loaded on
 │                                 # first use: WeatherCard.svelte (compact and wide layouts by its own
-│                                 # width), and QuoteCard, QuoteTable and Sparkline, stock's cards
+│                                 # width), QrCard.svelte, and QuoteCard, QuoteTable and Sparkline, stock's
+│                                 # cards
 ├── testing/                      # Test setup
 └── utils/
-    ├── commands.ts               # The legacy command table; the network commands load on first use
-    ├── commands/                 # Legacy commands not yet ported: network, fastfetch, QR; fastfetch
-    │                             # and the network commands load on first use
-    ├── virtualFileSystem.ts      # A shim over the VFS for the legacy commands not yet ported
-    ├── helpTexts.ts              # Help for each legacy command not yet ported
-    ├── notice.ts                 # The one notice panel and the one error style (cmd: message, then a hint)
-    ├── beep.ts                   # The terminal bell
-    └── osLogos.ts                # fastfetch's logos, loaded with it
+    ├── legacyShell.ts            # Migration only: the legacy tree's hooks into the VFS, for tests; every
+    │                             # command is a spec now, so the app no longer loads it
+    ├── virtualFileSystem.ts      # The shim over the VFS that the legacy commands walked
+    └── beep.ts                   # The terminal bell
 public/                           # 404.html; fonts/ (Vesen Mono
                                   # and its licence, OFL.txt); icons/ and og.png (generated, see scripts/);
                                   # manifest.webmanifest; probe/ (device capability probe, not linked from the app)

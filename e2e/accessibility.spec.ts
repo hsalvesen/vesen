@@ -59,7 +59,6 @@ test.describe('accessibility', { tag: '@smoke' }, () => {
   });
 
   test('the page passes the audit after a few commands', async ({ page }) => {
-    await page.route('https://api.ipify.org/**', (route) => route.fulfill({ json: { ip: '203.0.113.7' } }));
     await page.goto('/');
     for (const line of ['help', 'theme ls', 'lss', 'fastfetch']) await run(page, line);
     expect(await page.evaluate(audit)).toEqual([]);
@@ -93,7 +92,6 @@ test.describe('accessibility', { tag: '@smoke' }, () => {
   });
 
   test('art is hidden from screen readers, which hear a description instead', async ({ page }) => {
-    await page.route('https://api.ipify.org/**', (route) => route.fulfill({ json: { ip: '203.0.113.7' } }));
     await page.goto('/');
 
     const banner = page.locator('.art-fit').first();
@@ -105,7 +103,6 @@ test.describe('accessibility', { tag: '@smoke' }, () => {
     const logo = page.locator('[role="log"] .art[aria-hidden="true"]').nth(1);
     await expect(logo).toBeAttached();
     await expect(page.locator('.sr-only', { hasText: / logo$/ })).toHaveCount(2);
-    await expect(page.locator('.sr-only', { hasText: "The theme's sixteen colours" })).toHaveCount(1);
 
     await run(page, 'theme ls');
     const swatches = page.locator('.swatches');

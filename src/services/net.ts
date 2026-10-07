@@ -15,6 +15,8 @@ import {
   type NetErrorKind,
   type NetInit,
   type NetResponse,
+  type NetStream,
+  type StreamInit,
 } from './types';
 
 export type { NetErrorKind };
@@ -162,8 +164,9 @@ export async function fetchAndRead<T>(
 
   const request = (async () => {
     const response = await fetch(url, { ...init, signal: combined });
-    // A no-cors request yields an opaque response with status 0; that is not an HTTP error.
-    if (throwHttpErrors && !response.ok && response.type !== 'opaque') {
+    // A no-cors request yields an opaque response with status 0, and a redirect that is not
+    // followed an opaqueredirect one; neither is an HTTP error.
+    if (throwHttpErrors && !response.ok && response.type !== 'opaque' && response.type !== 'opaqueredirect') {
       throw new NetError('http', host, { status: response.status });
     }
     return read(response);
@@ -182,6 +185,79 @@ export async function fetchAndRead<T>(
     clearTimeout(timer);
     stopListening();
   }
+}
+
+// ── Streams ────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Fetches `url` up to its headers within `timeoutMs`, and returns the body to read as it arrives.
+ * A read rejects with kind `abort` as soon as `signal` aborts, and the rest is never downloaded.
+ */
+export function openStream(url: string, init: StreamInit = {}): Promise<NetStream> {
+  const { headers, signal, ...rest } = init;
+  const host = hostOf(url);
+  return fetchAndRead(url, { ...rest, signal: signal ?? null, ...(headers === undefined ? {} : { headers: { ...headers } }) }, async (response) =>
+    streamOf(response, host, signal),
+  );
+}
+
+function streamOf(response: Response, host: string, signal: AbortSignal | undefined): NetStream {
+  const headers: Record<string, string> = {};
+  response.headers.forEach((value, name) => {
+    headers[name.toLowerCase()] = value;
+  });
+  const reader = response.body?.getReader() ?? null;
+  let finished = reader === null;
+  const cancel = (): void => {
+    if (finished) return;
+    finished = true;
+    reader?.cancel().catch(() => {});
+  };
+  return {
+    url: response.url,
+    status: response.status,
+    statusText: response.statusText,
+    type: response.type,
+    redirected: response.redirected,
+    headers,
+    cancel,
+    async read() {
+      if (finished || reader === null) return null;
+      if (signal?.aborted) {
+        cancel();
+        throw new NetError('abort', host);
+      }
+      let stop = (): void => {};
+      const aborted = new Promise<never>((_, reject) => {
+        const onAbort = (): void => reject(new NetError('abort', host));
+        signal?.addEventListener('abort', onAbort, { once: true });
+        stop = () => signal?.removeEventListener('abort', onAbort);
+      });
+      try {
+        const { done, value } = await Promise.race([reader.read(), aborted]);
+        if (done) {
+          finished = true;
+          return null;
+        }
+        return value;
+      } catch (error) {
+        cancel();
+        if (error instanceof NetError || signal?.aborted) throw error instanceof NetError ? error : new NetError('abort', host);
+        throw new NetError(isOnline() ? 'network' : 'offline', host);
+      } finally {
+        stop();
+      }
+    },
+  };
+}
+
+const LOOPBACK = /^(?:localhost|127(?:\.\d{1,3}){3}|\[::1\])$/i;
+
+/** True when the page is https and `url` is http (other than this machine), which the browser blocks. */
+export function isMixedContent(url: string): boolean {
+  if (typeof location === 'undefined' || location.protocol !== 'https:') return false;
+  const target = parseUrl(url);
+  return target !== null && target.protocol === 'http:' && !LOOPBACK.test(target.hostname);
 }
 
 function parseUrl(url: string): URL | null {
@@ -335,6 +411,8 @@ export function createNet(options: MemoOptions = {}): Net {
         throw new NetError('parse', hostOf(url));
       }
     },
+    open: (url: string, init: StreamInit = {}): Promise<NetStream> => openStream(url, init),
+    mixedContent: isMixedContent,
     memo: <T>(key: string, ttlMs: number, load: () => Promise<T>): Promise<T> => table(key, ttlMs, load),
     isError: (error: unknown): error is NetError => isNetError(error),
     online: isOnline,

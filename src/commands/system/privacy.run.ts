@@ -39,14 +39,14 @@ export const THIRD_PARTIES: readonly ThirdParty[] = [
   { service: 'Cloudflare or Google DNS-over-HTTPS', commands: ['dig', 'host', 'nslookup'], askedBy: 'dig, host, nslookup', sent: 'the name you look up' },
   { service: 'RDAP (rdap.org and the registries)', commands: ['whois'], askedBy: 'whois', sent: 'the domain you look up' },
   { service: 'GitHub', commands: ['git', 'repo'], askedBy: 'git log in ~/projects/vesen', sent: 'nothing but the request' },
-  { service: 'ipify', commands: ['fastfetch'], askedBy: 'fastfetch', sent: 'nothing but the request: it answers with your public IP' },
+  { service: 'ipify', commands: ['fastfetch'], askedBy: 'fastfetch --net', sent: 'nothing but the request: it answers with your public IP' },
 ];
 
 const NOTES: readonly string[] = [
   'Every request carries your IP address, as any web request does. Nothing else you type is sent, except as listed.',
-  "IP address and location lookups happen only on request: weather with no place, and fastfetch's Public IP.",
+  'IP address and location lookups happen only on request: weather with no place, and fastfetch --net.',
   "weather --here asks the browser for this device's location; once you allow it, weather with no place uses it too. It is rounded to about a kilometre before it is used, and no location is ever saved. The last five places you looked up are kept in this browser until weather --forget or reset.",
-  'curl and wget fetch the address you give them, straight from your browser.',
+  "curl and wget fetch the address you give them, straight from your browser; curl --via-proxy, where this site has a proxy of its own, sends it through that proxy.",
   'qr makes its codes in your browser: nothing you encode is sent anywhere.',
   'Links open only when you tap them, or in a desktop browser when whoami, linkedin, repo or open opens one.',
   'This browser keeps the theme, your settings, history, your files under ~, recent weather places, and the last quotes and tickers stock showed (local storage), and a snapshot of the screen for Back for 30 minutes (session storage). What you type at sudo is never kept.',

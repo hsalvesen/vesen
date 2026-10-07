@@ -10,7 +10,7 @@ import { createAppearance } from '../services/appearance';
 import { createClock } from '../services/clock';
 import { createNet } from '../services/net';
 import { STORAGE_KEYS } from '../services/storage-keys';
-import { createSysInfoStub, type SysHost } from '../services/sysinfo';
+import { createSysInfo, type SysHost } from '../services/sysinfo';
 import type { Bell, Clipboard, Clock, KV, Net, Opener, SysInfo } from '../services/types';
 import { loadArith } from '../shell/expand';
 import { createShell, type Shell, type TerminalInfo } from '../shell/index';
@@ -102,7 +102,7 @@ export function createAppShell(options: AppShellOptions): AppShell {
   const registry = buildRegistry(options.specs ?? []);
   provideWeather(options.weather ?? null);
   const clock = options.clock ?? createClock();
-  const sys = options.sys ?? createSysInfoStub(options.sysHost ?? null, options.errors ? { errors: options.errors } : {});
+  const sys = options.sys ?? createSysInfo(options.sysHost ?? null, options.errors ? { errors: options.errors } : {});
   const screen = options.screen ?? appScreen;
   const storage = options.storage ?? null;
   const version = options.version ?? __APP_VERSION__;
@@ -113,7 +113,12 @@ export function createAppShell(options: AppShellOptions): AppShell {
     seed,
     ...(options.root ? { root: options.root } : {}),
     now: () => clock.now(),
-    context: () => ({ now: clock.now(), bootTime: clock.bootTime(), sys: sys.snapshot(), random: () => clock.random() }),
+    // /proc/uptime counts from when the page started, as fastfetch's Uptime does.
+    context: () => {
+      const now = clock.now();
+      const up = sys.uptimeMs();
+      return { now, bootTime: up > 0 ? now - up : clock.bootTime(), sys: sys.snapshot(), random: () => clock.random() };
+    },
   });
   const persistence = createPersistence({
     vfs,

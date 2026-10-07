@@ -111,18 +111,16 @@ describe('bootstrap', () => {
     expect({ ...localStorage }).toEqual({ 'vesen:theme:v1': 'cockatoo', 'vesen:cathode:v1': '{"mode":"vintage"}' });
   });
 
-  it("saves a new theme by name, and renames the theme in legacy fastfetch's earlier output", async () => {
+  it('saves a new theme by name', async () => {
     const { boot, setTheme, cathode } = await load();
     boot();
     expect(localStorage.length).toBe(0);
-    document.body.innerHTML = '<span class="current-theme-name">swamphen</span>';
 
     setTheme('wombat');
     cathode.set('off');
 
     expect(localStorage.getItem('vesen:theme:v1')).toBe('wombat');
     expect(localStorage.getItem('vesen:cathode:v1')).toBe('{"mode":"off"}');
-    expect(document.querySelector('.current-theme-name')?.textContent).toBe('wombat');
     expect(document.documentElement.classList.contains('crt-on')).toBe(false);
   });
 

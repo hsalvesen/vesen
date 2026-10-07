@@ -115,6 +115,7 @@ type GoldenBlock =
   | { readonly type: 'grid'; readonly items: readonly GoldenSpan[]; readonly notes?: readonly (readonly GoldenSpan[])[] }
   | { readonly type: 'art'; readonly text: string; readonly alt: string }
   | { readonly type: 'component'; readonly name: string; readonly plain: string; readonly alt: string }
+  | { readonly type: 'columns'; readonly left: readonly GoldenBlock[]; readonly right: readonly GoldenBlock[] }
   | { readonly type: string };
 
 const ROLES = new Set([
@@ -152,8 +153,9 @@ function spanHtml(span: GoldenSpan): string {
  * command's lines (and the shell's own, such as command not found) as the equivalent spans, a
  * grid (ls) as its items' spans two spaces apart on one line, since the page lays the columns
  * out to its width, a grid with notes (help) as one item and its note per line, art as its
- * hidden text with the alternative, and a component card (weather, qr, stock) in art's form: its plain
- * text, which is what a pipe receives, with its screen-reader summary. Tap actions and live
+ * hidden text with the alternative, columns (fastfetch) as the left blocks, then the right ones,
+ * as a narrow screen stacks them, and a component card (weather, qr, stock) in art's form: its
+ * plain text, which is what a pipe receives, with its screen-reader summary. Tap actions and live
  * bindings have no HTML form: a live span is recorded as it read when it was written.
  */
 export function blocksToGoldenHtml(blocks: readonly GoldenBlock[]): string {
@@ -173,6 +175,7 @@ export function blocksToGoldenHtml(blocks: readonly GoldenBlock[]): string {
         // A component card, as the plain text a pipe receives, in art's form, with its summary.
         return `<div class="art" aria-hidden="true">${escapeText(block.plain.replace(/\n$/, ''))}</div><span class="sr-only">${escapeText(block.alt)}</span>`;
       }
+      if ('left' in block && 'right' in block) return blocksToGoldenHtml([...block.left, ...block.right]);
       throw new Error(`no golden form for a ${block.type} block`);
     })
     .join('\n');

@@ -6,8 +6,8 @@ import { lineText, type Block } from '../output/model';
 import { plain } from '../output/plain';
 import { createClock } from '../services/clock';
 import { createNet } from '../services/net';
-import { createSysInfoStub } from '../services/sysinfo';
-import type { Appearance, Clock, KV, Net, Opener } from '../services/types';
+import { createSysInfo } from '../services/sysinfo';
+import type { Appearance, Clock, KV, Net, Opener, SysInfo } from '../services/types';
 import { createShell, type JobResult, type ScreenCommit, type Shell, type TerminalInfo } from '../shell/index';
 import { CommandRegistry } from '../shell/registry';
 import { defineCommand, type CommandContext, type CommandSpec } from '../shell/types';
@@ -296,6 +296,7 @@ export interface HarnessOptions {
   /** The seed; a fresh copy is built again for `reset`. */
   readonly tree?: () => VirtualFile;
   readonly net?: Net;
+  readonly sys?: SysInfo;
   readonly clock?: Clock;
   readonly storage?: KV<'local'> | null;
   readonly opener?: Opener;
@@ -333,7 +334,7 @@ export function harness(options: HarnessOptions = {}) {
     storage: options.storage ?? null,
     net: options.net ?? createNet(),
     clock: options.clock ?? createClock({ random: () => 0.5 }),
-    sys: createSysInfoStub(null),
+    sys: options.sys ?? createSysInfo(null),
     appearance,
     screen: { commit: (entry) => commits.push(entry) },
     bell: { ring: () => (bells += 1), onFlash: () => () => {} },

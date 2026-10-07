@@ -17,29 +17,18 @@ $ fastfetch
      ;KMMMMMMMWXXWMMMMMMMk.
        .cooc,.    .,coo:.
 
-
-████████████████████████
-████████████████████████
 guest@vesen
-OS:iOS 17.5 arm64
-Host:iPhone
-Kernel:Darwin
-Uptime:1 hours, 2 mins
-Packages:npm packages in node_modules
-Shell:Vesen Terminal v0.0.0-golden
-Display:390x844 @ 60 Hz
-DE:Unknown
-WM:Unknown
-WM Theme:swamphen
-Font:System Font
-Cursor:Default System Cursor
-Terminal:Vesen Web Terminal
-CPU:arm64 CPU (6)
-GPU:Apple GPU
-Memory:Unknown / Unknown
-Swap:Not available in browser
-Disk (/):0 GiB / 1 GiB (5%) - WebStorage
-Local IP:203.0.113.7
-Battery:Unknown
-Power Adapter:Unknown
-Locale:en-AU
+-----------
+OS: iOS 17.5 arm64
+Host (approximate): iPhone (iPhone14,5)
+Kernel: Darwin
+Uptime: 1 hour, 2 mins (this page)
+Shell: vesh 0.0.0-golden
+Display: 1170x2532 (as 390x844)
+Terminal: vesen
+WM Theme: swamphen
+Font: Vesen Mono
+CPU: Apple silicon (6)
+GPU: Apple GPU
+Disk (WebStorage): 50.00 MiB / 1.00 GiB (5%)
+Locale: en-AU (Australia/Sydney)

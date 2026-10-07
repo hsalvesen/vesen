@@ -11,7 +11,7 @@ import { createClock } from '../src/services/clock';
 import { expandAliases } from '../src/shell/alias';
 import { wrapText } from '../src/shell/help';
 import { CaptureOut } from '../src/shell/streams';
-import type { Clipboard, Opener } from '../src/services/types';
+import type { Clipboard, Opener, SysInfo } from '../src/services/types';
 import { defineCommand, type CommandSpec, type FullscreenView, type InAppBrowser } from '../src/shell/types';
 import { createScreen } from '../src/stores/screen';
 import { screenText, stubCommands } from '../src/testing/shell-harness';
@@ -37,6 +37,8 @@ export interface RunOptions {
   readonly clipboard?: Clipboard;
   /** Shows a full-screen app, as AppHost would, and closes it with a result. */
   readonly fullscreen?: (view: FullscreenView, props: unknown) => Promise<unknown>;
+  /** The system facts; none by default, as with no page to read them from. */
+  readonly sys?: SysInfo;
 }
 
 export interface LineResult {
@@ -127,6 +129,7 @@ export async function session(options: RunOptions = {}): Promise<Session> {
     },
     ...(options.opener === undefined ? {} : { opener: options.opener }),
     ...(options.clipboard === undefined ? {} : { clipboard: options.clipboard }),
+    ...(options.sys === undefined ? {} : { sys: options.sys }),
     yieldToHost: () => Promise.resolve(),
   });
   await app.boot();

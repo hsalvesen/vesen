@@ -1,23 +1,14 @@
 // help, man, whatis and apropos, generated from the specs (F042, F043): help lists every visible
-// command, and --help and man render for every spec, ported or legacy.
+// command, and --help and man render for every spec.
 import { describe, expect, it } from 'vitest';
 import { runLine, session } from '../../../tests/harness';
 import { isTrustedAction, type Block } from '../../output/model';
 import { plain } from '../../output/plain';
-import { manPage, withDoc } from '../../shell/help';
-import { CommandRegistry } from '../../shell/registry';
+import { withDoc } from '../../shell/help';
 import { specFiles } from '../index';
-import { LEGACY_NAMES, legacySpecs, type LegacyFn, type LegacyName } from '../legacy';
 
 const text = (blocks: readonly Block[]): string => blocks.map(plain).join('');
 const literal = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-/** The legacy commands as specs, with stand-in functions. */
-function legacyTable() {
-  const commands = {} as Record<LegacyName, LegacyFn>;
-  for (const name of LEGACY_NAMES) commands[name] = () => name;
-  return legacySpecs({ commands, help: () => undefined });
-}
 
 describe('help', () => {
   it('is short: the portfolio commands with their summaries, then one row of names for each other category', async () => {
@@ -93,15 +84,6 @@ describe('help', () => {
       }
     }
     s.stop();
-  });
-
-  it('renders a man page for every legacy command too', () => {
-    const registry = new CommandRegistry(legacyTable());
-    for (const spec of registry.list({ includeHidden: true })) {
-      const page = text(manPage(spec, { columns: 80, version: '2.0.0' }));
-      expect(page, spec.name).toContain(`${spec.name} - ${spec.summary}`);
-      expect(page, spec.name).toContain('EXAMPLES');
-    }
   });
 });
 

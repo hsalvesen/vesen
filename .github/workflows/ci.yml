@@ -32,10 +32,12 @@ jobs:
       - run: npm run check:boundaries
       - run: npm test
       # The stock Worker's address; an unset repository variable is an empty string, which the
-      # app takes to mean the interim proxy (src/services/market/port.ts).
+      # app takes to mean the interim proxy (src/services/market/port.ts). The fetch proxy for
+      # curl --via-proxy works the same way: empty means the site has none.
       - run: npm run build
         env:
           VITE_STOCK_API: ${{ vars.VITE_STOCK_API }}
+          VITE_FETCH_PROXY: ${{ vars.VITE_FETCH_PROXY }}
       - run: npm run check:bundle
       - run: npm run check:contrast -- --strict
 
@@ -45,6 +47,7 @@ jobs:
       - run: npm run test:smoke
         env:
           VITE_STOCK_API: ${{ vars.VITE_STOCK_API }}
+          VITE_FETCH_PROXY: ${{ vars.VITE_FETCH_PROXY }}
 
       - name: Upload Playwright report
         if: failure()

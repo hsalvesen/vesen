@@ -16,7 +16,6 @@ try {
     // At boot, and again for reset and a new login, at the width the terminal has then.
     banner: () =>
       bannerBlocks({ version: __APP_VERSION__, columns: get(columns), touch: window.matchMedia?.('(pointer: coarse)').matches ?? false }),
-    legacy: () => import('./utils/legacyShell').then((module) => module.legacyBindings()),
   });
   if (booted) {
     if (!target) throw new Error('#app is missing from the page');

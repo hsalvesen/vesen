@@ -3,7 +3,8 @@ import { lineText, type Block } from '../output/model';
 import { harness } from '../testing/shell-harness';
 import { CommandRegistry } from '../shell/registry';
 import { takesRawArgs } from '../shell/flags';
-import { isLegacySpec, LEGACY_NAMES, legacy, legacySpecs, legacyStatus, type LegacyFn, type LegacyName, type LegacySource } from './legacy';
+import { buildRegistry } from './index';
+import { isLegacySpec, legacy, legacyStatus, type LegacyFn } from './legacy';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -117,59 +118,32 @@ describe('the adapter', () => {
   });
 });
 
-/** Every legacy command, each printing its own name and words. */
-function fakeSource(): LegacySource & { calls: string[] } {
-  const calls: string[] = [];
-  const commands = Object.fromEntries(
-    LEGACY_NAMES.map((name) => [name, ((args: string[]) => {
-      calls.push([name, ...args].join(' '));
-      return `${name}:${args.join(',')}`;
-    }) satisfies LegacyFn]),
-  ) as Record<LegacyName, LegacyFn>;
-  return {
-    calls,
-    commands,
-    help: (name) => (name === 'curl' ? '<div>curl help</div>' : undefined),
-  };
-}
-
-describe('the legacy table', () => {
-  it('wraps the 3 commands not yet ported, each once, with a category and a summary', () => {
-    const specs = legacySpecs(fakeSource());
-    expect(specs).toHaveLength(3);
-    expect(new Set(specs.map((spec) => spec.name)).size).toBe(3);
-    expect(specs.every(isLegacySpec)).toBe(true);
-    // Ported to src/commands: the file and text core, history, clear, cd, pwd, reset, help, theme,
-    // cathode, banner, sudo, the openers, the power commands, weather, qr and stock.
-    const ported = ['cd', 'ls', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'history', 'clear', 'help', 'theme', 'cathode', 'banner', 'sudo', 'weather', 'qr', 'stock'];
-    for (const name of [...ported, 'whoami', 'email', 'repo', 'poweroff']) {
-      expect(specs.map((spec) => spec.name)).not.toContain(name);
-    }
-    const registry = new CommandRegistry(specs);
+describe('the adapter', () => {
+  it('passes every word, unparsed, to the legacy function, and carries its help', async () => {
+    const calls: string[] = [];
+    const fn: LegacyFn = (args) => {
+      calls.push(args.join(' '));
+      return 'ok';
+    };
+    const spec = legacy('old', fn, { category: 'network', summary: 'an old command', help: '<div>old help</div>' });
+    expect(isLegacySpec(spec)).toBe(true);
+    expect(takesRawArgs(spec)).toBe(true);
+    const registry = new CommandRegistry([spec]);
     expect(registry.validate()).toEqual([]);
-    expect(specs.every((spec) => takesRawArgs(spec))).toBe(true);
-    expect(registry.get('curl')).toMatchObject({ category: 'network', summary: 'transfer a URL', legacyHelp: '<div>curl help</div>' });
-    expect(registry.get('speedtest')).toMatchObject({ network: true, budgetMs: 120_000 });
-    expect(registry.get('curl')?.network).toBe(true);
-    expect(registry.get('fastfetch')?.category).toBe('system');
+    expect(registry.get('old')).toMatchObject({ category: 'network', summary: 'an old command', legacyHelp: '<div>old help</div>' });
+    const { run } = harness({ specs: [spec] });
+    await run('old -x AAPL');
+    expect(calls).toEqual(['-x AAPL']);
   });
+});
 
-  it('gives every command a lower-case summary of 50 characters or fewer, as the specs have', () => {
-    for (const spec of legacySpecs(fakeSource())) {
-      expect(spec.summary.length, spec.name).toBeLessThanOrEqual(50);
-      expect(spec.summary.charAt(0), spec.name).toBe(spec.summary.charAt(0).toLowerCase());
+describe('the catalogue', () => {
+  it('has no legacy command left: every command is a spec of its own', () => {
+    const registry = buildRegistry([]);
+    for (const name of ['weather', 'qr', 'stock', 'curl', 'speedtest', 'fastfetch', 'ls', 'help', 'poweroff']) {
+      const spec = registry.get(name);
+      expect(spec, name).toBeDefined();
+      expect(isLegacySpec(spec!), name).toBe(false);
     }
-  });
-
-  it('describes arguments for completion', () => {
-    const registry = new CommandRegistry(legacySpecs(fakeSource()));
-    expect(registry.get('curl')?.args?.[0]?.source).toEqual({ kind: 'url' });
-  });
-
-  it('passes every word, unparsed, to the legacy function', async () => {
-    const source = fakeSource();
-    const { run } = harness({ specs: legacySpecs(source) });
-    await run('curl -x AAPL');
-    expect(source.calls).toEqual(['curl -x AAPL']);
   });
 });

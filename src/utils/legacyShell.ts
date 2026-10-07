@@ -1,20 +1,17 @@
-// Migration only: what the shell needs from the legacy code in src/utils: the legacy commands as
-// specs, through the DOM-free adapter (src/commands/legacy.ts), and the shim that lets them reach
-// the VFS (src/utils/virtualFileSystem.ts). main.ts hands this to bootstrap, so the strictly
-// typed app code never imports src/utils. Deleted with the adapter once the last command is
-// ported.
+// Migration only: the shim that let the legacy commands reach the VFS
+// (src/utils/virtualFileSystem.ts). Every command is now a spec, so the app no longer loads this;
+// tests that mount the terminal over the legacy tree still use it. Deleted with the adapter in the
+// clean-up that follows the last port.
 
 import { createAppShell, type AppShell, type AppShellOptions } from '../app/shell';
-import { LEGACY_NAMES, legacySpecs, type LegacyFn, type LegacyName, type LegacySource } from '../commands/legacy';
 import type { Shell } from '../shell/index';
 import type { CommandSpec } from '../shell/types';
 import type { VirtualFile } from '../vfs/types';
 import type { Vfs } from '../vfs/vfs';
-import { commands, legacyHelpHtml } from './commands';
 import { bindLegacyVfs, mirrorCwd, virtualFileSystem } from './virtualFileSystem';
 
 export interface LegacyBindings {
-  /** The legacy commands as specs. */
+  /** The legacy commands as specs: none now. */
   readonly specs: CommandSpec[];
   /** The tree the legacy code walks, which the VFS fills. */
   readonly root: VirtualFile;
@@ -22,24 +19,10 @@ export interface LegacyBindings {
   bind(parts: { readonly vfs: Vfs; readonly shell: Shell }): () => void;
 }
 
-function legacyFunction(name: LegacyName): LegacyFn {
-  const fn = commands[name];
-  if (fn === undefined) throw new Error(`legacy command ${name} is missing from src/utils/commands.ts`);
-  return fn;
-}
-
-export function legacySource(): LegacySource {
-  const fns = Object.fromEntries(LEGACY_NAMES.map((name) => [name, legacyFunction(name)])) as Record<LegacyName, LegacyFn>;
-  return {
-    commands: fns,
-    help: (name) => legacyHelpHtml(name),
-  };
-}
-
-/** The legacy commands, and the hooks that keep the legacy code in step with the shell. */
+/** The hooks that keep the legacy tree in step with the shell. */
 export function legacyBindings(): LegacyBindings {
   return {
-    specs: legacySpecs(legacySource()),
+    specs: [],
     root: virtualFileSystem,
     bind({ vfs, shell }) {
       bindLegacyVfs(vfs);

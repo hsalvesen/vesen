@@ -89,12 +89,13 @@ describe('CommandRegistry', () => {
       expect(registry.suggest('constructor')).toEqual({ near: [] });
     });
 
-    it('never guesses a command that opens a page, takes over the page or ends the session', () => {
+    it('never guesses a command that opens a page, takes over the page, spends data or ends the session', () => {
       const risky = new CommandRegistry([
         spec('repo', { category: 'portfolio', opens: () => 'https://github.com' }),
         spec('email', { category: 'portfolio', opens: () => 'mailto:a@b.c' }),
         spec('whoami', { category: 'portfolio', opens: () => 'https://www.linkedin.com' }),
         spec('poweroff', { category: 'system', interactiveOnly: true }),
+        spec('speedtest', { category: 'network', dataCost: { bytes: 6_000_000, confirmOn: ['touch'] } }),
         spec('reset'),
         spec('exit', { aliases: ['logout'] }),
         spec('help'),
@@ -105,6 +106,7 @@ describe('CommandRegistry', () => {
       expect(risky.suggest('emial').near).toEqual([]);
       expect(risky.suggest('who').near).toEqual([]);
       expect(risky.suggest('powerof').near).toEqual([]);
+      expect(risky.suggest('speedtets').near).toEqual([]);
       expect(risky.suggest('rest').near).toEqual([]);
       expect(risky.suggest('exti').near).toEqual([]);
       expect(risky.suggest('e').near).toEqual([]);

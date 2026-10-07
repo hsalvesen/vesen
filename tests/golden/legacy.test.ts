@@ -156,12 +156,16 @@ async function boot(viewport: Viewport): Promise<LegacyTerminal> {
   const { decideTier, readSignals } = await import('../../src/platform/perf');
   crtTier.set(decideTier(readSignals(window)));
   const { createWeatherService } = await import('../../src/services/weather/service');
+  const { createClock } = await import('../../src/services/clock');
   const app = legacyAppShell({
     banner: () => bannerBlocks({ version: APP_VERSION, columns: Math.floor((window.innerWidth - 40) / 8), touch: false }),
     bell: createBell({ play: playBeep }),
     yieldToHost: () => Promise.resolve(),
     // weather is ported: its service, over the recorded fixtures, with nothing stored.
     weather: () => Promise.resolve(createWeatherService()),
+    // fastfetch reads the device installed for the case, in the time zone the clock is frozen in.
+    sysHost: window,
+    clock: createClock({ timeZone: 'Australia/Sydney' }),
   });
   const { shell } = app;
   // What app/bootstrap.ts does before the app mounts: the banner at the first prompt, and

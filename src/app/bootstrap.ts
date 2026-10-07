@@ -31,7 +31,6 @@ import { persistPrefs } from '../stores/prefs';
 import { DEFAULT_THEME_NAME, persistTheme, theme, themes } from '../stores/theme';
 import { visibleArea } from '../stores/viewport';
 import { loadLegacyShim } from '../ui/legacy-block';
-import { markCurrentThemeName } from '../ui/legacy-highlights';
 import { loadRichBlock } from '../ui/rich-block';
 import { playBeep } from '../utils/beep';
 import { GUEST } from '../vfs/identity';
@@ -47,9 +46,9 @@ export interface BootOptions {
   /** The welcome banner that opens the transcript. */
   readonly banner: () => CommandOutput;
   /**
-   * Migration only: loads the legacy commands and the shim over the VFS
-   * (src/utils/legacyShell.ts). main.ts hands it in, so this strictly typed module never imports
-   * src/utils. Without it the shell has only the spec files.
+   * Migration only: loads legacy commands and the shim over the VFS. Every command is a spec now,
+   * so main.ts hands in none and the shell has only the spec files; the option goes with the
+   * adapter in the clean-up after the last port.
    */
   readonly legacy?: () => Promise<LegacyParts>;
 }
@@ -134,7 +133,6 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
     theme.subscribe((value) => {
       applyTheme(doc, value);
       applyRoles(root, value);
-      markCurrentThemeName(doc, value.name);
     }),
     startPerf(win, (next) => {
       signals = next;

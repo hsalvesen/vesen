@@ -47,10 +47,10 @@ describe('sanitizeLegacyHtml: the XSS corpus', () => {
 describe('sanitizeLegacyHtml: what legacy output keeps', () => {
   it('keeps allowed tags, classes and safe styles exactly', () => {
     const html =
-      '<span class="current-theme-name">swamphen</span>' +
+      '<span class="out-muted">swamphen</span>' +
       '<div style="border-left: 4px solid var(--theme-cyan)"><br><pre>x</pre></div>';
     expect(render(html).innerHTML).toBe(
-      '<span class="current-theme-name">swamphen</span>' +
+      '<span class="out-muted">swamphen</span>' +
         '<div style="border-left: 4px solid var(--theme-cyan)"><br><pre>x</pre></div>',
     );
   });

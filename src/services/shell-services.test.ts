@@ -4,7 +4,7 @@ import { createAppearance } from './appearance';
 import { createBell } from './bell';
 import { createClock } from './clock';
 import { createNet, NetError } from './net';
-import { createSysInfoStub } from './sysinfo';
+import { createSysInfo } from './sysinfo';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -157,17 +157,17 @@ describe('appearance', () => {
   });
 });
 
-describe('sysinfo stub', () => {
-  it('reports the cheap facts and nothing it would have to probe', async () => {
-    const sys = createSysInfoStub({
+describe('sysinfo', () => {
+  it('reports the cheap facts, and nothing it has no way to probe', async () => {
+    const sys = createSysInfo({
       navigator: { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X)', languages: ['en-AU'], hardwareConcurrency: 6, deviceMemory: 4 },
       screen: { width: 390, height: 844, colorDepth: 24 },
       devicePixelRatio: 3,
     });
     expect(sys.snapshot()).toMatchObject({ device: { class: 'phone' }, cores: 6, memoryGB: 4, languages: ['en-AU'], screen: { pixelRatio: 3 } });
-    expect(createSysInfoStub(null).snapshot().device.class).toBe('desktop');
+    expect(createSysInfo(null).snapshot().device.class).toBe('desktop');
     expect(sys.gpu()).toBeNull();
-    expect(await sys.publicIp()).toBeNull();
+    expect(await createSysInfo(null).publicIp()).toBeNull();
   });
 });
 

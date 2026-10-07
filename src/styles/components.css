@@ -7,11 +7,6 @@
    through the allowlist in src/output/legacy-policy.ts.
    ========================================================================== */
 
-/* helpTexts.ts names a slot no theme has; it means the purple one. */
-:root {
-  --theme-magenta: var(--theme-purple);
-}
-
 /* --- Text roles ------------------------------------------------------------ */
 
 .out-strong {
@@ -29,7 +24,7 @@
 
 /* --- Errors -----------------------------------------------------------------
    One style: `cmd: message` in the error role, then optionally a dim hint on
-   the next line (utils/notice.ts errorLine). */
+   the next line. */
 
 .out-error {
   color: var(--role-error);
@@ -83,71 +78,6 @@
 /* A second section in a panel (help's Tip: after its Examples:) stands a little apart. */
 .out-panel > * + .out-panel-title {
   margin-top: 0.5em;
-}
-
-/* --- Layouts that follow the output's width ----------------------------------
-   For the legacy commands until they are ported (fastfetch, and stock until its rewrite): each output is a size container (ui/OutputView.svelte), so these lay themselves out
-   by its width, never the window's, and a rotated phone or a resized window reflows them with
-   nothing run again (F016). Nothing here measures anything. */
-
-/* Two parts side by side where the output has room, one above the other where it has not: a
-   logo and its details, a quote's figures and its chart. The main part needs 40 cells beside the
-   other, or it wraps under it. */
-.out-split {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 0.75em 3ch;
-}
-
-.out-split-side {
-  flex: none;
-  max-width: 100%;
-  min-width: 0;
-}
-
-.out-split-main {
-  flex: 1 1 40ch;
-  min-width: 0;
-}
-
-/* Key: value rows. A column of keys and one of values while the rows have room; below 40 cells
-   each value follows its key and wraps under it, as a table stacks into key: value rows. An
-   engine without container queries keeps the columns. */
-.out-kv {
-  container: kv / inline-size;
-}
-
-.out-kv-row {
-  display: flex;
-  column-gap: 1ch;
-}
-
-.out-kv-key {
-  flex: none;
-  width: 15ch;
-}
-
-.out-kv-value {
-  flex: 1 1 0;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-@container kv (max-width: 40ch) {
-  .out-kv-row {
-    display: block;
-  }
-
-  .out-kv-key {
-    display: inline;
-    width: auto;
-    margin-right: 1ch;
-  }
-
-  .out-kv-value {
-    display: inline;
-  }
 }
 
 /* --- theme ls ---------------------------------------------------------------

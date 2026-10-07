@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { runLine, session } from '../../../tests/harness';
-import { prefixes } from './mkdir';
+import { prefixes } from './mkdir.run';
 
 describe('mkdir', () => {
   it('makes every operand, silently (F019)', async () => {

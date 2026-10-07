@@ -6,7 +6,7 @@ Lines run through the shell kernel (`src/shell`), as the prompt (`src/ui/prompt`
 
 ## Ported commands
 
-A command ported to a spec in `src/commands` keeps its cases here, recording what the port prints: `cat`, `echo`, `history`, `ls`, `mkdir`, `rm` and `touch` (step 2.3a), and `banner`, `help`, `theme` and `cathode` (step 2.3b). Their own, fuller transcripts, at 40, 80 and 120 columns on the terminal and into a pipe, are in `tests/transcripts`. The Phase 4 ports keep their cases too, each card recorded as the plain text a pipe receives, with its screen-reader summary: `weather`, over the recordings in `tests/fixtures/weather` (the wttr.in output it replaced is at commit `147bd66`), `qr`, whose own tests are in `src/commands/portfolio/qr.test.ts`, and `stock`. The legacy output these cases first recorded remains in git history at commit `afed6a8`, for comparison:
+A command ported to a spec in `src/commands` keeps its cases here, recording what the port prints: `cat`, `echo`, `history`, `ls`, `mkdir`, `rm` and `touch` (step 2.3a), and `banner`, `help`, `theme` and `cathode` (step 2.3b). Their own, fuller transcripts, at 40, 80 and 120 columns on the terminal and into a pipe, are in `tests/transcripts`. The Phase 4 ports keep their cases too: `curl` and `fastfetch`, and the cards, each recorded as the plain text a pipe receives, with its screen-reader summary: `weather`, over the recordings in `tests/fixtures/weather` (the wttr.in output it replaced is at commit `147bd66`), `qr`, whose own tests are in `src/commands/portfolio/qr.test.ts`, and `stock`. The legacy output these cases first recorded remains in git history at commit `afed6a8`, for comparison:
 
 ```sh
 git show afed6a8:tests/golden/__snapshots__/legacy/ls/680.html
