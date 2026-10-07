@@ -1,15 +1,16 @@
-// Every spec file's offline examples run with status 0 on a fresh VFS, on the terminal and into a
-// pipe, so the examples help, man and the starter chips show always work
-// (docs/plan/08-shell-and-commands.md, acceptance).
+// Every spec file's offline examples, the kernel's and the catalogue's, run with status 0 on a
+// fresh VFS, on the terminal and into a pipe, so the examples help, man and the starter chips show
+// always work (docs/plan/08-shell-and-commands.md, acceptance).
 import { describe, expect, it } from 'vitest';
 import { runLine } from '../../tests/harness';
-import { specFiles } from './index';
+import { allSpecFiles } from './index';
 
-const examples = specFiles().flatMap((spec) => (spec.examples ?? []).filter((example) => example.offline).map((example) => [spec.name, example.line] as const));
+const specs = await allSpecFiles();
+const examples = specs.flatMap((spec) => (spec.examples ?? []).filter((example) => example.offline).map((example) => [spec.name, example.line] as const));
 
 describe('offline examples', () => {
   it('exist for every spec file', () => {
-    const without = specFiles()
+    const without = specs
       .filter((spec) => !(spec.examples ?? []).some((example) => example.offline))
       .map((spec) => spec.name);
     expect(without).toEqual([]);

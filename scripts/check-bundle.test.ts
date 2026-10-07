@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { STOCK_ROOTS, closure, initialChunks, staticImports } from './check-bundle.mjs';
+import { CATALOGUE_BUDGET_KB, CATALOGUE_ROOT, KERNEL_BUDGET_KB, STOCK_ROOTS, closure, initialChunks, staticImports } from './check-bundle.mjs';
 
 describe('check-bundle', () => {
   it('reads the entry and the preloads from index.html', () => {
@@ -31,5 +31,12 @@ describe('check-bundle', () => {
       ['client-PFSwVPgT.js'],
       ['QuoteCard-CkwtB5v4.js'],
     ]);
+  });
+
+  it("finds the catalogue's chunk by name, and budgets it apart from the kernel's", () => {
+    const names = ['catalogue-Sa23uIo-.js', 'rev.run-Cx1Uoq_v.js', 'shell-DMK.js', 'catalogue.js'];
+    expect(names.filter((name) => CATALOGUE_ROOT.test(name))).toEqual(['catalogue-Sa23uIo-.js']);
+    expect(CATALOGUE_BUDGET_KB).toBe(40);
+    expect(KERNEL_BUDGET_KB).toBe(75);
   });
 });

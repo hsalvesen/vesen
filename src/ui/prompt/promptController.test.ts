@@ -10,7 +10,8 @@ import { createScreen, type ScreenStore } from '../../stores/screen';
 import { harness } from '../../testing/shell-harness';
 import PromptLine from './PromptLine.svelte';
 import { REVEAL_EVENT, SUBMIT_EVENT } from '../actions/stickToBottom';
-import { ESCAPE_TAB_MS, PromptController, READ_HINT_ID, SECRET_MASK } from './promptController.svelte';
+import { ESCAPE_TAB_MS, PromptController, READ_HINT_ID, SECRET_MASK, TAB_CATALOGUE_WAIT_MS } from './promptController.svelte';
+import { defineCommand, type CatalogueLoader, type CommandSpec } from '../../shell/types';
 
 const SECRET = 'hunter2-correct-horse';
 
@@ -28,9 +29,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function setup(options: { touch?: boolean; dock?: boolean; platform?: 'mac' | 'other'; now?: () => number } = {}) {
+function setup(options: { touch?: boolean; dock?: boolean; platform?: 'mac' | 'other'; now?: () => number; catalogue?: CatalogueLoader } = {}) {
   const storage = createStorage(window).local;
-  const h = harness({ specs: [sudo, rm, theme, sleep], storage });
+  const h = harness({ specs: [sudo, rm, theme, sleep], storage, ...(options.catalogue ? { catalogue: options.catalogue } : {}) });
   const screen: ScreenStore = createScreen();
   const controller = new PromptController({
     shell: h.shell,
@@ -283,6 +284,58 @@ describe('Tab and the chips', () => {
     expect(input.value).toBe('ca');
     input.dispatchEvent(new CompositionEvent('compositionend'));
     expect(input.value).toBe('cat ');
+  });
+});
+
+describe('Tab while the catalogue is on its way', () => {
+  const hush = defineCommand({ name: 'hush', category: 'text', summary: 'say nothing', run: () => 0 });
+
+  /** A catalogue that arrives when the test says. */
+  function later(): { load: CatalogueLoader; arrive: (specs: readonly CommandSpec[]) => void } {
+    let arrive: (specs: readonly CommandSpec[]) => void = () => {};
+    const load: CatalogueLoader = () =>
+      new Promise((resolve) => {
+        arrive = resolve;
+      });
+    return { load, arrive: (specs) => arrive(specs) };
+  }
+
+  it('completes from it when it lands within the wait', async () => {
+    const catalogue = later();
+    const { input, controller } = setup({ catalogue: catalogue.load });
+    await engineReady(controller);
+    await type(input, 'hu');
+    press(input, 'Tab');
+    // Nothing yet: the Tab is waiting, and a second press does not start another wait.
+    expect(input.value).toBe('hu');
+    press(input, 'Tab');
+    catalogue.arrive([hush]);
+    await vi.waitFor(() => expect(input.value).toBe('hush '));
+  });
+
+  it('lists what there is after the wait, and fills the list in when the rest lands', async () => {
+    const catalogue = later();
+    const { input, controller } = setup({ catalogue: catalogue.load });
+    await engineReady(controller);
+    await type(input, 'h');
+    const pressed = performance.now();
+    press(input, 'Tab');
+    await vi.waitFor(() => expect(controller.listed).toBe(true), { timeout: 2000 });
+    expect(performance.now() - pressed).toBeGreaterThanOrEqual(TAB_CATALOGUE_WAIT_MS - 50);
+    const values = (): string[] => (controller.tab.phase === 'listed' ? controller.tab.result.candidates.map((c) => c.value) : []);
+    expect(values()).toEqual(['hang', 'head']);
+    catalogue.arrive([hush]);
+    await vi.waitFor(() => expect(values()).toEqual(['hang', 'head', 'hush']));
+    expect(input.value).toBe('h');
+  });
+
+  it('does not wait for a path', async () => {
+    const catalogue = later();
+    const { input, controller } = setup({ catalogue: catalogue.load });
+    await engineReady(controller);
+    await type(input, 'cat a.');
+    press(input, 'Tab');
+    expect(input.value).toBe('cat a.txt ');
   });
 });
 

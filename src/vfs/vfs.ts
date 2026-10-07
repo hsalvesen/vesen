@@ -205,6 +205,39 @@ export class Vfs implements BoundVfs {
     this.replace(this.options.seed());
   }
 
+  /**
+   * Adds to each folder at `paths` what the seed has there now and the folder lacks: the /usr/bin
+   * stubs and man pages of commands registered after the session began (the catalogue). Nothing
+   * already there is changed or removed, and nothing is checked against the visitor's
+   * permissions: the system adds these, as a package would.
+   */
+  reseed(paths: readonly string[]): void {
+    const seed = this.options.seed();
+    const added: string[] = [];
+    const at = (tree: VirtualFile, path: string): VirtualFile | undefined => {
+      let node: VirtualFile | undefined = tree;
+      for (const name of segments(path)) node = node?.type === 'directory' ? own(node.children, name) : undefined;
+      return node;
+    };
+    for (const path of paths) {
+      const from = at(seed, path);
+      const to = at(this.root, path);
+      if (from?.type !== 'directory' || to?.type !== 'directory' || to.children === undefined) continue;
+      for (const name of Object.keys(from.children ?? {})) {
+        const child = own(from.children, name);
+        if (child === undefined || own(to.children, name) !== undefined) continue;
+        validateName(name);
+        child.name = name;
+        to.children[name] = adopt(child, this.now(), to.owner ?? 'root', to.group ?? 'root');
+        added.push(join(path, name));
+      }
+    }
+    if (added.length === 0) return;
+    this.seedPaths = null;
+    this.used = null;
+    this.emit(added);
+  }
+
   /** Every path in the seed, built the first time seeded() is asked. */
   private seedPaths: Set<string> | null = null;
 

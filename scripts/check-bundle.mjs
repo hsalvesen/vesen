@@ -2,8 +2,9 @@
 // Bundle budget: gzips every JS chunk in dist/assets, prints the sizes, and fails when
 // the JavaScript a visitor must download before first paint exceeds the budget.
 // That is the entry chunk referenced by dist/index.html plus any chunk the page
-// modulepreloads alongside it. The kernel, and what stock's first quote fetches, have budgets
-// of their own; other lazy chunks are reported but not budgeted.
+// modulepreloads alongside it. The kernel, the catalogue (the commands that load after it) and
+// what stock's first quote fetches have budgets of their own; other lazy chunks are reported but
+// not budgeted.
 // Zero dependencies; run `npm run build` first, then `npm run check:bundle`.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
@@ -55,6 +56,18 @@ export function staticImports(code) {
   }
   return [...found];
 }
+
+/**
+ * The catalogue's budget in kB gzip: the specs under src/commands/more, which load together after
+ * the kernel (on idle, or when a name the kernel lacks is typed) in `catalogue-*.js`, with the
+ * chunks it imports that the page and the kernel have not loaded. Their bodies (`*.run.ts`) are
+ * chunks of their own, fetched on a command's first run, and are not counted. Each wave of
+ * commands grows it, never the kernel.
+ */
+export const CATALOGUE_BUDGET_KB = 40;
+
+/** The catalogue's chunk, by name: src/commands/more/catalogue.ts. */
+export const CATALOGUE_ROOT = /^catalogue-[\w-]+\.js$/;
 
 /**
  * What `stock SYMBOL` fetches the first time, in kB gzip, beyond the page and the kernel: its
@@ -149,6 +162,28 @@ function main() {
     process.exit(1);
   }
   console.log(`check-bundle: ok: ${kernelVerdict}`);
+
+  // The catalogue: the commands that come after the kernel, in one chunk the kernel only import()s.
+  const catalogueRoots = chunks.filter((chunk) => CATALOGUE_ROOT.test(chunk.name));
+  if (catalogueRoots.length !== 1) {
+    console.error(
+      `check-bundle: expected one chunk matching ${CATALOGUE_ROOT}, found ${catalogueRoots.length}; a static import of src/commands/more would merge the catalogue into the kernel.`,
+    );
+    process.exit(1);
+  }
+  const catalogueRoot = catalogueRoots[0]?.name ?? '';
+  if (parts.has(catalogueRoot) || initial.has(catalogueRoot)) {
+    console.error(`check-bundle: the catalogue (${catalogueRoot}) is loaded with the page or the kernel, not after them.`);
+    process.exit(1);
+  }
+  const catalogue = closure([catalogueRoot], new Set([...initial, ...parts]), read);
+  const catalogueGzip = chunks.filter((chunk) => catalogue.has(chunk.name)).reduce((sum, chunk) => sum + chunk.gzip, 0);
+  const catalogueVerdict = `catalogue ${kb(catalogueGzip).trim()} kB gzip in ${[...catalogue].join(' + ')} (budget ${CATALOGUE_BUDGET_KB} kB)`;
+  if (catalogueGzip > CATALOGUE_BUDGET_KB * 1000) {
+    console.error(`check-bundle: over budget: ${catalogueVerdict}`);
+    process.exit(1);
+  }
+  console.log(`check-bundle: ok: ${catalogueVerdict}`);
 
   // stock's first quote: what it fetches beyond the page and the kernel.
   const roots = STOCK_ROOTS.map((pattern) => chunks.filter((chunk) => pattern.test(chunk.name)));

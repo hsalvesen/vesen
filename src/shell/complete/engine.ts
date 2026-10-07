@@ -95,6 +95,7 @@ function resolve(state: EditState, env: CompletionEnv): Resolved {
     common: longestCommonPrefix(ordered.map((c) => c.value)),
     caseFolded,
     ...(near.length > 0 ? { near } : {}),
+    ...(context.slot === 'command' || context.source?.kind === 'command' ? { namesCommand: true } : {}),
   };
   return { result, kind };
 }

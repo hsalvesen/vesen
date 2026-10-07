@@ -5,7 +5,7 @@ import { runLine, session } from '../../../tests/harness';
 import { isTrustedAction, type Block } from '../../output/model';
 import { plain } from '../../output/plain';
 import { withDoc } from '../../shell/help';
-import { specFiles } from '../index';
+import { allSpecFiles } from '../index';
 
 const text = (blocks: readonly Block[]): string => blocks.map(plain).join('');
 const literal = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -65,9 +65,9 @@ describe('help', () => {
     expect((await runLine('help keys')).stdoutPlain).toMatch(/^Ctrl\+L +clear the screen, keeping the line$/m);
   });
 
-  it('answers --help and man for every spec file', async () => {
+  it("answers --help and man for every spec file, the catalogue's too", async () => {
     const s = await session();
-    for (const spec of specFiles()) {
+    for (const spec of await allSpecFiles()) {
       const help = await s.run(`help ${spec.name}`);
       expect(help.status, spec.name).toBe(0);
       expect(help.stdoutPlain, spec.name).toContain(`${spec.name} - ${spec.summary}`);

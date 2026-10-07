@@ -41,6 +41,12 @@ export interface RunOptions {
   readonly sys?: SysInfo;
   /** The clock, in ms: frozen by default, a minute later each line. Fake timers can drive one. */
   readonly now?: () => number;
+  /**
+   * 'loaded' (the default): the catalogue (src/commands/more) is in before the first line, so
+   * every line sees every command, as it does once the page has been idle; 'lazy': it comes when
+   * something asks for it, as on a line typed the moment the kernel arrives.
+   */
+  readonly catalogue?: 'loaded' | 'lazy';
 }
 
 export interface LineResult {
@@ -134,6 +140,7 @@ export async function session(options: RunOptions = {}): Promise<Session> {
     ...(options.sys === undefined ? {} : { sys: options.sys }),
     yieldToHost: () => Promise.resolve(),
   });
+  if (options.catalogue !== 'lazy') await app.shell.registry.whenComplete();
   await app.boot();
 
   return {

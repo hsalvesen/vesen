@@ -9,6 +9,8 @@
 //   4. The legacy layer stays deleted (docs/plan/designs/shell-architecture.md, step 7): src/utils,
 //      src/components and the legacy modules do not exist, and no source file, test or script
 //      imports them.
+//   5. The catalogue (src/commands/more) stays out of the kernel's chunk: no source file outside
+//      it imports from it, except the one import() in src/commands/index.ts that loads it.
 // Zero dependencies; run with `npm run check:boundaries`.
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, posix, relative, sep } from 'node:path';
@@ -83,6 +85,37 @@ export const IMPORT_CHECKED_DIRS = ['src', 'tests', 'e2e', 'scripts', 'worker'];
 export const FORBIDDEN_APIS = [
   { pattern: /\bAbortSignal\s*\??\.\s*(?:any|timeout)\b/g, reason: "Instagram's WKWebView before iOS 17.4 lacks it; use combineSignals from services/net" },
 ];
+
+/**
+ * The catalogue: commands that load after the kernel, in a chunk of their own. Only this import()
+ * in this file may reach it from outside; a static import would pull it into the kernel.
+ */
+export const CATALOGUE_DIR = 'src/commands/more';
+export const CATALOGUE_LOADER = { file: 'src/commands/index.ts', target: 'src/commands/more/catalogue' };
+
+/**
+ * Finds imports into the catalogue from a source file outside it, other than the loader's import().
+ * @param {string} source
+ * @param {string} file the file's repo path
+ * @returns {{ line: number, message: string }[]}
+ */
+export function findCatalogueImports(source, file) {
+  if (file.startsWith(`${CATALOGUE_DIR}/`)) return [];
+  const withStrings = maskSource(source, { keepStrings: true });
+  const imports = /(\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)(['"])([^'"\n]+)\2/g;
+  return [...withStrings.matchAll(imports)].flatMap((match) => {
+    const target = resolveImport(file, match[3] ?? '');
+    if (target === null || (target !== CATALOGUE_DIR && !target.startsWith(`${CATALOGUE_DIR}/`))) return [];
+    const loader = (match[1] ?? '').includes('(') && file === CATALOGUE_LOADER.file && target === CATALOGUE_LOADER.target;
+    if (loader) return [];
+    return [
+      {
+        line: lineAt(withStrings, match.index),
+        message: `imports '${match[3]}' (${target}); the catalogue loads only through loadCatalogue() in ${CATALOGUE_LOADER.file}, so it stays out of the kernel`,
+      },
+    ];
+  });
+}
 
 /**
  * Finds `{@html` in any source file, test files included, so raw HTML never reaches the DOM.
@@ -446,6 +479,7 @@ function main() {
     const source = readFileSync(file, 'utf8');
     if (!TEST_FILE.test(file)) {
       for (const problem of findForbiddenApis(source)) failures.push(`${repoPath}:${problem.line} ${problem.message}`);
+      for (const problem of findCatalogueImports(source, repoPath)) failures.push(`${repoPath}:${problem.line} ${problem.message}`);
     }
     for (const problem of findRawHtml(source)) failures.push(`${repoPath}:${problem.line} ${problem.message}`);
   }
@@ -468,7 +502,7 @@ function main() {
     console.error(`\nDOM-free folders: ${DOM_FREE_DIRS.join(', ')}`);
     process.exit(1);
   }
-  console.log(`check-boundaries: ok (${scanned} DOM-free file(s) scanned, no {@html} anywhere, no legacy layer)`);
+  console.log(`check-boundaries: ok (${scanned} DOM-free file(s) scanned, no {@html} anywhere, no legacy layer, the catalogue out of the kernel)`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

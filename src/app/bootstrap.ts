@@ -173,9 +173,10 @@ export function bootstrap({ window: win, build, banner }: BootOptions): Booted |
       void app.shell.registry.get('ls')?.load?.().catch(() => {});
       // ~/.bashrc first, so a line typed while the chunk loaded already has ll and la.
       await app.boot();
-      // Then, once the page is idle, the commands that load lazily, so none waits on first use.
-      // Not on Data Saver or mobile data, where each command's code comes with its first run
-      // instead (app.prefetch).
+      // Then, once the page is idle, the catalogue (the commands that load after the kernel, so
+      // help, Tab and /usr/bin list them), and the bodies of the core commands that load lazily,
+      // so none waits on first use. Not those bodies on Data Saver or mobile data, where each
+      // command's code comes with its first run instead (app.prefetch).
       idle(win, () => {
         void app.prefetch().then((fetched) => {
           // The weather card too, so the first card draws at once rather than after its plain text.

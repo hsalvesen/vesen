@@ -4,7 +4,7 @@
 // (F034).
 
 import { lex } from './lexer';
-import type { Category, CommandSpec, Registry } from './types';
+import type { CatalogueLoader, Category, CommandSpec, Registry } from './types';
 
 /** The order help lists the categories in: the portfolio first. */
 export const CATEGORY_ORDER: readonly Category[] = ['portfolio', 'files', 'text', 'shell', 'system', 'network', 'fun', 'editor'];
@@ -77,14 +77,72 @@ export function editDistance(a: string, b: string): number {
 
 const VALID_NAME = /^[^\s/'"`$\\|&;<>()]+$/;
 
+/** How long a lookup waits for the catalogue (on top of ^C) before it goes on without it. */
+export const CATALOGUE_WAIT_MS = 8000;
+
+/**
+ * Waits until every command is registered, at most `ms` and never past `signal`. True when they
+ * all are; false when the catalogue failed to load, took too long or the wait was interrupted.
+ */
+export async function settleCommands(
+  registry: Pick<Registry, 'complete' | 'whenComplete'>,
+  signal?: AbortSignal,
+  ms: number = CATALOGUE_WAIT_MS,
+): Promise<boolean> {
+  if (registry.complete) return true;
+  if (signal?.aborted === true) return false;
+  let stop = (): void => {};
+  const gaveUp = new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    const aborted = (): void => resolve();
+    signal?.addEventListener('abort', aborted, { once: true });
+    stop = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', aborted);
+      resolve();
+    };
+  });
+  try {
+    await Promise.race([registry.whenComplete(), gaveUp]);
+  } finally {
+    stop();
+  }
+  return registry.complete;
+}
+
+/** What a lookup says, once, when the catalogue could not be loaded. */
+export function catalogueFailure(reason: string): string {
+  return `Some of vesen's commands could not be loaded (${reason}). The next command will try again.`;
+}
+
+export interface RegistryOptions {
+  /**
+   * The commands that load after the kernel (src/commands/more): registered when whenComplete()
+   * is first called, on idle or on demand.
+   */
+  readonly catalogue?: CatalogueLoader | null;
+}
+
+/** The catalogue's state: not asked for, on its way, in, or failed (with why, and whether that was said). */
+type CatalogueState =
+  | { readonly kind: 'idle'; readonly load: CatalogueLoader }
+  | { readonly kind: 'loading'; readonly load: CatalogueLoader; readonly done: Promise<void> }
+  | { readonly kind: 'failed'; readonly load: CatalogueLoader; readonly reason: string; reported: boolean }
+  | { readonly kind: 'complete' };
+
 export class CommandRegistry implements Registry {
   /** Every name and alias, to the spec that owns it. */
   private readonly lookup = new Map<string, CommandSpec>();
   /** Each spec once, by its name. */
   private readonly specs = new Map<string, CommandSpec>();
+  private catalogue: CatalogueState;
+  /** The names of stand-ins, which a catalogue command of the same name or alias replaces. */
+  private readonly standIns = new Set<string>();
+  private readonly listeners = new Set<() => void>();
 
-  constructor(specs: readonly CommandSpec[] = []) {
+  constructor(specs: readonly CommandSpec[] = [], options: RegistryOptions = {}) {
     for (const spec of specs) this.register(spec);
+    this.catalogue = options.catalogue ? { kind: 'idle', load: options.catalogue } : { kind: 'complete' };
   }
 
   register(spec: CommandSpec): void {
@@ -100,6 +158,88 @@ export class CommandRegistry implements Registry {
     if (new Set(names).size !== names.length) throw new Error(`registry: '${spec.name}' lists the same name twice`);
     for (const name of names) this.lookup.set(name, spec);
     this.specs.set(spec.name, spec);
+  }
+
+  /**
+   * Registers a stand-in, as tests do for commands not written yet: a catalogue command of the
+   * same name or alias replaces it when the catalogue arrives, as a spec file replaces it in
+   * buildRegistry (src/commands/index.ts).
+   */
+  registerStandIn(spec: CommandSpec): void {
+    this.register(spec);
+    this.standIns.add(spec.name);
+  }
+
+  // ── The catalogue ──
+
+  get complete(): boolean {
+    return this.catalogue.kind === 'complete';
+  }
+
+  whenComplete(): Promise<void> {
+    const state = this.catalogue;
+    if (state.kind === 'complete') return Promise.resolve();
+    if (state.kind === 'loading') return state.done;
+    const done = this.loadCatalogue(state.load);
+    // Unless the loader settled at once, the attempt is now in flight.
+    if (this.catalogue === state) this.catalogue = { kind: 'loading', load: state.load, done };
+    return done;
+  }
+
+  takeFailure(): string | undefined {
+    const state = this.catalogue;
+    if (state.kind !== 'failed' || state.reported) return undefined;
+    state.reported = true;
+    return state.reason;
+  }
+
+  onChange(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private async loadCatalogue(load: CatalogueLoader): Promise<void> {
+    let specs: readonly CommandSpec[];
+    try {
+      specs = await load();
+      this.addCatalogue(specs);
+    } catch (error) {
+      const reason = error instanceof Error && error.message !== '' ? error.message : String(error);
+      this.catalogue = { kind: 'failed', load, reason, reported: false };
+      return;
+    }
+    this.catalogue = { kind: 'complete' };
+    for (const listener of [...this.listeners]) {
+      try {
+        listener();
+      } catch {
+        // One listener failing must not stop the others hearing the commands arrive.
+      }
+    }
+  }
+
+  /**
+   * Registers the catalogue's commands all together, or none of them: a stand-in of the same
+   * name gives way, and any other clash throws, leaving the registry as it was.
+   */
+  private addCatalogue(specs: readonly CommandSpec[]): void {
+    const replaced = new Set<CommandSpec>();
+    for (const spec of specs) {
+      for (const name of [spec.name, ...(spec.aliases ?? [])]) {
+        const taken = this.lookup.get(name);
+        if (taken !== undefined && this.standIns.has(taken.name)) replaced.add(taken);
+      }
+    }
+    const scratch = new CommandRegistry([...this.specs.values()].filter((spec) => !replaced.has(spec)));
+    for (const spec of specs) scratch.register(spec);
+    for (const spec of replaced) {
+      this.specs.delete(spec.name);
+      this.standIns.delete(spec.name);
+      for (const name of [spec.name, ...(spec.aliases ?? [])]) if (this.lookup.get(name) === spec) this.lookup.delete(name);
+    }
+    for (const spec of specs) this.register(spec);
   }
 
   get(nameOrAlias: string): CommandSpec | undefined {

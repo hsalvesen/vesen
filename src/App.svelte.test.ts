@@ -201,12 +201,26 @@ describe('Tab completion and the completion row', () => {
     promptBox().setSelectionRange(value.length, value.length);
   };
 
-  /** Renders the app and waits for the engine's chunk. */
-  async function ready() {
+  /**
+   * Renders the app and waits for the engine's chunk, and for the catalogue, as once the page has
+   * been idle; with `catalogue: false`, as on a Tab the moment the kernel is up.
+   */
+  async function ready(options: { catalogue?: boolean } = {}) {
     const view = renderApp();
     await vi.waitFor(() => expect(view.container.querySelector('[data-completion="ready"]')).not.toBeNull());
+    if (options.catalogue !== false) await shell.registry.whenComplete();
     return view;
   }
+
+  it('waits on a first Tab for the commands still loading, then completes from them', async () => {
+    await ready({ catalogue: false });
+    expect(shell.registry.complete).toBe(false);
+    await type('rev');
+    await press('Tab');
+    // rev is in the catalogue, which the Tab asked for.
+    await vi.waitFor(() => expect(promptBox().value).toBe('rev '));
+    expect(shell.registry.complete).toBe(true);
+  });
 
   it("completes 'cat doc', then 'li', to cat documents/linux.txt", async () => {
     await ready();

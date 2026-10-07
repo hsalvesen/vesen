@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   findBoundaryViolations,
+  findCatalogueImports,
   findForbiddenApis,
   findRawHtml,
   findRemovedImports,
@@ -163,6 +164,30 @@ describe('the deleted legacy layer', () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe('the catalogue', () => {
+  const lines = (source: string, file: string) => findCatalogueImports(source, file).map((p) => p.line);
+
+  it('may be loaded only by the import() in src/commands/index.ts', () => {
+    expect(lines("const load = () => import('./more/catalogue');", 'src/commands/index.ts')).toEqual([]);
+    expect(lines("import { catalogueSpecs } from './more/catalogue';", 'src/commands/index.ts')).toEqual([1]);
+    expect(lines("const load = () => import('../commands/more/catalogue');", 'src/app/shell.ts')).toEqual([1]);
+  });
+
+  it('flags any other import into it from outside, static, type-only or of one command', () => {
+    expect(lines("import rev from '../more/text/rev';", 'src/commands/shell/help.ts')).toEqual([1]);
+    expect(lines("\nimport type { X } from '../commands/more/text/rev.run';", 'src/app/shell.ts')).toEqual([2]);
+    expect(lines("export * from './more/text/rev';", 'src/commands/index.ts')).toEqual([1]);
+    expect(lines("import './more/text/rev';", 'src/commands/index.ts')).toEqual([1]);
+  });
+
+  it('lets the catalogue import itself and everything else, and ignores comments and look-alikes', () => {
+    expect(lines("import { reverseLine } from './rev.run';", 'src/commands/more/text/rev.ts')).toEqual([]);
+    expect(lines("import { defineCommand } from '../../../shell/types';", 'src/commands/more/text/rev.ts')).toEqual([]);
+    expect(lines("import { more } from './lib/more';", 'src/commands/index.ts')).toEqual([]);
+    expect(lines("// import rev from './more/text/rev';", 'src/commands/index.ts')).toEqual([]);
   });
 });
 

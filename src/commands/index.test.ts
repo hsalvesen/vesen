@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CommandSpec } from '../shell/types';
-import { buildRegistry, specFiles } from './index';
+import { allSpecFiles, buildRegistry, loadCatalogue, specFiles } from './index';
 
 const spec = (name: string, extra: Partial<CommandSpec> = {}): CommandSpec => ({ name, category: 'files', summary: name, run: () => 0, ...extra });
 
@@ -16,13 +16,37 @@ describe('the command catalogue', () => {
     ]);
   });
 
-  it('has spec files that pass the registry lint', () => {
-    expect(buildRegistry([], specFiles()).validate()).toEqual([]);
+  it('finds the catalogue under src/commands/more/<category>/, apart from the kernel', async () => {
+    // Each wave adds to it.
+    const catalogue = await loadCatalogue();
+    expect(catalogue.map((found) => found.name).sort()).toEqual(['rev']);
+    const core = new Set(specFiles().map((found) => found.name));
+    for (const found of catalogue) expect(core.has(found.name), found.name).toBe(false);
+    for (const found of catalogue) expect(['text', 'files', 'system', 'network', 'fun', 'editor'], found.name).toContain(found.category);
+  });
+
+  it('registers the catalogue beside the kernel with no clash, and passes the registry lint', async () => {
+    const registry = buildRegistry([], specFiles());
+    expect(registry.complete).toBe(false);
+    expect(registry.get('rev')).toBeUndefined();
+    await registry.whenComplete();
+    expect(registry.takeFailure()).toBeUndefined();
+    expect(registry.complete).toBe(true);
+    expect(registry.get('rev')?.category).toBe('text');
+    expect(registry.validate()).toEqual([]);
+  });
+
+  it('lets a catalogue command replace an extra of the same name, as a spec file does', async () => {
+    const registry = buildRegistry([spec('rev', { summary: 'stand-in' }), spec('cat')], [spec('ls')], loadCatalogue);
+    expect(registry.get('rev')?.summary).toBe('stand-in');
+    await registry.whenComplete();
+    expect(registry.get('rev')?.summary).toBe('reverse the characters of each line');
+    expect(registry.names()).toEqual(['cat', 'ls', 'rev']);
   });
 
   it('keeps the long help of a command with a lazy body in the spec or the body, never both', async () => {
     let kept = 0;
-    for (const found of specFiles()) {
+    for (const found of await allSpecFiles()) {
       if (found.load === undefined) continue;
       const { doc } = await found.load();
       if (doc === undefined) continue;
@@ -30,8 +54,8 @@ describe('the command catalogue', () => {
       expect(found.description === undefined || doc.description === undefined, found.name).toBe(true);
       expect(found.man === undefined || doc.man === undefined, found.name).toBe(true);
     }
-    // ls, printf, test and the other bodies in a <name>.run.ts of their own.
-    expect(kept).toBeGreaterThanOrEqual(12);
+    // ls, printf, test, rev and the other bodies in a <name>.run.ts of their own.
+    expect(kept).toBeGreaterThanOrEqual(13);
   });
 
   it('lets a spec file replace an extra command of the same name', () => {

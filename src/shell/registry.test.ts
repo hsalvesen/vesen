@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { CATEGORY_ORDER, CommandRegistry, editDistance } from './registry';
+import { describe, expect, it, vi } from 'vitest';
+import { CATEGORY_ORDER, CommandRegistry, catalogueFailure, editDistance, settleCommands } from './registry';
 import type { CommandSpec } from './types';
 
 const spec = (name: string, extra: Partial<CommandSpec> = {}): CommandSpec => ({
@@ -175,6 +175,119 @@ describe('CommandRegistry', () => {
         'flags: flag -a is defined twice',
         "examples: example 'echo \"open' does not lex",
       ]);
+    });
+  });
+
+  describe('the catalogue', () => {
+    /** A catalogue loader that settles when the test says. */
+    function deferred() {
+      const calls: { resolve: (specs: readonly CommandSpec[]) => void; reject: (error: Error) => void }[] = [];
+      const load = vi.fn(
+        () =>
+          new Promise<readonly CommandSpec[]>((resolve, reject) => {
+            calls.push({ resolve, reject });
+          }),
+      );
+      return { load, calls };
+    }
+
+    it('is complete at once without one', async () => {
+      const registry = new CommandRegistry([spec('ls')]);
+      expect(registry.complete).toBe(true);
+      await registry.whenComplete();
+      expect(registry.takeFailure()).toBeUndefined();
+    });
+
+    it('loads once, when first asked, and lets every listener know', async () => {
+      const { load, calls } = deferred();
+      const registry = new CommandRegistry([spec('ls')], { catalogue: load });
+      const heard = vi.fn();
+      registry.onChange(heard);
+      expect(registry.complete).toBe(false);
+      expect(load).not.toHaveBeenCalled();
+      const first = registry.whenComplete();
+      const second = registry.whenComplete();
+      expect(load).toHaveBeenCalledTimes(1);
+      expect(registry.get('rev')).toBeUndefined();
+      calls[0]?.resolve([spec('rev', { category: 'text', aliases: ['ver'] })]);
+      await Promise.all([first, second]);
+      expect(registry.complete).toBe(true);
+      expect(registry.get('ver')?.name).toBe('rev');
+      expect(registry.names()).toEqual(['ls', 'rev', 'ver']);
+      expect(heard).toHaveBeenCalledTimes(1);
+      await registry.whenComplete();
+      expect(load).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports a failed load once, and tries again when next asked', async () => {
+      const { load, calls } = deferred();
+      const registry = new CommandRegistry([spec('ls')], { catalogue: load });
+      const waiting = registry.whenComplete();
+      calls[0]?.reject(new Error('Failed to fetch'));
+      await waiting;
+      expect(registry.complete).toBe(false);
+      expect(registry.takeFailure()).toBe('Failed to fetch');
+      expect(registry.takeFailure()).toBeUndefined();
+      const again = registry.whenComplete();
+      expect(load).toHaveBeenCalledTimes(2);
+      // The new attempt has not failed: there is nothing to report.
+      expect(registry.takeFailure()).toBeUndefined();
+      calls[1]?.resolve([spec('rev')]);
+      await again;
+      expect(registry.complete).toBe(true);
+      expect(registry.get('rev')).toBeDefined();
+    });
+
+    it('settles a loader that throws at once as a failure, never a rejection', async () => {
+      const registry = new CommandRegistry([], {
+        catalogue: () => {
+          throw new Error('no chunk');
+        },
+      });
+      await expect(registry.whenComplete()).resolves.toBeUndefined();
+      expect(registry.takeFailure()).toBe('no chunk');
+    });
+
+    it('lets a catalogue command replace a stand-in, and adds nothing when another name clashes', async () => {
+      const registry = new CommandRegistry([spec('ls')], { catalogue: () => Promise.resolve([spec('head', { summary: 'the real head' })]) });
+      registry.registerStandIn(spec('head', { aliases: ['first'] }));
+      await registry.whenComplete();
+      expect(registry.get('head')?.summary).toBe('the real head');
+      expect(registry.get('first')).toBeUndefined();
+
+      const clashing = new CommandRegistry([spec('ls')], { catalogue: () => Promise.resolve([spec('rev'), spec('dir', { aliases: ['ls'] })]) });
+      await clashing.whenComplete();
+      expect(clashing.complete).toBe(false);
+      expect(clashing.takeFailure()).toBe("registry: 'ls' is already registered as a command");
+      // All or nothing: rev, which did not clash, is not in either.
+      expect(clashing.get('rev')).toBeUndefined();
+    });
+
+    it('waits for it at most so long, and never past an abort', async () => {
+      vi.useFakeTimers();
+      try {
+        const { load, calls } = deferred();
+        const registry = new CommandRegistry([], { catalogue: load });
+        const late = settleCommands(registry, undefined, 1000);
+        await vi.advanceTimersByTimeAsync(1000);
+        await expect(late).resolves.toBe(false);
+
+        const controller = new AbortController();
+        const aborted = settleCommands(registry, controller.signal, 1000);
+        controller.abort();
+        await expect(aborted).resolves.toBe(false);
+
+        const arriving = settleCommands(registry, undefined, 1000);
+        calls[0]?.resolve([spec('rev')]);
+        await expect(arriving).resolves.toBe(true);
+        expect(load).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('words the failure for the visitor', () => {
+      expect(catalogueFailure('Failed to fetch')).toBe("Some of vesen's commands could not be loaded (Failed to fetch). The next command will try again.");
     });
   });
 });

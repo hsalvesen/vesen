@@ -465,7 +465,28 @@ export interface Registry {
   suggest(name: string): { near: string[]; hint?: string };
   /** Problems with the registered specs: long summaries, a non-final variadic, examples that do not lex. */
   validate(): string[];
+  /**
+   * False while some commands are still to come: the catalogue (src/commands/more), whose chunk
+   * loads after the kernel, once the page is idle or as soon as something needs it.
+   */
+  readonly complete: boolean;
+  /**
+   * Loads the rest of the commands if they are not in yet, and settles once they are, or once
+   * the attempt has failed: `complete` then stays false, and the next call tries again. Never
+   * rejects. Anything that lists or looks up commands by name awaits it, bounded by its signal.
+   */
+  whenComplete(): Promise<void>;
+  /**
+   * Why the last attempt to load the rest failed, the first time it is asked after that attempt,
+   * so the failure is reported once; undefined otherwise.
+   */
+  takeFailure(): string | undefined;
+  /** Calls `listener` after commands are added (the catalogue arriving); returns the unsubscribe. */
+  onChange(listener: () => void): () => void;
 }
+
+/** Where the commands that load after the kernel come from: the catalogue's chunk. */
+export type CatalogueLoader = () => Promise<readonly CommandSpec[]>;
 
 /** The shell's options, which `set` reads and changes. */
 export interface ShellOptionFlags {

@@ -10,7 +10,7 @@ import { createSysInfo } from '../services/sysinfo';
 import type { Appearance, Clock, KV, Net, Opener, SysInfo } from '../services/types';
 import { createShell, type JobResult, type ScreenCommit, type Shell, type TerminalInfo } from '../shell/index';
 import { CommandRegistry } from '../shell/registry';
-import { defineCommand, type CommandContext, type CommandSpec } from '../shell/types';
+import { defineCommand, type CatalogueLoader, type CommandContext, type CommandSpec } from '../shell/types';
 import { strerror } from '../vfs/errors';
 import { VfsError, type VirtualFile } from '../vfs/types';
 import { Vfs } from '../vfs/vfs';
@@ -301,6 +301,8 @@ export interface HarnessOptions {
   readonly storage?: KV<'local'> | null;
   readonly opener?: Opener;
   readonly terminal?: TerminalInfo;
+  /** Commands that arrive after the kernel, as the catalogue does; none by default. */
+  readonly catalogue?: CatalogueLoader;
 }
 
 export interface RunResult extends JobResult {
@@ -329,7 +331,9 @@ export function harness(options: HarnessOptions = {}) {
   let bells = 0;
   const appearance = stubAppearance();
   const shell: Shell = createShell({
-    registry: new CommandRegistry([...stubCommands().filter((stub) => !options.specs?.some((spec) => spec.name === stub.name)), ...(options.specs ?? [])]),
+    registry: new CommandRegistry([...stubCommands().filter((stub) => !options.specs?.some((spec) => spec.name === stub.name)), ...(options.specs ?? [])], {
+      catalogue: options.catalogue ?? null,
+    }),
     fs,
     storage: options.storage ?? null,
     net: options.net ?? createNet(),

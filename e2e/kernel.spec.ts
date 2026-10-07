@@ -47,6 +47,21 @@ test.describe('the shell kernel', { tag: '@smoke' }, () => {
     await expect(lastEntry(page)).toContainText('README.md');
   });
 
+  test('a command from the catalogue, which loads after the kernel, runs and is listed like the rest', async ({ page }) => {
+    const chunks: string[] = [];
+    page.on('request', (request) => chunks.push(new URL(request.url()).pathname));
+    await page.goto('/');
+    // rev is in the catalogue's chunk, not the kernel's: the line gets it if it is not in yet.
+    await run(page, 'echo hello | rev');
+    await expect(lastEntry(page).locator('.command-output')).toHaveText('olleh');
+    expect(chunks.some((path) => /^\/assets\/catalogue-[\w-]+\.js$/.test(path))).toBe(true);
+
+    await run(page, 'which rev');
+    await expect(lastEntry(page).locator('.command-output')).toHaveText('/usr/bin/rev');
+    await run(page, 'help | cat');
+    await expect(lastEntry(page)).toContainText('Text: echo printf rev');
+  });
+
   test('redirection, && and || and $? work for every command', async ({ page }) => {
     await page.goto('/');
     await run(page, 'echo "hi  there" > note.txt; cat note.txt');

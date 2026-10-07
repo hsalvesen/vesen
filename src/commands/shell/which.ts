@@ -2,6 +2,7 @@
 // builtins are the shell's, so which does not see them; type does.
 
 import { defineCommand } from '../../shell/types';
+import { allCommands } from '../lib/catalogue';
 import { searchPath } from '../lib/lookup';
 
 export default defineCommand({
@@ -19,6 +20,8 @@ export default defineCommand({
   seeAlso: ['type', 'command'],
   async run(ctx) {
     if (ctx.args.length === 0) return 1;
+    // The catalogue's commands have their files in /usr/bin once it is in.
+    await allCommands(ctx);
     let status = 0;
     for (const name of ctx.args) {
       const found = searchPath(ctx, name, ctx.opts.a === true);

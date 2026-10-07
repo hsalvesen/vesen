@@ -316,6 +316,28 @@ describe('glob, walk and changes', () => {
     expect(fs.exists('/home/guest/README.md')).toBe(true);
     expect(fs.exists('/home/guest/new')).toBe(false);
   });
+
+  it('adds what the seed has gained to the folders named, and nothing else, when reseeded', () => {
+    const commands = [{ name: 'ls', summary: 'list directory contents' }];
+    const fs = new Vfs({ seed: () => seedTree({ version: '9.9.9', commands }), now: () => NOW });
+    fs.writeFile('/home/guest/mine', 'kept');
+    const stub = fs.stat('/usr/bin/ls');
+    const changes: (readonly string[])[] = [];
+    fs.onChange((paths) => changes.push(paths));
+    // Commands registered after the session began: the catalogue arriving.
+    commands.push({ name: 'rev', summary: 'reverse the characters of each line' });
+    fs.reseed(['/usr/bin', '/usr/share/man/man1']);
+    expect(fs.readdir('/usr/bin')).toEqual(['ls', 'rev']);
+    expect(fs.readdir('/usr/share/man/man1')).toEqual(['ls.1', 'rev.1']);
+    expect(fs.stat('/usr/bin/rev')).toMatchObject({ owner: 'root', mode: 0o755 });
+    expect(fs.builtinAt('/bin/rev')).toBe('rev');
+    expect(fs.stat('/usr/bin/ls')).toEqual(stub);
+    expect(fs.readFile('/home/guest/mine')).toBe('kept');
+    expect(changes).toEqual([['/usr/bin/rev', '/usr/share/man/man1/rev.1']]);
+    // Nothing new: nothing changes.
+    fs.reseed(['/usr/bin', '/nowhere']);
+    expect(changes).toHaveLength(1);
+  });
 });
 
 describe('the quota', () => {

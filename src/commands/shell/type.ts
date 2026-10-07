@@ -3,6 +3,7 @@
 
 import { out } from '../../output/model';
 import { defineCommand } from '../../shell/types';
+import { allCommands } from '../lib/catalogue';
 import { describe, lookup } from '../lib/lookup';
 
 export default defineCommand({
@@ -28,6 +29,7 @@ export default defineCommand({
   ],
   seeAlso: ['which', 'command', 'alias'],
   async run(ctx) {
+    await allCommands(ctx);
     let status = 0;
     const all = ctx.opts.a === true;
     for (const name of ctx.args) {

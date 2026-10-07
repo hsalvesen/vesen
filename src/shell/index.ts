@@ -218,15 +218,22 @@ export const SOURCE_TIMEOUT_MS = 2000;
 
 const DEFAULT_TERMINAL: TerminalInfo = { size: () => ({ cols: 80, rows: 24 }), touch: false, inApp: null };
 
-/** A store that loads the completion engine's chunk when it is first subscribed to. */
-function lazyCompletion(env: CompletionEnv): Readable<Completion | null> {
+/**
+ * A store that loads the completion engine's chunk when it is first subscribed to. When the
+ * catalogue arrives it gives a new value, so the completions, the ghost and the chips are worked
+ * out again with the new commands.
+ */
+function lazyCompletion(env: CompletionEnv, registry: Registry): Readable<Completion | null> {
   const store = writable<Completion | null>(null);
   let loading = false;
   const load = (): void => {
     if (loading) return;
     loading = true;
     import('./complete/index').then(
-      ({ engine }) => store.set({ engine, env }),
+      ({ engine }) => {
+        store.set({ engine, env });
+        registry.onChange(() => store.set({ engine, env }));
+      },
       () => {
         // Offline, say: the next subscriber tries again.
         loading = false;
@@ -491,7 +498,7 @@ export function createShell(deps: ShellDeps): Shell {
     history: session.history,
     aliases: session.aliases,
     completionEnv,
-    completion: lazyCompletion(completionEnv),
+    completion: lazyCompletion(completionEnv, deps.registry),
     preflight,
     start,
     run: (line, origin) => start(line, origin).done,

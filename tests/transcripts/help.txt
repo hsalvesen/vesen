@@ -21,7 +21,7 @@ whoami    meet the developer; in a
           pipe, your user name
 
 Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
-Text: echo head printf wc yes
+Text: echo head printf rev wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
 Network: curl fetch speedtest stock weather
@@ -43,7 +43,7 @@ whoami    meet the developer; in a
           pipe, your user name
 
 Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
-Text: echo head printf wc yes
+Text: echo head printf rev wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
 Network: curl fetch speedtest stock weather
@@ -62,7 +62,7 @@ repo      open this terminal's source   theme     change the colour theme       
           code                                                                            pipe, your user name
 
 Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
-Text: echo head printf wc yes
+Text: echo head printf rev wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
 Network: curl fetch speedtest stock weather
@@ -84,7 +84,7 @@ theme     change the colour theme
 whoami    meet the developer; in a pipe, your user name
 
 Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
-Text: echo head printf wc yes
+Text: echo head printf rev wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
 Network: curl fetch speedtest stock weather

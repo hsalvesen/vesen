@@ -5,8 +5,9 @@
 //   head has its lines (the writer gets a silent 141);
 // - per command: word expansion, prefix assignments, redirections applied left to right
 //   (< > >> 2> 2>> &> 2>&1 >&2 <<<, with noclobber and /dev/null), then the command: the
-//   registry, then an executable script on $PATH, then `command not found` (127) with a tappable
-//   did-you-mean;
+//   registry (waiting for the catalogue, the commands that load after the kernel, when the name
+//   is not in it yet), then an executable script on $PATH, then `command not found` (127) with a
+//   tappable did-you-mean;
 // - options parsed from the spec, --help answered from it;
 // - errors mapped to statuses and Linux wording: usage 2, ^C 130, a broken pipe 141 (silently),
 //   a network failure 1 (in curl's words for curl), a file error 1 with strerror text;
@@ -26,6 +27,7 @@ import { createGlobber, type GlobFs } from './glob';
 import { dataCostQuestion } from './data-cost';
 import { describeIncomplete, parse } from './parser';
 import type { ReadOptions } from './reader';
+import { catalogueFailure, settleCommands } from './registry';
 import { loginFiles, type Scope, type Session } from './session';
 import {
   AsyncPipe,
@@ -351,7 +353,7 @@ export class Executor {
           for (const assign of cmd.assigns) scope.env.set(assign.name, await expander.string(assign.value));
           argv = [];
         } else {
-          argv = await this.argv(cmd, expander);
+          argv = await this.argv(cmd, expander, job, scope);
           for (const assign of cmd.assigns) assigned[assign.name] = await expander.string(assign.value);
         }
         cmdIo = await this.redirect(cmd.redirects, io, expander, opened, scope);
@@ -399,11 +401,12 @@ export class Executor {
    * A command's words, expanded. For a declaration builtin (export), a word shaped NAME=value
    * expands as an assignment does: no splitting and no globbing, so `export X=$Y` keeps spaces.
    */
-  private async argv(cmd: SimpleCommand, expander: Expander): Promise<string[]> {
+  private async argv(cmd: SimpleCommand, expander: Expander, job: Job, scope: Scope): Promise<string[]> {
     const [first, ...rest] = cmd.words;
     if (first === undefined) return [];
     const words = await expander.fields([first]);
     const name = words[0];
+    if (name !== undefined) await this.awaitCatalogue(name, job, scope);
     const declares = words.length === 1 && name !== undefined && this.deps.registry.get(name)?.assignmentArgs === true;
     if (!declares) {
       words.push(...(await expander.fields(rest)));
@@ -414,6 +417,20 @@ export class Executor {
       else words.push(...(await expander.fields([word])));
     }
     return words;
+  }
+
+  /**
+   * Waits for the catalogue (the commands that load after the kernel) when `name` is not a
+   * command yet, nor a file that is there, so nothing is reported missing before it could have
+   * arrived. Bounded by ^C and CATALOGUE_WAIT_MS; a failed load is reported with the 127.
+   */
+  private async awaitCatalogue(name: string, job: Job, scope: Scope): Promise<void> {
+    const { registry, fs } = this.deps;
+    if (registry.complete || registry.get(name) !== undefined) return;
+    // A path to a file that is there (a script, a /usr/bin stub) is not waiting on the catalogue.
+    if (name.includes('/') && fs.exists(this.resolve(name, scope))) return;
+    await settleCommands(registry, job.signal);
+    this.checkAborted(job);
   }
 
   /** Runs `run` with `assigned` set in `scope`, then puts back each one the command left alone. */
@@ -1130,7 +1147,11 @@ export class Executor {
       label !== undefined && line !== undefined
         ? [span('Did you mean ', MUTED), out.run(label, line, ACCENT), span("? Type 'help' to see all commands.", MUTED)]
         : [span(hint ?? "Type 'help' to see all commands.", MUTED)];
-    await say(io.stderr, [span(`vesen: ${name}: command not found`, ERROR)], second);
+    // The catalogue could not be loaded: said once, under the first name it left unfound.
+    const failure = this.deps.registry.complete ? undefined : this.deps.registry.takeFailure();
+    const lines: Line[] = [[span(`vesen: ${name}: command not found`, ERROR)], second];
+    if (failure !== undefined) lines.push([span(catalogueFailure(failure), MUTED)]);
+    await say(io.stderr, ...lines);
     job.bell();
     return EXIT.notFound;
   }

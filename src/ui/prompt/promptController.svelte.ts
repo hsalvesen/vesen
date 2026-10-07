@@ -26,6 +26,7 @@
 import type { Line } from '../../output/model';
 import {
   TAB_IDLE,
+  tabKey,
   type Chip,
   type ChipList,
   type Completion,
@@ -55,6 +56,12 @@ export const ESCAPE_TAB_MS = 1000;
 export const BELL_MS = 150;
 /** The cursor holds still this long after an edit, then blinks. */
 export const STEADY_MS = 600;
+
+/**
+ * A first Tab on a command name waits at most this long for the catalogue (the commands that load
+ * after the kernel), then shows what there is; the list fills in when the rest arrives.
+ */
+export const TAB_CATALOGUE_WAIT_MS = 300;
 
 /** The id of a read the prompt asks itself: the Tab list's `Display all N possibilities?`. */
 const OWN_READ = -1;
@@ -234,6 +241,8 @@ export class PromptController {
   private announced = 0;
   private bellTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly stops: (() => void)[] = [];
+  /** The line a Tab is waiting on the catalogue for, and its timer. */
+  private tabWait: { readonly key: string; readonly timer: ReturnType<typeof setTimeout> } | null = null;
 
   constructor(deps: PromptDeps) {
     this.shell = deps.shell;
@@ -243,7 +252,10 @@ export class PromptController {
     this.dock = deps.dock ?? false;
     this.now = deps.now ?? (() => (typeof performance === 'undefined' ? Date.now() : performance.now()));
     this.stops.push(
-      deps.shell.completion.subscribe((value) => (this.completion = value)),
+      deps.shell.completion.subscribe((value) => {
+        this.completion = value;
+        this.refreshList(value);
+      }),
       deps.shell.lastStatus.subscribe((value) => (this.lastStatus = value)),
       deps.shell.historyLines.subscribe((value) => (this.history = value)),
       // The prompt is idle again the moment the job ends, in the same update as its entry.
@@ -423,6 +435,8 @@ export class PromptController {
   destroy(): void {
     for (const stop of this.stops.splice(0)) stop();
     clearTimeout(this.bellTimer);
+    if (this.tabWait !== null) clearTimeout(this.tabWait.timer);
+    this.tabWait = null;
     this.input = null;
   }
 
@@ -1020,7 +1034,58 @@ export class PromptController {
       this.ringBell();
       return;
     }
+    const registry = completion.env.registry;
+    const key = tabKey(this.state);
+    const fresh = this.tab.phase === 'idle' || this.tab.key !== key;
+    if (fresh && registry.complete === false && registry.whenComplete !== undefined && this.result?.namesCommand === true) {
+      // More commands are on their way: wait a moment for them, then show what there is.
+      if (this.tabWait?.key === key) return;
+      this.waitForCommands(key, registry.whenComplete(), reverse);
+      return;
+    }
     this.applyTab(completion.engine.pressTab(this.tab, this.state, completion.env, reverse));
+  }
+
+  /** Presses Tab on the line `key` once the catalogue is in, or TAB_CATALOGUE_WAIT_MS have passed. */
+  private waitForCommands(key: string, arrived: Promise<void>, reverse: boolean): void {
+    if (this.tabWait !== null) clearTimeout(this.tabWait.timer);
+    let done = false;
+    const press = (): void => {
+      if (done) return;
+      done = true;
+      const wait = this.tabWait;
+      if (wait === null || wait.key !== key) return;
+      clearTimeout(wait.timer);
+      this.tabWait = null;
+      const completion = this.completion;
+      // Only if nothing has moved on meanwhile: the line, a read, a search, a command.
+      if (completion === null || tabKey(this.state) !== key || this.read !== null || this.search !== null || this.running !== null || this.ps2 !== null) return;
+      this.applyTab(completion.engine.pressTab(this.tab, this.state, completion.env, reverse));
+    };
+    this.tabWait = { key, timer: setTimeout(press, TAB_CATALOGUE_WAIT_MS) };
+    void arrived.then(press, press);
+  }
+
+  /**
+   * The commands grew while the Tab list was open (the catalogue arrived after a first Tab gave
+   * up waiting): the list, or the menu, shows the new ones too.
+   */
+  private refreshList(completion: Completion | null): void {
+    const tab = this.tab;
+    if (completion === null) return;
+    if (tab.phase === 'listed') {
+      if (tab.key !== tabKey(this.state)) return;
+      const result = completion.engine.complete(this.state, completion.env);
+      if (result.total > 0) this.tab = { ...tab, result };
+      return;
+    }
+    if (tab.phase === 'menu') {
+      // From the line before the menu, keeping the candidate it is on.
+      const result = completion.engine.complete(tab.anchor, completion.env);
+      const value = tab.result.candidates[tab.index]?.value;
+      const index = result.candidates.findIndex((candidate) => candidate.value === value);
+      if (index >= 0) this.tab = { ...tab, result, index };
+    }
   }
 
   private resetTab(): void {

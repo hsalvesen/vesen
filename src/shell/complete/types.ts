@@ -27,9 +27,16 @@ export interface CompletionFs {
   list(dir: string): readonly FsEntry[] | null;
 }
 
+/**
+ * The commands, as completion reads them. `complete` and `whenComplete` are the catalogue's: a
+ * first Tab on a command name waits a moment for it (PromptController), and the session's
+ * completion store gives a new value when it arrives, so the list fills in.
+ */
+export type CompletionRegistry = Pick<Registry, 'get' | 'list' | 'suggest'> & Partial<Pick<Registry, 'complete' | 'whenComplete'>>;
+
 /** What completion reads: the commands, the files, the variables, the aliases and history. */
 export interface CompletionEnv {
-  readonly registry: Pick<Registry, 'get' | 'list' | 'suggest'>;
+  readonly registry: CompletionRegistry;
   readonly fs: CompletionFs;
   /** The working folder, absolute. */
   cwd(): string;
@@ -77,6 +84,11 @@ export interface CompletionResult {
   readonly caseFolded: boolean;
   /** Commands close to an unknown command name, when nothing matched. */
   readonly near?: readonly string[];
+  /**
+   * The word names a command: the line's first word, or an operand such as help's. Its
+   * candidates grow when the catalogue arrives.
+   */
+  readonly namesCommand?: boolean;
   /**
    * Lookahead: the typed word is exactly the only candidate, so this is what comes next, as the
    * completion of the line with that word accepted. 'theme' still offers ls and set.
@@ -270,3 +282,8 @@ export interface Completion {
 
 /** Idle: no Tab in progress. */
 export const TAB_IDLE: TabState = { phase: 'idle' };
+
+/** The line and cursor a Tab phase belongs to. */
+export function tabKey(state: EditState): string {
+  return `${state.text}\u0000${state.cursor}`;
+}

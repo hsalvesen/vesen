@@ -3,6 +3,7 @@
 import { out, type Line } from '../../output/model';
 import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
 import { marketBackend } from '../../services/market/port';
+import { allCommands } from '../lib/catalogue';
 
 /** What --help, help and man say about privacy, besides its spec (privacy.ts). */
 export const doc: CommandDoc = {
@@ -59,7 +60,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   const [extra] = ctx.args;
   if (extra !== undefined) return ctx.usage(`extra operand '${extra}'`);
   // Only what can happen here: a service whose commands this shell does not have is left out.
-  const registry = ctx.shell.registry;
+  const registry = await allCommands(ctx);
   const shown = thirdParties().filter((row) => row.commands.some((name) => registry.get(name) !== undefined));
   const cell = (text: string): Line => [out.span(text)];
   await ctx.stdout.block(out.lines([[out.span('What vesen sends, and where', { fg: 'accent', bold: true })], []]));

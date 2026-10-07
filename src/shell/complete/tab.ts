@@ -14,17 +14,14 @@
 // A phase belongs to the line it was entered on: on any other line, Tab starts again from idle.
 
 import { accept, complete, extendToCommon } from './engine';
-import { TAB_IDLE, type CompletionEnv, type CompletionResult, type EditState, type MenuKey, type TabState, type TabStep, type TabView } from './types';
+import { TAB_IDLE, tabKey, type CompletionEnv, type CompletionResult, type EditState, type MenuKey, type TabState, type TabStep, type TabView } from './types';
+
+export { tabKey };
 
 /** Above this many candidates, the list asks before it shows them all, as bash does. */
 export const ASK_ABOVE = 100;
 
 export const NO_COMPLETIONS = 'No completions';
-
-/** The line and cursor a phase belongs to. */
-export function tabKey(state: EditState): string {
-  return `${state.text}\u0000${state.cursor}`;
-}
 
 export function question(total: number): string {
   return `Display all ${total} possibilities? (y or n)`;

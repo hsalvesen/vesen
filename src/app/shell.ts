@@ -28,6 +28,9 @@ import { transcriptScreen, type Banner, type FrameScheduler } from './transcript
 
 export { bannerEntry, transcriptScreen } from './transcript';
 
+/** The folders that hold a file for each command: the stubs on $PATH and the man pages. */
+const COMMAND_FOLDERS = ['/usr/bin', '/usr/share/man/man1'];
+
 /** Run at boot, quietly, as a login shell reads them: aliases such as ll, and exports (F072). */
 export const BOOT_FILES = loginFiles(GUEST.home);
 
@@ -79,10 +82,11 @@ export interface AppShell {
   /** Sources /etc/profile and ~/.bashrc, then starts saving changes under ~. */
   boot(): Promise<void>;
   /**
-   * Loads the bodies of the commands that load lazily, and the parts of the kernel that do, so
-   * none of them waits for the network the first time it runs. Settles when all have loaded or
-   * failed, true; on a connection with Data Saver on, or a cellular or slow one, it fetches
-   * nothing and settles false at once: each command's code then comes with its first run.
+   * Loads the catalogue (the commands that load after the kernel), then the bodies of the core
+   * commands that load lazily, and the parts of the kernel that do, so none of them waits for
+   * the network the first time it runs. Settles when all have loaded or failed, true; on a
+   * connection with Data Saver on, or a cellular or slow one, it fetches only the catalogue and
+   * settles false: each command's code then comes with its first run.
    */
   prefetch(): Promise<boolean>;
   /** Disconnects the stores the shell keeps in step, and stops saving. */
@@ -102,8 +106,11 @@ export function createAppShell(options: AppShellOptions): AppShell {
   const screen = options.screen ?? appScreen;
   const storage = options.storage ?? null;
   const version = options.version ?? __APP_VERSION__;
-  const commands = registry.list({ includeHidden: true }).map(({ name, summary }) => ({ name, summary }));
-  const seed = (): VirtualFile => seedTree({ version, commands, timeZone: clock.timeZone() });
+  // The commands the kernel came with, whose bodies the idle prefetch fetches.
+  const core = registry.list({ includeHidden: true });
+  // Every registered command has a /usr/bin stub and a man page, the catalogue's once it is in.
+  const seed = (): VirtualFile =>
+    seedTree({ version, commands: registry.list({ includeHidden: true }).map(({ name, summary }) => ({ name, summary })), timeZone: clock.timeZone() });
 
   const vfs = new Vfs({
     seed,
@@ -124,6 +131,8 @@ export function createAppShell(options: AppShellOptions): AppShell {
     onNotice: (message) => screen.push({ prompt: null, line: '', blocks: noticeBlocks(message), origin: 'boot' }),
   });
   persistence.load();
+  // The catalogue arriving: its commands' stubs and man pages join the ones already there.
+  const stopReseed = registry.onChange(() => vfs.reseed(COMMAND_FOLDERS));
 
   let shell: Shell | undefined;
   const renderPrompt = (): Line => shell?.renderPrompt() ?? [];
@@ -178,15 +187,23 @@ export function createAppShell(options: AppShellOptions): AppShell {
       persistence.start();
     },
     async prefetch() {
+      // The catalogue's specs whatever the connection: help, Tab, the chips and /usr/bin list
+      // its commands, and a name not in the kernel waits for it.
+      const catalogue = registry.whenComplete();
       const connection = sys.connection();
-      if (connection.saveData || connection.cellular) return false;
-      const loads: Promise<unknown>[] = registry.list({ includeHidden: true }).flatMap((spec) => (spec.load === undefined ? [] : [spec.load()]));
+      if (connection.saveData || connection.cellular) {
+        await catalogue;
+        return false;
+      }
+      // The core commands' bodies; a catalogue command's body comes with its first run.
+      const loads: Promise<unknown>[] = core.flatMap((spec) => (spec.load === undefined ? [] : [spec.load()]));
       // And what the kernel itself loads on first use: $(( )) arithmetic.
-      loads.push(loadArith());
+      loads.push(loadArith(), catalogue);
       await Promise.allSettled(loads);
       return true;
     },
     stop() {
+      stopReseed();
       persistence.stop();
     },
   };

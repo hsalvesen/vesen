@@ -1,0 +1,210 @@
+# Adding a command
+
+A vesen command is one `CommandSpec` in one file. The spec drives everything the visitor sees of
+the command: running it, its options, `--help`, `help`, `man`, `whatis`, `apropos`, Tab completion,
+the phone's chips, its `/usr/bin` stub and its man page. Nothing about a command is written
+anywhere else. The contracts are in `src/shell/types.ts`; the decisions behind them are in
+[docs/adr/0001-architecture.md](adr/0001-architecture.md).
+
+## Core or catalogue
+
+Commands live in one of two places, and the choice decides when their code reaches the visitor.
+
+| | Core | Catalogue |
+|---|---|---|
+| Folder | `src/commands/<category>/<name>.ts` | `src/commands/more/<category>/<name>.ts` |
+| Loads | with the kernel, before the first line runs | in one `catalogue-*.js` chunk, once the page is idle or as soon as a name the kernel lacks is typed |
+| Budget (`npm run check:bundle`) | the kernel's 75 kB gzip, almost spent | the catalogue's 40 kB gzip |
+| Categories | portfolio, files, text, shell, system, network | text, files, system, network, fun, editor |
+
+**New commands go in the catalogue.** Every spec in the core adds to the kernel, which every line
+waits for. A catalogue spec adds nothing to it: `src/commands/index.ts` reaches the catalogue only
+through `loadCatalogue()`, an `import()` of `src/commands/more/catalogue.ts`, which gathers the
+specs under `more/` with `import.meta.glob`. A new file there is picked up with no other change.
+
+The core is for the few commands that cannot wait for the catalogue:
+
+- the portfolio commands and the starter chips, which a visitor taps in the first second;
+- the shell's own builtins, and `help`, `man` and the other commands that look commands up;
+- a command with `opens()`, which opens a URL inside the Enter or tap gesture: that check runs
+  before the line starts, so it sees only commands already registered.
+
+What the visitor sees does not depend on the folder. Until the catalogue arrives:
+
+- a line whose command is not registered waits for it (up to 8 s, and ^C stops the wait), so a
+  catalogue command runs as if it were always there, and `command not found` (127) comes only once
+  the catalogue has settled without the name;
+- `help`, `help --all`, `man`, `whatis`, `apropos`, `which`, `type`, `command -v` and `privacy`
+  wait for it too, through `allCommands(ctx)` in `src/commands/lib/catalogue.ts`; a command that
+  lists or looks up commands by name should do the same;
+- a first Tab on a command name waits up to 300 ms, then shows what it has; the list, the ghost
+  and the chips fill in when the rest arrives;
+- the catalogue's `/usr/bin` stubs and man pages are added to the file system when it arrives.
+
+If the catalogue cannot be loaded, the first lookup that misses it says so once, and the next
+command tries again. `npm run check:boundaries` fails if anything outside `src/commands/more`
+imports from it, other than that one `import()`, because a static import would pull it into the
+kernel.
+
+## The spec
+
+Copy a command close to the one you are writing. `src/commands/more/text/rev.ts` is the smallest
+complete example: a spec, its body in `rev.run.ts` and its tests in `rev.test.ts`.
+
+```ts
+// rev: reverse the characters of each line.
+
+import { defineCommand } from '../../../shell/types';
+
+export default defineCommand({
+  name: 'rev',
+  category: 'text',
+  summary: 'reverse the characters of each line',
+  synopsis: ['rev [FILE]...'],
+  args: [{ name: 'FILE', source: { kind: 'path', accept: 'file' }, optional: true, variadic: true }],
+  examples: [
+    { line: 'echo hello | rev', note: 'olleh', offline: true },
+    { line: 'rev .bashrc', note: 'a file, each line backwards', offline: true },
+  ],
+  seeAlso: ['cat', 'echo'],
+  load: () => import('./rev.run'),
+});
+```
+
+The file's default export is the spec, made with `defineCommand`, which insists on exactly one of
+`run` and `load`. The fields:
+
+| Field | What it is for |
+|---|---|
+| `name`, `aliases` | What the visitor types. A clash with another command's name or alias throws. |
+| `category` | Where `help` lists it. |
+| `summary` | One line, 50 characters at most, lower case, no full stop: `help`, `whatis`, Tab and the chips show it. |
+| `synopsis` | The usage lines, such as `rev [FILE]...`; generated from the flags and arguments when left out. |
+| `flags` | Each with `short` and/or `long`, a `description`, and `value` when it takes one. `-la`, `-n5`, `--lines=5` and `--` are parsed for you, and the values arrive in `ctx.opts`. |
+| `args` | The operands, with a `source` that completion reads: `path`, `command`, `enum`, `examples`, `free` and others. Only the last may be `variadic`. |
+| `subcommands` | `theme ls`, `theme set`: each with its own summary, flags and arguments. |
+| `examples` | Lines that show the command at work; see below. |
+| `seeAlso` | Related commands, for `man`. |
+| `hidden` | Left out of `help`, Tab and the chips; it still runs when typed. |
+| `builtin` | Changes the session (`cd`, `export`): runs in the shell itself, and a usage error exits 2. |
+| `network` | Fails fast offline, and gets a 15 s budget for the whole command (`budgetMs` to change it) on top of the 8 s per request. |
+| `loadingLabel` | The status line while it runs, such as `fetching forecast for Oslo`. |
+| `dataCost` | Asks before spending that much data on a phone, on mobile data or with Data Saver on. |
+| `interactiveOnly` | Runs only at the prompt, never from a pipe, `$( )`, a script or `~/.bashrc`. |
+| `next` | Follow-up chips after a run. Every word taken from data must pass `PLAIN_ARG`. |
+| `opens` | A URL to open inside the Enter gesture. Core commands only (see above). |
+| `usageStatus`, `posixArgs`, `numericShortcut`, `handlesHelp`, `assignmentArgs` | For commands that need Linux's exact behaviour: `ls` exits 2 on a usage error, `head -5`, `echo` reading its own options. |
+
+`-h` and `--help` print the help generated from the spec, unless the spec defines an `h` flag of
+its own (as `ls -h` does); `--help` still works then.
+
+## The body and its `doc`
+
+Put the body in `<name>.run.ts` and load it with `load: () => import('./<name>.run')`, so only the
+spec is in the catalogue's chunk (or the kernel's) and the body comes with the first run. The body
+exports `run`, and the long help as `doc`:
+
+```ts
+import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
+
+/** What --help, help and man say about rev, besides its spec (rev.ts). */
+export const doc: CommandDoc = {
+  description: 'Copies each FILE to standard output with the characters of every line in reverse order. ...',
+  man: [{ heading: 'EXIT STATUS', body: '0 when every FILE was read, 1 when any could not be: rev carries on with the rest.' }],
+};
+
+export async function run(ctx: CommandContext): Promise<ExitCode> {
+  // ...
+}
+```
+
+`description` and `man` belong in `doc`, never in the spec as well: `--help`, `help NAME` and
+`man` fetch the body to read them, and the summary stands in if it cannot be loaded. Summaries,
+synopses, flags, examples and see-also stay in the spec, because completion, the chips, `whatis`
+and `apropos` read them without loading anything.
+
+A tiny command may keep `run` in the spec instead, with its `description` there too.
+
+Inside `run`:
+
+- write with `ctx.stdout.write(text)` or `ctx.stdout.line(...)`, and rich output with
+  `ctx.stdout.block(out.table(...))` and the other `out` builders in `src/output/model.ts`;
+  every block has a plain form for pipes. Never write HTML;
+- read standard input with `ctx.stdin.chunks()` or `ctx.stdin.lines()` as it arrives, so
+  `yes | rev | head -n 2` ends at once;
+- reach files through `ctx.fs` and `ctx.resolve(path)`, and say what went wrong with the helpers in
+  `src/commands/lib/files.ts`: `ctx.fail('cannot open nope: No such file or directory')` prints
+  `rev: cannot open nope: No such file or directory` and returns 1;
+- report bad options or operands with `ctx.usage(message)`, which adds the `Try 'rev --help'` line
+  and returns the right status;
+- return the exit status, or nothing for 0.
+
+## House rules
+
+- **Linux behaviour.** Use Linux's wording and exit codes. Coreutils are silent when they work,
+  with `-v` to say what they did.
+- **DOM-free.** `src/commands` never touches `window`, `document`, `navigator`, browser storage or
+  Svelte; services reach the browser for it (`ctx.net`, `ctx.sys`, `ctx.clock`, `ctx.tty`).
+  `npm run check:boundaries` enforces it. Avoid `AbortSignal.any` and `AbortSignal.timeout`,
+  `Array.prototype.at`, `Object.hasOwn`, `Object.groupBy` and `Promise.withResolvers`: Instagram's
+  browser on older iPhones lacks them.
+- **Regular expressions from the visitor** (grep, sed, find -regex and the like) go through the one
+  shared guard in `src/commands/lib`, which caps the pattern and the input and refuses patterns that
+  could run for ever, such as `(a+)+`. A JavaScript regular expression cannot be interrupted, so
+  one bad pattern would freeze the page. The first command that takes a pattern adds the guard
+  there; every later one uses it.
+- **Original content.** Cows, fortunes, fonts and art are written for vesen, not copied, and
+  credit no other project.
+- **Honest network commands.** A browser cannot send ICMP or raw DNS: say what is done instead
+  (DNS over HTTPS, an HTTPS round trip for `ping`), in the output itself.
+- **No new dependencies.**
+
+## Examples are tests
+
+Every example marked `offline: true` is run by `src/commands/examples.test.ts`, on the terminal
+and into a pipe, on a fresh file system, and must exit 0. The same examples are what `help` and
+`man` show; one with a `starter` rank is also a chip on an empty phone prompt, which is for core
+commands. Examples that need the network leave `offline` out.
+
+Every spec must have at least one offline example, and `src/commands/shell/help-man.test.ts`
+checks that `--help` and `man` render for every spec, the catalogue's included.
+`src/commands/index.test.ts` checks that the catalogue registers beside the core with no clash,
+and lists the catalogue's commands: add yours to that list.
+
+## Tests
+
+Put `<name>.test.ts` beside the command. `tests/harness.ts` runs lines in the app's own shell over
+a fresh file system with a frozen clock:
+
+```ts
+import { runLine, session } from '../../../../tests/harness';
+
+expect(await runLine('echo hello | rev')).toMatchObject({ status: 0, stdoutPlain: 'olleh' });
+expect((await runLine('rev nope', { tty: false })).stderrPlain).toBe('rev: cannot open nope: No such file or directory');
+```
+
+`runLine` gives each line a fresh session; `session()` keeps one for several lines. `tty: false`
+runs the line into a pipe, as `line | cat` would see it, and `cols` sets the width. The catalogue
+is loaded before the first line unless you pass `catalogue: 'lazy'`.
+
+Tests never touch the network: record the responses once under `tests/fixtures/` and serve them
+through a fake `fetch`, as `src/commands/network/weather.test.ts` does, with the timeout,
+offline, rate-limit and malformed variants.
+
+## The gates
+
+Run them all before you commit; CI runs the same:
+
+```bash
+npm run check              # svelte-check, 0 errors
+npm run check:strict       # the strict TypeScript settings
+npm run check:boundaries   # DOM-free folders, no {@html}, the catalogue kept out of the kernel
+npm test                   # Vitest, offline examples included
+npm run build
+npm run check:bundle       # initial JS 60 kB, kernel 75 kB, catalogue 40 kB (gzip)
+npm run check:contrast -- --strict
+npm run test:smoke         # Playwright: desktop Chrome, iPhone in Instagram, Pixel 7
+```
+
+If `check:bundle` says the catalogue is over budget, move what a spec imports into its body. If it
+says the kernel grew, a core file is importing something it should not.

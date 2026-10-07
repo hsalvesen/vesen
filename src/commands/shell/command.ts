@@ -4,6 +4,7 @@
 import { out } from '../../output/model';
 import { defineCommand } from '../../shell/types';
 import { shellQuote } from './alias';
+import { allCommands } from '../lib/catalogue';
 import { brief, describe, lookup } from '../lib/lookup';
 
 export default defineCommand({
@@ -32,6 +33,7 @@ export default defineCommand({
   seeAlso: ['type', 'which', 'alias'],
   async run(ctx) {
     if (ctx.opts.v === true || ctx.opts.V === true) {
+      await allCommands(ctx);
       let status = 0;
       for (const name of ctx.args) {
         const [found] = lookup(ctx, name);

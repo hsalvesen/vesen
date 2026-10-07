@@ -5,6 +5,7 @@
 
 import { out } from '../../output/model';
 import { defineCommand, type CommandContext, type ExitCode } from '../../shell/types';
+import { allCommands } from '../lib/catalogue';
 
 /** man-db's status when a page is not found. */
 export const NOT_FOUND = 16;
@@ -16,11 +17,11 @@ async function nothingFor(ctx: CommandContext, words: readonly string[]): Promis
 
 /** apropos: the whatis line of every command a keyword appears in. Shared with `man -k`. */
 export async function runApropos(ctx: CommandContext, keywords: readonly string[]): Promise<ExitCode> {
-  const help = await import('../../shell/help');
+  const [help, registry] = await Promise.all([import('../../shell/help'), allCommands(ctx)]);
   const missing: string[] = [];
   const found = new Map<string, string>();
   for (const keyword of keywords) {
-    const specs = help.apropos(ctx.shell.registry, keyword);
+    const specs = help.apropos(registry, keyword);
     if (specs.length === 0) missing.push(keyword);
     for (const spec of specs) found.set(spec.name, spec.summary);
   }
@@ -30,10 +31,10 @@ export async function runApropos(ctx: CommandContext, keywords: readonly string[
 
 /** whatis: the one-line summary of each command named. Shared with `man -f`. */
 export async function runWhatis(ctx: CommandContext, names: readonly string[]): Promise<ExitCode> {
-  const help = await import('../../shell/help');
+  const [help, registry] = await Promise.all([import('../../shell/help'), allCommands(ctx)]);
   const missing: string[] = [];
   for (const name of names) {
-    const spec = ctx.shell.registry.get(name);
+    const spec = registry.get(name);
     if (spec === undefined) missing.push(name);
     else await ctx.stdout.write(`${help.whatisLine(name, spec.summary)}\n`);
   }
@@ -74,12 +75,12 @@ export default defineCommand({
       section = pages[0] ?? null;
       pages = pages.slice(1);
     }
-    const help = await import('../../shell/help');
+    const [help, registry] = await Promise.all([import('../../shell/help'), allCommands(ctx)]);
     const layout = { columns: ctx.stdout.columns, version: __APP_VERSION__ };
     let status = 0;
     let first = true;
     for (const name of pages) {
-      const spec = name === 'vesen' ? undefined : ctx.shell.registry.get(name);
+      const spec = name === 'vesen' ? undefined : registry.get(name);
       const inSection = name === 'vesen' ? section === null || section === '7' : section === null || section === '1';
       if ((spec === undefined && name !== 'vesen') || !inSection) {
         const where = section === null ? '' : ` in section ${section}`;
@@ -89,7 +90,7 @@ export default defineCommand({
       }
       if (!first) await ctx.stdout.write('\n');
       first = false;
-      const blocks = spec === undefined ? help.vesenPage(ctx.shell.registry, layout) : help.manPage(await help.withDoc(spec), layout);
+      const blocks = spec === undefined ? help.vesenPage(registry, layout) : help.manPage(await help.withDoc(spec), layout);
       for (const block of blocks) await ctx.stdout.block(block);
     }
     return status;

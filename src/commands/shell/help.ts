@@ -4,6 +4,7 @@
 
 import { out } from '../../output/model';
 import { defineCommand, PLAIN_ARG } from '../../shell/types';
+import { allCommands } from '../lib/catalogue';
 
 export default defineCommand({
   name: 'help',
@@ -33,19 +34,19 @@ export default defineCommand({
     return topics.length === 1 && topic !== undefined && topic !== 'keys' && PLAIN_ARG.test(topic) ? [`man ${topic}`] : [];
   },
   async run(ctx) {
-    const help = await import('../../shell/help');
+    const [help, registry] = await Promise.all([import('../../shell/help'), allCommands(ctx)]);
     if (ctx.args.length === 0) {
-      for (const block of help.helpIndex(ctx.shell.registry, { all: ctx.opts.all === true })) await ctx.stdout.block(block);
+      for (const block of help.helpIndex(registry, { all: ctx.opts.all === true })) await ctx.stdout.block(block);
       return 0;
     }
     let status = 0;
     for (const topic of ctx.args) {
       if (topic === 'keys') {
-        const keys = ctx.shell.registry.get('keys');
+        const keys = registry.get('keys');
         for (const block of help.keysTopic({ touch: ctx.tty.touch, ...(keys === undefined ? {} : { spec: keys }) })) await ctx.stdout.block(block);
         continue;
       }
-      const spec = ctx.shell.registry.get(topic);
+      const spec = registry.get(topic);
       if (spec === undefined) {
         await ctx.stderr.line(out.span(`help: no help topics match '${topic}'`, { fg: 'error' }));
         await ctx.stderr.line(out.span(`Try 'help' for the list, or 'apropos ${topic}' to search it.`, { fg: 'muted' }));

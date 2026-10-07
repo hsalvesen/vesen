@@ -117,7 +117,9 @@ src/
 │                                 # privacy, debug, fastfetch), network/ (weather, curl, speedtest, and
 │                                 # stock with its card's words in stock/); lib/ is what they share: the
 │                                 # banner, the link cards, weather's way to its service, and qr's options
-│                                 # and payloads
+│                                 # and payloads; more/ is the catalogue, the commands that load after the
+│                                 # kernel in a chunk of their own (text/rev so far; see
+│                                 # docs/ADDING_COMMANDS.md)
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette
 │                                 # where themes.json does not set them, and the contrast each must meet);
@@ -237,7 +239,7 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/new-feature`
 3. Make your changes
-4. Run the checks: `npm run check && npm test` (CI runs the checks, tests, build and smoke tests on each pull request)
+4. Run the checks: `npm run check && npm test` (CI runs the checks, tests, build and smoke tests on each pull request). [docs/ADDING_COMMANDS.md](docs/ADDING_COMMANDS.md) says where a new command goes and how to test it
 5. Commit your changes: `git commit -m 'Add new feature'`
 6. Push to the branch: `git push origin feature/new-feature`
 7. Open a Pull Request
