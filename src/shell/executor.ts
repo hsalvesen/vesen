@@ -15,7 +15,7 @@
 
 import { DeadlineExceeded, combineSignals, deadline, whenAborted } from '../lib/signals';
 import { out, type Line, type Span, type SpanStyle } from '../output/model';
-import type { Appearance, Bell, Clipboard, Clock, Net, NetError, Opener, SysInfo } from '../services/types';
+import type { Appearance, Bell, Clipboard, Clock, Digest, Net, NetError, Opener, SysInfo } from '../services/types';
 import { strerror } from '../vfs/errors';
 import { VfsError, type BoundVfs } from '../vfs/types';
 import type { AndOr, List, ParseFailure, Pipeline, Redirect, SimpleCommand } from './ast';
@@ -77,6 +77,9 @@ const YIELD_EVERY_COMMANDS = 256;
 
 const defaultYield = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
+/** ctx.digest when the host provides none: every hash fails. */
+const NO_DIGEST: Digest = { hash: () => Promise.reject(new Error('no hashing service here')) };
+
 /** How long a command whose budget ran out may take to stop and say why, before the kernel stops waiting. */
 const BUDGET_GRACE_MS = 250;
 
@@ -133,6 +136,8 @@ export interface ExecutorDeps {
   readonly opener?: Opener | undefined;
   readonly clipboard?: Clipboard | undefined;
   readonly bell?: Bell | undefined;
+  /** WebCrypto's hashes, for ctx.digest; without it every hash rejects. */
+  readonly digest?: Digest | undefined;
   /** Lets the browser run between commands of a long job; tests pass a resolved promise. */
   readonly yieldToHost?: (() => Promise<void>) | undefined;
   /** What else `reset` forgets, outside the session: weather's saved places. */
@@ -824,6 +829,7 @@ export class Executor {
       net: deps.net,
       sys: deps.sys,
       clock: deps.clock,
+      digest: deps.digest ?? NO_DIGEST,
       appearance: deps.appearance,
       shell: this.shellApi(o.job, io, o.frame),
       spec: o.spec,

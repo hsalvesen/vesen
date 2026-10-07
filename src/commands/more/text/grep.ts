@@ -1,0 +1,72 @@
+// grep: print lines that match patterns. Its body is in grep.run.ts.
+
+import { defineCommand } from '../../../shell/types';
+
+const NUM = { name: 'NUM', source: { kind: 'int' } } as const;
+const GLOB = { name: 'GLOB', source: { kind: 'free', placeholder: 'GLOB' } } as const;
+
+export default defineCommand({
+  name: 'grep',
+  category: 'text',
+  summary: 'print lines that match patterns',
+  helpRank: 2,
+  synopsis: ['grep [OPTION]... PATTERNS [FILE]...', 'grep [OPTION]... -e PATTERNS ... [FILE]...'],
+  usageStatus: 2,
+  numericShortcut: 'context',
+  flags: [
+    { short: 'E', long: 'extended-regexp', description: 'PATTERNS are extended regular expressions' },
+    { short: 'F', long: 'fixed-strings', description: 'PATTERNS are strings' },
+    { short: 'G', long: 'basic-regexp', description: 'PATTERNS are basic regular expressions (the default)' },
+    { short: 'P', long: 'perl-regexp', description: "PATTERNS are Perl-style expressions, in JavaScript's syntax" },
+    { short: 'e', long: 'regexp', description: 'use PATTERNS for matching', value: { name: 'PATTERNS', source: { kind: 'free', placeholder: 'pattern' } }, repeatable: true },
+    { short: 'f', long: 'file', description: 'take PATTERNS from FILE, one a line', value: { name: 'FILE', source: { kind: 'path', accept: 'file' } }, repeatable: true },
+    { short: 'i', long: 'ignore-case', description: 'ignore case distinctions in patterns and data' },
+    { long: 'no-ignore-case', description: 'do not ignore case distinctions (the default)' },
+    { short: 'w', long: 'word-regexp', description: 'match only whole words' },
+    { short: 'x', long: 'line-regexp', description: 'match only whole lines' },
+    { short: 'v', long: 'invert-match', description: 'select non-matching lines' },
+    { short: 'c', long: 'count', description: 'print only a count of selected lines per FILE' },
+    {
+      long: 'color',
+      key: 'color',
+      description: 'highlight matches: never, always or auto (on the terminal)',
+      value: { name: 'WHEN', optional: true, source: { kind: 'enum', values: () => ['never', 'always', 'auto'].map((value) => ({ value })) } },
+    },
+    { long: 'colour', key: 'color', description: 'the same as --color', value: { name: 'WHEN', optional: true, source: { kind: 'enum', values: () => ['never', 'always', 'auto'].map((value) => ({ value })) } } },
+    { short: 'L', long: 'files-without-match', description: 'print only names of FILEs with no selected lines' },
+    { short: 'l', long: 'files-with-matches', description: 'print only names of FILEs with selected lines' },
+    { short: 'm', long: 'max-count', description: 'stop after NUM selected lines', value: NUM },
+    { short: 'o', long: 'only-matching', description: 'show only the matching parts of lines' },
+    { short: 'q', long: 'quiet', key: 'quiet', description: 'print nothing; exit 0 at the first match' },
+    { long: 'silent', key: 'quiet', description: 'the same as --quiet' },
+    { short: 's', long: 'no-messages', description: 'suppress messages about unreadable files' },
+    { short: 'b', long: 'byte-offset', description: 'print the byte offset with output lines' },
+    { short: 'n', long: 'line-number', description: 'print the line number with output lines' },
+    { short: 'H', long: 'with-filename', description: 'print the file name with each match' },
+    { short: 'h', long: 'no-filename', description: 'never print file names' },
+    { long: 'label', description: 'use LABEL as the name of standard input', value: { name: 'LABEL', source: { kind: 'free', placeholder: 'label' } } },
+    { short: 'A', long: 'after-context', description: 'print NUM lines of trailing context', value: NUM },
+    { short: 'B', long: 'before-context', description: 'print NUM lines of leading context', value: NUM },
+    { short: 'C', long: 'context', description: 'print NUM lines of context around each match', value: NUM },
+    { short: 'r', long: 'recursive', description: 'search folders, following links named on the line only' },
+    { short: 'R', long: 'dereference-recursive', description: 'search folders, following every link' },
+    { long: 'include', description: 'search only files whose name matches GLOB', value: GLOB, repeatable: true },
+    { long: 'exclude', description: 'skip files whose name matches GLOB', value: GLOB, repeatable: true },
+    { long: 'exclude-dir', description: 'skip folders whose name matches GLOB', value: GLOB, repeatable: true },
+  ],
+  args: [
+    { name: 'PATTERNS', source: { kind: 'free', placeholder: 'pattern' } },
+    { name: 'FILE', source: { kind: 'path' }, optional: true, variadic: true },
+  ],
+  examples: [
+    { line: 'grep -i theme README.md', note: 'lines that mention themes, in any case', offline: true },
+    { line: 'grep -n alias .bashrc', note: 'with line numbers', offline: true },
+    { line: 'grep -rl Hello projects', note: 'which files say Hello', offline: true },
+    { line: "grep -E '^(root|guest):' /etc/passwd", note: 'an extended expression', offline: true },
+    { line: 'grep -c -v "^#" .vimrc', note: 'how many lines are not comments', offline: true },
+    { line: 'grep -o -w "[[:alpha:]]*ing" documents/linux.txt', note: 'just the words that match', offline: true },
+    { line: 'grep -A1 -n EDITOR .profile', note: 'with a line of context after', offline: true },
+  ],
+  seeAlso: ['sed', 'find', 'wc'],
+  load: () => import('./grep.run'),
+});

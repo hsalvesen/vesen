@@ -104,6 +104,20 @@ const SESSIONS: Readonly<Record<string, readonly string[]>> = {
     'date; date -u +%s',
     'exit 3',
   ],
+  // The text tools (src/commands/more/text): the screen as each draws it, and in a pipe.
+  grep: [
+    'grep -n alias .bashrc',
+    'grep -c alias .bashrc .profile',
+    'grep -rl Hello',
+    "grep -E '^(root|guest):' /etc/passwd",
+    'grep -A1 -n EDITOR .profile',
+    'grep x nope documents',
+    "grep -E '(a+)+$' .profile",
+  ],
+  column: ['seq 30 | column', 'seq 30 | column -x', 'column -t -s : /etc/passwd', "printf 'name size\\nREADME.md 1K\\n' | column -t"],
+  wc: ['wc README.md', 'wc -l .bashrc .profile', 'echo one two | wc', 'wc documents nope'],
+  diff: ["printf 'a\\nb\\nc\\n' > old; printf 'a\\nB\\nc\\nd\\n' > new", 'diff old new', 'diff -u old new', 'diff -q old new', 'diff old nope'],
+  sort: ['sort /etc/shells', 'cut -d : -f 7 /etc/passwd | sort | uniq -c', 'sort -t : -k 3,3n /etc/passwd', "printf 'b\\na\\n' | sort -c"],
 };
 
 interface Variant {

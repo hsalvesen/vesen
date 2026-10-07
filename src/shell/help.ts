@@ -1,8 +1,9 @@
 // Help generated from command specs (docs/plan/02-architecture-and-contracts.md, section 11):
 //
 // - the help index: the portfolio commands with their summaries in a grid that reflows, then a
-//   row of names for each other category; with --all, every category's grid. Each name is
-//   tappable (it inserts itself at the prompt);
+//   row of names for each other category, as many as fit in two lines on a phone (ranked first,
+//   spec.helpRank); with --all, every category's grid. Each name is tappable (it inserts itself
+//   at the prompt);
 // - the `<cmd> --help` panels as callouts (what it does, Usage, Options, Examples as run chips,
 //   See also);
 // - man pages: NAME, SYNOPSIS, DESCRIPTION, OPTIONS, EXAMPLES and SEE ALSO, laid out to the width
@@ -40,13 +41,29 @@ const SUMMARY_CH = 26;
 
 // ── The index ──────────────────────────────────────────────────────────────────────────────
 
-/** A category's commands as one row: its title, then each name, tappable. */
+/** How many characters of names a row of the short index holds: about two lines on a phone. */
+export const ROW_BUDGET = 64;
+
+/**
+ * A category's commands as one row: its title, then each name, tappable, the ranked ones first
+ * (spec.helpRank), then the rest by name, as many as ROW_BUDGET holds, and how many more there are.
+ */
 function namesRow(category: Category, specs: readonly CommandSpec[]): Span[] {
   const row: Span[] = [out.span(CATEGORY_TITLES[category], HEADING), out.span(': ', HEADING)];
-  specs.forEach((spec, i) => {
-    if (i > 0) row.push(out.span(' '));
+  // Array sort is stable, so commands of the same rank keep the registry's order, by name.
+  const rank = (spec: CommandSpec): number => spec.helpRank ?? Number.MAX_SAFE_INTEGER;
+  const ordered = [...specs].sort((a, b) => rank(a) - rank(b));
+  let used = 0;
+  let shown = 0;
+  for (const spec of ordered) {
+    const width = textWidth(spec.name) + (shown > 0 ? 1 : 0);
+    if (shown > 0 && used + width > ROW_BUDGET) break;
+    if (shown > 0) row.push(out.span(' '));
     row.push(out.insert(spec.name, `${spec.name} `, STRONG));
-  });
+    used += width;
+    shown += 1;
+  }
+  if (shown < ordered.length) row.push(out.span(` +${ordered.length - shown} more`, MUTED));
   return row;
 }
 
@@ -70,8 +87,9 @@ const MORE_HELP: Line = [
 /**
  * The help index. By default it is short enough to read on a phone without scrolling: the
  * portfolio commands, the reason the site exists, each with its summary, then one row of names
- * for every other category. With `all`, every category gets the table. A name inserts itself
- * at the prompt when tapped; in a pipe the index is plain text.
+ * for every other category, the first of them when there are more than a row holds. With `all`,
+ * every category gets the table. A name inserts itself at the prompt when tapped; in a pipe the
+ * index is plain text.
  */
 export function helpIndex(registry: Registry, options: { readonly all?: boolean } = {}): Block[] {
   const blocks: Block[] = [];

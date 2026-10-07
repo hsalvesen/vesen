@@ -1,0 +1,32 @@
+# grep: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ grep -n alias .bashrc
+3:# User specific aliases and functions
+4:alias ll="ls -la"
+5:alias la="ls -A"
+6:alias l="ls -CF"
+? 0
+$ grep -c alias .bashrc .profile
+.bashrc:4
+.profile:0
+? 0
+$ grep -rl Hello
+projects/learning/javascript-basics.js
+src/main.c
+? 0
+$ grep -E '^(root|guest):' /etc/passwd
+root:x:0:0:root:/root:/bin/vesh
+guest:x:1000:1000:Guest:/home/guest:/bin/vesh
+? 0
+$ grep -A1 -n EDITOR .profile
+7:export EDITOR=vim
+? 0
+$ grep x nope documents
+! grep: nope: No such file or directory
+! grep: documents: Is a directory
+? 2
+$ grep -E '(a+)+$' .profile
+! grep: a repeated group with a repetition inside it, as in (a+)+, can take forever to match
+? 2

@@ -5,7 +5,7 @@
 
 import { whenAborted } from '../lib/signals';
 import type { Block, Line } from '../output/model';
-import type { Appearance, Bell, Clipboard, Clock, KV, Net, Opener, SysInfo } from '../services/types';
+import type { Appearance, Bell, Clipboard, Clock, Digest, KV, Net, Opener, SysInfo } from '../services/types';
 import { expandAliases } from './alias';
 import { createAppRunner, type AppRequest } from './apps';
 import { createCompletionEnv } from './complete/env';
@@ -206,6 +206,7 @@ export interface ShellDeps {
   readonly opener?: Opener;
   readonly clipboard?: Clipboard;
   readonly bell?: Bell;
+  readonly digest?: Digest;
   readonly user?: User;
   /** Lets the browser run between large writes to the screen; tests pass a resolved promise. */
   readonly yieldToHost?: () => Promise<void>;
@@ -294,6 +295,7 @@ export function createShell(deps: ShellDeps): Shell {
     opener: deps.opener,
     clipboard: deps.clipboard,
     bell: deps.bell,
+    digest: deps.digest,
     yieldToHost: deps.yieldToHost,
     onReset: deps.onReset,
   });

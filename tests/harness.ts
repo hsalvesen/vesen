@@ -11,7 +11,7 @@ import { createClock } from '../src/services/clock';
 import { expandAliases } from '../src/shell/alias';
 import { wrapText } from '../src/shell/help';
 import { CaptureOut } from '../src/shell/streams';
-import type { Clipboard, Opener, SysInfo } from '../src/services/types';
+import type { Clipboard, Digest, Opener, SysInfo } from '../src/services/types';
 import { defineCommand, type CommandSpec, type FullscreenView, type InAppBrowser } from '../src/shell/types';
 import { createScreen } from '../src/stores/screen';
 import { screenText, stubCommands } from '../src/testing/shell-harness';
@@ -39,6 +39,8 @@ export interface RunOptions {
   readonly fullscreen?: (view: FullscreenView, props: unknown) => Promise<unknown>;
   /** The system facts; none by default, as with no page to read them from. */
   readonly sys?: SysInfo;
+  /** The hashes sha256sum and the others use; Node's WebCrypto by default, as the page's. */
+  readonly digest?: Digest;
   /** The clock, in ms: frozen by default, a minute later each line. Fake timers can drive one. */
   readonly now?: () => number;
   /**
@@ -138,6 +140,7 @@ export async function session(options: RunOptions = {}): Promise<Session> {
     ...(options.opener === undefined ? {} : { opener: options.opener }),
     ...(options.clipboard === undefined ? {} : { clipboard: options.clipboard }),
     ...(options.sys === undefined ? {} : { sys: options.sys }),
+    ...(options.digest === undefined ? {} : { digest: options.digest }),
     yieldToHost: () => Promise.resolve(),
   });
   if (options.catalogue !== 'lazy') await app.shell.registry.whenComplete();

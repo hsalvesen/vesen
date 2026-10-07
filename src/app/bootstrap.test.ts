@@ -208,7 +208,9 @@ describe('bootstrap', () => {
     expect(last?.blocks).toMatchObject([{ type: 'lines', lines: [[{ text: 'vesen was updated, reloading…', style: { fg: 'warn', bold: true } }]] }]);
   });
 
-  it('runs lines through the shell, whose kernel loads after the first paint, and keeps history', async () => {
+  // `lss` is not a command, so the line waits for the whole catalogue, which a cold test run
+  // compiles first: give it room.
+  it('runs lines through the shell, whose kernel loads after the first paint, and keeps history', { timeout: 15_000 }, async () => {
     const { boot, screen } = await load();
     const shell = boot()?.shell;
     const running = shell?.run('lss');

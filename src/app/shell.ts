@@ -10,7 +10,8 @@ import { createClock } from '../services/clock';
 import { createNet } from '../services/net';
 import { STORAGE_KEYS } from '../services/storage-keys';
 import { createSysInfo, type SysHost } from '../services/sysinfo';
-import type { Bell, Clipboard, Clock, KV, Net, Opener, SysInfo } from '../services/types';
+import { createDigest } from '../services/digest';
+import type { Bell, Clipboard, Clock, Digest, KV, Net, Opener, SysInfo } from '../services/types';
 import { loadArith } from '../shell/expand';
 import { createShell, type Shell, type TerminalInfo } from '../shell/index';
 import { loginFiles } from '../shell/session';
@@ -62,6 +63,8 @@ export interface AppShellOptions {
   /** The page's recent errors (platform/errors.ts), for debug report. */
   readonly errors?: () => readonly string[];
   readonly bell?: Bell;
+  /** Hashes for sha256sum and the other checksums; the browser's WebCrypto by default. */
+  readonly digest?: Digest;
   readonly opener?: Opener;
   readonly clipboard?: Clipboard;
   readonly terminal?: TerminalInfo;
@@ -141,6 +144,7 @@ export function createAppShell(options: AppShellOptions): AppShell {
     fs: vfs,
     storage,
     net: options.net ?? createNet(),
+    digest: options.digest ?? createDigest(),
     clock,
     sys,
     appearance: createAppearance({
