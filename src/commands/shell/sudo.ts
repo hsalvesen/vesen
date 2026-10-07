@@ -5,9 +5,9 @@
 // compared, kept, shown or sent anywhere.
 //
 // On a desktop browser outside an in-app browser the video opens in a new tab inside the Enter
-// that answers the prompt (the read's `opens`); everywhere, a link card with Copy is printed.
+// that answers the prompt (the read's `opens`); everywhere, a link card with Copy is printed. The
+// body is in sudo.run.ts.
 
-import { out } from '../../output/model';
 import { defineCommand } from '../../shell/types';
 
 export const SUDO_VIDEO = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
@@ -20,8 +20,6 @@ export default defineCommand({
   category: 'shell',
   summary: 'run a command as the superuser',
   synopsis: ['sudo [-u USER] COMMAND [ARG]...', 'sudo -i', 'sudo -s'],
-  description:
-    "Asks for guest's password, as sudo does, and then says what sudo says to a user who is not in the sudoers file. It is a joke: what is typed at the password prompt is hidden, and is never kept, shown or sent anywhere.",
   posixArgs: true,
   flags: [
     { short: 'u', long: 'user', description: 'run the command as USER', value: { name: 'USER', source: { kind: 'user' } } },
@@ -34,29 +32,5 @@ export default defineCommand({
     { line: 'sudo --help', note: 'what it would do', offline: true },
   ],
   seeAlso: ['whoami', 'id'],
-  man: [{ heading: 'EXIT STATUS', body: '1: guest is not in the sudoers file.' }],
-  async run(ctx) {
-    const shell = ctx.opts.login === true || ctx.opts.shell === true;
-    if (ctx.args.length === 0 && !shell) return ctx.usage('a command is required');
-    if (!ctx.tty.interactive) return ctx.fail('a terminal is required to read the password');
-
-    const password = await ctx.tty.readLine({ prompt: `[sudo] password for ${ctx.user.name}: `, secret: true, hint: SUDO_HINT, opens: SUDO_VIDEO });
-    if (password === null) {
-      if (ctx.signal.aborted) throw ctx.signal.reason;
-      return ctx.fail('a password is required');
-    }
-
-    // The one request sudo grants here.
-    if (ctx.args.join(' ').toLowerCase() === 'make me a sandwich') {
-      await ctx.stdout.line('Okay. One sandwich, made with superuser care.');
-      await ctx.stdout.line(out.span(`(${ctx.user.name} is still not in the sudoers file. This one is on the house.)`, { fg: 'muted' }));
-      return 0;
-    }
-    await ctx.stderr.line(`${ctx.user.name} is not in the sudoers file. This incident will be reported.`);
-    // The card everywhere; on a desktop browser the answer's key press has opened it already.
-    const opened = await ctx.tty.open(SUDO_VIDEO, 'sudo');
-    await ctx.stdout.block(out.card({ title: 'Your incident report', href: SUDO_VIDEO }));
-    if (opened === 'opened') await ctx.stdout.line(out.span('(opened in a new tab)', { fg: 'muted' }));
-    return 1;
-  },
+  load: () => import('./sudo.run'),
 });

@@ -1,10 +1,8 @@
 // help: every command by category, or one command's options and examples, or the keys. The
 // index, the panels and the key list are all generated from the specs (src/shell/help.ts), so
-// help never disagrees with the commands (F042, F043).
+// help never disagrees with the commands (F042, F043). Its body is in help.run.ts.
 
-import { out } from '../../output/model';
 import { defineCommand, PLAIN_ARG } from '../../shell/types';
-import { allCommands } from '../lib/catalogue';
 
 export default defineCommand({
   name: 'help',
@@ -14,8 +12,6 @@ export default defineCommand({
   summary: 'list the commands, or explain one',
   helpRank: 1,
   synopsis: ['help [-a]', 'help COMMAND...', 'help keys'],
-  description:
-    "With no COMMAND, lists the portfolio commands with what each does, then the names of the rest by category (on a narrow screen, the first few of each, then how many more); with -a, every command with what it does. Tap a name to put it at the prompt. With a COMMAND, shows its options and examples, as 'COMMAND --help' does. 'help keys' lists the keys the terminal answers to.",
   featured: true,
   flags: [{ short: 'a', long: 'all', description: 'list every command, each with what it does' }],
   args: [{ name: 'COMMAND', source: { kind: 'command' }, optional: true, variadic: true }],
@@ -34,30 +30,5 @@ export default defineCommand({
     const [topic] = topics;
     return topics.length === 1 && topic !== undefined && topic !== 'keys' && PLAIN_ARG.test(topic) ? [`man ${topic}`] : [];
   },
-  async run(ctx) {
-    const [help, registry] = await Promise.all([import('../../shell/help'), allCommands(ctx)]);
-    if (ctx.args.length === 0) {
-      // On a terminal the rows are cut to fit its width; in a pipe, every name.
-      const columns = ctx.stdout.isTTY ? { columns: ctx.stdout.columns } : {};
-      for (const block of help.helpIndex(registry, { all: ctx.opts.all === true, ...columns })) await ctx.stdout.block(block);
-      return 0;
-    }
-    let status = 0;
-    for (const topic of ctx.args) {
-      if (topic === 'keys') {
-        const keys = registry.get('keys');
-        for (const block of help.keysTopic({ touch: ctx.tty.touch, ...(keys === undefined ? {} : { spec: keys }) })) await ctx.stdout.block(block);
-        continue;
-      }
-      const spec = registry.get(topic);
-      if (spec === undefined) {
-        await ctx.stderr.line(out.span(`help: no help topics match '${topic}'`, { fg: 'error' }));
-        await ctx.stderr.line(out.span(`Try 'help' for the list, or 'apropos ${topic}' to search it.`, { fg: 'muted' }));
-        status = 1;
-        continue;
-      }
-      for (const block of help.commandHelp(await help.withDoc(spec))) await ctx.stdout.block(block);
-    }
-    return status;
-  },
+  load: () => import('./help.run'),
 });

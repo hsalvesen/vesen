@@ -1,7 +1,6 @@
 // apropos: search the commands' names and summaries, as man-db's apropos searches the manual.
 
 import { defineCommand } from '../../shell/types';
-import { runApropos } from './man';
 
 export default defineCommand({
   name: 'apropos',
@@ -14,11 +13,5 @@ export default defineCommand({
     { line: 'apropos theme', offline: true },
   ],
   seeAlso: ['whatis', 'man', 'help'],
-  async run(ctx) {
-    if (ctx.args.length === 0) {
-      await ctx.stderr.write('apropos what?\n');
-      return 1;
-    }
-    return runApropos(ctx, ctx.args);
-  },
+  load: () => import('./man.run').then(({ apropos }) => ({ run: apropos })),
 });

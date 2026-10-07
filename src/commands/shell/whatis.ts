@@ -1,7 +1,6 @@
 // whatis: the one-line summary of each command named, as man-db prints it.
 
 import { defineCommand } from '../../shell/types';
-import { runWhatis } from './man';
 
 export default defineCommand({
   name: 'whatis',
@@ -14,11 +13,5 @@ export default defineCommand({
     { line: 'whatis cd pwd theme', offline: true },
   ],
   seeAlso: ['apropos', 'man', 'help'],
-  async run(ctx) {
-    if (ctx.args.length === 0) {
-      await ctx.stderr.write('whatis what?\n');
-      return 1;
-    }
-    return runWhatis(ctx, ctx.args);
-  },
+  load: () => import('./man.run').then(({ whatis }) => ({ run: whatis })),
 });

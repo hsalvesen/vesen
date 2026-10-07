@@ -114,7 +114,8 @@ describe('a listing', () => {
     const { load, calls } = deferred();
     const h = harness({ specs: [help], catalogue: load });
     const listing = h.run('help --all');
-    await flush();
+    // help's body loads first, then asks for the catalogue.
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
     calls[0]?.reject(new Error('Failed to fetch'));
     const result = await listing;
     expect(result.status).toBe(0);
@@ -123,8 +124,7 @@ describe('a listing', () => {
 
     // The next one tries again, and lists them all.
     const again = h.run('help --all');
-    await flush();
-    expect(load).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2));
     calls[1]?.resolve([shout]);
     const listed = await again;
     expect(listed.stderr).toBe('');
