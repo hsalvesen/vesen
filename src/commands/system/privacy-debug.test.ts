@@ -3,10 +3,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { runLine, session } from '../../../tests/harness';
 import { lineText, type Block } from '../../output/model';
-import { legacy } from '../legacy';
 import { buildRegistry } from '../index';
-import { createAppShell } from '../../app/shell';
-import { createScreen } from '../../stores/screen';
 import { THIRD_PARTIES } from './privacy.run';
 
 const tableRows = (blocks: readonly Block[]): string[] =>
@@ -20,7 +17,8 @@ describe('privacy', () => {
       'Open-Meteo',
       'OpenStreetMap Nominatim',
       'GeoJS, then ipinfo.io',
-      "vesen's stock Worker",
+      // No VITE_STOCK_API in tests: the interim proxy, until the stock Worker is deployed.
+      'allorigins.win, then Yahoo Finance',
       'Cloudflare speed test',
       'Cloudflare or Google DNS-over-HTTPS',
       'RDAP (rdap.org and the registries)',
@@ -31,20 +29,11 @@ describe('privacy', () => {
     expect(stdoutPlain).toContain('What you type at sudo is never kept.');
   });
 
-  it('adds what a legacy command still uses, while it is legacy', async () => {
-    const stock = legacy('stock', () => '', { category: 'network', summary: 'x' });
-    const app = createAppShell({ banner: () => '', specs: [stock], screen: createScreen(), version: 'test' });
-    await app.boot();
-    const result = await app.shell.run('privacy');
-    expect(tableRows(result.blocks)).toContain('allorigins.win, then Yahoo Finance');
-    app.stop();
-    const without = createAppShell({ banner: () => '', specs: [], screen: createScreen(), version: 'test' });
-    await without.boot();
-    expect(tableRows((await without.shell.run('privacy')).blocks)).not.toContain('allorigins.win, then Yahoo Finance');
-    without.stop();
-    // weather is ported: its old source is gone from the table.
-    expect(THIRD_PARTIES.filter((row) => row.legacy === true).map((row) => row.commands)).toEqual([['stock']]);
-    expect(THIRD_PARTIES.map((row) => row.service).join(' ')).not.toMatch(/wttr/);
+  it('names no source a ported command has left behind', () => {
+    // weather left wttr.in, and stock's interim proxy is the labelled row above until its Worker runs.
+    const services = THIRD_PARTIES.map((row) => row.service).join(' ');
+    expect(services).not.toMatch(/wttr/);
+    expect(THIRD_PARTIES.map((row) => row.askedBy).join(' ')).not.toMatch(/for now/);
     expect(buildRegistry([]).get('privacy')).toBeDefined();
   });
 

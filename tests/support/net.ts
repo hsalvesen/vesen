@@ -22,6 +22,11 @@ const UPSTREAM: Record<string, Upstream> = {
     file: 'yahoo-chart-aapl.json',
     contentType: 'application/json;charset=utf-8',
   },
+  // What stock's interim source asks the proxy for (src/services/market/interim.ts).
+  'https://query1.finance.yahoo.com/v8/finance/chart/AAPL?range=1d&interval=5m&includePrePost=false': {
+    file: 'yahoo-chart-aapl.json',
+    contentType: 'application/json;charset=utf-8',
+  },
   'https://httpbin.org/get': { file: 'httpbin-get.json', contentType: 'application/json' },
   'https://api.ipify.org/?format=json': { file: 'ipify.json', contentType: 'application/json' },
 };

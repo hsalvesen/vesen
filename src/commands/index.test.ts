@@ -11,8 +11,8 @@ describe('the command catalogue', () => {
       'about', 'alias', 'apropos', 'banner', 'cat', 'cathode', 'cd', 'clear', 'command', 'contact', 'cp', 'date', 'debug', 'echo',
       'env', 'exit', 'export', 'false', 'help', 'history', 'keys', 'linkedin', 'ln', 'login', 'ls', 'man', 'mkdir', 'mv',
       'open', 'poweroff', 'printenv', 'printf', 'privacy', 'pwd', 'qr', 'reboot', 'repo', 'reset', 'rm', 'rmdir', 'set',
-      'shutdown', 'sleep', 'source', 'stat', 'sudo', 'test', 'theme', 'touch', 'true', 'type', 'unalias', 'unset', 'weather',
-      'whatis', 'which', 'whoami',
+      'shutdown', 'sleep', 'source', 'stat', 'stock', 'sudo', 'test', 'theme', 'touch', 'true', 'type', 'unalias', 'unset',
+      'weather', 'whatis', 'which', 'whoami',
     ]);
   });
 

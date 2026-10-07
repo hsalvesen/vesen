@@ -22,14 +22,18 @@ export const DOM_FREE_DIRS = ['src/shell', 'src/output', 'src/vfs', 'src/lib', '
 /**
  * Modules outside those folders that DOM-free code may import: the service contracts, which are
  * types, constants and pure functions only. They are held to the same rules as the folders.
- * The market contract is also bundled by the stock Worker (worker/stock). The weather core's pure
- * modules (its model and service port, WMO codes, units, places and the card's view) are what
- * the weather command draws its card with; the sources and resolution stay behind the port.
+ * The market contract and chart normaliser are also bundled by the stock Worker (worker/stock);
+ * the market port is how the stock command reaches the client the composition root provides.
+ * The weather core's pure modules (its model and service port, WMO codes, units, places and the
+ * card's view) are what the weather command draws its card with; the sources and resolution stay
+ * behind the port.
  */
 export const DOM_FREE_IMPORTABLE = [
   'src/services/types',
   'src/services/storage-keys',
   'src/services/market/contract',
+  'src/services/market/normalise',
+  'src/services/market/port',
   'src/services/weather/types',
   'src/services/weather/wmo',
   'src/services/weather/units',

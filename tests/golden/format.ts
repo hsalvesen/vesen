@@ -152,7 +152,7 @@ function spanHtml(span: GoldenSpan): string {
  * command's lines (and the shell's own, such as command not found) as the equivalent spans, a
  * grid (ls) as its items' spans two spaces apart on one line, since the page lays the columns
  * out to its width, a grid with notes (help) as one item and its note per line, art as its
- * hidden text with the alternative, and a component card (weather, qr) in art's form: its plain
+ * hidden text with the alternative, and a component card (weather, qr, stock) in art's form: its plain
  * text, which is what a pipe receives, with its screen-reader summary. Tap actions and live
  * bindings have no HTML form: a live span is recorded as it read when it was written.
  */

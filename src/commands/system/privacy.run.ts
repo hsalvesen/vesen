@@ -2,7 +2,7 @@
 
 import { out, type Line } from '../../output/model';
 import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
-import { isLegacySpec } from '../legacy';
+import { marketBackend } from '../../services/market/port';
 
 /** What --help, help and man say about privacy, besides its spec (privacy.ts). */
 export const doc: CommandDoc = {
@@ -16,8 +16,13 @@ interface ThirdParty {
   /** Who asks, as the table says it. */
   readonly askedBy: string;
   readonly sent: string;
-  /** What a legacy command uses until it is ported: shown only while one of `commands` is legacy. */
-  readonly legacy?: boolean;
+}
+
+/** Where stock's quotes come from in this build: the owned Worker when it names one, else the interim proxy. */
+function stockSource(): ThirdParty {
+  return marketBackend() === 'worker'
+    ? { service: "vesen's stock Worker", commands: ['stock'], askedBy: 'stock', sent: 'the ticker' }
+    : { service: 'allorigins.win, then Yahoo Finance', commands: ['stock'], askedBy: 'stock, until its own service runs', sent: 'the ticker, through a public proxy' };
 }
 
 export const THIRD_PARTIES: readonly ThirdParty[] = [
@@ -29,14 +34,12 @@ export const THIRD_PARTIES: readonly ThirdParty[] = [
     askedBy: 'weather with no place, or --here without a device location',
     sent: 'nothing but the request: they answer with your approximate location',
   },
-  { service: "vesen's stock Worker", commands: ['stock'], askedBy: 'stock', sent: 'the ticker' },
+  stockSource(),
   { service: 'Cloudflare speed test', commands: ['speedtest'], askedBy: 'speedtest', sent: 'test data, down and up' },
   { service: 'Cloudflare or Google DNS-over-HTTPS', commands: ['dig', 'host', 'nslookup'], askedBy: 'dig, host, nslookup', sent: 'the name you look up' },
   { service: 'RDAP (rdap.org and the registries)', commands: ['whois'], askedBy: 'whois', sent: 'the domain you look up' },
   { service: 'GitHub', commands: ['git', 'repo'], askedBy: 'git log in ~/projects/vesen', sent: 'nothing but the request' },
   { service: 'ipify', commands: ['fastfetch'], askedBy: 'fastfetch', sent: 'nothing but the request: it answers with your public IP' },
-  // What the legacy commands use until their ports land.
-  { service: 'allorigins.win, then Yahoo Finance', commands: ['stock'], askedBy: 'stock, for now', sent: 'the ticker', legacy: true },
 ];
 
 const NOTES: readonly string[] = [
@@ -46,25 +49,18 @@ const NOTES: readonly string[] = [
   'curl and wget fetch the address you give them, straight from your browser.',
   'qr makes its codes in your browser: nothing you encode is sent anywhere.',
   'Links open only when you tap them, or in a desktop browser when whoami, linkedin, repo or open opens one.',
-  'This browser keeps the theme, your settings, history, your files under ~ and recent weather places (local storage), and a snapshot of the screen for Back for 30 minutes (session storage). What you type at sudo is never kept.',
+  'This browser keeps the theme, your settings, history, your files under ~, recent weather places, and the last quotes and tickers stock showed (local storage), and a snapshot of the screen for Back for 30 minutes (session storage). What you type at sudo is never kept.',
   'No analytics, and no cookies.',
 ];
 
 export async function run(ctx: CommandContext): Promise<ExitCode> {
   const [extra] = ctx.args;
   if (extra !== undefined) return ctx.usage(`extra operand '${extra}'`);
-  const registry = ctx.shell.registry;
-  const shown = THIRD_PARTIES.filter(
-    (row) => row.legacy !== true || row.commands.some((name) => {
-      const spec = registry.get(name);
-      return spec !== undefined && isLegacySpec(spec);
-    }),
-  );
   const cell = (text: string): Line => [out.span(text)];
   await ctx.stdout.block(out.lines([[out.span('What vesen sends, and where', { fg: 'accent', bold: true })], []]));
   await ctx.stdout.block(
     out.table(
-      shown.map((row) => [[out.span(row.service, { fg: 'fg-strong' })], cell(row.askedBy), cell(row.sent)]),
+      THIRD_PARTIES.map((row) => [[out.span(row.service, { fg: 'fg-strong' })], cell(row.askedBy), cell(row.sent)]),
       { head: [cell('Service'), cell('Asked by'), cell('What it is sent')], stackBelowCols: 100 },
     ),
   );

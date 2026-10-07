@@ -16,6 +16,7 @@ import { startMeasuring, transcriptColumns } from '../platform/measure';
 import { startViewport } from '../platform/viewport';
 import { createBell } from '../services/bell';
 import { createClipboard } from '../services/clipboard';
+import { provideMarket } from '../services/market/port';
 import { createOpener } from '../services/opener';
 import { pendingSnapshot, type SessionSnapshot } from '../services/session-snapshot';
 import { createStorage, runMigrations } from '../services/storage';
@@ -106,6 +107,8 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
   const env = readLinkEnv(win);
   const opener = createOpener(win, env);
   const clipboard = createClipboard(win);
+  // stock's market client, over this browser's storage; its chunk loads with the first quote.
+  provideMarket(() => import('../services/market/client').then(({ createMarketClient }) => createMarketClient({ storage: storage.local })));
 
   // The CRT tier follows the quality setting and the device's own settings, which can change
   // while the page is open (reduced motion switched on, say).
@@ -118,6 +121,7 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
 
   const stops = [
     () => errors.stop(),
+    () => provideMarket(null),
     installChunkReload(win, storage.session, build, (message) => {
       // A lines block, which the first paint's chunk draws itself: this build's other chunks are
       // the ones that just failed to load.

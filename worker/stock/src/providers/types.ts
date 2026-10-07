@@ -33,41 +33,8 @@ export function coolDown(ctx: ProviderContext, host: string): void {
   ctx.cooldowns.set(host, ctx.now() + COOLDOWN_MS);
 }
 
-export type Rec = Readonly<Record<string, unknown>>;
-
-export function isRecord(value: unknown): value is Rec {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/** A finite number, or null. Missing, NaN and non-numbers all become null, never 0. */
-export function num(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
-
-/** A finite positive number, or null: volume 0 means "not reported" for indices and FX. */
-export function positive(value: unknown): number | null {
-  const n = num(value);
-  return n !== null && n > 0 ? n : null;
-}
-
-/**
- * Display text from an upstream: control and bidirectional-override characters removed (so a
- * name cannot reorder the text around it), spaces collapsed, length capped.
- */
-export function text(value: unknown, max = 120): string | null {
-  if (typeof value !== 'string') return null;
-  const clean = value
-    .replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ')
-    .replace(/[‎‏‪-‮⁦-⁩]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return clean === '' ? null : clean.slice(0, max);
-}
-
-export function round(value: number, decimals: number): number {
-  const factor = 10 ** decimals;
-  return Math.round(value * factor) / factor;
-}
+// The checked-value helpers are shared with the chart normaliser.
+export { isRecord, num, positive, round, text, type Rec } from '../normalise';
 
 /** US-listed common stock or ETF symbols, which Cboe and Finnhub can answer: AAPL, BRK-B. */
 export function isUsListed(symbol: string): boolean {

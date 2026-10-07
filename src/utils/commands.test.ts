@@ -25,9 +25,9 @@ describe('the lazily loaded network commands', () => {
     });
     const { commands } = await import('./commands');
 
-    const output = await commands.stock?.(['AAPL']);
+    const output = await commands.curl?.(['https://example.com']);
 
-    expect(output).toContain('stock: could not load the command. Check the connection and try again.');
+    expect(output).toContain('curl: could not load the command. Check the connection and try again.');
     expect(beep).toHaveBeenCalledTimes(1);
     vi.doUnmock('./beep');
   });
@@ -51,10 +51,10 @@ describe('fastfetch', () => {
 describe('help', () => {
   it('lays out each legacy help text as panels, for the shell to show on --help', async () => {
     const { legacyHelpHtml } = await import('./commands');
-    expect(legacyHelpHtml('stock')).toContain('<div class="out-panel tone-link"><div class="out-panel-title">Usage:</div>');
+    expect(legacyHelpHtml('curl')).toContain('<div class="out-panel tone-link"><div class="out-panel-title">Usage:</div>');
     expect(legacyHelpHtml('constructor')).toBeUndefined();
     // A ported command's help comes from its spec, so its legacy help text is gone.
-    for (const ported of ['ls', 'help', 'theme', 'cathode', 'banner']) expect(legacyHelpHtml(ported), ported).toBeUndefined();
+    for (const ported of ['ls', 'help', 'theme', 'cathode', 'banner', 'stock']) expect(legacyHelpHtml(ported), ported).toBeUndefined();
   });
 });
 

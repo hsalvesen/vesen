@@ -11,6 +11,8 @@ import { SNAPSHOT_KEY } from './services/session-snapshot';
 import type { KV } from './services/types';
 import type { AppPlatform } from './ui/platform';
 import { fakeOpener } from './testing/opener';
+import { createMarketClient } from './services/market/client';
+import { provideMarket } from './services/market/port';
 
 async function settle(): Promise<void> {
   for (let i = 0; i < 20; i += 1) await Promise.resolve();
@@ -29,11 +31,14 @@ beforeEach(() => {
   const app = legacyAppShell({ banner: () => bannerBlocks({ version: '0.0.0-test', columns: 80, touch: false }), yieldToHost: () => Promise.resolve() });
   shell = app.shell;
   stopShell = app.stop;
+  // stock's client, as bootstrap provides it; each test that runs stock stubs fetch.
+  provideMarket(() => Promise.resolve(createMarketClient({ storage: null })));
 });
 
 afterEach(() => {
   shell.abort();
   stopShell();
+  provideMarket(null);
   vi.unstubAllGlobals();
   // The transcript is a module store, so each test starts from an empty screen.
   transcript.clear();

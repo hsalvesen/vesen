@@ -49,6 +49,16 @@ At the prompt, Tab completes, ↑ and ↓ step through the history lines that st
 
 On a phone, a dock rides above the keyboard. Its chips run a starter command in one tap without opening the keyboard, offer what comes next after a command (every theme after `theme ls`), and build a line by tapping: a completion goes on the line as Tab would put it, and one that finishes the line runs it. Holding a chip that runs puts it at the prompt instead. The key bar has tab, ↑, ↓, ^C, clear, ••• for symbols and ⌄ to put the keyboard away; holding ↑ opens a list of past commands. A hardware keyboard hides the key bar; `keys on|off|auto` chooses. Open the page with `?dock=1` to see the dock on a desktop.
 
+## Stock quotes
+
+`stock AAPL` shows a card with the price in the instrument's own currency, the change, the market's phase (open, pre-market, closed and when it opens), a chart and the day and 52-week ranges; `stock AAPL CBA.AX BTC-USD` shows a table, `stock -s commonwealth bank` finds tickers by name, and `stock -r 5d AAPL` changes the chart's range. Chips under a card refresh it or change the range in one tap. Quotes may be delayed, and every card says where its data came from and how old it is. Not investment advice.
+
+The quotes come through vesen's own stock service, a small Cloudflare Worker in [`worker/stock`](worker/stock/README.md) that calls Yahoo Finance (and Cboe for US listings when Yahoo is down). The build finds it through `VITE_STOCK_API`: copy `.env.example` to `.env.local` and set it there, or set the `VITE_STOCK_API` repository variable, which CI passes to the build. Left unset or empty, `stock` uses an interim source, Yahoo's chart through the public `api.allorigins.win` proxy: it is slower, every card it feeds says "via public proxy, may be slow", and `privacy` lists it.
+
+Every request has an 8 s deadline and the whole command 10 s; a quick failure is tried once more, and answers are reused for 30 s. The last good quote of each ticker is kept in this browser (`vesen:stock:v1`, with the recent tickers), and shown marked STALE when live data cannot be reached.
+
+To run your own copy on another domain, deploy your own Worker with your domain in its `ALLOWED_ORIGINS` (see its README) and build with `VITE_STOCK_API` pointing at it. vesen's Worker answers only vesen.app, its preview channels and localhost, so elsewhere `stock` says that live quotes aren't available on that host.
+
 ## Themes
 
 ![themes](/docs/themes/themes.gif)
@@ -107,9 +117,10 @@ src/
 │                                 # apropos, history, clear, reset, alias, unalias, export, unset, env,
 │                                 # printenv, set, source, type, which, command, true, false, test, exit,
 │                                 # login, sleep, sudo), system/ (date, keys, poweroff, reboot, shutdown,
-│                                 # privacy, debug), network/ (weather); lib/ is what they share, the banner,
-│                                 # the link cards and weather's way to its service included; legacy.ts wraps
-│                                 # the commands not yet ported
+│                                 # privacy, debug), network/ (weather, and stock with its card's words in
+│                                 # stock/); lib/ is what they share, the banner, the link cards and
+│                                 # weather's way to its service included; legacy.ts wraps the commands not
+│                                 # yet ported
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette
 │                                 # where themes.json does not set them, and the contrast each must meet);
@@ -137,7 +148,10 @@ src/
 │   ├── weather/                  # Weather's sources (forecast, geocoding, IP location), place resolution,
 │   │                             # units and WMO codes, the view model a weather card draws, and the
 │   │                             # service the weather command reaches them through (loaded on first use)
-│   └── market/contract.ts        # The stock Worker's wire format, shared by the Worker and the app
+│   └── market/                   # stock's data: contract.ts (the Worker's wire format) and normalise.ts
+│                                 # (Yahoo's chart as a quote), both shared with the Worker; client.ts
+│                                 # (budgets, retry, memory, saved copies); interim.ts (the public proxy
+│                                 # until the Worker is deployed); port.ts (how the command reaches it)
 ├── stores/                       # Svelte stores, pure state: screen (the transcript), term, theme, cathode,
 │                                 # prefs (the key bar setting), viewport (the visible height)
 ├── ui/
@@ -163,7 +177,8 @@ src/
 │   │                             # focusPolicy (when a click, tap or key puts the caret in the prompt)
 │   └── components/               # LinkCard.svelte (the card block: the link, Copy, the in-app escape);
 │                                 # registry.ts, the rich cards a component block may name, each loaded on
-│                                 # first use: WeatherCard.svelte (compact and wide layouts by its own width)
+│                                 # first use: WeatherCard.svelte (compact and wide layouts by its own
+│                                 # width), and QuoteCard, QuoteTable and Sparkline, stock's cards
 ├── testing/                      # Test setup
 └── utils/
     ├── commands.ts               # The legacy command table; the network commands load on first use

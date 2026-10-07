@@ -25,6 +25,8 @@ export type ComponentLoader = () => Promise<{ readonly default: BlockComponent }
 /** The cards, by name, each loading its own chunk. Each card adds itself here as it lands. */
 const CARDS: Partial<Record<ComponentName, ComponentLoader>> = {
   'qr-card': () => import('./QrCard.svelte'),
+  'quote-card': () => import('./QuoteCard.svelte'),
+  'quote-table': () => import('./QuoteTable.svelte'),
   'weather-card': () => import('./WeatherCard.svelte'),
 };
 

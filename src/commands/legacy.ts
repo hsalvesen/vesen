@@ -104,7 +104,7 @@ export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpe
 // ── The table ──────────────────────────────────────────────────────────────────────────────
 
 /** The legacy command names, in the order help lists them today. */
-export const LEGACY_NAMES = ['curl', 'fastfetch', 'speedtest', 'stock'] as const;
+export const LEGACY_NAMES = ['curl', 'fastfetch', 'speedtest'] as const;
 export type LegacyName = (typeof LEGACY_NAMES)[number];
 
 /** What the app layer supplies from src/utils. */
@@ -144,15 +144,6 @@ const TABLE: Readonly<Record<LegacyName, StaticMeta>> = {
     interactiveOnly: true,
     loadingLabel: () => 'measuring the connection…',
     examples: examples('speedtest'),
-  },
-  stock: {
-    category: 'network',
-    summary: 'show the price of a stock',
-    network: true,
-    budgetMs: 10_000,
-    loadingLabel: (argv) => `fetching ${argv[1]?.toUpperCase() ?? 'the quote'}…`,
-    args: [{ name: 'TICKER', source: { kind: 'examples', caseInsensitive: true } }],
-    examples: examples('stock AAPL', 'stock TEAM'),
   },
 };
 

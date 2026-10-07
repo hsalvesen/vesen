@@ -129,27 +129,27 @@ function fakeSource(): LegacySource & { calls: string[] } {
   return {
     calls,
     commands,
-    help: (name) => (name === 'stock' ? '<div>stock help</div>' : undefined),
+    help: (name) => (name === 'curl' ? '<div>curl help</div>' : undefined),
   };
 }
 
 describe('the legacy table', () => {
-  it('wraps the 4 commands not yet ported, each once, with a category and a summary', () => {
+  it('wraps the 3 commands not yet ported, each once, with a category and a summary', () => {
     const specs = legacySpecs(fakeSource());
-    expect(specs).toHaveLength(4);
-    expect(new Set(specs.map((spec) => spec.name)).size).toBe(4);
+    expect(specs).toHaveLength(3);
+    expect(new Set(specs.map((spec) => spec.name)).size).toBe(3);
     expect(specs.every(isLegacySpec)).toBe(true);
     // Ported to src/commands: the file and text core, history, clear, cd, pwd, reset, help, theme,
-    // cathode, banner, sudo, the openers, the power commands, weather and qr.
-    const ported = ['cd', 'ls', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'history', 'clear', 'help', 'theme', 'cathode', 'banner', 'sudo', 'weather', 'qr'];
+    // cathode, banner, sudo, the openers, the power commands, weather, qr and stock.
+    const ported = ['cd', 'ls', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'history', 'clear', 'help', 'theme', 'cathode', 'banner', 'sudo', 'weather', 'qr', 'stock'];
     for (const name of [...ported, 'whoami', 'email', 'repo', 'poweroff']) {
       expect(specs.map((spec) => spec.name)).not.toContain(name);
     }
     const registry = new CommandRegistry(specs);
     expect(registry.validate()).toEqual([]);
     expect(specs.every((spec) => takesRawArgs(spec))).toBe(true);
-    expect(registry.get('stock')).toMatchObject({ category: 'network', summary: 'show the price of a stock', legacyHelp: '<div>stock help</div>' });
-    expect(registry.get('stock')).toMatchObject({ network: true, budgetMs: 10_000 });
+    expect(registry.get('curl')).toMatchObject({ category: 'network', summary: 'transfer a URL', legacyHelp: '<div>curl help</div>' });
+    expect(registry.get('speedtest')).toMatchObject({ network: true, budgetMs: 120_000 });
     expect(registry.get('curl')?.network).toBe(true);
     expect(registry.get('fastfetch')?.category).toBe('system');
   });
@@ -163,13 +163,13 @@ describe('the legacy table', () => {
 
   it('describes arguments for completion', () => {
     const registry = new CommandRegistry(legacySpecs(fakeSource()));
-    expect(registry.get('stock')?.args?.[0]?.source).toEqual({ kind: 'examples', caseInsensitive: true });
+    expect(registry.get('curl')?.args?.[0]?.source).toEqual({ kind: 'url' });
   });
 
   it('passes every word, unparsed, to the legacy function', async () => {
     const source = fakeSource();
     const { run } = harness({ specs: legacySpecs(source) });
-    await run('stock -x AAPL');
-    expect(source.calls).toEqual(['stock -x AAPL']);
+    await run('curl -x AAPL');
+    expect(source.calls).toEqual(['curl -x AAPL']);
   });
 });

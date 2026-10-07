@@ -31,13 +31,20 @@ jobs:
       - run: npm run check:strict
       - run: npm run check:boundaries
       - run: npm test
+      # The stock Worker's address; an unset repository variable is an empty string, which the
+      # app takes to mean the interim proxy (src/services/market/port.ts).
       - run: npm run build
+        env:
+          VITE_STOCK_API: ${{ vars.VITE_STOCK_API }}
       - run: npm run check:bundle
       - run: npm run check:contrast -- --strict
 
       # WebKit for the iPhone Instagram project: the main audience, and the engine where taps differ.
       - run: npx playwright install --with-deps chromium webkit
+      # The smoke tests build again (playwright.config.ts), and that build is the one uploaded below.
       - run: npm run test:smoke
+        env:
+          VITE_STOCK_API: ${{ vars.VITE_STOCK_API }}
 
       - name: Upload Playwright report
         if: failure()

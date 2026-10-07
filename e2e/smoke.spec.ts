@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { isBenignConsoleMessage } from './console';
+import { routeQuotes } from './quotes';
 
 test.describe('smoke', { tag: '@smoke' }, () => {
   test('boots, runs help, fits the viewport and logs no errors', async ({ page }) => {
@@ -35,8 +36,8 @@ test.describe('smoke', { tag: '@smoke' }, () => {
   });
 
   test('a hung request is cancelled from the status line, and the prompt stays usable', async ({ page, hasTouch }) => {
-    // The stock proxy accepts the request and never answers.
-    await page.route('https://api.allorigins.win/**', () => {});
+    // The quote service accepts the request and never answers.
+    await routeQuotes(page, 'hang');
     await page.goto('/');
 
     const prompt = page.locator('input.command-input');
