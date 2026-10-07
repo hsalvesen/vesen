@@ -20,11 +20,11 @@ theme     change the colour theme
 whoami    meet the developer; in a
           pipe, your user name
 
-Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
+Files: cat cd cp ln ls mkdir mv pwd +4
 Text: echo head printf rev wc yes
-Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
-System: date debug fastfetch keys open poweroff privacy reboot shutdown
-Network: curl fetch speedtest stock weather
+Shell: help alias apropos clear +23
+System: fastfetch date debug keys +5
+Network: stock weather curl dig fetch +9
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
@@ -46,7 +46,7 @@ Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
 Text: echo head printf rev wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
-Network: curl fetch speedtest stock weather
+Network: curl dig fetch git host ifconfig ip nslookup ping speedtest stock weather wget whois
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
@@ -65,7 +65,7 @@ Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
 Text: echo head printf rev wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
-Network: curl fetch speedtest stock weather
+Network: curl dig fetch git host ifconfig ip nslookup ping speedtest stock weather wget whois
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
@@ -87,7 +87,7 @@ Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
 Text: echo head printf rev wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
-Network: curl fetch speedtest stock weather
+Network: curl dig fetch git host ifconfig ip nslookup ping speedtest stock weather wget whois
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.

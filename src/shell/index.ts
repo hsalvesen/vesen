@@ -387,8 +387,9 @@ export function createShell(deps: ShellDeps): Shell {
       },
       describe: (name, label) => session.jobs.describe(id, name, label),
     };
-    // ^C seals the screen at once, before anything the job does next can write to it.
-    signal.addEventListener('abort', () => sink.seal(), { once: true });
+    // ^C seals the screen before anything the job does next can write to it. Only what the abort
+    // event itself writes still lands, so a command can say its last words: ping's statistics.
+    signal.addEventListener('abort', () => void Promise.resolve().then(() => sink.seal()), { once: true });
     // The line shows at once, with its output to follow as the job writes it (F013).
     transcript?.begin?.({
       id,

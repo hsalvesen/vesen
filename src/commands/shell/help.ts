@@ -36,7 +36,7 @@ export default defineCommand({
   async run(ctx) {
     const [help, registry] = await Promise.all([import('../../shell/help'), allCommands(ctx)]);
     if (ctx.args.length === 0) {
-      for (const block of help.helpIndex(registry, { all: ctx.opts.all === true })) await ctx.stdout.block(block);
+      for (const block of help.helpIndex(registry, { all: ctx.opts.all === true, ...(ctx.stdout.isTTY ? { columns: ctx.stdout.columns } : {}) })) await ctx.stdout.block(block);
       return 0;
     }
     let status = 0;

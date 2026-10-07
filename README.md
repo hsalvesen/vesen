@@ -45,6 +45,8 @@ Type `help` in the terminal to see every command by category, `man <command>` fo
 
 `whoami`, `about` and `contact` say who made vesen, with link cards that have Copy. A desktop browser also opens LinkedIn or the source for `whoami` and `repo`; on phones a link opens only when tapped, and inside Instagram's browser it opens in the same view, so Back brings the terminal back as it was. `privacy` lists every service a command talks to and what it is sent, and `debug report` copies the details a bug report needs.
 
+The network commands do what a browser allows, and say how. `dig`, `host` and `nslookup` ask Cloudflare's DNS over HTTPS (Google's when Cloudflare cannot be reached), and `whois` asks the registries over RDAP. A page cannot send ICMP, so `ping` times HTTPS round trips and labels them so, with ping's statistics at the end or on ^C. `ip addr` and `ifconfig` show a synthetic `eth0`, marked as such, and your public address, which they first say they are asking Cloudflare for. `wget` downloads into your files, with the same CORS rules as `curl`, and `git log` and `git show` in `~/projects/vesen` read this site's newest commits from GitHub. `ssh`, `telnet`, `nc`, `ftp` and `traceroute` say in one line why a browser tab cannot be them.
+
 At the prompt, Tab completes, ↑ and ↓ step through the history lines that start with what is typed, Ctrl+R searches the history, and grey text offers the rest of a past line (→ takes it). While the prompt has focus, the readline keys edit the line: Ctrl+A, E, U, K, Y, L and D everywhere, Ctrl+W, P, N, F, B and T on a Mac, and Alt+B, F, D, Y, . and Backspace. Ctrl+C stops the running command or abandons the line; on Windows and Linux, with text selected, it copies instead (a Mac copies with Cmd+C). Escape then a key is that key with Alt, as in readline (Esc . inserts the last argument), and Escape then Tab leaves the terminal for the rest of the page.
 
 On a phone, a dock rides above the keyboard. Its chips run a starter command in one tap without opening the keyboard, offer what comes next after a command (every theme after `theme ls`), and build a line by tapping: a completion goes on the line as Tab would put it, and one that finishes the line runs it. Holding a chip that runs puts it at the prompt instead. The key bar has tab, ↑, ↓, ^C, clear, ••• for symbols and ⌄ to put the keyboard away; holding ↑ opens a list of past commands. A hardware keyboard hides the key bar; `keys on|off|auto` chooses. Open the page with `?dock=1` to see the dock on a desktop.
@@ -116,9 +118,11 @@ src/
 │                                 # login, sleep, sudo), system/ (date, keys, poweroff, reboot, shutdown,
 │                                 # privacy, debug, fastfetch), network/ (weather, curl, speedtest, and
 │                                 # stock with its card's words in stock/); lib/ is what they share: the
-│                                 # banner, the link cards, weather's way to its service, and qr's options
-│                                 # and payloads; more/ is the catalogue, the commands that load after the
-│                                 # kernel in a chunk of their own (text/rev so far; see
+│                                 # banner, the link cards, weather's way to its service, qr's options and
+│                                 # payloads, and the network commands' DNS over HTTPS, interfaces and
+│                                 # GitHub commits; more/ is the catalogue, the commands that load after
+│                                 # the kernel in a chunk of their own (text/rev, and network/ with dig,
+│                                 # host, nslookup, ping, ip, ifconfig, whois, wget and git; see
 │                                 # docs/ADDING_COMMANDS.md)
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette

@@ -17,7 +17,6 @@ describe('privacy', () => {
   it('lists the third party of every command this shell has, who asks and what it is sent', async () => {
     const { status, blocks, stdoutPlain } = await runLine('privacy');
     expect(status).toBe(0);
-    // Services of commands that do not exist here (dig, host, nslookup, whois, git) are left out.
     expect(tableRows(blocks)).toEqual([
       'Open-Meteo',
       'OpenStreetMap Nominatim',
@@ -25,11 +24,24 @@ describe('privacy', () => {
       // No VITE_STOCK_API: the interim proxy, until the stock Worker is deployed.
       'allorigins.win, then Yahoo Finance',
       'Cloudflare speed test',
+      // The network commands of the catalogue (wave D).
+      'Cloudflare or Google DNS-over-HTTPS',
+      'RDAP (rdap.org and the registries)',
+      'GitHub',
+      'Cloudflare (cdn-cgi/trace)',
       'ipify',
     ]);
-    expect(stdoutPlain).toContain('IP address and location lookups happen only on request');
+    expect(stdoutPlain).toContain('IP address and location lookups happen only on request: weather with no place, ip addr, ifconfig and fastfetch --net.');
     expect(stdoutPlain).toContain('What you type at sudo is never kept.');
-    expect(stdoutPlain).not.toContain('wget');
+    expect(stdoutPlain).toContain('the commits git log showed for 10 (session storage)');
+  });
+
+  it('leaves out the services of commands this shell does not have', async () => {
+    // Before the catalogue arrives, only the kernel's commands are there to ask.
+    const registry = buildRegistry([]);
+    const shown = thirdParties().filter((row) => row.commands.some((name) => registry.get(name) !== undefined));
+    expect(shown.map((row) => row.service)).not.toContain('GitHub');
+    expect(shown.map((row) => row.service)).not.toContain('Cloudflare (cdn-cgi/trace)');
   });
 
   it("names the stock Worker in a build that has one", async () => {

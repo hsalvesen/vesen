@@ -40,13 +40,30 @@ const SUMMARY_CH = 26;
 
 // ── The index ──────────────────────────────────────────────────────────────────────────────
 
-/** A category's commands as one row: its title, then each name, tappable. */
-function namesRow(category: Category, specs: readonly CommandSpec[]): Span[] {
+/** Below this width (a phone) each row of the short index keeps to one line. */
+export const ONE_LINE_BELOW_COLS = 80;
+
+/**
+ * A category's commands as one row: its title, then each name, tappable. With `fit`, only as
+ * many as fit on one line of that width, the featured ones first, then `+N`, which runs
+ * help --all, for the rest.
+ */
+function namesRow(category: Category, specs: readonly CommandSpec[], fit?: number): Span[] {
+  const title = `${CATEGORY_TITLES[category]}: `;
   const row: Span[] = [out.span(CATEGORY_TITLES[category], HEADING), out.span(': ', HEADING)];
-  specs.forEach((spec, i) => {
-    if (i > 0) row.push(out.span(' '));
+  const ordered = fit === undefined ? specs : [...specs.filter((spec) => spec.featured === true), ...specs.filter((spec) => spec.featured !== true)];
+  let width = textWidth(title);
+  let shown = 0;
+  for (const spec of ordered) {
+    const next = width + (shown > 0 ? 1 : 0) + textWidth(spec.name);
+    const rest = ordered.length - shown - 1;
+    if (fit !== undefined && shown > 0 && next + (rest > 0 ? ` +${rest}`.length : 0) > fit) break;
+    if (shown > 0) row.push(out.span(' '));
     row.push(out.insert(spec.name, `${spec.name} `, STRONG));
-  });
+    width = next;
+    shown += 1;
+  }
+  if (shown < ordered.length) row.push(out.span(' '), out.run(`+${ordered.length - shown}`, 'help --all', MUTED));
   return row;
 }
 
@@ -70,10 +87,12 @@ const MORE_HELP: Line = [
 /**
  * The help index. By default it is short enough to read on a phone without scrolling: the
  * portfolio commands, the reason the site exists, each with its summary, then one row of names
- * for every other category. With `all`, every category gets the table. A name inserts itself
- * at the prompt when tapped; in a pipe the index is plain text.
+ * for every other category; on a terminal of `columns` narrower than ONE_LINE_BELOW_COLS, one
+ * line each, however many commands the catalogue brings. With `all`, every category gets the
+ * table. A name inserts itself at the prompt when tapped; in a pipe the index is plain text.
  */
-export function helpIndex(registry: Registry, options: { readonly all?: boolean } = {}): Block[] {
+export function helpIndex(registry: Registry, options: { readonly all?: boolean; readonly columns?: number } = {}): Block[] {
+  const fit = options.columns !== undefined && options.columns < ONE_LINE_BELOW_COLS ? options.columns : undefined;
   const blocks: Block[] = [];
   const widest = Math.max(1, ...registry.list().map((spec) => textWidth(spec.name)));
   // One column on a phone, two at 80 columns, three at 120.
@@ -83,7 +102,7 @@ export function helpIndex(registry: Registry, options: { readonly all?: boolean 
     const specs = registry.list({ category });
     if (specs.length === 0) continue;
     if (options.all === true || category === 'portfolio') blocks.push(...categoryTable(category, specs, minCh));
-    else rows.push(namesRow(category, specs));
+    else rows.push(namesRow(category, specs, fit));
   }
   if (rows.length > 0) blocks.push(out.lines([[], ...rows]));
   const more: Line[] = [[]];

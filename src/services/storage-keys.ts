@@ -67,6 +67,11 @@ export const STORAGE_KEYS = {
     area: 'session',
     holds: 'The build that last reloaded because of a stale lazy chunk',
   },
+  github: {
+    key: 'vesen:github:v1',
+    area: 'session',
+    holds: 'The newest commits git log showed, for 10 minutes',
+  },
   boot: {
     key: 'vesen:boot:v1',
     area: 'session',

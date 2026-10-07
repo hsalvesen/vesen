@@ -48,6 +48,7 @@ const spec: CommandSpec & RawArgsSpec & RunnerChoice = {
     'weather --here | weather - | weather --forget',
   ],
   rawArgs: true,
+  featured: true,
   network: true,
   // It may wait on a location prompt.
   budgetMs: 25_000,

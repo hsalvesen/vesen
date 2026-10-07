@@ -20,8 +20,18 @@ describe('help', () => {
     for (const spec of s.app.shell.registry.list({ category: 'portfolio' })) {
       expect(listed, spec.name).toMatch(new RegExp(`^${literal(spec.name)} +${literal(spec.summary)}$`, 'm'));
     }
+    // On a phone, each row keeps to one line: as many names as fit, then +N for the rest.
     const files = s.app.shell.registry.list({ category: 'files' }).map((spec) => spec.name);
-    expect(listed).toContain(`Files: ${files.join(' ')}`);
+    const row = listed.split('\n').find((line) => line.startsWith('Files: ')) ?? '';
+    expect(row.length).toBeLessThanOrEqual(40);
+    const shown = row.slice('Files: '.length).split(' ');
+    const rest = shown[shown.length - 1]?.startsWith('+') === true ? Number(shown.pop()?.slice(1)) : 0;
+    expect(shown).toEqual(files.slice(0, shown.length));
+    expect(shown.length + rest).toBe(files.length);
+    const plus = result.blocks.flatMap((block) => (block.type === 'lines' ? block.lines.flat() : [])).find((span) => span.text === `+${rest}`);
+    if (rest > 0) expect(plus?.action).toMatchObject({ kind: 'run', line: 'help --all' });
+    // Featured commands come first in a row cut short: weather and stock among the network's.
+    expect(listed.split('\n').find((line) => line.startsWith('Network: '))).toMatch(/^Network: stock weather /);
     expect(listed).not.toContain('list directory contents');
     expect(listed).toContain('help --all lists every command with what it does.');
     // It fits a phone's screen: the portfolio is never scrolled out of sight by the rest.
@@ -29,6 +39,19 @@ describe('help', () => {
     const more = result.blocks.flatMap((block) => (block.type === 'lines' ? block.lines.flat() : [])).find((span) => span.text === 'help --all');
     expect(more?.action).toMatchObject({ kind: 'run', line: 'help --all' });
     s.stop();
+  });
+
+  it('names every command of each category on a wider terminal, and in a pipe', async () => {
+    for (const options of [{ cols: 80 }, { cols: 40, tty: false }]) {
+      const s = await session(options);
+      const result = await s.run('help');
+      const listed = options.tty === false ? result.stdoutPlain : text(result.blocks);
+      for (const category of ['files', 'network'] as const) {
+        const names = s.app.shell.registry.list({ category }).map((spec) => spec.name);
+        expect(listed).toContain(`${category === 'files' ? 'Files' : 'Network'}: ${names.join(' ')}`);
+      }
+      s.stop();
+    }
   });
 
   it('lists every visible command in the registry with --all, by category, each with its summary', async () => {

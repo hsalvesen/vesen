@@ -189,7 +189,9 @@ is loaded before the first line unless you pass `catalogue: 'lazy'`.
 
 Tests never touch the network: record the responses once under `tests/fixtures/` and serve them
 through a fake `fetch`, as `src/commands/network/weather.test.ts` does, with the timeout,
-offline, rate-limit and malformed variants.
+offline, rate-limit and malformed variants. `serveNet` in `tests/support/net.ts` serves the
+DNS-over-HTTPS, RDAP, GitHub and Cloudflare fixtures in `tests/fixtures/net/` that the network
+commands in `src/commands/more/network/` use, and lets a test answer some requests itself.
 
 ## The gates
 

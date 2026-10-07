@@ -75,6 +75,7 @@ export default defineCommand({
     { line: 'stock -s commonwealth bank', note: 'find a ticker by name' },
   ],
   seeAlso: ['privacy'],
+  featured: true,
   network: true,
   // The client keeps half a second of this for drawing a saved copy (MARKET_LIMITS.budgetMs).
   budgetMs: 10_000,
