@@ -9,8 +9,9 @@ import { createAppearance } from '../services/appearance';
 import { createClock } from '../services/clock';
 import { createNet } from '../services/net';
 import { STORAGE_KEYS } from '../services/storage-keys';
-import { createSysInfoStub } from '../services/sysinfo';
+import { createSysInfoStub, type SysHost } from '../services/sysinfo';
 import type { Bell, Clipboard, Clock, KV, Net, Opener, SysInfo } from '../services/types';
+import { loadArith } from '../shell/expand';
 import { createShell, type Shell, type TerminalInfo } from '../shell/index';
 import { loginFiles } from '../shell/session';
 import type { CommandSpec } from '../shell/types';
@@ -57,6 +58,10 @@ export interface AppShellOptions {
   readonly net?: Net;
   readonly clock?: Clock;
   readonly sys?: SysInfo;
+  /** Where the system facts are read from when `sys` is not given: the page's window. */
+  readonly sysHost?: SysHost | null;
+  /** The page's recent errors (platform/errors.ts), for debug report. */
+  readonly errors?: () => readonly string[];
   readonly bell?: Bell;
   readonly opener?: Opener;
   readonly clipboard?: Clipboard;
@@ -73,8 +78,9 @@ export interface AppShell {
   /** Sources /etc/profile and ~/.bashrc, then starts saving changes under ~. */
   boot(): Promise<void>;
   /**
-   * Loads the bodies of the commands that load lazily, so none of them waits for the network
-   * the first time it runs. Settles when all have loaded or failed.
+   * Loads the bodies of the commands that load lazily, and the parts of the kernel that do, so
+   * none of them waits for the network the first time it runs. Settles when all have loaded or
+   * failed.
    */
   prefetch(): Promise<void>;
   /** Disconnects the stores the shell keeps in step, and stops saving. */
@@ -89,7 +95,7 @@ function noticeBlocks(message: string): Block[] {
 export function createAppShell(options: AppShellOptions): AppShell {
   const registry = buildRegistry(options.specs ?? []);
   const clock = options.clock ?? createClock();
-  const sys = options.sys ?? createSysInfoStub(null);
+  const sys = options.sys ?? createSysInfoStub(options.sysHost ?? null, options.errors ? { errors: options.errors } : {});
   const screen = options.screen ?? appScreen;
   const storage = options.storage ?? null;
   const version = options.version ?? __APP_VERSION__;
@@ -165,7 +171,9 @@ export function createAppShell(options: AppShellOptions): AppShell {
       persistence.start();
     },
     async prefetch() {
-      const loads = registry.list({ includeHidden: true }).flatMap((spec) => (spec.load === undefined ? [] : [spec.load()]));
+      const loads: Promise<unknown>[] = registry.list({ includeHidden: true }).flatMap((spec) => (spec.load === undefined ? [] : [spec.load()]));
+      // And what the kernel itself loads on first use: $(( )) arithmetic.
+      loads.push(loadArith());
       await Promise.allSettled(loads);
     },
     stop() {

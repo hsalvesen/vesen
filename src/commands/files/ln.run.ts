@@ -2,9 +2,16 @@
 // kernel's chunk carries only the spec.
 
 import { out } from '../../output/model';
-import type { CommandContext, ExitCode } from '../../shell/types';
+import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
 import { basename } from '../../vfs/path';
 import { childPath, reason, tryLstat, tryStat } from '../lib/files';
+
+/** What --help, help and man say about ln, besides its spec (ln.ts). */
+export const doc: CommandDoc = {
+  description:
+    'With -s, makes LINK_NAME a symbolic link to TARGET: opening the link opens TARGET. With no LINK_NAME, the link is made here, with TARGET\'s name; with a DIRECTORY, inside it. A relative TARGET is read from the folder the link is in. Hard links are not available here, so -s is needed.',
+  man: [{ heading: 'EXIT STATUS', body: '0 when every link was made, 1 otherwise.' }],
+};
 
 /** Runs ln. */
 export async function run(ctx: CommandContext): Promise<ExitCode | void> {

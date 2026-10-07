@@ -2,8 +2,24 @@
 // kernel's chunk carries only the spec.
 
 import { isVariableName } from '../../shell/session';
-import type { CommandContext, ExitCode } from '../../shell/types';
+import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
 import { readEscape, unescape } from '../lib/escapes';
+
+/** What --help, help and man say about printf, besides its spec (printf.ts). */
+export const doc: CommandDoc = {
+  description:
+    'Prints the ARGUMENTs as FORMAT says, reusing FORMAT until they run out. FORMAT is text with backslash escapes (\\n, \\t) and conversions: %s a string, %d or %i an integer, %f a decimal, %x hex, %o octal, %c a character, %b a string with escapes read, %q a string quoted for the shell, %% a percent sign. A width and precision go between: %-10s, %5.2f, %05d. Unlike echo, printf adds no newline of its own. With -v VAR, the result goes into the variable VAR instead.',
+  man: [
+    {
+      heading: 'CONVERSIONS',
+      body: 'Flags: - left-justify, 0 pad with zeros, + always a sign, space a space for positive numbers, # 0x for hex. A * for the width or precision takes it from the next argument. %e and %g write decimals in exponent form; %u, %X, %E, %F and %G are there too.',
+    },
+    {
+      heading: 'EXIT STATUS',
+      body: "0, or 1 when an argument was not a number a conversion wanted, such as printf '%d' abc.",
+    },
+  ],
+};
 
 /** The widest field and the longest precision printf makes. */
 export const MAX_FIELD = 65_535;

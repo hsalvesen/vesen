@@ -2,7 +2,8 @@
 // and fakes for every service. run(line) returns the status and what reached the screen, split
 // by stream.
 
-import { lineText, plain, type Block } from '../output/model';
+import { lineText, type Block } from '../output/model';
+import { plain } from '../output/plain';
 import { createClock } from '../services/clock';
 import { createNet } from '../services/net';
 import { createSysInfoStub } from '../services/sysinfo';

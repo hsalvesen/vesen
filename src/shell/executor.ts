@@ -712,8 +712,8 @@ export class Executor {
       await writeLegacyHtml(stdout, spec.legacyHelp);
       return;
     }
-    const { commandHelp } = await import('./help');
-    for (const block of commandHelp(spec)) await stdout.block(block);
+    const { commandHelp, withDoc } = await import('./help');
+    for (const block of commandHelp(await withDoc(spec))) await stdout.block(block);
   }
 
   private async commandError(

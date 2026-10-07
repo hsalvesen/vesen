@@ -12,14 +12,15 @@
 // A legacy command keeps its own --help (spec.legacyHelp) until it is ported; its man page is
 // generated from its spec like any other.
 //
-// Commands and the executor load this module the first time help is asked for.
+// Commands and the executor load this module the first time help is asked for. A command whose
+// body loads lazily keeps its long help with the body; withDoc() fetches it first.
 
 import { parseMarkup } from '../output/markup';
 import { out, textWidth, type Block, type Line, type Span, type SpanStyle } from '../output/model';
 import { flagKey } from './flags';
 import { KEY_BINDINGS, TOUCH_BINDINGS, type KeyBinding } from './keys';
 import { CATEGORY_ORDER } from './registry';
-import type { ArgSpec, Category, CommandSpec, FlagSpec, Registry } from './types';
+import type { ArgSpec, Category, CommandDoc, CommandSpec, FlagSpec, Registry } from './types';
 
 export const CATEGORY_TITLES: Readonly<Record<Category, string>> = {
   portfolio: 'Portfolio',
@@ -125,6 +126,28 @@ export function keysTopic(options: { readonly touch?: boolean; readonly spec?: C
 }
 
 // ── --help ─────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The spec with all of its long help. A command whose body loads lazily keeps its description
+ * and man sections there (spec.load's `doc`), so the kernel's chunk carries only the spec; this
+ * loads the body to read them. When the body cannot be loaded, the spec as it is: the summary
+ * stands in for the description.
+ */
+export async function withDoc(spec: CommandSpec): Promise<CommandSpec> {
+  if (spec.load === undefined) return spec;
+  let doc: CommandDoc | undefined;
+  try {
+    ({ doc } = await spec.load());
+  } catch {
+    return spec;
+  }
+  if (doc === undefined) return spec;
+  return {
+    ...spec,
+    ...(spec.description === undefined && doc.description !== undefined ? { description: doc.description } : {}),
+    ...(spec.man === undefined && doc.man !== undefined ? { man: doc.man } : {}),
+  };
+}
 
 function argUsage(arg: ArgSpec): string {
   const name = arg.variadic ? `${arg.name}...` : arg.name;

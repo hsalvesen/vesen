@@ -12,7 +12,7 @@
   import LineView from './LineView.svelte';
   import LinkCard from './components/LinkCard.svelte';
   import OutputView from './OutputView.svelte';
-  import { lookupComponent } from './components/registry';
+  import { loadComponent, lookupComponent } from './components/registry';
   import { hangingIndent } from './hang';
   import { cssColour } from './span-style';
 
@@ -110,9 +110,19 @@
     <div class="column"><OutputView blocks={block.right} {onaction} /></div>
   </div>
 {:else if block.type === 'component'}
+  <!-- A card's chunk loads the first time a block names it; until then, the plain text. -->
   {@const Card = lookupComponent(block.name)}
+  {@const loading = Card === undefined ? loadComponent(block.name) : undefined}
   {#if Card}
     <div class="component"><Card view={block.props} alt={block.alt} {onaction} /></div>
+  {:else if loading}
+    {#await loading}
+      <div class="text">{block.plain}</div>
+    {:then Loaded}
+      <div class="component"><Loaded view={block.props} alt={block.alt} {onaction} /></div>
+    {:catch}
+      <div class="text">{block.plain}</div>
+    {/await}
   {:else}
     <div class="text">{block.plain}</div>
   {/if}

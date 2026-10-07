@@ -4,7 +4,8 @@
 import { get } from 'svelte/store';
 import { afterEach, describe, expect, it } from 'vitest';
 import { runLine, session } from '../../../tests/harness';
-import { lineText, plain, type Block, type Line } from '../../output/model';
+import { lineText, type Block, type Line } from '../../output/model';
+import { plain } from '../../output/plain';
 import { createStorage } from '../../services/storage';
 import { STORAGE_KEYS } from '../../services/storage-keys';
 import { cathode, cathodeQuality, crtTier, DEFAULT_CATHODE_MODE, persistCathode } from '../../stores/cathode';

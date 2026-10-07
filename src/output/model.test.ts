@@ -10,7 +10,6 @@ import {
   isTrustedAction,
   lineText,
   out,
-  plain,
   readableUrl,
   safeHref,
   textWidth,
@@ -19,6 +18,7 @@ import {
   type Block,
   type BlockType,
 } from './model';
+import { plain } from './plain';
 
 describe('colour tokens', () => {
   it('maps palette entries to --theme-* in kebab case and roles to --role-*', () => {

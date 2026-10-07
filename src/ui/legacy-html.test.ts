@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { activeContent, xssCorpus } from '../../tests/support/xss';
 import { LEGACY_TAGS } from '../output/legacy-policy';
-import { legacyHtml, sanitizeLegacyHtml, sizeFittedArt } from './legacy-html';
+import { renderLegacyHtml, sanitizeLegacyHtml, sizeFittedArt } from './legacy-html';
 
 /** Sanitises into a live, attached element, the way the renderer does. */
 function render(html: string): HTMLElement {
@@ -93,13 +93,12 @@ describe('sanitizeLegacyHtml: what legacy output keeps', () => {
   });
 });
 
-describe('use:legacyHtml', () => {
-  it('renders the sanitised fragment and replaces it on update', () => {
+describe('renderLegacyHtml', () => {
+  it('renders the sanitised fragment, replacing what was there', () => {
     const node = document.createElement('div');
-    const action = legacyHtml(node, '<b onclick="window.__x=1">one</b>');
+    renderLegacyHtml(node, '<b onclick="window.__x=1">one</b>');
     expect(node.innerHTML).toBe('<b>one</b>');
-    if (!action || !action.update) throw new Error('legacyHtml must be updatable');
-    action.update('<i>two</i>');
+    renderLegacyHtml(node, '<i>two</i>');
     expect(node.innerHTML).toBe('<i>two</i>');
   });
 });
@@ -107,7 +106,7 @@ describe('use:legacyHtml', () => {
 describe('sizeFittedArt', () => {
   it('gives fitted art its widest row in cells, and leaves other art alone', () => {
     const node = document.createElement('div');
-    legacyHtml(node, '<div class="art art-fit">██╗ \n███████╗ v1.2.0</div><div class="art">a\nbb</div>');
+    renderLegacyHtml(node, '<div class="art art-fit">██╗ \n███████╗ v1.2.0</div><div class="art">a\nbb</div>');
     const [fitted, plain] = Array.from(node.querySelectorAll<HTMLElement>('.art'));
     expect(fitted?.style.getPropertyValue('--art-cols')).toBe('15');
     expect(plain?.getAttribute('style')).toBeNull();

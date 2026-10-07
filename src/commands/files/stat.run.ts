@@ -1,12 +1,25 @@
 // The body of stat; its spec, in stat.ts, loads this the first time stat runs, so the
 // kernel's chunk carries only the spec.
 
-import type { CommandContext, ExitCode } from '../../shell/types';
+import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
 import { basename } from '../../vfs/path';
 import type { Stat } from '../../vfs/types';
 import { unescape } from '../lib/escapes';
 import { reason } from '../lib/files';
 import { DEVICE_NUMBERS, fileType, kibBlocks, modeString, octalMode, statDate } from '../lib/listing';
+
+/** What --help, help and man say about stat, besides its spec (stat.ts). */
+export const doc: CommandDoc = {
+  description:
+    "Shows each FILE's size, blocks, permissions, owner, group and times. -c picks the facts and their layout with %-directives: %n name, %s size, %A permissions, %U owner, %G group, %y modified, %F type.",
+  man: [
+    {
+      heading: 'FORMAT',
+      body: '%a permissions in octal, %A in ls form, %b blocks, %F file type, %g and %G group, %u and %U owner, %h links, %i inode, %n name, %N quoted name and link target, %s size in bytes, %y modified, %Y modified in seconds since 1970, %% a percent sign. A width goes between: %-8U.',
+    },
+    { heading: 'EXIT STATUS', body: '0 when every FILE was found, 1 otherwise.' },
+  ],
+};
 
 /** A stable inode number for a path, so stat says the same thing twice. */
 function inode(path: string): number {

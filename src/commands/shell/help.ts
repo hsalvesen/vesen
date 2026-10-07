@@ -52,7 +52,7 @@ export default defineCommand({
         status = 1;
         continue;
       }
-      for (const block of help.commandHelp(spec)) await ctx.stdout.block(block);
+      for (const block of help.commandHelp(await help.withDoc(spec))) await ctx.stdout.block(block);
     }
     return status;
   },

@@ -1,7 +1,12 @@
 // The body of debug: builds the report, copies it, and prints it.
 
 import { out, type Line } from '../../output/model';
-import type { CommandContext, ExitCode } from '../../shell/types';
+import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
+
+/** What --help, help and man say about debug, besides its spec (debug.ts). */
+export const doc: CommandDoc = {
+  description: "'debug report' copies the browser, screen, build and recent errors, to paste into an issue. Nothing is sent.",
+};
 
 const ISSUES = 'https://github.com/hsalvesen/vesen/issues';
 

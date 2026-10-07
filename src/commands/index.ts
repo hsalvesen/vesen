@@ -7,7 +7,8 @@ import { CommandRegistry } from '../shell/registry';
 import type { CommandSpec } from '../shell/types';
 
 // lib/ holds what the commands share, not commands. A `name.run.ts` holds the body of a command
-// whose spec loads it lazily (`load: () => import('./name.run')`), so it is not a spec file and
+// whose spec loads it lazily (`load: () => import('./name.run')`), with its long help as `doc`
+// (description and man sections, which help fetches with the body), so it is not a spec file and
 // stays out of the kernel's chunk.
 const modules = import.meta.glob<{ default?: CommandSpec }>(['./*/*.ts', '!./*/*.test.ts', '!./*/*.run.ts', '!./lib/*.ts'], { eager: true });
 

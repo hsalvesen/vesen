@@ -3,7 +3,7 @@
 // links that pass safeHref. Nothing read back can carry an action: actions are made only by the
 // out builders in this page (docs/plan/02-architecture-and-contracts.md, section 6).
 
-import { isPalette, isRole, out, plain, safeHref, type Block, type Colour, type Line, type Span, type SpanStyle } from '../output/model';
+import { isPalette, isRole, out, safeHref, type Block, type Colour, type Line, type Span, type SpanStyle } from '../output/model';
 import type { SessionSnapshot, SnapshotEntry } from './session-snapshot';
 import { STORAGE_LIMITS } from './storage-keys';
 
@@ -163,10 +163,5 @@ export function reviveSnapshot(json: string | null, now: number): SessionSnapsho
     cwd: cwd !== undefined && cwd.startsWith('/') ? cwd : '',
     scroll: { top: typeof scroll.top === 'number' && scroll.top >= 0 ? scroll.top : 0, atBottom: scroll.atBottom !== false },
   };
-}
-
-/** The entries as plain text, for tests and for reading a snapshot by eye. */
-export function snapshotText(snapshot: SessionSnapshot): string {
-  return snapshot.entries.map((entry) => `$ ${entry.line}\n${entry.blocks.map(plain).join('')}`).join('');
 }
 

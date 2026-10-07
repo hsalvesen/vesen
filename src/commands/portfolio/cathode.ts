@@ -20,8 +20,6 @@ export default defineCommand({
   category: 'portfolio',
   summary: 'trial a retro CRT display effect',
   synopsis: ['cathode ls', 'cathode set VARIATION', 'cathode VARIATION', 'cathode off', 'cathode quality [QUALITY]'],
-  description:
-    "Draws the terminal as a cathode ray tube would: scanlines, phosphor glow, flicker. 'cathode ls' lists the variations and the quality in force. The quality, auto unless you choose, is how much of the effect the device draws: full on a desktop, lite on phones and in-app browsers, off when the system asks for less motion or more contrast.",
   subcommands: {
     ls: { summary: 'list the variations, and the quality in force' },
     set: { summary: 'turn on the effect VARIATION', args: [MODE] },

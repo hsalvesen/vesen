@@ -6,7 +6,9 @@ import { activeContent } from '../../tests/support/xss';
 import { out, type Action, type Block, type SafeHref, type Span } from '../output/model';
 import { cathode } from '../stores/cathode';
 import { theme } from '../stores/theme';
+import FakeCard from '../testing/FakeCard.svelte';
 import OutputView from './OutputView.svelte';
+import { registerComponent, type BlockComponent } from './components/registry';
 
 /** Renders blocks and waits for the layout-block renderer, which loads on first use. */
 async function view(blocks: readonly Block[], onaction?: (action: Action) => void): Promise<HTMLElement> {
@@ -219,6 +221,36 @@ describe('OutputView: layout blocks', () => {
   it('shows a component with no registered card as its plain text', async () => {
     const root = await view([out.component('weather-card', { place: 'Oslo' }, 'Oslo: 9°C, light rain\n', 'Weather in Oslo')]);
     expect(root.textContent).toBe('Oslo: 9°C, light rain\n');
+  });
+
+  it('draws a registered card from its own chunk, with the plain text until the chunk arrives', async () => {
+    let arrive: (module: { default: BlockComponent }) => void = () => {};
+    const load = vi.fn(() => new Promise<{ default: BlockComponent }>((resolve) => (arrive = resolve)));
+    registerComponent('qr-card', load);
+    const block = out.component('qr-card', { text: 'hi' }, 'QR code for hi\n', 'QR code for hi');
+    const root = await view([block, block]);
+    expect(root.textContent).toBe('QR code for hi\nQR code for hi\n');
+    expect(load).toHaveBeenCalledTimes(1);
+    arrive({ default: FakeCard as BlockComponent });
+    await vi.waitFor(() => expect(root.querySelectorAll('.component [data-fake-card]')).toHaveLength(2));
+    expect(root.querySelector('[data-fake-card]')?.getAttribute('aria-label')).toBe('QR code for hi');
+    expect(root.textContent).toBe('hihi');
+    // Drawn again, it draws at once, from the chunk already here.
+    const again = await view([block]);
+    expect(again.querySelector('.component [data-fake-card]')?.textContent).toBe('hi');
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the plain text of a card whose chunk does not load, and tries again next time', async () => {
+    const load = vi.fn(() => Promise.reject(new Error('offline')));
+    registerComponent('quote-card', load);
+    const block = out.component('quote-card', {}, 'CBA.AX 1.00\n', 'Quote');
+    const root = await view([block]);
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(1));
+    for (let i = 0; i < 5; i += 1) await tick();
+    expect(root.textContent).toBe('CBA.AX 1.00\n');
+    await view([block]);
+    expect(load).toHaveBeenCalledTimes(2);
   });
 
   it('sanitises legacy HTML', async () => {

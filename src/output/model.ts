@@ -2,14 +2,13 @@
 // See docs/plan/02-architecture-and-contracts.md, sections 2, 6 and 10.
 //
 // Commands never build HTML. They build Spans and Blocks with the `out` builders below, and
-// every Block has a plain-text form for pipes and files (`plain`). Tap actions (run, insert,
-// open, copy, share) can be made only by these builders: an Action carries a compile-time brand
-// that an object literal cannot forge, and a runtime mark that JSON, SGR, OSC 8 or HTML parsing
-// cannot recreate. Text that came from cat, curl or echo therefore never plants a command a
-// visitor might tap.
+// every Block has a plain-text form for pipes and files (`plain`, in ./plain.ts, which only the
+// kernel loads). Tap actions (run, insert, open, copy, share) can be made only by these builders:
+// an Action carries a compile-time brand that an object literal cannot forge, and a runtime mark
+// that JSON, SGR, OSC 8 or HTML parsing cannot recreate. Text that came from cat, curl or echo
+// therefore never plants a command a visitor might tap.
 
 import { safeInLine } from '../lib/unsafe-text';
-import { htmlToText } from './html-to-text';
 
 // ── Colours ────────────────────────────────────────────────────────────────────────────────
 
@@ -483,7 +482,7 @@ export const out = {
   legacyHtml: (html: string): LegacyHtmlBlock => ({ type: 'legacyHtml', html }),
 } as const;
 
-// ── Plain text ─────────────────────────────────────────────────────────────────────────────
+// ── Text width ─────────────────────────────────────────────────────────────────────────────
 
 export function lineText(line: Line): string {
   return line.map((s) => s.text).join('');
@@ -525,71 +524,4 @@ export function textWidth(text: string): number {
   let width = 0;
   for (const ch of text) width += charWidth(ch);
   return width;
-}
-
-function terminated(text: string): string {
-  return text === '' || text.endsWith('\n') ? text : `${text}\n`;
-}
-
-function asLines(rows: readonly string[]): string {
-  return rows.map((row) => `${row}\n`).join('');
-}
-
-function tableRows(table: TableBlock): string[] {
-  const rows = (table.head ? [table.head, ...table.rows] : table.rows).map((row) => row.map(lineText));
-  const widths: number[] = [];
-  for (const row of rows) {
-    row.forEach((cell, i) => {
-      widths[i] = Math.max(widths[i] ?? 0, textWidth(cell));
-    });
-  }
-  return rows.map((row) =>
-    row
-      .map((cell, i) => {
-        const pad = ' '.repeat((widths[i] ?? 0) - textWidth(cell));
-        return table.align?.[i] === 'r' ? pad + cell : cell + pad;
-      })
-      .join('  ')
-      .trimEnd(),
-  );
-}
-
-/**
- * What a pipe or a file receives for a block: '' or text ending in a newline, so blocks
- * concatenate the way a program's output does. Styles, links and actions are dropped.
- */
-export function plain(block: Block): string {
-  switch (block.type) {
-    case 'lines':
-      return asLines(block.lines.map(lineText));
-    case 'grid': {
-      // Like `ls | cat`: one item per line, and its note after it, the notes lined up.
-      const notes = block.notes;
-      if (notes === undefined) return asLines(block.items.map((item) => item.text));
-      const width = Math.max(0, ...block.items.map((item) => textWidth(item.text)));
-      return asLines(
-        block.items.map((item, i) => {
-          const note = lineText(notes[i] ?? []);
-          return note === '' ? item.text : `${item.text}${' '.repeat(width - textWidth(item.text) + 2)}${note}`;
-        }),
-      );
-    }
-    case 'table':
-      return asLines(tableRows(block));
-    case 'art':
-      return terminated(block.text);
-    case 'panel':
-      return asLines([...(block.title === undefined ? [] : [block.title]), ...block.body.map(lineText)]);
-    case 'chips':
-      return '';
-    case 'card':
-      // The link as it would be pasted: the address for mail, the whole URL for the web.
-      return asLines([block.title, block.copy ?? block.href, ...(block.detail === undefined ? [] : [block.detail])]);
-    case 'columns':
-      return [...block.left, ...block.right].map(plain).join('');
-    case 'component':
-      return terminated(block.plain);
-    case 'legacyHtml':
-      return terminated(htmlToText(block.html));
-  }
 }

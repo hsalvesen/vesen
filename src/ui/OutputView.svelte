@@ -1,8 +1,9 @@
 <!--
   Renders output blocks with text interpolation only. Legacy HTML is the one exception, and it
-  goes through the sanitising use:legacyHtml action. Lines, legacy HTML and art (the banner, which
-  boot shows before anything has loaded) are drawn here; the layout blocks are drawn by
-  RichBlock, loaded the first time one appears (or sooner: bootstrap fetches it beside the kernel).
+  goes through the sanitising use:legacyBlock action, whose shim loads with the first such block.
+  Lines, legacy HTML and art (the banner, which boot shows before anything has loaded) are drawn
+  here; the layout blocks are drawn by RichBlock, loaded the first time one appears (or sooner:
+  bootstrap fetches it beside the kernel).
 
   Markup inside text containers is written without whitespace between tags on purpose: those
   containers preserve whitespace, so any space Svelte kept there would show.
@@ -11,7 +12,7 @@
   import { textWidth, type Action, type Block } from '../output/model';
   import LineView from './LineView.svelte';
   import { hangingIndent } from './hang';
-  import { legacyHtml } from './legacy-html';
+  import { legacyBlock } from './legacy-block';
   import { loadRichBlock } from './rich-block';
   import { spanClasses, spanCss } from './span-style';
 
@@ -34,7 +35,7 @@
         {/each}
       </div>
     {:else if block.type === 'legacyHtml'}
-      <div class="legacy" use:legacyHtml={block.html}></div>
+      <div class="legacy" use:legacyBlock={block.html}></div>
     {:else if block.type === 'art'}
       <!-- Hidden from screen readers, which hear the alternative text instead of the glyphs. -->
       <div class="art-wrap">

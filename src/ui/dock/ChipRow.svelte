@@ -9,7 +9,7 @@
 -->
 <script lang="ts">
   import type { Chip } from '../../shell/complete/types';
-  import { COMPLETION_LIST_ID, optionId } from '../CompletionRow.svelte';
+  import { COMPLETION_LIST_ID, optionId } from '../completion-ids';
   import { chipName, leadGlyph, runsLine } from './chip-name';
   import { press } from './press';
 

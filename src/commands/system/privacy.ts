@@ -7,7 +7,6 @@ export default defineCommand({
   name: 'privacy',
   category: 'system',
   summary: 'what vesen sends, and where',
-  description: 'Each service a command talks to, and what it is sent. IP and location lookups happen only on request.',
   examples: [{ line: 'privacy', offline: true }],
   seeAlso: ['debug'],
   load: () => import('./privacy.run'),

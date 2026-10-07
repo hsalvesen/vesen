@@ -128,7 +128,26 @@ export interface Example {
 // ── Commands ───────────────────────────────────────────────────────────────────────────────
 
 export type RunFn = (ctx: CommandContext) => ExitCode | void | Promise<ExitCode | void>;
-export type LoadFn = () => Promise<{ run: RunFn }>;
+
+/** A man page section after the generated ones; the body is in {colour} markup. */
+export interface ManSection {
+  readonly heading: string;
+  readonly body: string;
+}
+
+/**
+ * A command's long help: what --help, help and man say besides the summary, synopsis, flags and
+ * examples. A command whose body loads lazily keeps it with the body, as `doc`, so the kernel's
+ * chunk carries only the spec; help fetches it when asked (withDoc in shell/help.ts).
+ */
+export interface CommandDoc {
+  readonly description?: string;
+  /** Extra man page sections. */
+  readonly man?: readonly ManSection[];
+}
+
+/** Loads a command's body, and with it the long help kept there. */
+export type LoadFn = () => Promise<{ run: RunFn; readonly doc?: CommandDoc }>;
 
 export interface CommandSpec {
   readonly name: string;
@@ -137,9 +156,10 @@ export interface CommandSpec {
   /** 50 characters or fewer. */
   readonly summary: string;
   readonly synopsis?: readonly string[];
+  /** Said by --help, help and man; a command that loads lazily keeps it in its body's `doc`. */
   readonly description?: string;
-  /** Extra man page sections; bodies are in {colour} markup. */
-  readonly man?: readonly { readonly heading: string; readonly body: string }[];
+  /** Extra man page sections; bodies are in {colour} markup. As description, for a lazy body. */
+  readonly man?: readonly ManSection[];
   readonly flags?: readonly FlagSpec[];
   readonly args?: readonly ArgSpec[];
   readonly subcommands?: Readonly<Record<string, SubcommandSpec>>;

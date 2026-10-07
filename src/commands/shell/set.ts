@@ -13,8 +13,6 @@ const spec: CommandSpec & RawArgsSpec & RunnerChoice = {
   category: 'shell',
   summary: "list variables, or set the shell's options",
   synopsis: ['set', 'set [-Cf] [-o OPTION] [+o OPTION]', 'set -o'],
-  description:
-    "With nothing, lists every shell variable. -o OPTION turns an option on and +o OPTION off; 'set -o' alone lists them. noclobber (-C) stops > from overwriting a file; noglob (-f) turns off pathname expansion.",
   builtin: true,
   rawArgs: true,
   handlesHelp: true,

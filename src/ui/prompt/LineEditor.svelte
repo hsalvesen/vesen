@@ -18,7 +18,7 @@
 -->
 <script lang="ts">
   import { nextBoundary } from '../../shell/editor/readline';
-  import { COMPLETION_LIST_ID, optionId } from '../CompletionRow.svelte';
+  import { COMPLETION_LIST_ID, optionId } from '../completion-ids';
   import { READ_HINT_ID, STEADY_MS, type PromptController } from './promptController.svelte';
 
   let { controller }: { controller: PromptController } = $props();

@@ -1,10 +1,17 @@
 // The body of cp; its spec, in cp.ts, loads this the first time cp runs, so the
 // kernel's chunk carries only the spec.
 
-import type { CommandContext, ExitCode } from '../../shell/types';
+import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
 import { basename, isWithin, join } from '../../vfs/path';
 import type { Stat } from '../../vfs/types';
 import { childPath, errorCode, realOrSelf, reason, tryLstat, tryStat } from '../lib/files';
+
+/** What --help, help and man say about cp, besides its spec (cp.ts). */
+export const doc: CommandDoc = {
+  description:
+    'Copies SOURCE to DEST, or each SOURCE into DIRECTORY. Folders need -r. A file that is there is replaced, unless -n is given. It prints nothing when it works; -v names each copy.',
+  man: [{ heading: 'EXIT STATUS', body: '0 when everything was copied, 1 otherwise.' }],
+};
 
 interface Options {
   readonly recursive: boolean;

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { plain, type Block } from '../../output/model';
+import type { Block } from '../../output/model';
+import { plain } from '../../output/plain';
 import type { KV, Opener } from '../../services/types';
 import type { Shell } from '../../shell/index';
 import { fakeOpener as openerFake } from '../../testing/opener';

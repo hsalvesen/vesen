@@ -89,7 +89,7 @@ export default defineCommand({
       }
       if (!first) await ctx.stdout.write('\n');
       first = false;
-      const blocks = spec === undefined ? help.vesenPage(ctx.shell.registry, layout) : help.manPage(spec, layout);
+      const blocks = spec === undefined ? help.vesenPage(ctx.shell.registry, layout) : help.manPage(await help.withDoc(spec), layout);
       for (const block of blocks) await ctx.stdout.block(block);
     }
     return status;

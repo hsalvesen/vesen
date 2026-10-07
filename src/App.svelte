@@ -5,6 +5,7 @@
   the visible viewport by styles/shell.css and platform/viewport.ts, so the dock rides on top of
   the soft keyboard. The dock loads in its own chunk, so a desktop never downloads it; until it
   arrives its room is kept, so nothing jumps, and if it never does the chips stay under the prompt.
+  The completion row and the status line load just after the first paint, as the kernel does.
 
   Each line's entry is in the transcript from the moment it starts, its output arriving under it
   as the command writes it, and the status line under the line still running says what it is
@@ -21,7 +22,6 @@
   import { SNAPSHOT_KEY, type SessionSnapshot } from './services/session-snapshot';
   import type { AppRequest, ShellPort } from './shell/index';
   import { screen as transcript } from './stores/screen';
-  import CompletionRow from './ui/CompletionRow.svelte';
   import { provideLinkPolicy } from './ui/links';
   import type { AppPlatform } from './ui/platform';
   import PromptLine from './ui/prompt/PromptLine.svelte';
@@ -67,6 +67,24 @@
   // Under the prompt: every chip but Stop (the status line stops a command), unless the dock
   // draws them.
   const inlineChips = $derived(Dock === null ? prompt.chipList.chips.filter((chip) => chip.action.kind !== 'interrupt') : []);
+
+  // Tab's list and the chips under the prompt load in their own chunk just after the first
+  // paint, as the status line does: nothing completes before the kernel is here.
+  let CompletionRow: typeof import('./ui/CompletionRow.svelte').default | null = $state(null);
+  let rowLoading = false;
+  function loadCompletionRow(): void {
+    if (rowLoading) return;
+    rowLoading = true;
+    import('./ui/CompletionRow.svelte').then(
+      (module) => (CompletionRow = module.default),
+      // Offline, say: tried again when there is something to show.
+      () => (rowLoading = false),
+    );
+  }
+  onMount(loadCompletionRow);
+  $effect(() => {
+    if (CompletionRow === null && (inlineChips.length > 0 || prompt.question !== null || prompt.announce !== '')) loadCompletionRow();
+  });
 
   // The status line goes under the running line's entry; above the prompt only if that entry is
   // not on the screen. It loads in its own chunk just after the first paint, as the kernel does,
@@ -241,14 +259,16 @@
           <PromptLine controller={prompt} {shell} />
 
           <!-- Tab's list, the chips while typing, and the starters on an empty phone prompt. -->
-          <CompletionRow
-            chips={inlineChips}
-            more={Dock === null ? prompt.chipList.more : 0}
-            listed={prompt.listed}
-            question={prompt.question}
-            announce={prompt.announce}
-            onchoose={(chip) => prompt.choose(chip)}
-          />
+          {#if CompletionRow}
+            <CompletionRow
+              chips={inlineChips}
+              more={Dock === null ? prompt.chipList.more : 0}
+              listed={prompt.listed}
+              question={prompt.question}
+              announce={prompt.announce}
+              onchoose={(chip) => prompt.choose(chip)}
+            />
+          {/if}
         </div>
       </div>
 

@@ -9,8 +9,6 @@ export default defineCommand({
   category: 'files',
   summary: 'display file status',
   synopsis: ['stat [OPTION]... FILE...'],
-  description:
-    "Shows each FILE's size, blocks, permissions, owner, group and times. -c picks the facts and their layout with %-directives: %n name, %s size, %A permissions, %U owner, %G group, %y modified, %F type.",
   flags: [
     { short: 'L', long: 'dereference', description: 'follow links' },
     {
@@ -32,12 +30,5 @@ export default defineCommand({
     { line: 'stat /home/user', note: 'a link, itself', offline: true },
   ],
   seeAlso: ['ls', 'touch'],
-  man: [
-    {
-      heading: 'FORMAT',
-      body: '%a permissions in octal, %A in ls form, %b blocks, %F file type, %g and %G group, %u and %U owner, %h links, %i inode, %n name, %N quoted name and link target, %s size in bytes, %y modified, %Y modified in seconds since 1970, %% a percent sign. A width goes between: %-8U.',
-    },
-    { heading: 'EXIT STATUS', body: '0 when every FILE was found, 1 otherwise.' },
-  ],
   load: () => import('./stat.run'),
 });

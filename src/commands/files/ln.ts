@@ -9,8 +9,6 @@ export default defineCommand({
   category: 'files',
   summary: 'make links between files',
   synopsis: ['ln -s [OPTION]... TARGET [LINK_NAME]', 'ln -s [OPTION]... TARGET... DIRECTORY'],
-  description:
-    'With -s, makes LINK_NAME a symbolic link to TARGET: opening the link opens TARGET. With no LINK_NAME, the link is made here, with TARGET\'s name; with a DIRECTORY, inside it. A relative TARGET is read from the folder the link is in. Hard links are not available here, so -s is needed.',
   flags: [
     { short: 'f', long: 'force', description: 'replace a file that is already at LINK_NAME' },
     { short: 's', long: 'symbolic', description: 'make symbolic links' },
@@ -25,6 +23,5 @@ export default defineCommand({
     { line: 'ln -sv /etc/hostname', note: 'a link called hostname, here', offline: true },
   ],
   seeAlso: ['ls', 'stat', 'cp'],
-  man: [{ heading: 'EXIT STATUS', body: '0 when every link was made, 1 otherwise.' }],
   load: () => import('./ln.run'),
 });

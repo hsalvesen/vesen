@@ -8,7 +8,6 @@ export default defineCommand({
   category: 'system',
   summary: 'copy a report for a bug',
   synopsis: ['debug report'],
-  description: "'debug report' copies the browser, screen, build and recent errors, to paste into an issue. Nothing is sent.",
   subcommands: { report: { summary: 'copy a report' } },
   examples: [{ line: 'debug report', offline: true }],
   seeAlso: ['privacy'],

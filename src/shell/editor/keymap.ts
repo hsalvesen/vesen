@@ -1,7 +1,9 @@
 // The keys the prompt answers to (docs/plan/03-terminal-input.md, "Readline, keymap and history
 // store"; F046, F095). One table, BINDINGS, says what every key does in every mode, and on which
 // platform. The prompt controller asks resolveKey() for each key press on the input; `help keys`
-// and `man vesen` list the same table (src/shell/keys.ts), so the two never drift apart.
+// and `man vesen` list the same table (src/shell/keys.ts), so the two never drift apart. Each
+// binding names its row of `help keys`, and the row's words are in src/shell/keys.ts, which loads
+// with the help rather than with the first paint.
 //
 // Keys are captured only while the prompt has focus. Ctrl+A, E, U, K, Y, R, L and D are readline
 // keys everywhere; Ctrl+W, P, N, F, B and T only on a Mac, because elsewhere the browser owns
@@ -79,15 +81,51 @@ export interface Binding {
   /** Only when this holds. */
   readonly when?: (ctx: KeyCtx) => boolean;
   readonly action: Action;
-  /** What `help keys` says it does; bindings with the same words share a row. */
-  readonly does: string;
+  /**
+   * Its row of `help keys`, which says what it does (KEY_ROWS in src/shell/keys.ts); bindings
+   * with the same row are listed together. None: left out, as another row already says it.
+   */
+  readonly row?: KeyRow;
   /** How `help keys` writes the keys, when not from `keys`. */
   readonly shown?: string;
-  /** Left out of `help keys`: another row already says it. */
-  readonly hidden?: boolean;
-  /** Where `help keys` lists it: after the editing keys, the search keys, then leaving. */
-  readonly section?: 'search' | 'leave';
 }
+
+/** The rows of `help keys`, in the words src/shell/keys.ts gives each. */
+export type KeyRow =
+  | 'searchRun'
+  | 'searchOlder'
+  | 'searchNewer'
+  | 'searchCancel'
+  | 'searchEdit'
+  | 'leave'
+  | 'run'
+  | 'complete'
+  | 'completeBack'
+  | 'interrupt'
+  | 'interruptOrCopy'
+  | 'escape'
+  | 'clear'
+  | 'eof'
+  | 'ghost'
+  | 'ghostWord'
+  | 'bol'
+  | 'eol'
+  | 'charLeft'
+  | 'charRight'
+  | 'wordLeft'
+  | 'wordRight'
+  | 'killToStart'
+  | 'killToEnd'
+  | 'killWordBackUnix'
+  | 'killWordBack'
+  | 'killWordFwd'
+  | 'yank'
+  | 'yankPop'
+  | 'transpose'
+  | 'lastArg'
+  | 'older'
+  | 'newer'
+  | 'search';
 
 const NATIVE: Action = { a: 'native' };
 const op = (name: EditOp): Action => ({ a: 'op', op: name });
@@ -102,88 +140,69 @@ export const BINDINGS: readonly Binding[] = [
   // Reverse-i-search: Ctrl+R older, Ctrl+S newer, Enter runs, moving and editing keys act on the
   // line found, as readline ends the search on any key that is not its own; Escape and Ctrl+G
   // cancel (designs/terminal-input.md).
-  { keys: ['Enter'], when: searching, action: { a: 'searchAccept' }, does: 'in a search: run the line found', shown: 'Enter', section: 'search' },
-  { keys: ['C-r'], when: searching, action: { a: 'search', dir: -1 }, does: 'in a search: an older line', shown: 'Ctrl+R', section: 'search' },
-  { keys: ['C-s'], when: searching, action: { a: 'search', dir: 1 }, does: 'in a search: a newer line', shown: 'Ctrl+S', section: 'search' },
-  { keys: ['Escape', 'C-g'], when: searching, action: { a: 'searchCancel' }, does: 'in a search: put back what you typed', section: 'search' },
+  { keys: ['Enter'], when: searching, action: { a: 'searchAccept' }, row: 'searchRun', shown: 'Enter' },
+  { keys: ['C-r'], when: searching, action: { a: 'search', dir: -1 }, row: 'searchOlder', shown: 'Ctrl+R' },
+  { keys: ['C-s'], when: searching, action: { a: 'search', dir: 1 }, row: 'searchNewer', shown: 'Ctrl+S' },
+  { keys: ['Escape', 'C-g'], when: searching, action: { a: 'searchCancel' }, row: 'searchCancel' },
   {
     keys: ['Left', 'Right', 'Up', 'Down', 'Home', 'End', 'Tab', 'C-a', 'C-e', 'M-b', 'M-f', 'C-j'],
     when: searching,
     action: { a: 'searchExit' },
-    does: 'in a search: edit the line found',
+    row: 'searchEdit',
     shown: '← → ↑ ↓',
-    section: 'search',
   },
-  {
-    keys: ['C-k', 'C-u', 'C-y', 'C-d', 'C-l', 'M-d', 'M-y', 'M-Backspace', 'M-.'],
-    when: searching,
-    action: { a: 'searchExit' },
-    does: 'in a search: edit the line found',
-    hidden: true,
-    section: 'search',
-  },
-  { keys: ['C-Backspace'], platforms: OTHER, when: searching, action: { a: 'searchExit' }, does: 'in a search: edit the line found', hidden: true, section: 'search' },
-  {
-    keys: ['C-b', 'C-f', 'C-p', 'C-n', 'C-w', 'C-t'],
-    platforms: MAC,
-    when: searching,
-    action: { a: 'searchExit' },
-    does: 'in a search: edit the line found',
-    hidden: true,
-    section: 'search',
-  },
+  // The editing keys end a search too; the row above says so for all of them.
+  { keys: ['C-k', 'C-u', 'C-y', 'C-d', 'C-l', 'M-d', 'M-y', 'M-Backspace', 'M-.'], when: searching, action: { a: 'searchExit' } },
+  { keys: ['C-Backspace'], platforms: OTHER, when: searching, action: { a: 'searchExit' } },
+  { keys: ['C-b', 'C-f', 'C-p', 'C-n', 'C-w', 'C-t'], platforms: MAC, when: searching, action: { a: 'searchExit' } },
 
   // Escape, then Tab within a second: out of the terminal, so the keyboard is never trapped.
-  { keys: ['Tab', 'S-Tab'], when: (c) => c.escArmed, action: { a: 'leave' }, does: 'leave the terminal for the rest of the page', shown: 'Escape, Tab', section: 'leave' },
+  { keys: ['Tab', 'S-Tab'], when: (c) => c.escArmed, action: { a: 'leave' }, row: 'leave', shown: 'Escape, Tab' },
 
-  { keys: ['Enter'], action: { a: 'submit' }, does: 'run the line' },
-  { keys: ['Tab'], action: { a: 'tab', reverse: false }, does: 'complete; again to list the choices, again to step through them' },
-  { keys: ['S-Tab'], action: { a: 'tab', reverse: true }, does: 'step back through the choices' },
+  { keys: ['Enter'], action: { a: 'submit' }, row: 'run' },
+  { keys: ['Tab'], action: { a: 'tab', reverse: false }, row: 'complete' },
+  { keys: ['S-Tab'], action: { a: 'tab', reverse: true }, row: 'completeBack' },
   // A Mac copies with Cmd+C, so Ctrl+C is free to interrupt whatever is selected.
-  { keys: ['C-c'], platforms: MAC, action: { a: 'interrupt' }, does: 'stop the running command, or abandon the line' },
-  {
-    keys: ['C-c'],
-    platforms: OTHER,
-    when: (c) => !c.hasSelection,
-    action: { a: 'interrupt' },
-    does: 'stop the running command, or abandon the line; with text selected, copy it',
-  },
-  { keys: ['Escape'], action: { a: 'escape' }, does: 'stop the running command; in the choices, put back what you typed' },
-  { keys: ['C-l'], action: { a: 'clearScreen' }, does: 'clear the screen, keeping the line' },
-  { keys: ['C-d'], when: (c) => c.empty && c.mode !== 'search', action: { a: 'eof' }, does: 'on an empty line, exit; otherwise delete the character under the cursor' },
-  { keys: ['C-d'], action: op('deleteChar'), does: 'on an empty line, exit; otherwise delete the character under the cursor', hidden: true },
+  { keys: ['C-c'], platforms: MAC, action: { a: 'interrupt' }, row: 'interrupt' },
+  { keys: ['C-c'], platforms: OTHER, when: (c) => !c.hasSelection, action: { a: 'interrupt' }, row: 'interruptOrCopy' },
+  { keys: ['Escape'], action: { a: 'escape' }, row: 'escape' },
+  { keys: ['C-l'], action: { a: 'clearScreen' }, row: 'clear' },
+  { keys: ['C-d'], when: (c) => c.empty && c.mode !== 'search', action: { a: 'eof' }, row: 'eof' },
+  // Listed in the row above.
+  { keys: ['C-d'], action: op('deleteChar') },
 
   // The grey suggestion after the cursor.
-  { keys: ['Right', 'End', 'C-e'], when: ghostAtEnd, action: { a: 'acceptGhost', unit: 'all' }, does: 'at the end of the line, take the grey suggestion', shown: '→' },
-  { keys: ['C-f'], platforms: MAC, when: ghostAtEnd, action: { a: 'acceptGhost', unit: 'all' }, does: 'at the end of the line, take the grey suggestion', hidden: true },
-  { keys: ['M-f', 'M-Right'], when: ghostAtEnd, action: { a: 'acceptGhost', unit: 'word' }, does: 'at the end of the line, take one word of it', shown: 'Alt+→' },
+  { keys: ['Right', 'End', 'C-e'], when: ghostAtEnd, action: { a: 'acceptGhost', unit: 'all' }, row: 'ghost', shown: '→' },
+  // Listed in the row above.
+  { keys: ['C-f'], platforms: MAC, when: ghostAtEnd, action: { a: 'acceptGhost', unit: 'all' } },
+  { keys: ['M-f', 'M-Right'], when: ghostAtEnd, action: { a: 'acceptGhost', unit: 'word' }, row: 'ghostWord', shown: 'Alt+→' },
 
   // Moving.
-  { keys: ['C-a', 'Home'], action: op('bol'), does: 'go to the start of the line' },
-  { keys: ['C-e', 'End'], action: op('eol'), does: 'go to the end of the line' },
-  { keys: ['C-b'], platforms: MAC, action: op('charLeft'), does: 'back one character' },
-  { keys: ['C-f'], platforms: MAC, action: op('charRight'), does: 'forward one character' },
-  { keys: ['M-b', 'M-Left'], action: op('wordLeft'), does: 'back one word' },
-  { keys: ['M-f', 'M-Right'], action: op('wordRight'), does: 'forward one word' },
+  { keys: ['C-a', 'Home'], action: op('bol'), row: 'bol' },
+  { keys: ['C-e', 'End'], action: op('eol'), row: 'eol' },
+  { keys: ['C-b'], platforms: MAC, action: op('charLeft'), row: 'charLeft' },
+  { keys: ['C-f'], platforms: MAC, action: op('charRight'), row: 'charRight' },
+  { keys: ['M-b', 'M-Left'], action: op('wordLeft'), row: 'wordLeft' },
+  { keys: ['M-f', 'M-Right'], action: op('wordRight'), row: 'wordRight' },
 
   // Cutting and pasting, through the kill ring.
-  { keys: ['C-u'], action: op('killToStart'), does: 'cut to the start of the line' },
-  { keys: ['C-k'], action: op('killToEnd'), does: 'cut to the end of the line' },
-  { keys: ['C-w'], platforms: MAC, action: op('killWordBackUnix'), does: 'cut back to the last space' },
-  { keys: ['M-Backspace'], action: op('killWordBackAlnum'), does: 'cut the word before the cursor' },
-  { keys: ['C-Backspace'], platforms: OTHER, action: op('killWordBackAlnum'), does: 'cut the word before the cursor' },
-  { keys: ['M-d'], action: op('killWordFwd'), does: 'cut the word after the cursor' },
-  { keys: ['C-y'], action: op('yank'), does: 'paste what was cut last' },
-  { keys: ['M-y'], action: op('yankPop'), does: 'after Ctrl+Y, swap in what was cut before it' },
-  { keys: ['C-t'], platforms: MAC, action: op('transpose'), does: 'swap the two characters at the cursor' },
-  { keys: ['M-.'], action: { a: 'yankLastArg' }, does: 'insert the last word of the line before; again for older lines' },
+  { keys: ['C-u'], action: op('killToStart'), row: 'killToStart' },
+  { keys: ['C-k'], action: op('killToEnd'), row: 'killToEnd' },
+  { keys: ['C-w'], platforms: MAC, action: op('killWordBackUnix'), row: 'killWordBackUnix' },
+  { keys: ['M-Backspace'], action: op('killWordBackAlnum'), row: 'killWordBack' },
+  { keys: ['C-Backspace'], platforms: OTHER, action: op('killWordBackAlnum'), row: 'killWordBack' },
+  { keys: ['M-d'], action: op('killWordFwd'), row: 'killWordFwd' },
+  { keys: ['C-y'], action: op('yank'), row: 'yank' },
+  { keys: ['M-y'], action: op('yankPop'), row: 'yankPop' },
+  { keys: ['C-t'], platforms: MAC, action: op('transpose'), row: 'transpose' },
+  { keys: ['M-.'], action: { a: 'yankLastArg' }, row: 'lastArg' },
 
   // History.
-  { keys: ['Up'], action: { a: 'history', dir: -1 }, does: 'an older line from history, starting with what is typed' },
-  { keys: ['Down'], action: { a: 'history', dir: 1 }, does: 'a newer line; past the newest, what you were typing' },
-  { keys: ['C-p'], platforms: MAC, action: { a: 'history', dir: -1 }, does: 'an older line from history, starting with what is typed' },
-  { keys: ['C-n'], platforms: MAC, action: { a: 'history', dir: 1 }, does: 'a newer line; past the newest, what you were typing' },
-  { keys: ['C-r'], action: { a: 'search', dir: -1 }, does: 'search the history: (reverse-i-search)' },
+  { keys: ['Up'], action: { a: 'history', dir: -1 }, row: 'older' },
+  { keys: ['Down'], action: { a: 'history', dir: 1 }, row: 'newer' },
+  { keys: ['C-p'], platforms: MAC, action: { a: 'history', dir: -1 }, row: 'older' },
+  { keys: ['C-n'], platforms: MAC, action: { a: 'history', dir: 1 }, row: 'newer' },
+  { keys: ['C-r'], action: { a: 'search', dir: -1 }, row: 'search' },
 ];
 
 const NAMED: Readonly<Record<string, string>> = {

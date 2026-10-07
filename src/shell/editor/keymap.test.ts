@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { keyHelp, showChord } from '../keys';
+import { KEY_ROWS, keyHelp, showChord } from '../keys';
 import { BINDINGS, chordOf, isModifierKey, resolveKey, type Action, type KeyChord, type KeyCtx, type KeyPlatform } from './keymap';
 
 /** A key press: `C-a`, `M-b`, `S-Tab`, `Up`, a plain `x`. */
@@ -215,7 +215,9 @@ describe('chords', () => {
 describe('help keys', () => {
   it('has a row for everything the table binds, with the Mac-only keys marked', () => {
     const rows = keyHelp();
-    for (const binding of BINDINGS) if (binding.hidden !== true) expect(rows.some((row) => row.does === binding.does), binding.does).toBe(true);
+    for (const { row } of BINDINGS) if (row !== undefined) expect(rows.some(({ does }) => does === KEY_ROWS[row].does), row).toBe(true);
+    // Every row is used, and no two rows say the same.
+    expect(new Set(rows.map((row) => row.does)).size).toBe(Object.keys(KEY_ROWS).length);
     expect(rows.find((row) => row.does === 'cut back to the last space')?.keys).toBe('Ctrl+W (Mac)');
     expect(rows.find((row) => row.does === 'clear the screen, keeping the line')?.keys).toBe('Ctrl+L');
     expect(rows[0]).toEqual({ keys: 'Enter', does: 'run the line' });

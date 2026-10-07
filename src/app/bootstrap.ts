@@ -3,6 +3,7 @@
 // it mounts the app; nothing else has side effects at import time.
 import { get } from 'svelte/store';
 import { outputBlocks, type CommandOutput } from '../interfaces/command';
+import { out } from '../output/model';
 import { applyCathode } from '../platform/crt';
 import { installChunkReload } from '../platform/chunkReload';
 import { applyTheme } from '../platform/head';
@@ -18,7 +19,6 @@ import { createClipboard } from '../services/clipboard';
 import { createOpener } from '../services/opener';
 import { pendingSnapshot, type SessionSnapshot } from '../services/session-snapshot';
 import { createStorage, runMigrations } from '../services/storage';
-import { createSysInfoStub } from '../services/sysinfo';
 import type { Clipboard, Opener, StorageService } from '../services/types';
 import type { Shell, ShellPort, TerminalInfo } from '../shell/index';
 import { promptLine } from '../shell/prompt';
@@ -29,10 +29,10 @@ import { columns } from '../stores/term';
 import { persistPrefs } from '../stores/prefs';
 import { DEFAULT_THEME_NAME, persistTheme, theme, themes } from '../stores/theme';
 import { visibleArea } from '../stores/viewport';
+import { loadLegacyShim } from '../ui/legacy-block';
 import { markCurrentThemeName } from '../ui/legacy-highlights';
 import { loadRichBlock } from '../ui/rich-block';
 import { playBeep } from '../utils/beep';
-import { notice } from '../utils/notice';
 import { GUEST } from '../vfs/identity';
 import type { VirtualFile } from '../vfs/types';
 import type { Vfs } from '../vfs/vfs';
@@ -119,7 +119,9 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
   const stops = [
     () => errors.stop(),
     installChunkReload(win, storage.session, build, (message) => {
-      screen.push({ prompt: shell.renderPrompt(), line: '', blocks: outputBlocks(notice(message)) });
+      // A lines block, which the first paint's chunk draws itself: this build's other chunks are
+      // the ones that just failed to load.
+      screen.push({ prompt: shell.renderPrompt(), line: '', blocks: [out.text(message, { fg: 'warn', bold: true })] });
     }),
     persistTheme(storage.local),
     persistCathode(storage.local),
@@ -145,7 +147,8 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
     trackColumns(win),
   ];
 
-  // The kernel loads now, in its own chunk, so it is not in the way of the first paint.
+  // The kernel loads now, in its own chunk, so it is not in the way of the first paint; the
+  // services only it uses (net, clock, system facts) are built in that chunk (app/shell.ts).
   const services = {
     banner,
     storage: storage.local,
@@ -154,27 +157,22 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
     opener,
     clipboard,
     terminal: terminalInfo(win, env.inApp),
-    sys: createSysInfoStub(win, { errors: () => errors.recent() }),
   };
   let stopped = false;
   const shell = lazyShell(
     async () => {
       // What the first help or ls draws with comes down beside the kernel, rather than after the
-      // line has run: the help text and the layout-block renderer.
+      // line has run: the help text and the layout-block renderer, and ls's body once the kernel
+      // is here.
       void import('../shell/help').catch(() => {});
       void loadRichBlock().catch(() => {});
-      const [{ createAppShell }, { createNet }, { createClock }, parts] = await Promise.all([
-        import('./shell'),
-        import('../services/net'),
-        import('../services/clock'),
-        legacy?.() ?? Promise.resolve(null),
-      ]);
+      const [{ createAppShell }, parts] = await Promise.all([import('./shell'), legacy?.() ?? Promise.resolve(null)]);
       const app = createAppShell({
         ...services,
         specs: parts?.specs ?? [],
         ...(parts ? { root: parts.root, bind: parts.bind } : {}),
-        net: createNet(),
-        clock: createClock(),
+        sysHost: win,
+        errors: () => errors.recent(),
       });
       // A page put away or closed saves what is waiting to be saved.
       const flush = (): void => app.persistence.flush();
@@ -185,10 +183,16 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
       };
       if (stopped) stop();
       else stops.push(stop);
+      // ls's body through its spec, so it shares the kernel's chunks rather than splitting them.
+      void app.shell.registry.get('ls')?.load?.().catch(() => {});
       // ~/.bashrc first, so a line typed while the chunk loaded already has ll and la.
       await app.boot();
-      // Then, once the page is idle, the commands that load lazily, so none waits on first use.
-      idle(win, () => void app.prefetch());
+      // Then, once the page is idle, the commands that load lazily, so none waits on first use,
+      // and the shim the legacy commands' HTML is drawn through.
+      idle(win, () => {
+        void app.prefetch();
+        if (parts !== null) loadLegacyShim().catch(() => {});
+      });
       return app.shell;
     },
     {

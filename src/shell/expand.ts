@@ -10,12 +10,12 @@
 // - parameters: $X ${X} ${X:-word} ${X-word} ${X:=word} ${X:+word} ${#X}, and the specials
 //   $? $$ $# $0 $1… $@ $* $RANDOM $PWD; other ${…} forms fail as unsupported or a bad substitution
 // - command substitution $( ) and backticks through an injected executor
-// - arithmetic $(( )) through ./arith.ts
+// - arithmetic $(( )) through ./arith.ts, loaded the first time a line uses it (few lines do), so
+//   it is not in the kernel's chunk
 // - globbing through an injected matcher (./glob.ts), skipped when none is given or noglob is set
 //
 // Everything that can fail throws ExpandError with bash's wording, without the `vesen: ` prefix.
 
-import { ArithError, evaluateArith } from './arith';
 import { escapeGlob, GlobTooLarge, hasGlob, type GlobMatcher } from './glob';
 import type { WordPart } from './lexer-types';
 import { lexText } from './lexer';
@@ -25,6 +25,22 @@ export class ExpandError extends Error {
     super(message);
     this.name = 'ExpandError';
   }
+}
+
+type Arith = typeof import('./arith');
+
+let arith: Promise<Arith> | undefined;
+
+/** The arithmetic evaluator, loaded once; a load that fails is tried again next time. */
+export function loadArith(): Promise<Arith> {
+  if (arith === undefined) {
+    const loading = import('./arith');
+    loading.catch(() => {
+      if (arith === loading) arith = undefined;
+    });
+    arith = loading;
+  }
+  return arith;
 }
 
 /** A redirection target that came out as more or fewer than one word; it fails only its command. */
@@ -376,10 +392,16 @@ export class Expander {
 
   private async arithmetic(expr: string): Promise<string> {
     const text = await this.string({ parts: lexText(expr) });
+    let module: Arith;
     try {
-      return evaluateArith(text, { get: (name) => this.get(name), set: (name, value) => this.assign(name, value) }).toString();
+      module = await loadArith();
+    } catch {
+      throw new ExpandError('arithmetic could not be loaded; check the connection and try again');
+    }
+    try {
+      return module.evaluateArith(text, { get: (name) => this.get(name), set: (name, value) => this.assign(name, value) }).toString();
     } catch (error) {
-      if (error instanceof ArithError) throw new ExpandError(error.message);
+      if (error instanceof module.ArithError) throw new ExpandError(error.message);
       throw error;
     }
   }

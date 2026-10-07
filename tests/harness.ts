@@ -5,7 +5,8 @@
 // width. runLine gives a fresh session per line; session() keeps one for a transcript.
 
 import { createAppShell, type AppShell } from '../src/app/shell';
-import { lineText, plain, type Block, type Line } from '../src/output/model';
+import { lineText, type Block, type Line } from '../src/output/model';
+import { plain } from '../src/output/plain';
 import { createClock } from '../src/services/clock';
 import { expandAliases } from '../src/shell/alias';
 import { wrapText } from '../src/shell/help';

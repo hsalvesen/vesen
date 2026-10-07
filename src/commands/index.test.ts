@@ -19,6 +19,20 @@ describe('the command catalogue', () => {
     expect(buildRegistry([], specFiles()).validate()).toEqual([]);
   });
 
+  it('keeps the long help of a command with a lazy body in the spec or the body, never both', async () => {
+    let kept = 0;
+    for (const found of specFiles()) {
+      if (found.load === undefined) continue;
+      const { doc } = await found.load();
+      if (doc === undefined) continue;
+      kept += 1;
+      expect(found.description === undefined || doc.description === undefined, found.name).toBe(true);
+      expect(found.man === undefined || doc.man === undefined, found.name).toBe(true);
+    }
+    // ls, printf, test and the other bodies in a <name>.run.ts of their own.
+    expect(kept).toBeGreaterThanOrEqual(12);
+  });
+
   it('lets a spec file replace the legacy command of the same name', () => {
     const port = spec('ls', { summary: 'list directory contents' });
     const registry = buildRegistry([spec('ls', { summary: 'legacy' }), spec('cat')], [port]);

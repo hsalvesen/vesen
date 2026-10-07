@@ -1,8 +1,25 @@
 // The body of test; its spec, in test.ts, loads this the first time test runs, so the
 // kernel's chunk carries only the spec.
 
-import type { CommandContext, ExitCode } from '../../shell/types';
+import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
 import type { Stat } from '../../vfs/types';
+
+/** What --help, help and man say about test, besides its spec (test.ts). */
+export const doc: CommandDoc = {
+  description:
+    "Exits 0 when EXPRESSION is true, 1 when it is false and 2 when it is malformed, printing nothing. With && and || it stands in for if: [ -d projects ] && cd projects. '[' needs a closing ']'.",
+  man: [
+    {
+      heading: 'FILES',
+      body: '-e FILE exists; -f a regular file; -d a directory; -L or -h a symbolic link; -c a character device; -r, -w, -x readable, writable, executable by you; -s not empty; -O, -G owned by your user, your group; FILE1 -nt FILE2 newer, -ot older, -ef the same file.',
+    },
+    {
+      heading: 'STRINGS AND NUMBERS',
+      body: '-z STRING empty; -n STRING, or STRING alone, not empty; S1 = S2, S1 != S2, S1 < S2, S1 > S2; N1 -eq N2, -ne, -lt, -le, -gt, -ge for whole numbers.',
+    },
+    { heading: 'COMBINING', body: '! EXPR not; EXPR1 -a EXPR2 and; EXPR1 -o EXPR2 or; ( EXPR ) groups.' },
+  ],
+};
 
 /** A mistake in the expression; test exits 2. */
 export class TestError extends Error {}

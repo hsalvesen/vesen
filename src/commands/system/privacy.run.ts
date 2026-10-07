@@ -1,8 +1,13 @@
 // The body of privacy: the table of third parties, then what stays in this browser.
 
 import { out, type Line } from '../../output/model';
-import type { CommandContext, ExitCode } from '../../shell/types';
+import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
 import { isLegacySpec } from '../legacy';
+
+/** What --help, help and man say about privacy, besides its spec (privacy.ts). */
+export const doc: CommandDoc = {
+  description: 'Each service a command talks to, and what it is sent. IP and location lookups happen only on request.',
+};
 
 interface ThirdParty {
   readonly service: string;

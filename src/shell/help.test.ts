@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isTrustedAction, lineText, plain, type Block } from '../output/model';
+import { isTrustedAction, lineText, type Block } from '../output/model';
+import { plain } from '../output/plain';
 import {
   apropos,
   CATEGORY_TITLES,
@@ -11,6 +12,7 @@ import {
   usageLines,
   vesenPage,
   whatisLine,
+  withDoc,
   wrapText,
 } from './help';
 import { KEY_BINDINGS } from './keys';
@@ -236,6 +238,34 @@ describe('man pages', () => {
     expect(about).toContain('PORTFOLIO');
     expect(about).toContain('       theme');
     expect(about).toContain('Written by Has Salvesen.');
+  });
+});
+
+describe('the long help a lazy body keeps', () => {
+  const { description: _unused, run: _run, ...bare } = head;
+  const lazy = (load: CommandSpec['load']): CommandSpec => ({ ...bare, load });
+  const doc = { description: 'Print the first 10 lines of each FILE.', man: [{ heading: 'Exit status', body: '0 when all went well.' }] };
+
+  it('comes from the body: --help and man say what an inline description says', async () => {
+    const full = await withDoc(lazy(() => Promise.resolve({ run: () => 0, doc })));
+    expect(full.description).toBe(doc.description);
+    expect(full.man).toBe(doc.man);
+    expect(text(commandHelp(full))).toBe(text(commandHelp({ ...head, man: doc.man })));
+    expect(text(manPage(full, { columns: 80, version: '2.0.0' }))).toBe(text(manPage({ ...head, man: doc.man }, { columns: 80, version: '2.0.0' })));
+  });
+
+  it("never replaces the spec's own, and leaves a spec with an inline body as it is", async () => {
+    const own = { ...bare, description: 'Mine.', load: () => Promise.resolve({ run: () => 0, doc }) };
+    expect((await withDoc(own)).description).toBe('Mine.');
+    expect(await withDoc(head)).toBe(head);
+  });
+
+  it('falls back to the summary when the body cannot be loaded, or keeps no help', async () => {
+    const offline = lazy(() => Promise.reject(new Error('offline')));
+    expect(await withDoc(offline)).toBe(offline);
+    expect(text(manPage(await withDoc(offline), { columns: 80, version: '2.0.0' }))).toContain('       Output the first part of files.');
+    const none = lazy(() => Promise.resolve({ run: () => 0 }));
+    expect(await withDoc(none)).toBe(none);
   });
 });
 

@@ -2,7 +2,13 @@
 // kernel's chunk carries only the spec.
 
 import { out } from '../../output/model';
-import type { CommandContext, ExitCode, ShellOptionFlags } from '../../shell/types';
+import type { CommandContext, CommandDoc, ExitCode, ShellOptionFlags } from '../../shell/types';
+
+/** What --help, help and man say about set, besides its spec (set.ts). */
+export const doc: CommandDoc = {
+  description:
+    "With nothing, lists every shell variable. -o OPTION turns an option on and +o OPTION off; 'set -o' alone lists them. noclobber (-C) stops > from overwriting a file; noglob (-f) turns off pathname expansion.",
+};
 
 type OptionName = keyof ShellOptionFlags;
 
@@ -41,7 +47,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode | void> {
   const words = ctx.args;
   if (words.length === 1 && words[0] === '--help') {
     const { commandHelp } = await import('../../shell/help');
-    for (const block of commandHelp(ctx.spec)) await ctx.stdout.block(block);
+    for (const block of commandHelp({ ...ctx.spec, ...doc })) await ctx.stdout.block(block);
     return 0;
   }
   if (words.length === 0) {

@@ -4,20 +4,12 @@
   after Tab, the whole list, with each candidate's description, and the Tab menu's choice marked.
   Chips are <button role=option> in a listbox: a theme name carries its colour, and the typed part
   of each label is bold. A tap or click does what Tab would, through the same accept(), and keeps
-  focus, and a phone's keyboard, on the prompt. Everything here is text, never markup.
+  focus, and a phone's keyboard, on the prompt. Everything here is text, never markup. The app
+  loads it in its own chunk just after the first paint: nothing completes before the kernel does.
 -->
-<script module lang="ts">
-  /** The listbox's id, for the input's aria-controls. */
-  export const COMPLETION_LIST_ID = 'completion-list';
-
-  /** The id of the option at `index`, for the input's aria-activedescendant. */
-  export function optionId(index: number): string {
-    return `${COMPLETION_LIST_ID}-${index}`;
-  }
-</script>
-
 <script lang="ts">
   import type { Chip } from '../shell/complete/types';
+  import { COMPLETION_LIST_ID, optionId } from './completion-ids';
 
   let {
     chips = [],

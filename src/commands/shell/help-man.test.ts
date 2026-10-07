@@ -2,8 +2,9 @@
 // command, and --help and man render for every spec, ported or legacy.
 import { describe, expect, it } from 'vitest';
 import { runLine, session } from '../../../tests/harness';
-import { isTrustedAction, plain, type Block } from '../../output/model';
-import { manPage } from '../../shell/help';
+import { isTrustedAction, type Block } from '../../output/model';
+import { plain } from '../../output/plain';
+import { manPage, withDoc } from '../../shell/help';
 import { CommandRegistry } from '../../shell/registry';
 import { specFiles } from '../index';
 import { LEGACY_NAMES, legacySpecs, type LegacyFn, type LegacyName } from '../legacy';
@@ -83,6 +84,13 @@ describe('help', () => {
       const man = await s.run(`man ${spec.name}`);
       expect(man.status, spec.name).toBe(0);
       expect(man.stdoutPlain, spec.name).toMatch(/^NAME$[\s\S]*^SYNOPSIS$[\s\S]*^DESCRIPTION$/m);
+      // The description, wherever the spec keeps it: inline, or with a body that loads lazily.
+      const description = (await withDoc(spec)).description;
+      if (description !== undefined) {
+        const opening = description.split(/\s+/).slice(0, 6).join(' ');
+        expect(help.stdoutPlain.replace(/\s+/g, ' '), spec.name).toContain(opening);
+        expect(man.stdoutPlain.replace(/\s+/g, ' '), spec.name).toContain(opening);
+      }
     }
     s.stop();
   });

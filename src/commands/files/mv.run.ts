@@ -1,10 +1,17 @@
 // The body of mv; its spec, in mv.ts, loads this the first time mv runs, so the
 // kernel's chunk carries only the spec.
 
-import type { CommandContext, ExitCode } from '../../shell/types';
+import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
 import { basename, isWithin, join } from '../../vfs/path';
 import type { Stat } from '../../vfs/types';
 import { childPath, entryPath, errorCode, realOrSelf, reason, tryLstat, tryStat } from '../lib/files';
+
+/** What --help, help and man say about mv, besides its spec (mv.ts). */
+export const doc: CommandDoc = {
+  description:
+    'Renames SOURCE to DEST, or moves each SOURCE into DIRECTORY. A file at DEST is replaced, unless -n is given. It prints nothing when it works; -v says what moved.',
+  man: [{ heading: 'EXIT STATUS', body: '0 when everything was moved, 1 otherwise.' }],
+};
 
 /** Runs mv. */
 export async function run(ctx: CommandContext): Promise<ExitCode | void> {

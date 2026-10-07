@@ -199,7 +199,9 @@ describe('bootstrap', () => {
     const entries = screen.entries();
     const last = entries[entries.length - 1];
     expect(last?.line).toBe('');
-    expect(shown(last ?? { prompt: null, line: '', blocks: [] }).join('\n')).toContain('vesen was updated, reloading…');
+    // A lines block, which the first paint's chunk draws: never legacy HTML, whose shim is in a
+    // chunk of its own, which may be one of those that failed to load.
+    expect(last?.blocks).toMatchObject([{ type: 'lines', lines: [[{ text: 'vesen was updated, reloading…', style: { fg: 'warn', bold: true } }]] }]);
   });
 
   it('runs lines through the shell, whose kernel loads after the first paint, and keeps history', async () => {

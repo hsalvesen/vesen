@@ -1,4 +1,6 @@
-// The legacy HTML shim: renders a legacy command's HTML string as a sanitised DOM fragment.
+// The legacy HTML shim: renders a legacy command's HTML string as a sanitised DOM fragment. It
+// loads in its own chunk, with its allowlist, the first time a legacyHtml block is drawn
+// (ui/legacy-block.ts), so the first paint never waits for it.
 //
 // The string is parsed by the browser's own HTML parser inside an inert document (no scripts
 // run, nothing loads, no event fires), then a new tree is built in the page's document from
@@ -8,7 +10,6 @@
 //
 // Deleted with the legacyHtml block once the last legacy command is ported.
 
-import type { Action } from 'svelte/action';
 import {
   LEGACY_DROP_WITH_CONTENT,
   LEGACY_TAGS,
@@ -102,13 +103,12 @@ export function sizeFittedArt(root: ParentNode): void {
   }
 }
 
-/** `use:legacyHtml={html}`: replaces the element's children with the sanitised fragment. */
-export const legacyHtml: Action<HTMLElement, string> = (node, html) => {
-  const render = (value: string): void => {
-    const fragment = sanitizeLegacyHtml(value, node.ownerDocument);
-    sizeFittedArt(fragment);
-    node.replaceChildren(fragment);
-  };
-  render(html);
-  return { update: render };
-};
+/**
+ * Replaces the element's children with the sanitised fragment of `html`. OutputView draws a
+ * legacyHtml block through ui/legacy-block.ts, which loads this module first.
+ */
+export function renderLegacyHtml(node: HTMLElement, html: string): void {
+  const fragment = sanitizeLegacyHtml(html, node.ownerDocument);
+  sizeFittedArt(fragment);
+  node.replaceChildren(fragment);
+}

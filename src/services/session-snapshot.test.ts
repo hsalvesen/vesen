@@ -1,14 +1,20 @@
 // The session snapshot (02, section 8; 04, "Inside Instagram's browser"): what is saved on
 // pagehide, when it is restored, and that nothing read back can act.
 import { describe, expect, it } from 'vitest';
-import { isTrustedAction, out, plain, type Block } from '../output/model';
-import { reviveSnapshot, snapshotText } from './session-restore';
+import { isTrustedAction, out, type Block } from '../output/model';
+import { plain } from '../output/plain';
+import { reviveSnapshot } from './session-restore';
 import { NOT_KEPT_NOTE, saveSnapshot, snapshotJson } from './session-save';
-import { navigationType, pendingSnapshot, SNAPSHOT_KEY, SNAPSHOT_MAX_CHARS, type SnapshotSource } from './session-snapshot';
+import { navigationType, pendingSnapshot, SNAPSHOT_KEY, SNAPSHOT_MAX_CHARS, type SessionSnapshot, type SnapshotSource } from './session-snapshot';
 import { STORAGE_LIMITS } from './storage-keys';
 import type { KV } from './types';
 
 const NOW = Date.UTC(2026, 9, 7, 10, 0, 0);
+
+/** The entries as plain text, for reading a snapshot by eye. */
+function snapshotText(snapshot: SessionSnapshot): string {
+  return snapshot.entries.map((entry) => `$ ${entry.line}\n${entry.blocks.map(plain).join('')}`).join('');
+}
 
 function memory(): KV<'session'> & { items: Map<string, string> } {
   const items = new Map<string, string>();

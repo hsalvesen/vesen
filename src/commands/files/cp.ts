@@ -8,8 +8,6 @@ export default defineCommand({
   category: 'files',
   summary: 'copy files and directories',
   synopsis: ['cp [OPTION]... SOURCE DEST', 'cp [OPTION]... SOURCE... DIRECTORY'],
-  description:
-    'Copies SOURCE to DEST, or each SOURCE into DIRECTORY. Folders need -r. A file that is there is replaced, unless -n is given. It prints nothing when it works; -v names each copy.',
   flags: [
     { short: 'n', long: 'no-clobber', description: 'do not overwrite a file that exists' },
     { short: 'r', long: 'recursive', description: 'copy folders and everything in them' },
@@ -24,6 +22,5 @@ export default defineCommand({
     { line: 'cp -v history.txt .bashrc documents/', note: 'into a folder', offline: true },
   ],
   seeAlso: ['mv', 'ln', 'rm'],
-  man: [{ heading: 'EXIT STATUS', body: '0 when everything was copied, 1 otherwise.' }],
   load: () => import('./cp.run'),
 });

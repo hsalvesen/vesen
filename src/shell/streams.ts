@@ -14,7 +14,8 @@
 //   a frame, which is the host's business), and view() is that output as it would show now.
 
 import { htmlToText } from '../output/html-to-text';
-import { plain, type Block, type Line, type Span, type Stream } from '../output/model';
+import { type Block, type Line, type Span, type Stream } from '../output/model';
+import { plain } from '../output/plain';
 import { SgrParser } from '../output/sgr';
 import type { Vfs } from '../vfs/types';
 import { BrokenPipe, type InStream, type OutStream } from './types';
