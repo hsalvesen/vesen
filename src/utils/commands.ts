@@ -115,22 +115,8 @@ const networkCommands = Object.fromEntries(
   ]),
 );
 
-// qr loads the first time it runs, with its encoder, which keeps both out of the initial chunk.
-const qrCommands = {
-  qr: async (args: string[]): Promise<string> => {
-    // Undefined when platform/chunkReload has taken the failure over to reload the page.
-    const module = await import('./commands/qr').catch(() => undefined);
-    if (!module) {
-      playBeep();
-      return errorLine('qr: could not load the command. Check the connection and try again.');
-    }
-    return module.qrCommands.qr(args);
-  },
-};
-
 // Combine all commands
 export const commands: Record<string, (args: string[], signal?: AbortSignal, status?: (text: string | null) => void) => Promise<string> | string> = {
   ...systemCommands,
   ...networkCommands,
-  ...qrCommands
 };

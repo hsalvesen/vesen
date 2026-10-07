@@ -104,7 +104,7 @@ export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpe
 // ── The table ──────────────────────────────────────────────────────────────────────────────
 
 /** The legacy command names, in the order help lists them today. */
-export const LEGACY_NAMES = ['curl', 'fastfetch', 'qr', 'speedtest', 'stock', 'weather'] as const;
+export const LEGACY_NAMES = ['curl', 'fastfetch', 'speedtest', 'stock', 'weather'] as const;
 export type LegacyName = (typeof LEGACY_NAMES)[number];
 
 /** What the app layer supplies from src/utils. */
@@ -115,7 +115,6 @@ export interface LegacySource {
 }
 
 const examples = (...lines: string[]): Example[] => lines.map((line) => ({ line }));
-const offline = (...lines: string[]): Example[] => lines.map((line) => ({ line, offline: true }));
 
 type StaticMeta = Omit<LegacyMeta, 'help'>;
 
@@ -135,12 +134,6 @@ const TABLE: Readonly<Record<LegacyName, StaticMeta>> = {
     featured: true,
     loadingLabel: () => 'gathering system information…',
     examples: [{ line: 'fastfetch', note: 'this system, at a glance', starter: 3 }],
-  },
-  qr: {
-    category: 'portfolio',
-    summary: 'draw a QR code for a URL or text',
-    args: [{ name: 'TEXT', source: { kind: 'examples' }, variadic: true }],
-    examples: offline('qr https://tldr.sh', 'qr explainshell.com', 'qr https://shellcheck.net'),
   },
   speedtest: {
     category: 'network',

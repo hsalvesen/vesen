@@ -48,22 +48,6 @@ describe('fastfetch', () => {
   });
 });
 
-describe('qr', () => {
-  it('loads on first use, with its encoder, and says so when it cannot', async () => {
-    const beep = vi.fn();
-    vi.doMock('./beep', () => ({ playBeep: beep }));
-    vi.doMock('./commands/qr', () => {
-      throw new TypeError('Failed to fetch dynamically imported module');
-    });
-    const { commands } = await import('./commands');
-
-    expect(await commands.qr?.(['https://www.vesen.app'])).toContain('qr: could not load the command. Check the connection and try again.');
-    expect(beep).toHaveBeenCalledTimes(1);
-    vi.doUnmock('./beep');
-    vi.doUnmock('./commands/qr');
-  });
-});
-
 describe('help', () => {
   it('lays out each legacy help text as panels, for the shell to show on --help', async () => {
     const { legacyHelpHtml } = await import('./commands');

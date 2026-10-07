@@ -44,6 +44,7 @@ const NOTES: readonly string[] = [
   'Every request carries your IP address, as any web request does. Nothing else you type is sent, except as listed.',
   "IP address and location lookups happen only on request: weather with no place, and fastfetch's Public IP.",
   'curl and wget fetch the address you give them, straight from your browser.',
+  'qr makes its codes in your browser: nothing you encode is sent anywhere.',
   'Links open only when you tap them, or in a desktop browser when whoami, linkedin, repo or open opens one.',
   'This browser keeps the theme, your settings, history and your files under ~ (local storage), and a snapshot of the screen for Back for 30 minutes (session storage). What you type at sudo is never kept.',
   'No analytics, and no cookies.',

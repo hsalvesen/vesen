@@ -29,3 +29,17 @@ export {
 export { toRaster, toRgba, type Raster, type RasterOptions, type RgbaRaster, type Rgb } from './render/raster';
 export { toSvg, toSvgPath, type SvgOptions, type SvgPalette } from './render/svg';
 export { textColumns, toText, type TextOptions, type TextStyle } from './render/text';
+export { adler32, base64, crc32, pngDataUrl, pngScanlines, toPng, zlibStored, type PngOptions } from './render/png';
+export { DENSE_PX, formatPx, moduleSize, type ModuleSize, type ModuleSizeOptions } from './render/layout';
+export {
+  asQrView,
+  cardHint,
+  displayPayload,
+  metaLine,
+  middleEllipsis,
+  qrFileName,
+  raisedNote,
+  type QrDisplay,
+  type QrView,
+  type QrViewOptions,
+} from './view';
