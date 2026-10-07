@@ -101,11 +101,6 @@ export function cleanBlock(block: unknown): Block | null {
         const leftCh = typeof raw.leftCh === 'number' && Number.isFinite(raw.leftCh) && raw.leftCh > 0 ? raw.leftCh : undefined;
         return out.columns(side(raw.left), side(raw.right), at, leftCh);
       }
-      case 'legacyHtml': {
-        // Sanitised again when it is drawn (ui/legacy-html.ts), as at first.
-        const html = str(raw.html);
-        return html === undefined ? null : out.legacyHtml(html);
-      }
       case 'component': {
         // A rich card comes back as what a pipe would have received.
         const text = str(raw.plain);

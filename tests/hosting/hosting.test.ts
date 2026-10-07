@@ -1,8 +1,7 @@
 // Checks the Firebase Hosting config and the two standalone pages it serves next to the app:
-// public/404.html and the device probe at public/probe/index.html; and the owner's documents
-// that tabs opened before the bundled seed still fetch.
+// public/404.html and the device probe at public/probe/index.html.
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
@@ -171,10 +170,10 @@ describe('standalone pages', () => {
   });
 });
 
-describe('the owner documents an older build fetches', () => {
-  // A tab opened before the documents moved into the bundle reads them from the site, so they
-  // stay in public/ for one release; Phase 5 deletes them with the legacy code.
-  it.each(['README.md', 'history.txt', 'linux.txt'])('public/%s is still served', (name) => {
-    expect(statSync(join(ROOT, 'public', name)).size).toBeGreaterThan(0);
+describe('the owner documents', () => {
+  // They are bundled into the seed (src/content), so the site no longer serves the HTML copies
+  // the legacy page fetched: a deep link to /README.md falls through to the 404 page.
+  it.each(['README.md', 'history.txt', 'linux.txt'])('public/%s is gone', (name) => {
+    expect(existsSync(join(ROOT, 'public', name))).toBe(false);
   });
 });

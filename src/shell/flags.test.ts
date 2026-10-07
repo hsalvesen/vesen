@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FlagError, flagKey, parseFlags, takesRawArgs, tryHelp, wantsLegacyHelp, type FlagSource } from './flags';
+import { FlagError, flagKey, parseFlags, rawArgsAskForHelp, takesRawArgs, tryHelp, type FlagSource } from './flags';
 import type { CommandSpec, FlagSpec } from './types';
 import { UsageError } from './types';
 
@@ -155,13 +155,13 @@ describe('helpers', () => {
     expect(flags.map(flagKey)).toEqual(['patterns', 'lines', 'l']);
   });
 
-  it('read legacy help requests anywhere, and mark legacy specs', () => {
-    expect(wantsLegacyHelp(['-h'])).toBe(true);
-    expect(wantsLegacyHelp(['-a', '--help'])).toBe(true);
+  it('read raw-args help requests anywhere, and mark raw-args specs', () => {
+    expect(rawArgsAskForHelp(['-h'])).toBe(true);
+    expect(rawArgsAskForHelp(['-a', '--help'])).toBe(true);
     // F032: a later -h is an argument, and so is anything after --.
-    expect(wantsLegacyHelp(['say', '-h'])).toBe(false);
-    expect(wantsLegacyHelp(['--', '--help'])).toBe(false);
-    expect(wantsLegacyHelp(['--helpful'])).toBe(false);
+    expect(rawArgsAskForHelp(['say', '-h'])).toBe(false);
+    expect(rawArgsAskForHelp(['--', '--help'])).toBe(false);
+    expect(rawArgsAskForHelp(['--helpful'])).toBe(false);
     const spec = { name: 'x', category: 'fun', summary: 'x', run: () => 0 } satisfies CommandSpec;
     expect(takesRawArgs(spec)).toBe(false);
     expect(takesRawArgs({ ...spec, rawArgs: true } as CommandSpec)).toBe(true);

@@ -1,9 +1,8 @@
 // The plain-text form of every block (docs/plan/02-architecture-and-contracts.md, section 2):
 // what a pipe or a file receives instead of the rich block a terminal draws. Kept apart from the
 // output model, which the first paint loads, because only the kernel's streams and the session
-// restore need it, and with it the legacy HTML-to-text reading.
+// restore need it.
 
-import { htmlToText } from './html-to-text';
 import { lineText, textWidth, type Block, type TableBlock } from './model';
 
 function terminated(text: string): string {
@@ -68,7 +67,5 @@ export function plain(block: Block): string {
       return [...block.left, ...block.right].map(plain).join('');
     case 'component':
       return terminated(block.plain);
-    case 'legacyHtml':
-      return terminated(htmlToText(block.html));
   }
 }

@@ -66,8 +66,8 @@ export function startMeasuring(win: Window): () => void {
 const DEFAULT_CH_RATIO = 0.6;
 
 /**
- * The legacy estimate of the terminal's width in cells, (innerWidth - 40) / 8, for a page with no
- * transcript to measure. The golden snapshots are recorded with it.
+ * An estimate of the terminal's width in cells, (innerWidth - 40) / 8 as the pre-overhaul page
+ * worked it out, for a page with no transcript to measure.
  */
 export function estimatedColumns(innerWidth: number): number {
   return Math.floor(Math.max(innerWidth - 40, 200) / 8);

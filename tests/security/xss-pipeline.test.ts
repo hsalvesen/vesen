@@ -1,13 +1,12 @@
 // Script injection through the whole pipeline: lines typed at the prompt run through the shell
-// exactly as the prompt runs them (legacy commands through the adapter), and the transcript is
-// mounted with the real Transcript component, which renders the shell's own output as text and
-// legacy output through OutputView's sanitising legacy block.
+// exactly as the prompt runs them, and the transcript is mounted with the real Transcript
+// component, which renders every block with text interpolation only.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { blocksToGoldenHtml } from '../golden/format';
+import { screenText } from '../../src/testing/shell-harness';
 import { activeContent, xssCorpus } from '../support/xss';
 
 interface Session {
-  /** Runs one line through the shell, which records it in the transcript; returns its output as HTML. */
+  /** Runs one line through the shell, which records it in the transcript; returns its stdout as text. */
   run(line: string): Promise<string>;
   /** Mounts the transcript over everything run so far. */
   render(): Promise<HTMLElement>;
@@ -20,13 +19,12 @@ let disposers: (() => void)[] = [];
 /** A fresh page load: new instances of the file system, the stores and the commands. */
 async function boot(): Promise<Session> {
   vi.resetModules();
-  const { legacyAppShell } = await import('../../src/utils/legacyShell');
-  const { virtualFileSystem } = await import('../../src/utils/virtualFileSystem');
-  const { shell } = legacyAppShell({ banner: () => '', yieldToHost: () => Promise.resolve() });
+  const { createAppShell } = await import('../../src/app/shell');
+  const { shell, vfs } = createAppShell({ banner: () => [], yieldToHost: () => Promise.resolve() });
 
   return {
     async run(line) {
-      return blocksToGoldenHtml((await shell.run(line)).blocks);
+      return screenText((await shell.run(line)).blocks, 'stdout');
     },
     async render() {
       // Imported after the reset so the component shares this session's stores.
@@ -45,7 +43,8 @@ async function boot(): Promise<Session> {
       return target;
     },
     plant(name) {
-      const home = virtualFileSystem.children?.home?.children?.guest?.children;
+      // Straight into the tree, past the name checks a command would meet.
+      const home = vfs.root.children?.home?.children?.guest?.children;
       if (!home) throw new Error('no home folder');
       home[name] = { name, type: 'file', content: '' };
     },
@@ -131,8 +130,11 @@ describe('typed and file text shows exactly as written', () => {
     await session.run('echo "<i>a</i>" > a.txt');
     await session.run('echo b>b.txt');
     await session.run("echo '<b>c</b>' >> a.txt");
-    // cat prints text lines, which the golden form writes as escaped text.
-    expect(await session.run('cat a.txt')).toBe('&lt;i&gt;a&lt;/i&gt;\n&lt;b&gt;c&lt;/b&gt;');
+    // cat prints the tags as text, which the transcript draws as text.
+    expect(await session.run('cat a.txt')).toBe('<i>a</i>\n<b>c</b>');
+    const root = await session.render();
+    expect(root.querySelector('.command-output i, .command-output b')).toBeNull();
+    expect(root.textContent).toContain('<i>a</i>');
     expect(await session.run('cat b.txt')).toBe('b');
   });
 

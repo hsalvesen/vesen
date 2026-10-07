@@ -230,10 +230,10 @@ function findHelp(words: readonly string[], source: FlagSource, definesH: boolea
 }
 
 /**
- * True when a legacy command's words ask for its help: --help before any `--`, or -h first.
+ * True when a raw-args command's words ask for its help: --help before any `--`, or -h first.
  * A later -h is an argument, so `echo say -h` says it (F032).
  */
-export function wantsLegacyHelp(words: readonly string[]): boolean {
+export function rawArgsAskForHelp(words: readonly string[]): boolean {
   if (words[0] === '-h') return true;
   const end = words.indexOf('--');
   return (end === -1 ? words : words.slice(0, end)).includes('--help');
@@ -241,9 +241,9 @@ export function wantsLegacyHelp(words: readonly string[]): boolean {
 
 /**
  * A spec that takes its words unparsed and reads its own options: echo, whose options are only
- * leading words such as -n or -neE (anything else is text to print, as in bash), and, until they
- * are ported, the legacy adapter's commands. Without handlesHelp, wantsLegacyHelp decides when
- * such a command asked for help.
+ * leading words such as -n or -neE (anything else is text to print, as in bash), test, set, exit
+ * and true, and qr and weather, which word their own errors. Without handlesHelp,
+ * rawArgsAskForHelp decides when such a command asked for help.
  */
 export interface RawArgsSpec {
   readonly rawArgs?: boolean;

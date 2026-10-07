@@ -1,8 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// The shell kernel in the browser (docs/plan/08-shell-and-commands.md, "Kernel behind the
-// legacy adapter"): every legacy command runs through it, so quotes, pipes, redirection, && and
-// ||, $? and ^C work for all of them.
+// The shell kernel in the browser (docs/plan/08-shell-and-commands.md): every command runs
+// through it, so quotes, pipes, redirection, && and ||, $? and ^C work for all of them.
 
 const prompt = (page: Page) => page.getByRole('combobox', { name: 'Terminal command' });
 const lastEntry = (page: Page) => page.locator('[role="log"] .entry').last();
@@ -25,9 +24,8 @@ test.describe('the shell kernel', { tag: '@smoke' }, () => {
     const output = lastEntry(page).locator('.command-output');
     await expect(output).toContainText('whoami');
     await expect(output).toContainText('fastfetch');
-    // Through a pipe the legacy HTML became text: plain lines, with no markup, styles or buttons.
+    // Through a pipe the help became text: plain lines, with no markup, styles or buttons.
     await expect(output.locator('.lines .text').first()).toBeVisible();
-    await expect(output.locator('.legacy')).toHaveCount(0);
     await expect(output.locator('button, a, [style], [class*="out-"]')).toHaveCount(0);
   });
 
@@ -49,7 +47,7 @@ test.describe('the shell kernel', { tag: '@smoke' }, () => {
     await expect(lastEntry(page)).toContainText('README.md');
   });
 
-  test('redirection, && and || and $? work for the legacy commands', async ({ page }) => {
+  test('redirection, && and || and $? work for every command', async ({ page }) => {
     await page.goto('/');
     await run(page, 'echo "hi  there" > note.txt; cat note.txt');
     await expect(lastEntry(page)).toContainText('hi  there');

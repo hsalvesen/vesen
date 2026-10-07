@@ -1,6 +1,7 @@
 // The file tree a new session starts with (docs/plan/08-shell-and-commands.md, "The file system
-// after this plan"): the legacy tree from src/utils/virtualFileSystem.ts, re-homed so the
-// visitor's files live in /home/guest (F003), plus the system folders a Linux visitor expects.
+// after this plan"): the pre-overhaul terminal's tree (src/utils/virtualFileSystem.ts, now in git
+// history), re-homed so the visitor's files live in /home/guest (F003), plus the system folders a
+// Linux visitor expects.
 //
 //   /bin -> usr/bin           /home/guest (HOME)     /proc (generated on read)
 //   /boot/vmlinuz-6.6.0-vesen /home/has (read-only)  /root (700)

@@ -1,9 +1,8 @@
 <!--
-  Renders output blocks with text interpolation only. Legacy HTML is the one exception, and it
-  goes through the sanitising use:legacyBlock action, whose shim loads with the first such block.
-  Lines, legacy HTML and art (the banner, which boot shows before anything has loaded) are drawn
-  here; the layout blocks are drawn by RichBlock, loaded the first time one appears (or sooner:
-  bootstrap fetches it beside the kernel).
+  Renders output blocks with text interpolation only: no block is ever HTML. Lines and art (the
+  banner, which boot shows before anything has loaded) are drawn here; the layout blocks are
+  drawn by RichBlock, loaded the first time one appears (or sooner: bootstrap fetches it beside
+  the kernel).
 
   Markup inside text containers is written without whitespace between tags on purpose: those
   containers preserve whitespace, so any space Svelte kept there would show.
@@ -12,7 +11,6 @@
   import { textWidth, type Action, type Block } from '../output/model';
   import LineView from './LineView.svelte';
   import { hangingIndent } from './hang';
-  import { legacyBlock } from './legacy-block';
   import { loadRichBlock } from './rich-block';
   import { spanClasses, spanCss } from './span-style';
 
@@ -34,8 +32,6 @@
           <div class="text" style={hang > 0 ? `padding-left: ${hang}ch; text-indent: -${hang}ch` : undefined}>{#if line.length === 0}<br />{:else}<LineView {line} {onaction} />{/if}</div>
         {/each}
       </div>
-    {:else if block.type === 'legacyHtml'}
-      <div class="legacy" use:legacyBlock={block.html}></div>
     {:else if block.type === 'art'}
       <!-- Hidden from screen readers, which hear the alternative text instead of the glyphs. -->
       <div class="art-wrap">
@@ -65,19 +61,12 @@
     white-space: normal;
   }
 
-  .text,
-  .legacy {
+  .text {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
 
   .art-wrap {
     max-width: 100%;
-  }
-
-  /* Legacy HTML is drawn, and takes taps, only inside its own box: padding or a negative margin
-     in it can never reach over later output or the prompt. */
-  .legacy {
-    contain: paint;
   }
 </style>

@@ -16,7 +16,6 @@ import {
   TtyOut,
   TtySink,
   vfsWriteTarget,
-  writeLegacyHtml,
 } from './streams';
 import { BrokenPipe } from './types';
 
@@ -156,13 +155,6 @@ describe('out streams off the screen', () => {
     expect(capture.columns).toBe(80);
   });
 
-  it('turn legacy HTML into the text a reader sees', async () => {
-    const capture = new CaptureOut();
-    await capture.html('<span style="color: var(--theme-cyan)">a</span><br>b&amp;c');
-    await capture.html('');
-    expect(capture.text).toBe('a\nb&c\n');
-  });
-
   it('write into a pipe, and nowhere for /dev/null', async () => {
     const pipe = new AsyncPipe();
     await new PipeOut(pipe).write('p');
@@ -256,19 +248,6 @@ describe('the screen', () => {
     await new TtyOut(sink, 'stdout', cols).line('try ', span);
     const [block] = sink.finish().blocks;
     expect(block?.type === 'lines' && block.lines[0]?.[1]).toBe(span);
-  });
-
-  it('draws legacy HTML as a legacyHtml block on the screen, and as text anywhere else', async () => {
-    const sink = new TtySink();
-    await writeLegacyHtml(new TtyOut(sink, 'stdout', cols), '<b>x</b>');
-    expect(sink.finish().blocks).toEqual([{ type: 'legacyHtml', html: '<b>x</b>' }]);
-
-    const capture = new CaptureOut();
-    await writeLegacyHtml(capture, '<b>x</b>');
-    const bare = { isTTY: false, columns: 80, written: '', write(text: string) { this.written += text; return Promise.resolve(); }, line: () => Promise.resolve(), block: () => Promise.resolve() };
-    await writeLegacyHtml(bare, 'a<br>b');
-    expect(capture.text).toBe('x\n');
-    expect(bare.written).toBe('a\nb\n');
   });
 
   it('drops everything before a clear, from the effect or from ESC[2J', async () => {

@@ -12,15 +12,9 @@ const { version } = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
 ) as { version: string };
 
-// Tests that need a DOM: anything under the UI folders, Svelte component tests, the golden
-// snapshots of the legacy terminal, and the security tests that render the transcript.
-const domTests = [
-  'src/ui/**/*.test.ts',
-  'src/components/**/*.test.ts',
-  'src/**/*.svelte.test.ts',
-  'tests/golden/**/*.test.ts',
-  'tests/security/**/*.test.ts',
-];
+// Tests that need a DOM: anything under the UI folder, Svelte component tests, and the security
+// tests that render the transcript.
+const domTests = ['src/ui/**/*.test.ts', 'src/**/*.svelte.test.ts', 'tests/security/**/*.test.ts'];
 
 export default defineConfig({
   plugins: [svelte(), tailwindcss(), bootScriptPlugin()],

@@ -30,7 +30,6 @@ function shown(entry: ScreenEntry | undefined): string[] {
   const rows = entry.prompt === null ? [] : [`${promptText(entry.prompt)} ${entry.line}`];
   for (const block of entry.blocks) {
     if (block.type === 'lines') rows.push(...block.lines.map(lineText));
-    else if (block.type === 'legacyHtml') rows.push(`<html>${block.html}`);
   }
   return rows;
 }
@@ -65,7 +64,7 @@ function job(id: number, line: string, extra: Partial<ScreenStart> = {}) {
 function setup() {
   const screen = createScreen(() => 5);
   const clock = frames();
-  const sink = transcriptScreen(screen, () => 'BANNER', () => PROMPT, { frame: clock.frame });
+  const sink = transcriptScreen(screen, () => [out.text('BANNER')], () => PROMPT, { frame: clock.frame });
   return { screen, clock, sink };
 }
 
@@ -129,13 +128,13 @@ describe('the transcript as a streaming screen', () => {
     reset.write([], 'reset', 1);
     // Finished before the next frame: the commit does the wipe.
     sink.commit(reset.commit());
-    expect(screen.entries().map(shown)).toEqual([['guest@vesen:~$ banner', '<html>BANNER']]);
+    expect(screen.entries().map(shown)).toEqual([['guest@vesen:~$ banner', 'BANNER']]);
   });
 
   it('carries on with the entry a line typed before the kernel arrived already has', () => {
     const screen = createScreen();
-    const waiting = transcriptScreen(screen, () => '', () => PROMPT, { frame: () => {} });
-    const kernel = transcriptScreen(screen, () => '', () => PROMPT, { frame: (work) => work() });
+    const waiting = transcriptScreen(screen, () => [], () => PROMPT, { frame: () => {} });
+    const kernel = transcriptScreen(screen, () => [], () => PROMPT, { frame: (work) => work() });
     waiting.begin?.(job(-1, 'ls').start);
     const ls = job(1, 'ls', { continues: -1 });
     kernel.begin?.(ls.start);
@@ -162,7 +161,7 @@ describe('a line in the app shell', () => {
   it('is on the screen at once, and its output arrives as the job writes it', async () => {
     const screen = createScreen();
     const clock = frames();
-    const app = createAppShell({ banner: () => 'BANNER', specs: stubCommands(), screen, version: '2.0.0', frame: clock.frame, yieldToHost: () => Promise.resolve() });
+    const app = createAppShell({ banner: () => [out.text('BANNER')], specs: stubCommands(), screen, version: '2.0.0', frame: clock.frame, yieldToHost: () => Promise.resolve() });
     let release: () => void = () => {};
     const gate = new Promise<void>((resolve) => (release = resolve));
     app.shell.registry.register({

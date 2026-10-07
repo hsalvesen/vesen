@@ -1,7 +1,6 @@
 {
   // The strict settings of tsconfig.strict.json for code that runs under Node or Vitest:
   // the unit tests of the strict folders, the test helpers, scripts and config files.
-  // tests/golden/legacy.test.ts and tests/security stay under tsconfig.json while they import legacy code.
   "extends": "./tsconfig.strict.json",
   "compilerOptions": {
     "types": ["node"]
@@ -18,7 +17,6 @@
     "src/ui/**/*.test.ts",
     "src/commands/**/*.test.ts",
     "src/stores/**/*.test.ts",
-    "src/utils/beep.test.ts",
     "src/testing/**/*.ts",
     "scripts/**/*.mjs",
     "scripts/**/*.ts",
@@ -26,9 +24,7 @@
     "tests/harness.ts",
     "tests/transcripts/**/*.ts",
     "tests/support/**/*.ts",
-    "tests/golden/format.ts",
-    "tests/golden/html-to-text.test.ts",
-    "tests/golden/parity.test.ts",
+    "tests/security/**/*.ts",
     "e2e/**/*.ts",
     "worker/*/test/**/*.ts",
     "playwright.config.ts",

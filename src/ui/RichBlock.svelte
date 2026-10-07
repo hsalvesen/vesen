@@ -1,7 +1,7 @@
 <!--
   The layout blocks: grid, table, panel, chips, card, columns and component. OutputView loads
-  this the first time it draws one, so the initial chunk carries only what legacy output, plain
-  lines and art (the boot banner) need. Everything is drawn with text interpolation only.
+  this the first time it draws one, so the initial chunk carries only what plain lines and art
+  (the boot banner) need. Everything is drawn with text interpolation only.
 
   Markup inside text containers is written without whitespace between tags on purpose: those
   containers preserve whitespace, so any space Svelte kept there would show. A press on a chip

@@ -3,14 +3,11 @@
 // - the help index: the portfolio commands with their summaries in a grid that reflows, then a
 //   row of names for each other category; with --all, every category's grid. Each name is
 //   tappable (it inserts itself at the prompt);
-// - the `<cmd> --help` panels in the callout style the legacy help used (what it does, Usage,
-//   Options, Examples as run chips, See also);
+// - the `<cmd> --help` panels as callouts (what it does, Usage, Options, Examples as run chips,
+//   See also);
 // - man pages: NAME, SYNOPSIS, DESCRIPTION, OPTIONS, EXAMPLES and SEE ALSO, laid out to the width
 //   as man lays them out, inline (the pager comes later), and `man vesen`, the about page;
 // - whatis and apropos lines; `help keys`.
-//
-// A legacy command keeps its own --help (spec.legacyHelp) until it is ported; its man page is
-// generated from its spec like any other.
 //
 // Commands and the executor load this module the first time help is asked for. A command whose
 // body loads lazily keeps its long help with the body; withDoc() fetches it first.
@@ -193,9 +190,8 @@ function optionLines(spec: CommandSpec): Line[] {
   });
 }
 
-/** The `<cmd> --help` panels for a spec, or its legacy help while it is unported. */
+/** The `<cmd> --help` panels for a spec. */
 export function commandHelp(spec: CommandSpec): Block[] {
-  if (spec.legacyHelp !== undefined) return [out.legacyHtml(spec.legacyHelp)];
   const blocks: Block[] = [];
 
   const about: Line[] = [[out.span(spec.name, HEADING), out.span(` - ${spec.summary}`, STRONG)]];

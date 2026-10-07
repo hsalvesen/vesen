@@ -58,9 +58,7 @@ export interface ScreenStore extends Readable<readonly ScreenEntry[]> {
 function lineCount(entry: ScreenEntry): number {
   let count = entry.prompt === null ? 0 : 1;
   for (const block of entry.blocks) {
-    if (block.type === 'lines') count += block.lines.length;
-    else if (block.type === 'legacyHtml') count += block.html.split(/<br\s*\/?>|\n/).length;
-    else count += 1;
+    count += block.type === 'lines' ? block.lines.length : 1;
   }
   return count;
 }

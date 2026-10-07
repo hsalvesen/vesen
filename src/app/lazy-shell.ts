@@ -1,5 +1,5 @@
 // The shell as the UI sees it while the kernel's chunk loads. The kernel (parser, executor,
-// streams, the legacy adapter) is the largest part of the app, so it loads right after the first
+// streams, the command specs) is the largest part of the app, so it loads right after the first
 // paint instead of before it: the banner and the prompt appear at once, and a line typed before
 // the chunk arrives runs as soon as it does. Its entry is on the screen from the moment it is
 // typed, as any line's is, and the kernel carries on with that entry. ^C on such a line ends it

@@ -1,7 +1,7 @@
 // The command catalogue: every spec file under src/commands/<category>/<name>.ts, found at build
-// time, plus the legacy table while the old commands are being ported. A spec file replaces the
-// legacy command of the same name, so a port is one new file; any other clash of names or
-// aliases is a mistake and throws (F034).
+// time, plus any extra specs the caller hands in (the stand-ins tests run against). A spec file
+// replaces an extra of the same name; any other clash of names or aliases is a mistake and
+// throws (F034).
 
 import { CommandRegistry } from '../shell/registry';
 import type { CommandSpec } from '../shell/types';
@@ -21,12 +21,12 @@ export function specFiles(): CommandSpec[] {
 }
 
 /**
- * The registry: the spec files, then each legacy spec whose name and aliases no spec file has
- * taken. Throws when two spec files clash, or a legacy spec clashes in part with a spec file.
+ * The registry: the spec files, then each extra spec whose name no spec file has taken. Throws
+ * when two spec files clash, or an extra clashes in part with a spec file (an alias).
  */
-export function buildRegistry(legacy: readonly CommandSpec[] = [], files: readonly CommandSpec[] = specFiles()): CommandRegistry {
+export function buildRegistry(extra: readonly CommandSpec[] = [], files: readonly CommandSpec[] = specFiles()): CommandRegistry {
   const registry = new CommandRegistry(files);
-  for (const spec of legacy) {
+  for (const spec of extra) {
     if (registry.get(spec.name)?.name === spec.name) continue;
     registry.register(spec);
   }

@@ -3,36 +3,14 @@
    --------------------------------------------------------------------------
    Every colour here is a role (--role-*, written by platform/theme-apply.ts),
    so output re-themes with the page and passes the contrast check
-   (scripts/check-contrast.mjs). Legacy command output reaches these classes
-   through the allowlist in src/output/legacy-policy.ts.
+   (scripts/check-contrast.mjs). Spans colour themselves inline from their
+   style (ui/span-style.ts), so text needs no classes here.
    ========================================================================== */
-
-/* --- Text roles ------------------------------------------------------------ */
-
-.out-strong {
-  color: var(--role-fg-strong);
-}
-
-.out-accent {
-  color: var(--role-accent);
-}
-
-/* Hints, meta lines and suggestions: dim, but still 4.5:1. */
-.out-muted {
-  color: var(--role-muted);
-}
-
-/* --- Errors -----------------------------------------------------------------
-   One style: `cmd: message` in the error role, then optionally a dim hint on
-   the next line. */
-
-.out-error {
-  color: var(--role-error);
-}
 
 /* --- Panels -----------------------------------------------------------------
    The one callout style, for help, notices and cancellations: a 4px border and
-   a 12% tint in the panel's tone, with the title in the tone. Browsers without
+   a 12% tint in the panel's tone (--panel-tone, which ui/RichBlock.svelte sets
+   from the block's tone), with the title in the tone. Browsers without
    color-mix (iOS 15's WebView) get a neutral tint instead. */
 
 .out-panel {
@@ -48,26 +26,6 @@
   .out-panel {
     background: color-mix(in srgb, var(--panel-tone) 12%, transparent);
   }
-}
-
-.out-panel.tone-warn {
-  --panel-tone: var(--role-warn);
-}
-
-.out-panel.tone-ok {
-  --panel-tone: var(--role-ok);
-}
-
-.out-panel.tone-error {
-  --panel-tone: var(--role-error);
-}
-
-.out-panel.tone-link {
-  --panel-tone: var(--role-link);
-}
-
-.out-panel.tone-muted {
-  --panel-tone: var(--role-muted);
 }
 
 .out-panel-title {

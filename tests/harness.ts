@@ -114,7 +114,7 @@ export async function session(options: RunOptions = {}): Promise<Session> {
   const specs: CommandSpec[] = [...stubCommands(), capture];
   let now = FROZEN_NOW;
   const app = createAppShell({
-    banner: () => '',
+    banner: () => [],
     specs,
     screen: createScreen(),
     version: '0.0.0-test',

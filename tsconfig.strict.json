@@ -1,7 +1,6 @@
 {
-  // Strict checking for the browser code written during the overhaul, from day one.
-  // The legacy code (src/utils, src/components, src/interfaces) stays under tsconfig.json
-  // until it is ported. Globs that match nothing yet are fine.
+  // Strict checking for the browser code, which `npm run check:strict` runs with tsc. Svelte
+  // components are checked by svelte-check under tsconfig.json.
   //
   // No ambient types: Node's would let `process`, `Buffer` and Array.prototype.at (which
   // @types/node adds to ES2021) through, and Safari 15 has none of them. vite/client and svelte
@@ -30,8 +29,7 @@
     "src/ui/**/*.ts",
     "src/commands/**/*.ts",
     "src/stores/**/*.ts",
-    "src/constants.ts",
-    "src/utils/beep.ts",
+    "src/interfaces/**/*.ts",
     "worker/**/*.ts"
   ],
   // The Worker's test helpers read fixtures with Node, so they are checked by

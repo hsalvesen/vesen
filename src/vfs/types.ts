@@ -21,8 +21,8 @@ export interface GenerateContext {
 }
 
 /**
- * One node of the file tree: the shape of the legacy tree literal (name, type, content,
- * children), plus the fields the VFS fills with defaults when it adopts a tree. Children are
+ * One node of the file tree: a plain object (name, type, content, children), the shape the
+ * pre-overhaul tree literal had, plus the fields the VFS fills with defaults when it adopts a tree. Children are
  * null-prototype records, so `children['constructor']` is never an inherited function (F031).
  */
 export interface VirtualFile {

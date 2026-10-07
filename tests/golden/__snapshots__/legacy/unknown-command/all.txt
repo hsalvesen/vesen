@@ -1,4 +1,0 @@
-$ lss
-vesen: lss: command not found
-Did you mean ls? Type 'help' to see all commands.
-[bell]

@@ -7,9 +7,9 @@
 //            text 4.5:1 on every panel tint and on the selection, ghost text and the cursor 3:1,
 //            chip text 4.5:1 on the chip, a selected chip's accent outline 3:1 on the chip, and QR
 //            ink 7:1 on its paper.
-//   palette  The palette slots legacy output still uses as text, on the background, against the
-//            committed baseline of pairs that failed before the palette work: no pair may newly
-//            fail or get worse. The baseline should only shrink.
+//   palette  The palette slots output still uses as text (the owner's documents, SGR colours), on
+//            the background, against the committed baseline of pairs that failed before the
+//            palette work: no pair may newly fail or get worse. The baseline should only shrink.
 //
 // By default a role below its minimum is reported and a palette regression fails. Flags:
 //   --strict           also fail when any role is below its minimum (what CI runs)
@@ -80,7 +80,7 @@ const { roles, colour } = await loadLib();
 
 // ── Palette ──────────────────────────────────────────────────────────────────────────────
 
-/** Palette slots that render text in legacy output, checked against `background`. */
+/** Palette slots that render text in output (documents, SGR), checked against `background`. */
 export const TEXT_SLOTS = /** @type {const} */ (['foreground', 'white', 'brightBlack', 'cyan', 'yellow', 'green', 'red']);
 
 /** WCAG AA minimum for normal-size text. */
@@ -243,7 +243,7 @@ function main() {
   // Palette slots, against the baseline.
   const measurements = measureThemes(themes);
   const width = Math.max(...TEXT_SLOTS.map((role) => role.length), 6) + 2;
-  console.log('\nPalette slots used as text by legacy output:');
+  console.log('\nPalette slots used as text by output:');
   console.log('theme'.padEnd(12) + 'background'.padEnd(12) + TEXT_SLOTS.map((role) => role.padStart(width)).join(''));
   for (const theme of themes) {
     const cells = TEXT_SLOTS.map((role) => {

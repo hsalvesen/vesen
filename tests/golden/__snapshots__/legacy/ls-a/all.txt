@@ -1,2 +1,0 @@
-$ ls -a
-.  ..  .bash_history  .bashrc  .gitconfig  .local  .profile  .ssh  .vimrc  bin  config  desktop  documents  downloads  history.txt  music  pictures  projects  public  README.md  scripts  src  templates  videos

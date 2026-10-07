@@ -15,7 +15,7 @@
 -->
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte';
-  import Cathode from './components/Cathode.svelte';
+  import Cathode from './ui/Cathode.svelte';
   import type { Action } from './output/model';
   import { coarsePointer, dockWanted, keyPlatform } from './platform/env';
   import { createClipboard } from './services/clipboard';

@@ -47,7 +47,7 @@ describe('playBeep', () => {
 
   it('reuses a single AudioContext across rings', async () => {
     vi.stubGlobal('AudioContext', FakeAudioContext);
-    const { playBeep } = await import('./beep');
+    const { playBeep } = await import('./bell');
 
     playBeep();
     playBeep();
@@ -58,7 +58,7 @@ describe('playBeep', () => {
 
   it('stays silent without Web Audio', async () => {
     vi.stubGlobal('AudioContext', undefined);
-    const { playBeep } = await import('./beep');
+    const { playBeep } = await import('./bell');
 
     expect(() => playBeep()).not.toThrow();
     expect(FakeAudioContext.instances).toBe(0);

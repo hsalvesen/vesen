@@ -220,8 +220,6 @@ export interface CommandSpec {
   /** Exactly one of run and load; load() makes a lazy chunk. */
   readonly run?: RunFn;
   readonly load?: LoadFn;
-  /** Migration only: the legacy help text. */
-  readonly legacyHelp?: string;
 }
 
 /** Either an inline `run` or a lazy `load`, never both. */

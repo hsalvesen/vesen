@@ -8,8 +8,7 @@
 // It reads nothing of the kernel but types, so the initial chunk uses it for a line typed before
 // the kernel has arrived (app/lazy-shell.ts), and the kernel carries on with that line's entry.
 
-import { outputBlocks, type CommandOutput } from '../interfaces/command';
-import type { Line } from '../output/model';
+import type { Block, Line } from '../output/model';
 import type { ScreenCommit, ScreenSink, ScreenStart } from '../shell/index';
 import type { LiveOutput, ScreenAction } from '../shell/streams';
 import type { ScreenEntry, ScreenStore } from '../stores/screen';
@@ -23,9 +22,12 @@ export const nextFrame: FrameScheduler = (work) => {
   else setTimeout(work, 16);
 };
 
+/** The welcome banner's blocks, at the width the terminal has when it is drawn. */
+export type Banner = () => readonly Block[];
+
 /** The banner entry, as boot and `reset` show it, typed at `prompt`. */
-export function bannerEntry(screen: ScreenStore, banner: () => CommandOutput, prompt: Line, before?: number): void {
-  screen.push({ prompt, line: 'banner', blocks: outputBlocks(banner()), origin: 'boot', status: 0 }, before === undefined ? {} : { before });
+export function bannerEntry(screen: ScreenStore, banner: Banner, prompt: Line, before?: number): void {
+  screen.push({ prompt, line: 'banner', blocks: banner(), origin: 'boot', status: 0 }, before === undefined ? {} : { before });
 }
 
 /** A running job, as the transcript keeps track of it. */
@@ -45,7 +47,7 @@ export interface TranscriptOptions {
 /** The transcript as the shell's screen: each line's entry, from the moment it starts. */
 export function transcriptScreen(
   screen: ScreenStore,
-  banner: () => CommandOutput,
+  banner: Banner,
   renderPrompt: () => Line,
   options: TranscriptOptions = {},
 ): ScreenSink {

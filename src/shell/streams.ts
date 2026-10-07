@@ -9,11 +9,10 @@
 //   for $( ). Off the screen, spans lose their styles and actions and blocks become plain text.
 // - In streams: a pipe, a string (`<<<` and `<`), or the terminal, which has nothing to read yet.
 // - TtySink turns what a job writes to the screen into Blocks: text through the SGR reader (so
-//   escapes become styles, never actions), lines, rich blocks, and the legacy HTML bridge. It
-//   says when its output changes, so the screen can draw the job's entry as it runs (at most once
-//   a frame, which is the host's business), and view() is that output as it would show now.
+//   escapes become styles, never actions), lines and rich blocks. It says when its output
+//   changes, so the screen can draw the job's entry as it runs (at most once a frame, which is
+//   the host's business), and view() is that output as it would show now.
 
-import { htmlToText } from '../output/html-to-text';
 import { type Block, type Line, type Span, type Stream } from '../output/model';
 import { plain } from '../output/plain';
 import { SgrParser } from '../output/sgr';
@@ -232,22 +231,12 @@ export class TtyIn implements InStream {
 
 // ── Out streams ────────────────────────────────────────────────────────────────────────────
 
-/**
- * Migration only: the legacy adapter's way to print a legacy command's HTML. On the screen it is
- * a legacyHtml block, sanitised when drawn; anywhere else it is the text a reader would see.
- */
-export interface LegacyHtmlOut {
-  html(legacy: string): Promise<void>;
-}
-
-export type ShellOut = OutStream & LegacyHtmlOut;
-
 function spanText(parts: readonly (string | Span)[]): string {
   return parts.map((part) => (typeof part === 'string' ? part : part.text)).join('');
 }
 
 /** An out stream that is not the screen: everything becomes plain text. */
-abstract class TextOut implements ShellOut {
+abstract class TextOut implements OutStream {
   readonly isTTY = false;
 
   constructor(readonly columns: number = 80) {}
@@ -261,11 +250,6 @@ abstract class TextOut implements ShellOut {
   block(block: Block): Promise<void> {
     const text = plain(block);
     return text === '' ? Promise.resolve() : this.write(text);
-  }
-
-  html(legacy: string): Promise<void> {
-    const text = htmlToText(legacy);
-    return text === '' ? Promise.resolve() : this.write(`${text}\n`);
   }
 }
 
@@ -575,7 +559,7 @@ export class TtySink {
 }
 
 /** A stream to the screen: text, lines and blocks keep their styles and actions. */
-export class TtyOut implements ShellOut {
+export class TtyOut implements OutStream {
   readonly isTTY = true;
 
   constructor(
@@ -599,17 +583,4 @@ export class TtyOut implements ShellOut {
   block(block: Block): Promise<void> {
     return this.sink.block(block);
   }
-
-  html(legacy: string): Promise<void> {
-    // A literal, as interfaces/command.ts does, so the legacy path pulls in no builders.
-    return this.sink.block({ type: 'legacyHtml', html: legacy });
-  }
-}
-
-/** Writes legacy HTML to any out stream: the bridge when it has one, its text otherwise. */
-export function writeLegacyHtml(stream: OutStream, legacy: string): Promise<void> {
-  const bridge = stream as Partial<LegacyHtmlOut>;
-  if (typeof bridge.html === 'function') return bridge.html.call(stream, legacy);
-  const text = htmlToText(legacy);
-  return text === '' ? Promise.resolve() : stream.write(`${text}\n`);
 }

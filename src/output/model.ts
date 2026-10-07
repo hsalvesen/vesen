@@ -252,12 +252,6 @@ export interface ComponentBlock {
   readonly alt: string;
 }
 
-/** Migration only: a legacy command's HTML, sanitised when rendered. Removed with DOMPurify. */
-export interface LegacyHtmlBlock {
-  readonly type: 'legacyHtml';
-  readonly html: string;
-}
-
 export type Block =
   | LinesBlock
   | GridBlock
@@ -267,8 +261,7 @@ export type Block =
   | ChipsBlock
   | CardBlock
   | ColumnsBlock
-  | ComponentBlock
-  | LegacyHtmlBlock;
+  | ComponentBlock;
 export type BlockType = Block['type'];
 
 // ── Trust ──────────────────────────────────────────────────────────────────────────────────
@@ -483,9 +476,6 @@ export const out = {
     plain,
     alt,
   }),
-
-  /** Migration only. */
-  legacyHtml: (html: string): LegacyHtmlBlock => ({ type: 'legacyHtml', html }),
 } as const;
 
 // ── Text width ─────────────────────────────────────────────────────────────────────────────

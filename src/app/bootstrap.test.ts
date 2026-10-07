@@ -1,11 +1,15 @@
 // @vitest-environment happy-dom
 import { get } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Block } from '../output/model';
 import type { Booted, BootOptions } from './bootstrap';
 
 const AREAS = ['localStorage', 'sessionStorage'] as const;
 const saved = AREAS.map((name) => [name, Object.getOwnPropertyDescriptor(window, name)] as const);
 let booted: Booted | null = null;
+
+/** The banner the tests boot with: one line. */
+const BANNER: Block[] = [{ type: 'lines', stream: 'stdout', lines: [[{ text: 'BANNER' }]] }];
 
 /** The head index.html ships with, as far as bootstrap is concerned. */
 const STATIC_HEAD = `
@@ -52,7 +56,7 @@ async function load() {
   const { cathode, cathodeQuality, crtTier } = await import('../stores/cathode');
   const { screen } = await import('../stores/screen');
   const boot = (options: Partial<BootOptions> = {}) => {
-    booted = app.bootstrap({ window, build: '/assets/index-test.js', banner: () => 'BANNER', ...options });
+    booted = app.bootstrap({ window, build: '/assets/index-test.js', banner: () => BANNER, ...options });
     return booted;
   };
   const setTheme = (name: string) => {
@@ -63,11 +67,13 @@ async function load() {
   return { ...app, boot, theme, setTheme, cathode, cathodeQuality, crtTier, screen };
 }
 
-/** What an entry shows: its prompt and line, then any legacy HTML. */
-function shown(entry: { prompt: readonly { text: string }[] | null; line: string; blocks: readonly { type: string; html?: string }[] }): string[] {
+/** What an entry shows: its prompt and line, then its lines' text, and other blocks by type. */
+function shown(entry: { prompt: readonly { text: string }[] | null; line: string; blocks: readonly Block[] }): string[] {
   return [
     ...(entry.prompt === null ? [] : [`${entry.prompt.map((span) => span.text).join('')} ${entry.line}`]),
-    ...entry.blocks.map((block) => (block.type === 'legacyHtml' ? (block.html ?? '') : `[${block.type}]`)),
+    ...entry.blocks.flatMap((block) =>
+      block.type === 'lines' ? block.lines.map((line) => line.map((span) => span.text).join('')) : [`[${block.type}]`],
+    ),
   ];
 }
 
@@ -197,8 +203,8 @@ describe('bootstrap', () => {
     const entries = screen.entries();
     const last = entries[entries.length - 1];
     expect(last?.line).toBe('');
-    // A lines block, which the first paint's chunk draws: never legacy HTML, whose shim is in a
-    // chunk of its own, which may be one of those that failed to load.
+    // A lines block, which the first paint's chunk draws itself: never a layout block, whose
+    // renderer is in a chunk of its own, which may be one of those that failed to load.
     expect(last?.blocks).toMatchObject([{ type: 'lines', lines: [[{ text: 'vesen was updated, reloading…', style: { fg: 'warn', bold: true } }]] }]);
   });
 
@@ -237,30 +243,6 @@ describe('bootstrap', () => {
     }
   });
 
-  it('runs the legacy commands main.ts hands in, and binds them to the VFS and the shell', async () => {
-    const { boot } = await load();
-    const spec = { name: 'hello', category: 'fun' as const, summary: 'say hello', run: () => 3 };
-    const root = { name: '', type: 'directory' as const };
-    const bound: string[] = [];
-    const booted = boot({
-      legacy: () =>
-        Promise.resolve({
-          specs: [spec],
-          root,
-          bind: ({ vfs }) => {
-            bound.push(vfs.readdir('/home').join(' '));
-            return () => bound.push('unbound');
-          },
-        }),
-    });
-    expect((await booted?.shell.run('hello'))?.status).toBe(3);
-    // The VFS keeps its tree in the legacy code's object.
-    expect(Object.keys(root)).toContain('children');
-    expect(bound).toEqual(['guest has user']);
-    booted?.stop();
-    expect(bound).toEqual(['guest has user', 'unbound']);
-  });
-
   it('sources ~/.bashrc before the first line, and saves files under ~ when the page is hidden', async () => {
     const { boot } = await load();
     const booted = boot();
@@ -285,7 +267,7 @@ describe('bootstrap', () => {
     const { bootstrap, screen } = await load();
     const alias = { location: { href: 'https://vesen.app/docs?x=1#top', replace } } as unknown as Window;
 
-    expect(bootstrap({ window: alias, build: 'b', banner: () => 'BANNER' })).toBeNull();
+    expect(bootstrap({ window: alias, build: 'b', banner: () => BANNER })).toBeNull();
     expect(replace).toHaveBeenCalledWith('https://www.vesen.app/docs?x=1#top');
     expect(screen.entries()).toEqual([]);
   });

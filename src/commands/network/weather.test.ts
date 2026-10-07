@@ -78,7 +78,7 @@ function rig(options: RigOptions = {}) {
   const service = createWeatherService({ sources, geolocation: geo, nominatim: true });
   const cols = options.cols ?? 80;
   const app: AppShell = createAppShell({
-    banner: () => '',
+    banner: () => [],
     screen: createScreen(),
     version: '0.0.0-test',
     clock: createClock({ now, random: () => 0.5, timeZone: 'Australia/Sydney' }),

@@ -2,12 +2,15 @@
 // Enforces the module boundaries from docs/plan/02-architecture-and-contracts.md:
 //   1. The DOM-free folders never reference browser globals or import Svelte, and import only
 //      each other plus the service interfaces, so nothing reaches the DOM through an import.
-//   2. No `{@html}` block appears anywhere: output renders through the output model, and legacy
-//      HTML through the sanitising legacyHtml block in src/ui.
+//   2. No `{@html}` block appears anywhere in src: output renders through the output model, with
+//      text interpolation only.
 //   3. Nothing in src uses AbortSignal.any or AbortSignal.timeout, which Instagram's WKWebView
 //      before iOS 17.4 lacks.
+//   4. The legacy layer stays deleted (docs/plan/designs/shell-architecture.md, step 7): src/utils,
+//      src/components and the legacy modules do not exist, and no source file, test or script
+//      imports them.
 // Zero dependencies; run with `npm run check:boundaries`.
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, posix, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -58,6 +61,24 @@ export const FORBIDDEN_GLOBALS = [
   'indexedDB',
 ];
 
+/**
+ * What the legacy clean-up deleted, as repo paths without extensions: two folders and the
+ * modules that only served the migration. None may come back, and nothing may import them.
+ */
+export const REMOVED_PATHS = [
+  'src/utils',
+  'src/components',
+  'src/interfaces/command',
+  'src/commands/legacy',
+  'src/output/html-to-text',
+  'src/output/legacy-policy',
+  'src/ui/legacy-html',
+  'src/ui/legacy-block',
+];
+
+/** Folders whose source files are checked for imports of REMOVED_PATHS. */
+export const IMPORT_CHECKED_DIRS = ['src', 'tests', 'e2e', 'scripts', 'worker'];
+
 /** APIs no source file may use, with the reason. */
 export const FORBIDDEN_APIS = [
   { pattern: /\bAbortSignal\s*\??\.\s*(?:any|timeout)\b/g, reason: "Instagram's WKWebView before iOS 17.4 lacks it; use combineSignals from services/net" },
@@ -71,7 +92,7 @@ export const FORBIDDEN_APIS = [
 export function findRawHtml(source) {
   return [...source.matchAll(/\{@html\b/g)].map((match) => ({
     line: lineAt(source, match.index),
-    message: 'uses {@html}; render through the output model (or a legacyHtml block) instead',
+    message: 'uses {@html}; render through the output model instead',
   }));
 }
 
@@ -259,6 +280,53 @@ function isDomFreeTarget(target) {
 }
 
 /**
+ * Every module specifier a file imports, re-exports, imports for side effects or loads
+ * dynamically, with its line.
+ * @param {string} source
+ * @returns {{ specifier: string, line: number }[]}
+ */
+function importSpecifiers(source) {
+  const withStrings = maskSource(source, { keepStrings: true });
+  const imports = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)(['"])([^'"\n]+)\1/g;
+  return [...withStrings.matchAll(imports)].map((match) => ({ specifier: match[2] ?? '', line: lineAt(withStrings, match.index) }));
+}
+
+/**
+ * True when `target` (a repo path from resolveImport) is, or is inside, a removed path.
+ * @param {string} target
+ */
+function isRemoved(target) {
+  const bare = target.replace(/\.svelte$/, '');
+  return REMOVED_PATHS.some((path) => bare === path || bare.startsWith(`${path}/`));
+}
+
+/**
+ * Finds imports of what the legacy clean-up deleted (REMOVED_PATHS) in any source file.
+ * @param {string} source
+ * @param {string} file the file's repo path, which relative imports are resolved from
+ * @returns {{ line: number, message: string }[]}
+ */
+export function findRemovedImports(source, file) {
+  return importSpecifiers(source).flatMap(({ specifier, line }) => {
+    const target = resolveImport(file, specifier);
+    return target !== null && isRemoved(target)
+      ? [{ line, message: `imports '${specifier}' (${target}), which was deleted with the legacy layer` }]
+      : [];
+  });
+}
+
+/**
+ * The removed paths that exist again, as a folder or as a module with a source extension.
+ * @param {string} root absolute path of the repo
+ * @returns {string[]}
+ */
+export function findRemovedPaths(root) {
+  return REMOVED_PATHS.filter(
+    (path) => existsSync(join(root, path)) || SOURCE_EXTENSIONS.some((ext) => existsSync(join(root, `${path}${ext}`))),
+  );
+}
+
+/**
  * Finds browser globals and imports that leave the DOM-free folders in one DOM-free source file.
  * @param {string} source
  * @param {string} [file] the file's repo path; when given, relative imports are resolved and checked
@@ -279,11 +347,7 @@ export function findBoundaryViolations(source, file) {
     problems.push({ line: lineAt(code, match.index), message: `references \`${name}\`` });
   }
 
-  const withStrings = maskSource(source, { keepStrings: true });
-  const imports = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)(['"])([^'"\n]+)\1/g;
-  for (const match of withStrings.matchAll(imports)) {
-    const specifier = match[2] ?? '';
-    const line = lineAt(withStrings, match.index);
+  for (const { specifier, line } of importSpecifiers(source)) {
     const isSvelte =
       specifier === 'svelte' || specifier.startsWith('svelte/') || /\.svelte(?:\.[jt]s)?$/.test(specifier);
     if (isSvelte) {
@@ -386,13 +450,25 @@ function main() {
     for (const problem of findRawHtml(source)) failures.push(`${repoPath}:${problem.line} ${problem.message}`);
   }
 
+  for (const path of findRemovedPaths(ROOT)) {
+    failures.push(`${path} exists again; it was deleted with the legacy layer, so put the code where it belongs (src/ui, src/services, ...)`);
+  }
+  for (const dir of IMPORT_CHECKED_DIRS) {
+    for (const file of walk(join(ROOT, dir))) {
+      const repoPath = toRepoPath(file);
+      for (const problem of findRemovedImports(readFileSync(file, 'utf8'), repoPath)) {
+        failures.push(`${repoPath}:${problem.line} ${problem.message}`);
+      }
+    }
+  }
+
   if (failures.length > 0) {
     console.error(`check-boundaries: ${failures.length} problem(s)\n`);
     for (const failure of failures) console.error(`  ${failure}`);
     console.error(`\nDOM-free folders: ${DOM_FREE_DIRS.join(', ')}`);
     process.exit(1);
   }
-  console.log(`check-boundaries: ok (${scanned} DOM-free file(s) scanned, no {@html} anywhere)`);
+  console.log(`check-boundaries: ok (${scanned} DOM-free file(s) scanned, no {@html} anywhere, no legacy layer)`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

@@ -1,5 +1,5 @@
-// The virtual file system (docs/plan/designs/shell-architecture.md, section 5): one class over
-// the legacy tree's literal shape, so unported legacy code that walks `children` keeps working.
+// The virtual file system (docs/plan/designs/shell-architecture.md, section 5): one class over a
+// tree of plain nodes (src/vfs/types.ts), each folder's entries in `children`.
 //
 // - Children are null-prototype records, and names are checked (validateName), so no path can
 //   reach an inherited property such as `constructor` (F031).
@@ -57,8 +57,6 @@ export const GUEST_CREDENTIALS: Credentials = {
 export interface VfsOptions {
   /** A fresh copy of the seed tree, built at start and again for `reset`. */
   readonly seed: () => VirtualFile;
-  /** The object to keep the tree in. The legacy shim hands in its own, so its walks see this tree. */
-  readonly root?: VirtualFile;
   readonly credentials?: Credentials;
   readonly now?: () => number;
   /** What generated files are made from; defaults to the clock and no device facts. */
@@ -186,7 +184,7 @@ export class Vfs implements BoundVfs {
   constructor(private readonly options: VfsOptions) {
     this.credentials = options.credentials ?? GUEST_CREDENTIALS;
     this.quota = options.quota ?? DEFAULT_QUOTA;
-    this.root = options.root ?? { name: '', type: 'directory', children: emptyChildren() };
+    this.root = { name: '', type: 'directory', children: emptyChildren() };
     this.install(options.seed());
   }
 

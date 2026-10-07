@@ -15,13 +15,14 @@
     "skipLibCheck": true,
     "allowJs": true,
     "checkJs": false,
-    // The legacy code under src/utils and src/components is still loosely typed.
-    // New folders compile under tsconfig.strict.json instead.
-    "strict": false,
-    "noImplicitAny": false,
-    "noImplicitReturns": false,
-    "noFallthroughCasesInSwitch": false,
-    "noUnusedLocals": false,
+    // The same strictness as tsconfig.strict.json, now that no loosely typed legacy code is left,
+    // so svelte-check holds the components to it too.
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
     "noUnusedParameters": false,
     "exactOptionalPropertyTypes": false,
     // Node's types are for the tests this config also checks. TypeScript 6 loads no @types
@@ -29,8 +30,7 @@
     // browser folders still cannot use Node globals.
     "types": ["node"]
   },
-  // tests/ is listed here too because tests/golden/legacy.test.ts imports legacy code; the rest of
-  // tests/ is also checked strictly by tsconfig.strict.node.json.
-  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte", "tests/**/*.ts"],
+  // tests/, scripts and config files are checked by tsconfig.strict.node.json.
+  "include": ["src/**/*.ts", "src/**/*.svelte"],
   "exclude": ["node_modules", "dist"]
 }

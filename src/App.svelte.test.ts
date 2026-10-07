@@ -2,11 +2,10 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.svelte';
-import { outputBlocks } from './interfaces/command';
+import { createAppShell } from './app/shell';
 import type { Shell } from './shell/index';
 import { screen as transcript } from './stores/screen';
 import { bannerBlocks } from './commands/lib/banner';
-import { legacyAppShell } from './utils/legacyShell';
 import { SNAPSHOT_KEY } from './services/session-snapshot';
 import type { KV } from './services/types';
 import type { AppPlatform } from './ui/platform';
@@ -29,7 +28,7 @@ let shell: Shell;
 let stopShell: () => void = () => {};
 
 beforeEach(() => {
-  const app = legacyAppShell({ banner: () => bannerBlocks({ version: '0.0.0-test', columns: 80, touch: false }), yieldToHost: () => Promise.resolve() });
+  const app = createAppShell({ banner: () => bannerBlocks({ version: '0.0.0-test', columns: 80, touch: false }), yieldToHost: () => Promise.resolve() });
   shell = app.shell;
   stopShell = app.stop;
   // stock's client, as bootstrap provides it, with no Worker whatever .env.local says; each test
@@ -68,7 +67,7 @@ describe('App', () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
     // What app/bootstrap.ts puts in the transcript before the app mounts.
-    transcript.push({ prompt: shell.renderPrompt(), line: 'banner', blocks: outputBlocks(banner()) });
+    transcript.push({ prompt: shell.renderPrompt(), line: 'banner', blocks: banner() });
     const { container } = renderApp();
 
     const headings = container.querySelectorAll('h1');

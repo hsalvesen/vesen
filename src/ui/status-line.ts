@@ -7,7 +7,7 @@ export const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', 
 /** The spinner's one still frame under reduced motion. */
 export const STILL = '…';
 
-/** What the line says for a command that says nothing about itself, as legacy commands did. */
+/** What the line says for a command that says nothing about itself, as the old terminal did. */
 export const DEFAULT_LABEL = 'Processing…';
 
 /** Elapsed time shows from this many seconds. */

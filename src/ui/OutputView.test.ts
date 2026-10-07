@@ -255,9 +255,12 @@ describe('OutputView: layout blocks', () => {
     expect(load).toHaveBeenCalledTimes(2);
   });
 
-  it('sanitises legacy HTML', async () => {
-    const root = await view([out.legacyHtml('<span style="color: var(--theme-cyan)">ok</span><img src=x onerror=window.__x=1>')]);
-    expect(root.querySelector('.legacy')?.innerHTML).toBe('<span style="color: var(--theme-cyan)">ok</span>');
+  it('never draws HTML, even from a block shaped like the retired legacyHtml one', async () => {
+    const stale = { type: 'legacyHtml', html: '<b>bold</b><img src=x onerror=window.__x=1>' } as unknown as Block;
+    const root = await view([stale, out.text('after')]);
+    expect(root.querySelector('b, img')).toBeNull();
+    expect(root.textContent).toBe('after');
+    expect((window as unknown as { __x?: unknown }).__x).toBeUndefined();
   });
 
   it('skips blocks it does not know', async () => {

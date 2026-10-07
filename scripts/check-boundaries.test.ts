@@ -1,5 +1,16 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { findBoundaryViolations, findForbiddenApis, findRawHtml, maskSource, resolveImport } from './check-boundaries.mjs';
+import {
+  findBoundaryViolations,
+  findForbiddenApis,
+  findRawHtml,
+  findRemovedImports,
+  findRemovedPaths,
+  maskSource,
+  resolveImport,
+} from './check-boundaries.mjs';
 
 describe('maskSource', () => {
   it('blanks comments and literals but keeps template expressions and line breaks', () => {
@@ -117,6 +128,41 @@ describe('findForbiddenApis', () => {
       'const fine = AbortSignal.abort();',
     ].join('\n');
     expect(findForbiddenApis(source).map((p) => p.line)).toEqual([3, 4]);
+  });
+});
+
+describe('the deleted legacy layer', () => {
+  const importing = (file: string, specifier: string) => findRemovedImports(`import x from '${specifier}';`, file).map((p) => p.line);
+
+  it('flags an import of src/utils, src/components or a legacy module from anywhere', () => {
+    expect(importing('src/app/bootstrap.ts', '../utils/beep')).toEqual([1]);
+    expect(importing('src/App.svelte', './components/Cathode.svelte')).toEqual([1]);
+    expect(importing('tests/security/x.test.ts', '../../src/utils/legacyShell')).toEqual([1]);
+    expect(importing('e2e/x.spec.ts', '../src/commands/legacy.ts')).toEqual([1]);
+    expect(importing('src/ui/OutputView.svelte', './legacy-block')).toEqual([1]);
+    expect(findRemovedImports("const m = import('../interfaces/command');", 'src/app/shell.ts')).toHaveLength(1);
+  });
+
+  it('allows everything else, including names that only look alike', () => {
+    expect(importing('src/app/bootstrap.ts', '../services/bell')).toEqual([]);
+    expect(importing('src/App.svelte', './ui/Cathode.svelte')).toEqual([]);
+    expect(importing('src/platform/head.ts', '../interfaces/theme')).toEqual([]);
+    expect(importing('src/commands/lib/x.ts', './utils')).toEqual([]);
+    expect(importing('src/lib/x.ts', 'utils')).toEqual([]);
+    expect(findRemovedImports("// import x from '../utils/beep';", 'src/app/a.ts')).toEqual([]);
+  });
+
+  it('finds a removed folder or module that has come back', () => {
+    const root = mkdtempSync(join(tmpdir(), 'boundaries-'));
+    try {
+      expect(findRemovedPaths(root)).toEqual([]);
+      mkdirSync(join(root, 'src', 'utils'), { recursive: true });
+      mkdirSync(join(root, 'src', 'commands'), { recursive: true });
+      writeFileSync(join(root, 'src', 'commands', 'legacy.ts'), '');
+      expect(findRemovedPaths(root)).toEqual(['src/utils', 'src/commands/legacy']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

@@ -2,7 +2,6 @@
 // services are built and the stores are connected to the page. main.ts calls bootstrap() before
 // it mounts the app; nothing else has side effects at import time.
 import { get } from 'svelte/store';
-import { outputBlocks, type CommandOutput } from '../interfaces/command';
 import { out } from '../output/model';
 import { applyCathode } from '../platform/crt';
 import { installChunkReload } from '../platform/chunkReload';
@@ -14,51 +13,32 @@ import { applyRoles } from '../platform/theme-apply';
 import { canonicalRedirect } from '../platform/hosts';
 import { startMeasuring, transcriptColumns } from '../platform/measure';
 import { startViewport } from '../platform/viewport';
-import { createBell } from '../services/bell';
+import { createBell, playBeep } from '../services/bell';
 import { createClipboard } from '../services/clipboard';
 import { provideMarket } from '../services/market/port';
 import { createOpener } from '../services/opener';
 import { pendingSnapshot, type SessionSnapshot } from '../services/session-snapshot';
 import { createStorage, runMigrations } from '../services/storage';
 import type { Clipboard, Opener, StorageService } from '../services/types';
-import type { Shell, ShellPort, TerminalInfo } from '../shell/index';
+import type { ShellPort, TerminalInfo } from '../shell/index';
 import { promptLine } from '../shell/prompt';
-import type { CommandSpec } from '../shell/types';
 import { cathode, cathodeModes, cathodeQuality, crtTier, DEFAULT_CATHODE_MODE, persistCathode } from '../stores/cathode';
 import { screen } from '../stores/screen';
 import { columns } from '../stores/term';
 import { persistPrefs } from '../stores/prefs';
 import { DEFAULT_THEME_NAME, persistTheme, theme, themes } from '../stores/theme';
 import { visibleArea } from '../stores/viewport';
-import { loadLegacyShim } from '../ui/legacy-block';
 import { loadRichBlock } from '../ui/rich-block';
-import { playBeep } from '../utils/beep';
 import { GUEST } from '../vfs/identity';
-import type { VirtualFile } from '../vfs/types';
-import type { Vfs } from '../vfs/vfs';
 import { lazyShell } from './lazy-shell';
-import { transcriptScreen } from './transcript';
+import { transcriptScreen, type Banner } from './transcript';
 
 export interface BootOptions {
   readonly window: Window;
   /** Identifies the running build: the entry chunk's URL, which changes with every deploy. */
   readonly build: string;
   /** The welcome banner that opens the transcript. */
-  readonly banner: () => CommandOutput;
-  /**
-   * Migration only: loads legacy commands and the shim over the VFS. Every command is a spec now,
-   * so main.ts hands in none and the shell has only the spec files; the option goes with the
-   * adapter in the clean-up after the last port.
-   */
-  readonly legacy?: () => Promise<LegacyParts>;
-}
-
-/** The legacy commands as specs, and how the legacy code reaches the VFS and the shell. */
-export interface LegacyParts {
-  readonly specs: readonly CommandSpec[];
-  /** The tree the legacy code walks, which the VFS fills. */
-  readonly root: VirtualFile;
-  readonly bind: (parts: { readonly vfs: Vfs; readonly shell: Shell }) => () => void;
+  readonly banner: Banner;
 }
 
 export interface Booted {
@@ -82,7 +62,7 @@ export interface Booted {
  * Prepares the page for the app. Returns null when the visitor is being sent to the canonical
  * origin, in which case nothing should mount.
  */
-export function bootstrap({ window: win, build, banner, legacy }: BootOptions): Booted | null {
+export function bootstrap({ window: win, build, banner }: BootOptions): Booted | null {
   // The apex and the two Firebase hostnames serve the same build; send visitors to the one
   // origin so storage and the prompt are the same everywhere.
   const canonical = canonicalRedirect(new URL(win.location.href));
@@ -168,11 +148,9 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
       // is here.
       void import('../shell/help').catch(() => {});
       void loadRichBlock().catch(() => {});
-      const [{ createAppShell }, parts] = await Promise.all([import('./shell'), legacy?.() ?? Promise.resolve(null)]);
+      const { createAppShell } = await import('./shell');
       const app = createAppShell({
         ...services,
-        specs: parts?.specs ?? [],
-        ...(parts ? { root: parts.root, bind: parts.bind } : {}),
         sysHost: win,
         errors: () => errors.recent(),
         // The weather service, its sources and the device's location load when weather first runs.
@@ -195,15 +173,14 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
       void app.shell.registry.get('ls')?.load?.().catch(() => {});
       // ~/.bashrc first, so a line typed while the chunk loaded already has ll and la.
       await app.boot();
-      // Then, once the page is idle, the commands that load lazily, so none waits on first use,
-      // and the shim the legacy commands' HTML is drawn through. Not on Data Saver or mobile
-      // data, where each command's code comes with its first run instead (app.prefetch).
+      // Then, once the page is idle, the commands that load lazily, so none waits on first use.
+      // Not on Data Saver or mobile data, where each command's code comes with its first run
+      // instead (app.prefetch).
       idle(win, () => {
         void app.prefetch().then((fetched) => {
           // The weather card too, so the first card draws at once rather than after its plain text.
           if (fetched) void import('../ui/components/registry').then(({ loadComponent }) => loadComponent('weather-card')).catch(() => {});
         });
-        if (parts !== null) loadLegacyShim().catch(() => {});
       });
       return app.shell;
     },
@@ -221,7 +198,7 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
     screen.push({
       prompt: promptLine({ cwd: GUEST.home, status: 0, columns: get(columns) }),
       line: 'banner',
-      blocks: outputBlocks(banner()),
+      blocks: banner(),
       origin: 'boot',
       status: 0,
     });

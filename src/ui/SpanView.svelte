@@ -45,8 +45,8 @@
     return { background, colours: colours as HexColour[] };
   });
 
-  // The current entry of a theme or cathode list is drawn the way the legacy lists draw it: in the
-  // accent, not bold, since a synthetic bold is wider in WebKit and would push the columns after it.
+  // The current entry of a theme or cathode list is drawn in the accent, not bold, since a
+  // synthetic bold is wider in WebKit and would push the columns after it.
   const style = $derived(current ? { ...span.style, fg: 'accent' as const } : span.style);
   const classes = $derived(spanClasses(style) || undefined);
   const css = $derived(spanCss(style));

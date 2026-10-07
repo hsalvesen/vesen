@@ -16,7 +16,7 @@ export interface CompletionHarness {
 
 export async function completionHarness(): Promise<CompletionHarness> {
   const app = createAppShell({
-    banner: () => '',
+    banner: () => [],
     screen: createScreen(),
     version: '0.0.0-test',
     clock: createClock({ now: () => Date.UTC(2026, 9, 6, 9, 0, 0), random: () => 0.5, timeZone: 'Australia/Sydney' }),

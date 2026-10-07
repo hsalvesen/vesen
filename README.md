@@ -81,13 +81,10 @@ src/
 │                                 # terminal.css (base type, the .art class for banners, logos and charts),
 │                                 # shell.css (the fixed shell sized to the visible viewport; phones
 │                                 # edge to edge, the desktop framed), components.css (output in role
-│                                 # colours: errors, panels, theme ls swatches, the scrollbar) and
+│                                 # colours: panels, theme ls swatches, the scrollbar) and
 │                                 # crt.css (the CRT effect, by tier)
-├── constants.ts                  # Repository URL (the prompt's host is in vfs/identity.ts)
 ├── global.d.ts                   # Build-time globals
-├── components/
-│   └── Cathode.svelte            # CRT overlay, inside the screen frame
-├── interfaces/                   # TypeScript interfaces (command, theme)
+├── interfaces/                   # TypeScript interfaces (theme)
 ├── shell/                        # The DOM-free shell kernel (docs/adr/0001-architecture.md)
 │   ├── types.ts                  # CommandSpec, command context, registry, history, TTY, streams, identity
 │   ├── lexer-types.ts            # The lexer's result and tokens
@@ -98,18 +95,18 @@ src/
 │   │                             # table (keymap.ts), history stepping and reverse-i-search, the `> `
 │   │                             # continuation, and straightening typed and pasted text
 │   └── keys.ts                   # help keys and man vesen, generated from the key table
-├── output/                       # DOM-free output
-│   ├── model.ts                  # Spans, blocks, actions, the `out` builders and plain()
-│   ├── html-to-text.ts           # Plain text of legacy HTML output, for pipes
-│   ├── legacy-policy.ts          # What the legacy HTML shim keeps: tags, attributes, classes, styles
-│   └── escape.ts                 # HTML escaping for command output
+├── output/                       # DOM-free output, never HTML
+│   ├── model.ts                  # Spans, blocks, actions and the `out` builders, the only makers of actions
+│   ├── plain.ts                  # Each block's plain text, for pipes and files
+│   ├── sgr.ts                    # The streaming SGR and OSC 8 reader: escapes become styles, never actions
+│   └── markup.ts                 # The {colour} markup the owner's documents are written in
 ├── vfs/                          # The virtual file system, DOM-free: vfs.ts (permissions, symlinks,
 │                                 # devices, /proc, a 512 KB quota), path.ts, seed.ts (the tree a session
 │                                 # starts with: /home/guest, /home/has, /etc, /proc, /dev, /usr/bin),
 │                                 # special.ts (/proc and /dev), persist.ts (files under ~ kept across
 │                                 # reloads as an overlay on the seed), identity.ts (guest@vesen)
 ├── content/                      # The owner's styled documents (README, history, linux notes) in {colour}
-│                                 # markup, converted once from HTML by scripts/convert-content.mjs
+│                                 # markup, converted once from the HTML the old page served
 ├── commands/                     # One CommandSpec per file, DOM-free, by category: portfolio/ (theme,
 │                                 # cathode, banner, whoami, linkedin, about, contact and email, repo, open
 │                                 # and xdg-open, qr), files/ (ls, cat, cp, mv, rm, rmdir, mkdir, touch, ln,
@@ -120,8 +117,7 @@ src/
 │                                 # privacy, debug, fastfetch), network/ (weather, curl, speedtest, and
 │                                 # stock with its card's words in stock/); lib/ is what they share: the
 │                                 # banner, the link cards, weather's way to its service, and qr's options
-│                                 # and payloads; legacy.ts, the adapter that ran the commands in
-│                                 # src/utils until each was ported, goes in the clean-up
+│                                 # and payloads
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette
 │                                 # where themes.json does not set them, and the contrast each must meet);
@@ -139,6 +135,7 @@ src/
 │                                 # device's location for weather --here, on its own timer, rounded to ~1 km)
 ├── services/
 │   ├── net.ts                    # fetch with timeouts, cancelling, byte caps and typed network errors
+│   ├── bell.ts                   # The terminal bell: a short tone through one AudioContext, or a flash
 │   ├── storage.ts                # localStorage and sessionStorage with a memory fallback; one-time migrations
 │   ├── types.ts                  # Service interfaces: net, storage, bell, opener, clipboard, clock, system info
 │   ├── sysinfo.ts                # System facts for fastfetch, /proc and debug report: the user agent, the GPU,
@@ -171,12 +168,12 @@ src/
 │   ├── Transcript.svelte         # Each entry: the prompt it was typed at, the line, its output
 │   ├── AppHost.svelte            # A command's full-screen app over the terminal: apps/Shutdown.svelte and
 │   │                             # apps/QrPresenter.svelte (qr's Present mode)
+│   ├── Cathode.svelte            # The CRT overlay, inside the screen frame
 │   ├── links.ts                  # Where links open and how Copy copies, for the cards and spans
 │   ├── Prompt.svelte             # guest@vesen:~/documents$, live under the transcript and as each entry's snapshot
 │   ├── OutputView.svelte         # Draws output blocks with text interpolation only
 │   ├── SpanView.svelte           # One styled span: link, trusted action button, live theme or CRT marker,
 │   │                             # or theme swatches
-│   ├── legacy-html.ts            # use:legacyHtml, which rebuilds legacy HTML from the allowlist
 │   ├── span-style.ts             # Colour tokens to CSS, with role fallbacks
 │   ├── actions/                  # stickToBottom (the one scroll owner, with the new-output pill) and
 │   │                             # focusPolicy (when a click, tap or key puts the caret in the prompt)
@@ -185,19 +182,15 @@ src/
 │                                 # first use: WeatherCard.svelte (compact and wide layouts by its own
 │                                 # width), QrCard.svelte, and QuoteCard, QuoteTable and Sparkline, stock's
 │                                 # cards
-├── testing/                      # Test setup
-└── utils/
-    ├── legacyShell.ts            # Migration only: the legacy tree's hooks into the VFS, for tests; every
-    │                             # command is a spec now, so the app no longer loads it
-    ├── virtualFileSystem.ts      # The shim over the VFS that the legacy commands walked
-    └── beep.ts                   # The terminal bell
+└── testing/                      # Test setup, the kernel's stand-in commands and fakes
 public/                           # 404.html; fonts/ (Vesen Mono
                                   # and its licence, OFL.txt); icons/ and og.png (generated, see scripts/);
                                   # manifest.webmanifest; probe/ (device capability probe, not linked from the app)
 assets-src/fonts/                 # The source font Vesen Mono is built from (not served)
 themes.json                       # The ten colour themes: each palette, and any role colours a theme sets itself
 worker/stock/                     # vesen-stock, the Cloudflare Worker that serves stock quotes (its own README)
-tests/                            # Golden snapshots and their parity check, XSS tests, network fixtures, hosting checks, helpers
+tests/                            # The command harness and transcripts, XSS tests, recorded fixtures, hosting
+                                  # checks, helpers
 e2e/                              # Playwright end-to-end tests
 scripts/                          # Checks: module boundaries, bundle budget, theme contrast (and its baseline);
                                   # vite-plugin-boot.ts (emits /boot.js, which paints the saved theme before
@@ -219,13 +212,14 @@ npm run dev               # Start development server on port 3000
 npm run build             # Build for production into dist/
 npm run preview           # Serve the production build
 npm run check             # Svelte and TypeScript checking (svelte-check)
-npm run check:strict      # Strict TypeScript: the new browser folders with no Node types, then the
-                          # unit tests, test helpers, scripts and config files with Node types
-npm run check:boundaries  # Keep the DOM-free folders free of browser globals, Svelte and imports that reach them
+npm run check:strict      # Strict TypeScript: the browser code with no Node types, then the unit
+                          # tests, test helpers, scripts and config files with Node types
+npm run check:boundaries  # Keep the DOM-free folders free of browser globals, Svelte and imports that
+                          # reach them; no {@html} anywhere; the deleted legacy layer stays deleted
 npm run check:bundle      # Initial JS budget (60 kB gzip); run after build
 npm run check:contrast    # WCAG contrast of every theme: the role colours as applied (4.5:1 for
                           # text, 3:1 for ghost text and the cursor, 7:1 for QR codes) and the palette
-                          # slots legacy output uses, which must be no worse than
+                          # slots output uses as text, which must be no worse than
                           # scripts/contrast-baseline.json; add -- --strict, as CI does, to fail on
                           # any role below its minimum
 npm test                  # Unit tests (Vitest)

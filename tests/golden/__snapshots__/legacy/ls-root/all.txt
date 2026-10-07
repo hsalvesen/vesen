@@ -1,2 +1,0 @@
-$ ls /
-bin  boot  dev  etc  home  lib  media  mnt  opt  proc  root  sys  tmp  usr  var

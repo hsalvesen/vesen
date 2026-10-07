@@ -6,7 +6,6 @@ import { promptText } from '../shell/prompt';
 import { stubCommands } from '../testing/shell-harness';
 import { createScreen, type ScreenEntry } from '../stores/screen';
 import { MEMORY_NOTICE } from '../vfs/persist';
-import { legacy } from '../commands/legacy';
 import type { KV } from '../services/types';
 import { MAX_SCRIPT_DEPTH } from '../shell/executor';
 import { createAppShell, SAFE_MODE_NOTICE, transcriptScreen } from './shell';
@@ -30,7 +29,6 @@ function shown(entry: ScreenEntry): string[] {
   const rows = entry.prompt === null ? [] : [`${promptText(entry.prompt)} ${entry.line}`];
   for (const block of entry.blocks) {
     if (block.type === 'lines') rows.push(...block.lines.map(lineText));
-    else if (block.type === 'legacyHtml') rows.push(`<html>${block.html}`);
   }
   return rows;
 }
@@ -38,7 +36,7 @@ function shown(entry: ScreenEntry): string[] {
 describe('the transcript as the screen', () => {
   const setup = () => {
     const screen = createScreen(() => 5);
-    const sink = transcriptScreen(screen, () => 'BANNER', () => PROMPT);
+    const sink = transcriptScreen(screen, () => [out.text('BANNER')], () => PROMPT);
     const commit = (line: string, action: 'keep' | 'clear' | 'reset', text?: string, prompt: Line = PROMPT) =>
       sink.commit({
         id: 1,
@@ -76,7 +74,7 @@ describe('the transcript as the screen', () => {
     const { screen, commit } = setup();
     commit('echo hi', 'keep', 'hi');
     commit('reset', 'reset');
-    expect(screen.entries().map(shown)).toEqual([['guest@vesen:~$ banner', '<html>BANNER']]);
+    expect(screen.entries().map(shown)).toEqual([['guest@vesen:~$ banner', 'BANNER']]);
   });
 });
 
@@ -84,7 +82,7 @@ describe('createAppShell', () => {
   const build = (storage: ReturnType<typeof memoryStorage>['local'] | null = null) => {
     const screen = createScreen();
     // The kernel's stand-ins for echo and cat; the spec files' cd, pwd and reset win over theirs.
-    const app = createAppShell({ banner: () => 'BANNER', specs: stubCommands(), storage, screen, version: '2.0.0', yieldToHost: () => Promise.resolve() });
+    const app = createAppShell({ banner: () => [out.text('BANNER')], specs: stubCommands(), storage, screen, version: '2.0.0', yieldToHost: () => Promise.resolve() });
     return { app, screen };
   };
 
@@ -162,7 +160,7 @@ describe('createAppShell', () => {
     const load = vi.fn(async () => ({ run: () => 0 }));
     const broken = vi.fn(() => Promise.reject(new Error('offline')));
     const app = createAppShell({
-      banner: () => '',
+      banner: () => [],
       specs: [
         ...stubCommands(),
         { name: 'lazy', category: 'shell', summary: 'x', load },
@@ -183,7 +181,7 @@ describe('createAppShell', () => {
     for (const connection of [{ saveData: true, type: 'wifi' }, { type: 'cellular' }, { effectiveType: '3g' }]) {
       const load = vi.fn(async () => ({ run: () => 0 }));
       const app = createAppShell({
-        banner: () => '',
+        banner: () => [],
         specs: [...stubCommands(), { name: 'lazy', category: 'shell', summary: 'x', load }],
         screen: createScreen(),
         version: '0.0.0',
@@ -220,7 +218,7 @@ describe('boot', () => {
   it('interrupts a ~/.bashrc that never ends, so the shell still starts', async () => {
     const screen = createScreen();
     const hang = { name: 'hang', category: 'shell' as const, summary: 'never finish', run: () => new Promise<number>(() => {}) };
-    const app = createAppShell({ banner: () => '', specs: [...stubCommands(), hang], screen, version: '0.0.0', yieldToHost: () => Promise.resolve() });
+    const app = createAppShell({ banner: () => [], specs: [...stubCommands(), hang], screen, version: '0.0.0', yieldToHost: () => Promise.resolve() });
     app.vfs.writeFile('/home/guest/.bashrc', 'alias before=1\nhang\nalias after=1\n');
     const started = Date.now();
     const status = await app.shell.source('~/.bashrc', { quiet: true, timeoutMs: 50 });
@@ -237,7 +235,7 @@ describe('boot safety', () => {
   /** A shell that yields to real timers, as the browser's does. */
   const real = (sessionStorage: KV<'session'> | null = null, extra: ReturnType<typeof stubCommands> = []) => {
     const screen = createScreen();
-    const app = createAppShell({ banner: () => '', specs: [...stubCommands(), ...extra], screen, version: '0.0.0', sessionStorage });
+    const app = createAppShell({ banner: () => [], specs: [...stubCommands(), ...extra], screen, version: '0.0.0', sessionStorage });
     return { app, screen };
   };
 
@@ -301,12 +299,14 @@ describe('boot safety', () => {
   });
 
   it('never runs a command that takes over the page from ~/.bashrc', async () => {
-    const poweroff = vi.fn(() => '<div>System Shutdown Complete</div>');
-    const { app } = real(null, [legacy('poweroff', poweroff, { category: 'system', summary: 'x', interactiveOnly: true })]);
-    app.vfs.writeFile('/home/guest/.bashrc', 'alias before=1\npoweroff\nalias after=1\n');
+    const takeover = vi.fn(() => 0);
+    const { app, screen } = real(null, [{ name: 'takeover', category: 'system', summary: 'x', interactiveOnly: true, run: takeover }]);
+    app.vfs.writeFile('/home/guest/.bashrc', 'alias before=1\ntakeover\npoweroff\nalias after=1\n');
     await app.boot();
-    expect(poweroff).not.toHaveBeenCalled();
+    expect(takeover).not.toHaveBeenCalled();
     expect(app.shell.aliases.get('after')).toBe('1');
+    // poweroff's own spec is one such command too: nothing was shut down.
+    expect(screen.entries().flatMap(shown).join('\n')).not.toMatch(/shut ?down/i);
     app.stop();
   });
 });

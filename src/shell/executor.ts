@@ -20,7 +20,7 @@ import { VfsError, type BoundVfs } from '../vfs/types';
 import type { AndOr, List, ParseFailure, Pipeline, Redirect, SimpleCommand } from './ast';
 import { expandAliases } from './alias';
 import { AmbiguousRedirect, ExpandError, Expander } from './expand';
-import { FlagError, parseFlags, takesRawArgs, tryHelp, wantsLegacyHelp, type ParsedArgs } from './flags';
+import { FlagError, parseFlags, rawArgsAskForHelp, takesRawArgs, tryHelp, type ParsedArgs } from './flags';
 import { createFmt } from './fmt';
 import { createGlobber, type GlobFs } from './glob';
 import { dataCostQuestion } from './data-cost';
@@ -36,7 +36,6 @@ import {
   PipeIn,
   PipeOut,
   StringIn,
-  writeLegacyHtml,
   type TtySink,
   type WriteTarget,
 } from './streams';
@@ -637,7 +636,7 @@ export class Executor {
     const words = argv.slice(1);
     let parsed: ParsedArgs;
     if (takesRawArgs(spec)) {
-      parsed = { opts: {}, args: words, help: !spec.handlesHelp && wantsLegacyHelp(words) };
+      parsed = { opts: {}, args: words, help: !spec.handlesHelp && rawArgsAskForHelp(words) };
     } else {
       try {
         parsed = parseFlags(words, spec, { interceptHelp: !spec.handlesHelp });
@@ -671,7 +670,7 @@ export class Executor {
     const first = args[0];
     if (spec.subcommands && first !== undefined && Object.prototype.hasOwnProperty.call(spec.subcommands, first)) {
       sub = first;
-      // A legacy command reads its subcommand from its words itself.
+      // A command that takes its words raw reads its subcommand from them itself.
       if (!takesRawArgs(spec)) args = args.slice(1);
     }
 
@@ -721,10 +720,6 @@ export class Executor {
   }
 
   private async printHelp(spec: CommandSpec, stdout: OutStream): Promise<void> {
-    if (spec.legacyHelp !== undefined) {
-      await writeLegacyHtml(stdout, spec.legacyHelp);
-      return;
-    }
     const { commandHelp, withDoc } = await import('./help');
     for (const block of commandHelp(await withDoc(spec))) await stdout.block(block);
   }

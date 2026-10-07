@@ -49,9 +49,9 @@ describe('parseMarkup', () => {
   });
 });
 
-// The owner's documents, converted once from HTML by scripts/convert-content.mjs. Their colours
-// as the legacy page drew them were recorded from the originals (and checked against the legacy
-// goldens' colour sets when they were converted), so cat must draw the same runs.
+// The owner's documents, converted once from the HTML the legacy page served (public/README.md,
+// history.txt and linux.txt, in git history before the legacy clean-up). The colour of every run
+// as that page drew them was recorded from the originals, so cat must draw the same runs.
 
 type Run = [colour: string | null, bold: boolean, text: string];
 
@@ -85,17 +85,11 @@ function drawn(lines: readonly Line[]): Run[][] {
   );
 }
 
-/** The colours a golden transcript's HTML uses. */
-function goldenColours(slug: string): string[] {
-  const html = readFileSync(join(__dirname, `../../tests/golden/__snapshots__/legacy/${slug}/all.html`), 'utf8');
-  return [...new Set([...html.matchAll(/var\(--theme-[a-z-]+\)/g)].map((match) => match[0]))].sort();
-}
-
 describe.each([
-  ['src/content/README.vt', readmeMarkup, 'cat-readme'],
-  ['src/content/history.vt', historyMarkup, 'cat-history'],
-  ['src/content/linux.vt', linuxMarkup, 'cat-linux'],
-])('%s', (file, markup, slug) => {
+  ['src/content/README.vt', readmeMarkup],
+  ['src/content/history.vt', historyMarkup],
+  ['src/content/linux.vt', linuxMarkup],
+])('%s', (file, markup) => {
   const legacy = LEGACY[file] ?? [];
   const { text, lines } = parseMarkup(markup);
 
@@ -109,10 +103,5 @@ describe.each([
     // The final newline ends the last line rather than starting an empty one.
     if (text.endsWith('\n')) expected.pop();
     expect(drawn(lines)).toEqual(expected);
-  });
-
-  it('uses the colour set of its legacy golden', () => {
-    const colours = [...new Set(legacy.map(([colour]) => colour).filter((colour): colour is string => colour !== null))].sort();
-    expect(goldenColours(slug)).toEqual(colours);
   });
 });

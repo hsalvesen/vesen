@@ -2,7 +2,7 @@
 // registry's commands and aliases with their summaries, a spec's subcommands and flags, and each
 // ValueSource: paths through ~, .., $VAR and nested folders; command names; enums such as the
 // theme names, with swatches; a spec's examples and the values history has seen; variables and
-// aliases. Legacy commands complete from the metadata src/commands/legacy.ts gives them.
+// aliases.
 
 import { lex } from '../lexer';
 import type { Candidate, CommandSpec, EnumValue, ValueSource } from '../types';

@@ -130,7 +130,7 @@ describe('--help panels', () => {
     );
   });
 
-  it('use the legacy look: accent, link and warn panels', () => {
+  it('use accent, link and warn panels', () => {
     const tones = commandHelp(head).flatMap((block) => (block.type === 'panel' ? [[block.tone, block.title ?? '']] : []));
     expect(tones).toEqual([
       ['accent', ''],
@@ -162,12 +162,6 @@ describe('--help panels', () => {
     // The summaries line up, as the options' descriptions do.
     expect(usage?.type === 'panel' && usage.body.map(lineText)).toContain('  set  switch theme');
     expect(usageLines({ ...theme, synopsis: ['theme ls', 'theme set NAME'] })).toEqual(['theme ls', 'theme set NAME']);
-  });
-
-  it('show a legacy command its own help, unchanged', () => {
-    expect(commandHelp({ ...head, legacyHelp: '<div class="out-panel">old</div>' })).toEqual([
-      { type: 'legacyHtml', html: '<div class="out-panel">old</div>' },
-    ]);
   });
 
   it('label flags as coreutils does', () => {

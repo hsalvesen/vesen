@@ -4,7 +4,6 @@
 
 import { buildRegistry } from '../commands/index';
 import { forgetWeather, provideWeather, type WeatherLoader } from '../commands/lib/weather';
-import type { CommandOutput } from '../interfaces/command';
 import type { Block, Line } from '../output/model';
 import { createAppearance } from '../services/appearance';
 import { createClock } from '../services/clock';
@@ -25,7 +24,7 @@ import { createPersistence, type Persistence } from '../vfs/persist';
 import { seedTree, seedVersion } from '../vfs/seed';
 import type { VirtualFile } from '../vfs/types';
 import { Vfs } from '../vfs/vfs';
-import { transcriptScreen, type FrameScheduler } from './transcript';
+import { transcriptScreen, type Banner, type FrameScheduler } from './transcript';
 
 export { bannerEntry, transcriptScreen } from './transcript';
 
@@ -38,13 +37,9 @@ export const SAFE_MODE_NOTICE =
 
 export interface AppShellOptions {
   /** The welcome banner, which `reset` puts back. */
-  readonly banner: () => CommandOutput;
-  /** Commands besides the spec files: the legacy table. */
+  readonly banner: Banner;
+  /** Commands besides the spec files, for tests: a spec file of the same name wins. */
   readonly specs?: readonly CommandSpec[];
-  /** The object the VFS keeps its tree in; the legacy shim hands in its own. */
-  readonly root?: VirtualFile;
-  /** Connects the legacy code to the VFS and the shell; returns a function that disconnects it. */
-  readonly bind?: (parts: { readonly vfs: Vfs; readonly shell: Shell }) => () => void;
   /** Keeps files under ~ and command history across reloads; null keeps them for the session. */
   readonly storage?: KV<'local'> | null;
   /**
@@ -112,7 +107,6 @@ export function createAppShell(options: AppShellOptions): AppShell {
 
   const vfs = new Vfs({
     seed,
-    ...(options.root ? { root: options.root } : {}),
     now: () => clock.now(),
     // /proc/uptime counts from when the page started, as fastfetch's Uptime does.
     context: () => {
@@ -162,7 +156,6 @@ export function createAppShell(options: AppShellOptions): AppShell {
     onReset: forgetWeather,
   });
   const built = shell;
-  const unbind = options.bind?.({ vfs, shell: built }) ?? (() => {});
 
   return {
     shell: built,
@@ -194,7 +187,6 @@ export function createAppShell(options: AppShellOptions): AppShell {
       return true;
     },
     stop() {
-      unbind();
       persistence.stop();
     },
   };

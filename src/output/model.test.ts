@@ -202,7 +202,6 @@ describe('block builders', () => {
       plain: 'qr',
       alt: 'A QR code',
     });
-    expect(out.legacyHtml('<b>x</b>')).toEqual({ type: 'legacyHtml', html: '<b>x</b>' });
   });
 
   it('card checks its href and normalises it', () => {
@@ -249,7 +248,6 @@ describe('plain', () => {
     card: out.card({ title: 'LinkedIn', href: 'https://www.linkedin.com/in/example', detail: 'Opens in a new tab' }),
     columns: out.columns([out.art('logo', 'logo')], [out.text('OS: macOS\nHost: Mac')], 60),
     component: out.component('weather-card', { place: 'Oslo' }, 'Oslo: 9 °C, light rain', 'Weather for Oslo'),
-    legacyHtml: out.legacyHtml('<div style="color: red">a &amp; b</div><br><span>c</span>'),
   };
 
   it.each(Object.entries(samples))('%s is empty or newline-terminated, with no markup', (_type, block) => {
@@ -334,12 +332,6 @@ describe('plain', () => {
     expect(text).not.toContain('place');
     expect(plain(out.component('qr-card', {}, 'line 1\nline 2\n', 'qr'))).toBe('line 1\nline 2\n');
     expect(plain(out.component('quote-card', {}, '', 'nothing'))).toBe('');
-  });
-
-  it('legacy HTML is read as text', () => {
-    expect(plain(samples.legacyHtml)).toBe('a & b\n\nc\n');
-    expect(plain(out.legacyHtml('<span>&lt;stdio.h&gt;</span>'))).toBe('<stdio.h>\n');
-    expect(plain(out.legacyHtml(''))).toBe('');
   });
 
   it('drops styles, links and actions but keeps their text', () => {
