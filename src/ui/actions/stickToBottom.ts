@@ -2,7 +2,8 @@
 // the view follows it to the bottom only if the visitor was already there, within 40px; anyone
 // who has scrolled up to read is left where they are and offered a '↓ New output' pill instead.
 // On touch, an output taller than three quarters of the screen is shown from its echo line, so it
-// reads from the start. When the screen itself shrinks (the soft keyboard opening), the bottom
+// reads from the start: the moment its entry, which is on the screen from the moment the line
+// starts, grows past that as the output streams in. When the screen itself shrinks (the soft keyboard opening), the bottom
 // edge of the view stays put. Pressing Enter or typing in the prompt goes back to the bottom.
 import type { ActionReturn } from 'svelte/action';
 
@@ -25,7 +26,10 @@ export interface ContentFacts {
   /** The content is taller than it was. */
   readonly grew: boolean;
   readonly touch: boolean;
-  /** The last entry's height, the first time the content changes with it last; otherwise null. */
+  /**
+   * The last entry's height when it has grown since the last report and has not been anchored
+   * yet; otherwise null.
+   */
   readonly freshEntryHeight: number | null;
   /** The scroller's visible height. */
   readonly viewHeight: number;
@@ -88,9 +92,12 @@ export function stickToBottom(node: HTMLElement, options: StickToBottomOptions =
   let visitorUntil = 0;
   let holdingScrollbar = false;
   let dragged = false;
-  // An entry is anchored, or not, once: when it first appears. Later changes (the keyboard
-  // opening, a suggestion row) must not pull the view back up to it.
-  let seen: Element | null = null;
+  // An entry is anchored at most once, when it grows past the threshold: output streaming into
+  // it. Changes that leave it as tall as it was (the keyboard opening, a suggestion row) never
+  // pull the view back up to it, and nor does more output once it has been anchored.
+  let watched: Element | null = null;
+  let watchedHeight = 0;
+  let anchored: Element | null = null;
 
   const setPill = (visible: boolean): void => {
     if (visible === pill) return;
@@ -154,19 +161,23 @@ export function stickToBottom(node: HTMLElement, options: StickToBottomOptions =
     const grew = height > contentHeight;
     contentHeight = height;
     const entry = lastEntry();
-    const fresh = entry !== seen ? entry : null;
-    seen = entry;
+    const entryHeight = entry?.getBoundingClientRect().height ?? 0;
+    const entryGrew = entry !== watched || entryHeight > watchedHeight;
+    watched = entry;
+    watchedHeight = entryHeight;
+    const fresh = entry !== null && entry !== anchored && entryGrew ? entry : null;
     const reaction = reactToContent({
       pinned,
       grew,
       touch: coarsePointer(win),
-      freshEntryHeight: fresh ? fresh.getBoundingClientRect().height : null,
+      freshEntryHeight: fresh ? entryHeight : null,
       viewHeight: node.clientHeight,
     });
     if (reaction === 'bottom') toBottom();
     else if (reaction === 'pill') setPill(true);
     else if (reaction === 'anchor' && fresh) {
       node.scrollTop += fresh.getBoundingClientRect().top - node.getBoundingClientRect().top - ANCHOR_MARGIN_PX;
+      anchored = fresh;
       // Reading from the top of a long output is not being left behind by it.
       pinned = false;
     }

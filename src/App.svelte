@@ -6,9 +6,11 @@
   the soft keyboard. The dock loads in its own chunk, so a desktop never downloads it; until it
   arrives its room is kept, so nothing jumps, and if it never does the chips stay under the prompt.
 
-  A command's full-screen app (the Shutdown screen) is drawn by AppHost over all of it. Links and
-  cards follow the opener's in-app policy, and when the page is put away the screen goes to the
-  session snapshot, which boot restores after Back.
+  Each line's entry is in the transcript from the moment it starts, its output arriving under it
+  as the command writes it, and the status line under the line still running says what it is
+  doing and stops it. A command's full-screen app (the Shutdown screen) is drawn by AppHost over
+  all of it. Links and cards follow the opener's in-app policy, and when the page is put away the
+  screen goes to the session snapshot, which boot restores after Back.
 -->
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte';
@@ -65,6 +67,26 @@
   // Under the prompt: every chip but Stop (the status line stops a command), unless the dock
   // draws them.
   const inlineChips = $derived(Dock === null ? prompt.chipList.chips.filter((chip) => chip.action.kind !== 'interrupt') : []);
+
+  // The status line goes under the running line's entry; above the prompt only if that entry is
+  // not on the screen. It loads in its own chunk just after the first paint, as the kernel does,
+  // since nothing runs before the kernel is here.
+  const runningEntry = $derived($transcript.some((entry) => entry.state === 'running'));
+  let StatusLine: typeof import('./ui/StatusLine.svelte').default | null = $state(null);
+  let statusLoading = false;
+  function loadStatusLine(): void {
+    if (statusLoading) return;
+    statusLoading = true;
+    import('./ui/StatusLine.svelte').then(
+      (module) => (StatusLine = module.default),
+      // Offline, say: the next command tries again.
+      () => (statusLoading = false),
+    );
+  }
+  onMount(loadStatusLine);
+  $effect(() => {
+    if (prompt.status !== null && StatusLine === null) loadStatusLine();
+  });
 
   let screen: HTMLElement | undefined = $state();
   let newOutput = $state(false);
@@ -202,11 +224,14 @@
 
         <!-- Announced politely as entries are added; held back while a command is still running. -->
         <div role="log" aria-live="polite" aria-relevant="additions" aria-busy={prompt.running !== null} aria-label="Terminal output">
-          <Transcript {onaction} />
+          <Transcript {onaction} status={statusLine} />
         </div>
 
         <div class="prompt-area" data-prompt-area>
-          <PromptLine controller={prompt} {shell} {onaction} />
+          {#if !runningEntry}
+            {@render statusLine()}
+          {/if}
+          <PromptLine controller={prompt} {shell} />
 
           <!-- Tab's list, the chips while typing, and the starters on an empty phone prompt. -->
           <CompletionRow
@@ -242,6 +267,13 @@
     {#if Dock}<Dock controller={prompt} />{/if}
   </div>
 </div>
+
+<!-- What a running line is doing, for how long, and how to stop it (F013, F047). -->
+{#snippet statusLine()}
+  {#if prompt.status && StatusLine}
+    <StatusLine label={prompt.status.label} startedAt={prompt.status.startedAt} touch={prompt.touch} onstop={() => prompt.interrupt()} />
+  {/if}
+{/snippet}
 
 <!-- Outside <main>, whose vintage CRT filter would capture it, and over the dock too. -->
 {#if app && AppHost}

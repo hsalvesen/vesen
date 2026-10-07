@@ -1,12 +1,12 @@
 // Reading a line from the terminal for a running command (ctx.tty.readLine): `rm -i` asking
 // before each removal, sudo asking for a password. The kernel puts the request in a store; the
-// prompt shows its prompt in place of PS1 and answers with what was typed, or null for ^C or ^D.
+// prompt shows its prompt in place of PS1, under the command's entry and what it has printed so
+// far, and answers with what was typed, or null for ^C or ^D.
 // DOM-free: the UI subscribes to `request` and calls `answer`.
 //
 // A secret answer (sudo's password) is handed to the command and to nothing else: it is never
 // kept here, never written to the screen, history or storage, and the prompt clears it.
 
-import type { Block } from '../output/model';
 import { readonly, writable, type Readable } from './observable';
 
 export interface ReadOptions {
@@ -16,8 +16,6 @@ export interface ReadOptions {
   readonly secret?: boolean;
   /** A dim line above the prompt: sudo's `(this is a joke; nothing you type is kept)`. */
   readonly hint?: string;
-  /** What the command has printed so far, shown above the prompt while it waits. */
-  readonly before?: readonly Block[];
   /** Aborts the read (with null) when the job is interrupted. */
   readonly signal?: AbortSignal;
   /**
@@ -34,7 +32,6 @@ export interface ReadRequest {
   readonly prompt: string;
   readonly secret: boolean;
   readonly hint: string | null;
-  readonly before: readonly Block[];
 }
 
 export interface LineReader {
@@ -86,7 +83,7 @@ export function createLineReader(preflight?: (url: string) => 'opened' | 'blocke
         };
         pending = entry;
         signal?.addEventListener('abort', onAbort, { once: true });
-        request.set({ id, prompt: options.prompt, secret: options.secret === true, hint: options.hint ?? null, before: options.before ?? [] });
+        request.set({ id, prompt: options.prompt, secret: options.secret === true, hint: options.hint ?? null });
       });
     },
   };

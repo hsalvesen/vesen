@@ -90,12 +90,14 @@ test.describe('the terminal font', { tag: '@smoke' }, () => {
     expect(widths.arrow).toBeCloseTo(widths.regular, 0);
   });
 
-  test('the banner shows the key hints only where there are keys', async ({ page }) => {
+  test('the banner says whose terminal it is, and how to start: the keys, or the chips on touch (F074)', async ({ page }) => {
     await page.goto('/');
-    const keys = page.getByText('help <cmd> for details').first();
-    await expect(keys).toBeVisible();
-    if (PHONES.includes(test.info().project.name)) await expect(keys).toHaveText('help <cmd> for details');
-    else await expect(keys).toHaveText('Tab completes · ↑ history · help <cmd> for details');
+    await expect(page.getByText(/^vesen v\S+ · a terminal by Has Salvesen$/).first()).toBeVisible();
+    const keys = 'Tab completes · ↑ history · help <cmd> for details';
+    const chips = 'Tap a chip below, or type a command';
+    const phone = PHONES.includes(test.info().project.name);
+    await expect(page.getByText(phone ? chips : keys, { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(phone ? keys : chips, { exact: true })).toHaveCount(0);
   });
 
   test('the prompt names the brand as the host', async ({ page }) => {

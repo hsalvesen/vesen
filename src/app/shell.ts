@@ -3,7 +3,7 @@
 // (bootstrap.ts) passes in the browser services; tests pass in fakes.
 
 import { buildRegistry } from '../commands/index';
-import { outputBlocks, type CommandOutput } from '../interfaces/command';
+import type { CommandOutput } from '../interfaces/command';
 import type { Block, Line } from '../output/model';
 import { createAppearance } from '../services/appearance';
 import { createClock } from '../services/clock';
@@ -11,7 +11,7 @@ import { createNet } from '../services/net';
 import { STORAGE_KEYS } from '../services/storage-keys';
 import { createSysInfoStub } from '../services/sysinfo';
 import type { Bell, Clipboard, Clock, KV, Net, Opener, SysInfo } from '../services/types';
-import { createShell, type ScreenSink, type Shell, type TerminalInfo } from '../shell/index';
+import { createShell, type Shell, type TerminalInfo } from '../shell/index';
 import { loginFiles } from '../shell/session';
 import type { CommandSpec } from '../shell/types';
 import { cathode, cathodeModeInfo, cathodeQuality, crtQualities, crtTier } from '../stores/cathode';
@@ -23,6 +23,9 @@ import { createPersistence, type Persistence } from '../vfs/persist';
 import { seedTree, seedVersion } from '../vfs/seed';
 import type { VirtualFile } from '../vfs/types';
 import { Vfs } from '../vfs/vfs';
+import { transcriptScreen, type FrameScheduler } from './transcript';
+
+export { bannerEntry, transcriptScreen } from './transcript';
 
 /** Run at boot, quietly, as a login shell reads them: aliases such as ll, and exports (F072). */
 export const BOOT_FILES = loginFiles(GUEST.home);
@@ -59,6 +62,8 @@ export interface AppShellOptions {
   readonly clipboard?: Clipboard;
   readonly terminal?: TerminalInfo;
   readonly yieldToHost?: () => Promise<void>;
+  /** When a running line's output is drawn; the next animation frame by default. */
+  readonly frame?: FrameScheduler;
 }
 
 export interface AppShell {
@@ -74,28 +79,6 @@ export interface AppShell {
   prefetch(): Promise<void>;
   /** Disconnects the stores the shell keeps in step, and stops saving. */
   stop(): void;
-}
-
-/** The banner entry, as boot and `reset` show it, typed at `prompt`. */
-export function bannerEntry(screen: ScreenStore, banner: () => CommandOutput, prompt: Line): void {
-  screen.push({ prompt, line: 'banner', blocks: outputBlocks(banner()), origin: 'boot', status: 0 });
-}
-
-/** The transcript as the shell's screen: each finished line becomes an entry. */
-export function transcriptScreen(screen: ScreenStore, banner: () => CommandOutput, renderPrompt: () => Line): ScreenSink {
-  return {
-    commit({ line, blocks, screen: action, prompt: typedAt, status, interrupted, origin, startedAt, endedAt }) {
-      if (action === 'clear') screen.clear();
-      if (action === 'reset') {
-        screen.clear();
-        bannerEntry(screen, banner, renderPrompt());
-      }
-      const state = interrupted ? 'interrupted' : 'done';
-      if (action === 'keep') screen.push({ prompt: typedAt, line, blocks, status, state, origin, startedAt, endedAt });
-      // After a clear, the output stays and the prompt line it was typed at does not.
-      else if (blocks.length > 0) screen.push({ prompt: null, line, blocks, status, state, origin, startedAt, endedAt });
-    },
-  };
 }
 
 /** A dim line on the screen, with no prompt: the one notice that storage is unavailable. */
@@ -151,7 +134,7 @@ export function createAppShell(options: AppShellOptions): AppShell {
       keyBarModes,
       hardwareKeyboard,
     }),
-    screen: transcriptScreen(screen, options.banner, renderPrompt),
+    screen: transcriptScreen(screen, options.banner, renderPrompt, options.frame ? { frame: options.frame } : {}),
     ...(options.terminal ? { terminal: options.terminal } : {}),
     ...(options.opener ? { opener: options.opener } : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),

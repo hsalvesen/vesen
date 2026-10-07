@@ -9,7 +9,7 @@ import { createStorage } from '../../services/storage';
 import { STORAGE_KEYS } from '../../services/storage-keys';
 import { cathode, cathodeQuality, crtTier, DEFAULT_CATHODE_MODE, persistCathode } from '../../stores/cathode';
 import { defaultTheme, persistTheme, theme } from '../../stores/theme';
-import { BANNER_ART, BANNER_ART_COMPACT } from '../lib/banner';
+import { BANNER_ART, BANNER_ART_COMPACT, bannerBlocks, KEYS_HINT, TOUCH_HINT } from '../lib/banner';
 
 afterEach(() => {
   // The stores are the app's, shared by every session in this file.
@@ -152,10 +152,18 @@ describe('banner', () => {
     expect(help?.action).toMatchObject({ kind: 'run', line: 'help' });
   });
 
-  it('is compact under 50 columns', async () => {
+  it('is compact under 50 columns, with the same words', async () => {
     const { blocks } = await runLine('banner', { cols: 46 });
     expect(blocks[0]).toMatchObject({ type: 'art', text: BANNER_ART_COMPACT });
-    expect(lineText(rows(blocks)[0] ?? [])).toMatch(/^vesen v.+ · by Has Salvesen$/);
+    expect(lineText(rows(blocks)[0] ?? [])).toMatch(/^vesen v.+ · a terminal by Has Salvesen$/);
     for (const row of BANNER_ART_COMPACT.split('\n')) expect(Array.from(row)).toHaveLength(26);
+  });
+
+  it('points a touch screen at the chips, where a keyboard gets the keys (F074)', () => {
+    const second = (touch: boolean) => lineText(rows(bannerBlocks({ version: '1.2.0', columns: 44, touch }))[1] ?? []);
+    expect(second(true)).toBe(TOUCH_HINT);
+    expect(TOUCH_HINT).toBe('Tap a chip below, or type a command');
+    expect(second(false)).toBe(KEYS_HINT);
+    expect(lineText(rows(bannerBlocks({ version: '1.2.0', columns: 44, touch: true }))[0] ?? [])).toBe('vesen v1.2.0 · a terminal by Has Salvesen');
   });
 });

@@ -86,7 +86,7 @@ test.describe('accessibility', { tag: '@smoke' }, () => {
     await input.fill('curl https://httpbin.org/get');
     await input.press('Enter');
     await expect(log).toHaveAttribute('aria-busy', 'true');
-    await page.getByRole('button', { name: 'Cancel running command' }).click();
+    await page.getByRole('button', { name: /^Stop: / }).click();
     await expect(log).toHaveAttribute('aria-busy', 'false');
     // Prompts are spans, so the h1 stays the only heading however long the transcript gets.
     await expect(page.getByRole('heading')).toHaveCount(1);

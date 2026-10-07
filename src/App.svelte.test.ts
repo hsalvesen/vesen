@@ -17,6 +17,11 @@ async function settle(): Promise<void> {
   await tick();
 }
 
+/** Waits until no line is running: the log is no longer busy. */
+async function idle(): Promise<void> {
+  await vi.waitFor(() => expect(screen.getByRole('log').getAttribute('aria-busy')).toBe('false'));
+}
+
 let shell: Shell;
 let stopShell: () => void = () => {};
 
@@ -78,7 +83,8 @@ describe('App', () => {
     await settle();
     expect(log.getAttribute('aria-busy')).toBe('true');
 
-    await fireEvent.click(screen.getByRole('button', { name: 'Cancel running command' }));
+    // The status line comes in its own chunk, just after the first paint.
+    await fireEvent.click(await screen.findByRole('button', { name: /^Stop: / }));
     await settle();
     expect(log.getAttribute('aria-busy')).toBe('false');
     vi.useRealTimers();
@@ -102,19 +108,24 @@ describe('App', () => {
     }
   });
 
-  it('cancels a running command when the processing line is tapped', async () => {
+  it('streams the line into its entry at once, with the status line under it, which stops it when tapped', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
-    renderApp();
+    const { container } = renderApp();
     const prompt = screen.getByRole('combobox');
 
     await fireEvent.input(prompt, { target: { value: 'stock AAPL' } });
     await fireEvent.keyDown(prompt, { key: 'Enter' });
     await settle();
-    // The spinner draws its first frame straight away.
-    const cancel = screen.getByRole('button', { name: 'Cancel running command' });
+    // The line is committed to the transcript at once (F013), and the prompt row no longer shows it.
+    const entry = container.querySelector('[role="log"] .entry.running');
+    expect(entry?.querySelector('.command-input-display')?.textContent).toBe('stock AAPL');
+    expect(container.querySelector('[data-prompt-area]')?.textContent).not.toContain('stock AAPL');
+    // The spinner draws its first frame straight away, under the running entry.
+    const cancel = await screen.findByRole('button', { name: 'Stop: fetching AAPL…' });
+    expect(entry?.contains(cancel)).toBe(true);
     // The status line says what the command is doing, and how to stop it.
-    expect(cancel).toHaveTextContent(/fetching AAPL… \((tap|Ctrl\+C) to cancel\)/);
+    expect(cancel).toHaveTextContent(/^⠋\s*fetching AAPL…\s*\(Ctrl\+C or Esc to stop\)$/);
 
     // A tap must not be cancelled at pointerdown: WebKit on iOS then never sends the click.
     expect(await fireEvent.pointerDown(cancel)).toBe(true);
@@ -124,7 +135,7 @@ describe('App', () => {
     await fireEvent.click(cancel);
     await settle();
 
-    expect(screen.queryByRole('button', { name: 'Cancel running command' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Stop: / })).not.toBeInTheDocument();
     // The prompt returns at once with ^C, as in a terminal.
     expect(screen.getByText('^C')).toBeInTheDocument();
     vi.useRealTimers();
@@ -147,10 +158,13 @@ describe('App', () => {
     const prompt = screen.getByRole('combobox');
     await fireEvent.input(prompt, { target: { value: 'cd documents' } });
     await fireEvent.keyDown(prompt, { key: 'Enter' });
-    await vi.waitFor(() => expect(container.querySelectorAll('.entry')).toHaveLength(1));
+    // The entry is there at once, before the line has finished.
+    expect(container.querySelectorAll('.entry')).toHaveLength(1);
+    await idle();
     await fireEvent.input(prompt, { target: { value: 'pwd' } });
     await fireEvent.keyDown(prompt, { key: 'Enter' });
     await vi.waitFor(() => expect(container.querySelectorAll('.entry')).toHaveLength(2));
+    await idle();
     await settle();
 
     const text = (element: Element | null | undefined) => element?.textContent?.replace(/\s+/g, '') ?? '';
@@ -291,7 +305,7 @@ describe('Tab completion and the completion row', () => {
     const names = screen.getAllByRole('option').map((o) => o.getAttribute('aria-label'));
     expect(names).toEqual(['Run: help', 'Run: cat README.md', 'Run: fastfetch', 'Run: ls', 'Run: theme ls', 'Run: cathode ls']);
     await fireEvent.click(screen.getByRole('option', { name: 'Run: ls' }));
-    await vi.waitFor(() => expect(transcript.entries().map((e) => e.line)).toEqual(['ls']));
+    await vi.waitFor(() => expect(transcript.entries().map((e) => [e.line, e.state])).toEqual([['ls', 'done']]));
     expect(document.activeElement).not.toBe(promptBox());
   });
 });

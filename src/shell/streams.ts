@@ -9,7 +9,9 @@
 //   for $( ). Off the screen, spans lose their styles and actions and blocks become plain text.
 // - In streams: a pipe, a string (`<<<` and `<`), or the terminal, which has nothing to read yet.
 // - TtySink turns what a job writes to the screen into Blocks: text through the SGR reader (so
-//   escapes become styles, never actions), lines, rich blocks, and the legacy HTML bridge.
+//   escapes become styles, never actions), lines, rich blocks, and the legacy HTML bridge. It
+//   says when its output changes, so the screen can draw the job's entry as it runs (at most once
+//   a frame, which is the host's business), and view() is that output as it would show now.
 
 import { htmlToText } from '../output/html-to-text';
 import { plain, type Block, type Line, type Span, type Stream } from '../output/model';
@@ -362,9 +364,25 @@ export class FileOut extends TextOut {
 /** What a job did to the screen besides adding output. */
 export type ScreenAction = 'keep' | 'clear' | 'reset';
 
+/** A running job's output as the screen shows it now. */
+export interface LiveOutput {
+  /** The blocks so far, with any unfinished line at the end, as a terminal shows it. */
+  readonly blocks: readonly Block[];
+  /** The last clear or reset the job did, if any. */
+  readonly screen: ScreenAction;
+  /** How many times the job has cleared the screen (clear, ESC[2J) or reset it so far. */
+  readonly clears: number;
+}
+
 export interface TtySinkOptions {
   /** Called on every write to the screen's stderr; the kernel rings the bell once per job. */
   onStderr?: () => void;
+  /**
+   * Called after the output changes: text, a line, a block, a clear. It says only that view()
+   * would now show something else; the host decides when to look, so a job writing a line at a
+   * time costs one redraw a frame, not one a line. Never called once the sink is sealed.
+   */
+  onChange?: () => void;
   /** Lets the browser run between large writes. Defaults to a zero-delay timer. */
   yieldToHost?: () => Promise<void>;
   maxLines?: number;
@@ -391,6 +409,7 @@ export class TtySink {
   private chars = 0;
   private truncated = false;
   private sinceYield = 0;
+  private clears = 0;
 
   constructor(private readonly options: TtySinkOptions = {}) {}
 
@@ -418,6 +437,7 @@ export class TtySink {
       this.partialStream = null;
       this.truncate(stream);
     }
+    this.changed();
     return this.counted(text.length);
   }
 
@@ -427,6 +447,7 @@ export class TtySink {
     this.endPartials();
     const spans = parts.map((part) => (typeof part === 'string' ? { text: part } : part)).filter((span) => span.text !== '');
     this.push(stream, spans);
+    this.changed();
     return this.counted(spans.reduce((sum, span) => sum + span.text.length, 1));
   }
 
@@ -435,6 +456,7 @@ export class TtySink {
     this.endPartials();
     this.open = null;
     if (!this.truncated) this.items.push(block);
+    this.changed();
     // A block's size is not worth measuring here; it counts as a line of average length.
     return this.counted(256);
   }
@@ -451,12 +473,16 @@ export class TtySink {
 
   /** The `clear` effect. */
   clear(): void {
-    if (!this.sealed) this.clearAll('clear');
+    if (this.sealed) return;
+    this.clearAll('clear');
+    this.changed();
   }
 
   /** The `reset` effect: the host puts the banner back. */
   reset(): void {
-    if (!this.sealed) this.clearAll('reset');
+    if (this.sealed) return;
+    this.clearAll('reset');
+    this.changed();
   }
 
   /** Stops taking output: unfinished lines are ended, and later writes reject with JobDetached. */
@@ -469,6 +495,27 @@ export class TtySink {
   /** The output so far, as it would show now: what a command reading a line shows above its prompt. */
   snapshot(): Block[] {
     return this.items.map((block) => (block.type === 'lines' ? { ...block, lines: [...block.lines] } : block));
+  }
+
+  /**
+   * The output as the screen shows it while the job runs: a copy (the sink goes on changing its
+   * own), with a line still being written shown as far as it has got, as a terminal shows
+   * `printf 'a'; sleep 3`.
+   */
+  view(): LiveOutput {
+    const blocks = this.snapshot();
+    const stream = this.partialStream;
+    const partial = stream === null || this.truncated ? [] : this.parsers[stream].partial();
+    if (stream !== null && partial.length > 0) {
+      // The open lines block, when there is one, is always the last.
+      const last = blocks[blocks.length - 1];
+      if (this.open !== null && this.open.stream === stream && last !== undefined && last.type === 'lines') {
+        blocks[blocks.length - 1] = { ...last, lines: [...last.lines, partial] };
+      } else {
+        blocks.push({ type: 'lines', lines: [partial], stream });
+      }
+    }
+    return { blocks, screen: this.action, clears: this.clears };
   }
 
   /** Ends the job's output and returns it. */
@@ -484,6 +531,11 @@ export class TtySink {
     this.chars = 0;
     this.truncated = false;
     this.action = action;
+    this.clears += 1;
+  }
+
+  private changed(): void {
+    if (!this.sealed) this.options.onChange?.();
   }
 
   /** Stops taking output, with a notice where it stopped. */

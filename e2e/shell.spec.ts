@@ -267,14 +267,19 @@ test.describe('focus', { tag: '@smoke' }, () => {
     await focusPrompt(page);
     await run(page, 'cat documents/linux.txt');
 
-    const offset = await page.evaluate(() => {
-      const main = document.querySelector('main') as HTMLElement;
-      const echoes = document.querySelectorAll('[role="log"] .command-input-display');
-      const echo = echoes[echoes.length - 1] as HTMLElement;
-      return echo.getBoundingClientRect().top - main.getBoundingClientRect().top;
-    });
-    expect(offset).toBeGreaterThanOrEqual(0);
-    expect(offset).toBeLessThanOrEqual(24);
+    const offset = () =>
+      page.evaluate(() => {
+        const main = document.querySelector('main') as HTMLElement;
+        const echoes = document.querySelectorAll('[role="log"] .command-input-display');
+        const echo = echoes[echoes.length - 1] as HTMLElement;
+        return echo.getBoundingClientRect().top - main.getBoundingClientRect().top;
+      });
+    // The view is anchored when the ResizeObserver reports the entry's new size, which can be a
+    // frame after the output is drawn.
+    await expect.poll(async () => {
+      const top = await offset();
+      return top >= 0 && top <= 24;
+    }, { message: 'the echo line is at the top' }).toBe(true);
   });
 
   test('on touch, output that arrives after the transcript overflows is followed or anchored', async ({ page }) => {
@@ -344,7 +349,7 @@ test.describe('focus', { tag: '@smoke' }, () => {
     await prompt(page).press('Enter');
     await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'true');
     await prompt(page).evaluate((input) => input.blur());
-    await page.getByRole('button', { name: 'Cancel running command' }).tap();
+    await page.getByRole('button', { name: /^Stop: / }).tap();
     await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
     // Interrupted as in a terminal: ^C, and the prompt back at once.
     await expect(page.locator('[role="log"] .entry').last()).toContainText('^C');
@@ -449,7 +454,7 @@ test.describe('keys on other controls', { tag: '@smoke' }, () => {
     await page.route('https://slow.example/**', () => new Promise(() => {}));
     await prompt(page).fill('curl https://slow.example/');
     await prompt(page).press('Enter');
-    const cancel = page.getByRole('button', { name: 'Cancel running command' });
+    const cancel = page.getByRole('button', { name: /^Stop: / });
     await cancel.focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');

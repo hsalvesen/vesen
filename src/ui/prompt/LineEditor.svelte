@@ -5,8 +5,9 @@
 
   - With a mouse (a fine pointer): the input is transparent and lies over an aria-hidden mirror
     that draws the text, a block cursor in --role-cursor (hollow when the terminal is not
-    focused, still while typing, never blinking under reduced motion) and the grey ghost in
-    --role-ghost. A click on the ghost takes it. The mirror scrolls sideways with the input.
+    focused or a line is running, still while typing, never blinking under reduced motion) and
+    the grey ghost in --role-ghost. A click on the ghost takes it. The mirror scrolls sideways
+    with the input.
   - On touch: the native input shows, really 16px so iOS never zooms, drawn at the terminal's
     size by --input-scale (platform/measure.ts). There is no mirror.
   - A secret (sudo's password) is masked: discs on touch, nothing but the cursor in the mirror.
@@ -25,6 +26,8 @@
 
   const mirrored = $derived(!controller.touch);
   const secret = $derived(controller.mode === 'secret');
+  // While a line runs the cursor is an outline: what is typed waits for the next prompt.
+  const hollow = $derived(!controller.focused || controller.mode === 'busy');
   const selecting = $derived(controller.selEnd !== controller.cursor);
 
   // The mirror's three parts: the text before the cursor, the character under it, the rest.
@@ -126,16 +129,16 @@
       <!-- At the end of the line the block cursor sits on the first character of what follows,
            the ghost or the search's line, as a terminal draws it. -->
       <span class="mirror" aria-hidden="true" bind:this={mirror}
-        >{#if secret}<span class="cursor" class:hollow={!controller.focused} class:steady>{' '}</span
+        >{#if secret}<span class="cursor" class:hollow class:steady>{' '}</span
           >{:else}{parts.before}{#if ghost}<span class="ghost-zone" bind:this={ghostElement}
-              ><span class="cursor on-tail" class:hollow={!controller.focused} class:steady class:selecting>{ghost.first}</span
+              ><span class="cursor on-tail" class:hollow class:steady class:selecting>{ghost.first}</span
               ><span class="ghost" class:hint={!ghost.acceptable}>{ghost.rest}</span></span
-            >{:else if search && parts.under === ''}<span class="cursor on-tail" class:hollow={!controller.focused} class:steady class:selecting
+            >{:else if search && parts.under === ''}<span class="cursor on-tail" class:hollow class:steady class:selecting
               >'</span
             ><span class="search-tail"
               >: {search.line.slice(0, search.at)}<span class="match">{search.line.slice(search.at, search.at + search.length)}</span
               >{search.line.slice(search.at + search.length)}</span
-            >{:else}<span class="cursor" class:hollow={!controller.focused} class:steady class:selecting
+            >{:else}<span class="cursor" class:hollow class:steady class:selecting
               >{parts.under === '' ? ' ' : parts.under}</span
             >{parts.after}{#if search}<span class="search-tail"
                 >': {search.line.slice(0, search.at)}<span class="match">{search.line.slice(search.at, search.at + search.length)}</span

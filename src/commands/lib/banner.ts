@@ -1,5 +1,6 @@
 // The welcome banner: the VESEN logo as art (screen readers hear "Vesen logo"), the version and
-// author, the keys, and two tappable first steps. `banner` prints it, the app shows it at boot
+// author, how to start (the keys on a keyboard, the chips on touch), and two tappable first steps
+// (F074). `banner` prints it, the app shows it at boot
 // before the shell has loaded, and `reset` and `login` put it back, so it lives here, small and
 // DOM-free, for the initial chunk to import.
 
@@ -28,9 +29,14 @@ export interface BannerOptions {
   readonly version: string;
   /** The terminal's width in columns. */
   readonly columns: number;
-  /** A touch screen has no Tab or arrow keys to mention. */
+  /** A touch screen has no Tab or arrow keys to mention; it has the chips in the dock. */
   readonly touch: boolean;
 }
+
+/** Under the logo on a keyboard: the keys a terminal has. */
+export const KEYS_HINT = 'Tab completes · ↑ history · help <cmd> for details';
+/** Under the logo on touch, where the dock's chips run commands. */
+export const TOUCH_HINT = 'Tap a chip below, or type a command';
 
 const MUTED: SpanStyle = { fg: 'muted' };
 const STRONG: SpanStyle = { fg: 'fg-strong' };
@@ -40,8 +46,8 @@ const ACCENT: SpanStyle = { fg: 'accent' };
 export function bannerBlocks({ version, columns, touch }: BannerOptions): Block[] {
   const compact = columns < COMPACT_BELOW;
   const lines: Line[] = [
-    [out.span(compact ? `vesen v${version} · by Has Salvesen` : `vesen v${version} · a terminal by Has Salvesen`, MUTED)],
-    [out.span(touch ? 'help <cmd> for details' : 'Tab completes · ↑ history · help <cmd> for details', MUTED)],
+    [out.span(`vesen v${version} · a terminal by Has Salvesen`, MUTED)],
+    [out.span(touch ? TOUCH_HINT : KEYS_HINT, MUTED)],
     [],
     [out.span('Type ', STRONG), out.run('help', 'help', ACCENT), out.span(' to see all available commands.', STRONG)],
     [out.span('Type ', STRONG), out.run('cat README.md', 'cat README.md', ACCENT), out.span(' to learn more about this terminal.', STRONG)],

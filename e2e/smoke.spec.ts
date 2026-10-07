@@ -34,7 +34,7 @@ test.describe('smoke', { tag: '@smoke' }, () => {
     expect(errors).toEqual([]);
   });
 
-  test('a hung request is cancelled from the processing line, and the prompt stays usable', async ({ page, hasTouch }) => {
+  test('a hung request is cancelled from the status line, and the prompt stays usable', async ({ page, hasTouch }) => {
     // The stock proxy accepts the request and never answers.
     await page.route('https://api.allorigins.win/**', () => {});
     await page.goto('/');
@@ -44,7 +44,7 @@ test.describe('smoke', { tag: '@smoke' }, () => {
     await prompt.fill('stock AAPL');
     await prompt.press('Enter');
 
-    const cancel = page.getByRole('button', { name: 'Cancel running command' });
+    const cancel = page.getByRole('button', { name: /^Stop: / });
     await expect(cancel).toBeVisible();
     await expect(prompt).toBeEnabled();
     // Phones tap. A mouse click would hide a tap that WebKit drops before it becomes a click.
@@ -66,11 +66,11 @@ test.describe('smoke', { tag: '@smoke' }, () => {
     await prompt.click();
     await prompt.fill('curl https://httpbin.org/get');
     await prompt.press('Enter');
-    await expect(page.getByRole('button', { name: 'Cancel running command' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Stop: / })).toBeVisible();
 
     await prompt.pressSequentially('ls -a');
     await expect(prompt).toHaveValue('ls -a');
-    // The input wraps under the running line rather than shrinking to nothing: it keeps at
+    // The input sits where the next prompt will be rather than shrinking to nothing: it keeps at
     // least 8ch, which is more than four ems in a monospace font. Ems of the terminal's size: on
     // touch the input itself is 16px, drawn scaled down to that size.
     const width = (await prompt.boundingBox())?.width ?? 0;

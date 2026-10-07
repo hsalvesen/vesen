@@ -295,11 +295,12 @@ function renderQuote(quote: Quote, ticker: string): string {
   output += `<span style="color: var(--theme-white);">$${price.toFixed(2)}</span> `;
   output += `<span style="color: ${changeColor}; font-weight: bold;">${arrow} ${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n\n`;
 
-  // Side by side where there is room, the chart under the figures where there is not: the row
-  // wraps, so the layout follows the screen's width without measuring it.
-  output += `<div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-start;">\n`;
+  // Side by side where the output has room, the chart under the figures where it has not: the
+  // layout follows the output's own width, so a rotated phone reflows it without fetching the
+  // quote again (styles/components.css, .out-split).
+  output += `<div class="out-split">\n`;
 
-  output += `<div style="flex: 0 1 380px; min-width: 0;">`;
+  output += `<div class="out-split-main">`;
   output += `<span style="color: var(--theme-yellow);">Day Range:</span> `;
   output += `<span style="color: var(--theme-green);">$${low.toFixed(2)}</span> `;
   output += `<span style="color: var(--theme-white);">${miniChart}</span> `;
@@ -317,7 +318,7 @@ function renderQuote(quote: Quote, ticker: string): string {
   output += `From Previous: <span style="color: ${trendFromPrevious >= 0 ? 'var(--theme-green)' : 'var(--theme-red)'};">$${trendFromPrevious.toFixed(2)} (${changePercent.toFixed(2)}%)</span>\n`;
   output += `</div>\n`;
 
-  output += `<div style="flex: 1; padding-left: 10%;">`;
+  output += `<div class="out-split-side">`;
   output += `<span style="color: var(--theme-purple); font-weight: bold;">OHLC Chart:</span>\n`;
   output += `<pre class="art" style="margin: 0;">${ohlcChart}</pre>`;
   output += `</div>\n`;
@@ -384,8 +385,9 @@ export const networkCommands = {
     );
 
     // The report opens with the current conditions (seven lines), then the forecast tables, which
-    // are about 125 columns wide, then the location. The tables are art: they keep their rows and
-    // scroll sideways inside themselves on a narrow screen, rather than wrapping into a jumble.
+    // are about 125 columns wide, then the location. The tables are art: they keep their rows,
+    // shrink a little to the output's width (.out-wide), and below that scroll sideways inside
+    // themselves on a narrow screen, rather than wrapping into a jumble.
     const locationAt = filteredLines.findIndex(line =>
       line.includes('Location:') && line.includes('[') && line.includes(']')
     );
@@ -396,7 +398,7 @@ export const networkCommands = {
 
     // The report's title, its first line, is the one in bold green.
     return colourWeather(current).replace(/^(.+)$/m, `<span style="color: var(--theme-bright-green); font-weight: bold;">$1</span>`) +
-      (forecast.trim() ? `<div class="art">${colourWeather(forecast)}</div>` : '\n') +
+      (forecast.trim() ? `<div class="art out-wide">${colourWeather(forecast)}</div>` : '\n') +
       colourWeather(rest);
   },
 

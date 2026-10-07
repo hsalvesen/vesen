@@ -10,6 +10,7 @@
 <script lang="ts">
   import { textWidth, type Action, type Block } from '../output/model';
   import LineView from './LineView.svelte';
+  import { hangingIndent } from './hang';
   import { legacyHtml } from './legacy-html';
   import { loadRichBlock } from './rich-block';
   import { spanClasses, spanCss } from './span-style';
@@ -27,7 +28,9 @@
     {#if block.type === 'lines'}
       <div class="lines" class:stderr={block.stream === 'stderr'}>
         {#each block.lines as line}
-          <div class="text">{#if line.length === 0}<br />{:else}<LineView {line} {onaction} />{/if}</div>
+          {@const hang = hangingIndent(line)}
+          <!-- A label row's description wraps under itself, not under the label. -->
+          <div class="text" style={hang > 0 ? `padding-left: ${hang}ch; text-indent: -${hang}ch` : undefined}>{#if line.length === 0}<br />{:else}<LineView {line} {onaction} />{/if}</div>
         {/each}
       </div>
     {:else if block.type === 'legacyHtml'}

@@ -358,3 +358,58 @@ describe('the screen', () => {
     expect(yields).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('the screen while the job runs', () => {
+  const cols = () => 80;
+
+  it('says when its output changes, and never once sealed', async () => {
+    let changes = 0;
+    const sink = new TtySink({ onChange: () => (changes += 1) });
+    const stdout = new TtyOut(sink, 'stdout', cols);
+    await stdout.write('a\n');
+    await stdout.line('b');
+    await stdout.block(out.panel('warn', [[out.span('note')]]));
+    sink.clear();
+    expect(changes).toBe(4);
+    sink.seal();
+    await stdout.write('late\n').catch(() => {});
+    sink.clear();
+    expect(changes).toBe(4);
+  });
+
+  it('shows a line still being written as far as it has got, and the sink keeps its own copy', async () => {
+    const sink = new TtySink();
+    const stdout = new TtyOut(sink, 'stdout', cols);
+    await stdout.write('done\nhalf');
+    const view = sink.view();
+    expect(view.blocks).toEqual([{ type: 'lines', stream: 'stdout', lines: [[{ text: 'done' }], [{ text: 'half' }]] }]);
+    await stdout.write(' and the rest\n');
+    // The earlier view is a copy: it does not change under the screen.
+    expect(view.blocks[0]?.type === 'lines' && view.blocks[0].lines.map(lineText)).toEqual(['done', 'half']);
+    const [now] = sink.view().blocks;
+    expect(now?.type === 'lines' && now.lines.map(lineText)).toEqual(['done', 'half and the rest']);
+  });
+
+  it('puts an unfinished line on another stream in a block of its own', async () => {
+    const sink = new TtySink();
+    await new TtyOut(sink, 'stdout', cols).write('out\n');
+    await new TtyOut(sink, 'stderr', cols).write('err, so far');
+    expect(sink.view().blocks).toEqual([
+      { type: 'lines', stream: 'stdout', lines: [[{ text: 'out' }]] },
+      { type: 'lines', stream: 'stderr', lines: [[{ text: 'err, so far' }]] },
+    ]);
+  });
+
+  it('counts the clears and resets, so the screen can wipe itself once for each', async () => {
+    const sink = new TtySink();
+    const stdout = new TtyOut(sink, 'stdout', cols);
+    expect(sink.view()).toMatchObject({ screen: 'keep', clears: 0 });
+    await stdout.write('a\n\u001b[2Jb\n');
+    expect(sink.view()).toMatchObject({ screen: 'clear', clears: 1 });
+    sink.reset();
+    await stdout.write('c\n');
+    const view = sink.view();
+    expect(view).toMatchObject({ screen: 'reset', clears: 2 });
+    expect(view.blocks).toEqual([{ type: 'lines', stream: 'stdout', lines: [[{ text: 'c' }]] }]);
+  });
+});

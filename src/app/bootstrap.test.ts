@@ -204,10 +204,16 @@ describe('bootstrap', () => {
 
   it('runs lines through the shell, whose kernel loads after the first paint, and keeps history', async () => {
     const { boot, screen } = await load();
-    const result = await boot()?.shell.run('lss');
+    const shell = boot()?.shell;
+    const running = shell?.run('lss');
+    // On the screen from the moment it is typed, before the kernel has arrived.
+    expect(screen.entries().find((entry) => entry.line === 'lss')).toMatchObject({ state: 'running', blocks: [] });
+    const result = await running;
     expect(result?.status).toBe(127);
-    const entries = screen.entries();
-    expect(entries[entries.length - 1]?.line).toBe('lss');
+    // The kernel carried on with that entry: one entry, finished.
+    const entries = screen.entries().filter((entry) => entry.line === 'lss');
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ state: 'done', status: 127 });
     expect(JSON.parse(localStorage.getItem('vesen:history:v1') ?? '')).toEqual({ v: 1, lines: ['lss'] });
   });
 

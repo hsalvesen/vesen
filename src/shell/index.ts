@@ -29,7 +29,7 @@ import { parse } from './parser';
 import { promptLine } from './prompt';
 import { createLineReader, type ReadRequest } from './reader';
 import { Session, type HistoryStore, type JobState } from './session';
-import { JobDetached, NullOut, StringIn, TtyIn, TtyOut, TtySink, vfsWriteTarget, type ScreenAction, type WriteTarget } from './streams';
+import { JobDetached, NullOut, StringIn, TtyIn, TtyOut, TtySink, vfsWriteTarget, type LiveOutput, type ScreenAction, type WriteTarget } from './streams';
 import { EXIT, ExitRequest, type CommandSpec, type Env, type ExitCode, type JobInfo, type Registry, type User } from './types';
 
 export type { AppRequest } from './apps';
@@ -37,7 +37,7 @@ export type { Completion, CompletionEnv } from './complete/types';
 export type { ShellFs, TerminalInfo } from './executor';
 export type { ReadRequest } from './reader';
 export type { IncompleteReason } from './ast';
-export type { ScreenAction, WriteTarget } from './streams';
+export type { LiveOutput, ScreenAction, WriteTarget } from './streams';
 
 /** Where a line came from. */
 export type JobOrigin = 'keyboard' | 'chip' | 'link' | 'boot';
@@ -63,9 +63,42 @@ export interface ScreenCommit extends JobResult {
   readonly endedAt: number;
 }
 
-/** The transcript, provided by the UI: it records each line once it has finished. */
+/** A line that has just started, as the transcript shows it while it runs. */
+export interface ScreenStart {
+  readonly id: number;
+  readonly line: string;
+  readonly origin: JobOrigin;
+  /** The prompt the line was typed at. */
+  readonly prompt: Line;
+  readonly startedAt: number;
+  /**
+   * The id a line typed before the kernel arrived had while it waited (app/lazy-shell.ts): the
+   * entry begun for it then is this job's, so the line shows once.
+   */
+  readonly continues?: number;
+  /** The job's output so far, as it would show now. */
+  output(): LiveOutput;
+}
+
+/**
+ * The transcript, provided by the UI. A line's entry is begun the moment it starts (F013), its
+ * output is drawn as the job writes it, and commit() records how it ended.
+ */
 export interface ScreenSink {
+  /** Line `start.id` has started: its entry goes on the screen now, with the line and no output. */
+  begin?(start: ScreenStart): void;
+  /**
+   * Job `id` has written something (or cleared the screen) since it began or last changed. Its
+   * start's output() shows what; the sink decides when to look, such as once a frame.
+   */
+  changed?(id: number): void;
   commit(entry: ScreenCommit): void;
+}
+
+/** How a line is started. */
+export interface StartOptions {
+  /** The id of the entry a line typed before the kernel arrived already has (ScreenStart.continues). */
+  readonly continues?: number;
 }
 
 export interface JobHandle {
@@ -99,7 +132,7 @@ export interface ShellPort {
    */
   preflight(line: string): PreflightResult | null;
   /** Runs a line as the job, interrupting any job still running. */
-  start(line: string, origin?: JobOrigin): JobHandle;
+  start(line: string, origin?: JobOrigin, options?: StartOptions): JobHandle;
   /** start(line).done. */
   run(line: string, origin?: JobOrigin): Promise<JobResult>;
   /** ^C: interrupts the running job. Returns whether there was one. */
@@ -310,7 +343,7 @@ export function createShell(deps: ShellDeps): Shell {
     }
   }
 
-  function start(line: string, origin: JobOrigin = 'keyboard'): JobHandle {
+  function start(line: string, origin: JobOrigin = 'keyboard', options: StartOptions = {}): JobHandle {
     const preflighted = pending?.line === line ? pending : null;
     pending = null;
     const fresh = ended && origin !== 'boot';
@@ -324,8 +357,10 @@ export function createShell(deps: ShellDeps): Shell {
     const startedAt = deps.clock.now();
     const { id, signal } = session.jobs.begin(first, startedAt);
     let belled = false;
+    const transcript = deps.screen;
     const sink = new TtySink({
       onStderr: () => job.bell(),
+      ...(transcript?.changed ? { onChange: () => transcript.changed?.(id) } : {}),
       ...(deps.yieldToHost ? { yieldToHost: deps.yieldToHost } : {}),
     });
     const job: Job = {
@@ -342,6 +377,16 @@ export function createShell(deps: ShellDeps): Shell {
     };
     // ^C seals the screen at once, before anything the job does next can write to it.
     signal.addEventListener('abort', () => sink.seal(), { once: true });
+    // The line shows at once, with its output to follow as the job writes it (F013).
+    transcript?.begin?.({
+      id,
+      line,
+      origin,
+      prompt,
+      startedAt,
+      ...(options.continues === undefined ? {} : { continues: options.continues }),
+      output: () => sink.view(),
+    });
     session.syncSize();
     const columns = (): number => terminal.size().cols;
     const io: Io = { stdin: new TtyIn(), stdout: new TtyOut(sink, 'stdout', columns), stderr: new TtyOut(sink, 'stderr', columns) };

@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/svelte';
+import { render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import sudo, { SUDO_HINT } from '../../commands/shell/sudo';
@@ -136,7 +136,9 @@ describe('a running command', () => {
     press(input, 'Enter');
     await tick();
     expect(controller.mode).toBe('busy');
-    expect(view.container.querySelector('.running-line')?.textContent).toBe('hang');
+    // The line is the transcript's to show now; the prompt it was typed at keeps its room, unseen.
+    expect(view.container.textContent).not.toContain('hang');
+    expect(view.container.querySelector('.edit-row.busy .label')?.getAttribute('aria-hidden')).toBe('true');
     expect(input.disabled).toBe(false);
     expect(input.readOnly).toBe(false);
     expect(document.activeElement).toBe(input);
@@ -180,20 +182,22 @@ describe('a running command', () => {
     expect(document.activeElement).not.toBe(input);
   });
 
-  it('stops on Escape, and on a tap of the status line', async () => {
-    const { input, controller, view } = setup();
+  it('stops on Escape', async () => {
+    const { input, controller } = setup();
     await type(input, 'hang');
     press(input, 'Enter');
     press(input, 'Escape');
     expect(controller.running).toBeNull();
+  });
 
-    await type(input, 'hang');
+  it('says what is running, from the label its spec gives, for the status line', async () => {
+    const { input, controller } = setup();
+    await type(input, 'sleep 5');
     press(input, 'Enter');
-    await tick();
-    const status = view.getByRole('button', { name: 'Cancel running command' });
-    expect(status.textContent).toMatch(/Processing… \(Ctrl\+C to cancel\)$/);
-    await fireEvent.click(status);
-    expect(controller.running).toBeNull();
+    await vi.waitFor(() => expect(controller.status).toMatchObject({ line: 'sleep 5', label: 'sleeping 5' }));
+    expect(controller.status?.startedAt).toBeGreaterThan(0);
+    press(input, 'c', { ctrlKey: true });
+    expect(controller.status).toBeNull();
   });
 });
 

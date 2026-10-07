@@ -865,7 +865,6 @@ export class Executor {
       prompt: options.prompt,
       ...(options.secret === true ? { secret: true } : {}),
       ...(options.hint === undefined ? {} : { hint: options.hint }),
-      before: job.sink.snapshot(),
       signal: job.signal,
       ...(url === undefined
         ? {}

@@ -7,7 +7,7 @@ $ banner
 █   █ █▀▀▀ █▀▀▀ █▀▀▀ █▄  █
 ▀▄ ▄▀ █▀▀  ▀▀▀█ █▀▀  █ ▀▄█
   ▀   ▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀   ▀
-vesen v0.0.0-test · by Has Salvesen
+vesen v0.0.0-test · a terminal by Has Salvesen
 Tab completes · ↑ history · help <cmd> for details
 
 Type help to see all available commands.

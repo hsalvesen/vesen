@@ -137,11 +137,10 @@ describe('reading a line', () => {
     expect(h.fs.exists('/home/guest/a.txt')).toBe(false);
   });
 
-  it('shows what the command printed before it asked', async () => {
+  it('keeps what the command printed before it asked ahead of the question and its answer', async () => {
     const h = harness({ specs: [rm] });
     const job = h.shell.start('echo first; rm -i a.txt');
     const request = await asked(h.shell);
-    expect(text(request.before)).toBe('first\n');
     h.shell.answerRead(request.id, 'n');
     expect(text((await job.done).blocks)).toBe("first\nrm: remove regular file 'a.txt'? n\n");
     expect(h.fs.exists('/home/guest/a.txt')).toBe(true);

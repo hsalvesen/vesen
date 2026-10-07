@@ -332,6 +332,27 @@ describe('use:stickToBottom', () => {
     expect(pills).toEqual([true]);
   });
 
+  it('on touch, anchors an entry when its streaming output grows past three quarters of the screen, once', () => {
+    coarse = true;
+    const view = start({ view: 600, content: 500 });
+    // The line is on the screen at once, with nothing under it yet: followed.
+    const entry = addEntry(500, 40);
+    grow(view, 540);
+    expect(view.atBottom()).toBe(true);
+    // Its output arrives, a frame at a time.
+    place(entry, main, 500, 300);
+    grow(view, 800);
+    expect(view.atBottom()).toBe(true);
+    place(entry, main, 500, 900);
+    grow(view, 1400);
+    expect(main.scrollTop).toBe(500 - ANCHOR_MARGIN_PX);
+    // More of it leaves the view where it is, and offers the way down.
+    place(entry, main, 500, 1200);
+    grow(view, 1700);
+    expect(main.scrollTop).toBe(500 - ANCHOR_MARGIN_PX);
+    expect(pills).toEqual([true]);
+  });
+
   it('on touch, follows a short new output to the bottom, and never re-anchors an old one', () => {
     coarse = true;
     const view = start({ view: 600, content: 500 });

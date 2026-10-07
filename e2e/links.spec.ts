@@ -138,6 +138,10 @@ test.describe('poweroff', { tag: '@smoke' }, () => {
     await expect(page.getByText('vesen is off')).toBeHidden();
     await expect(page.getByText('to see all available commands.')).toBeVisible();
     await expect(page.locator('.shell')).not.toHaveAttribute('inert', '');
+    // The new login reads ~/.bashrc before the prompt is back: poweroff's line ends then, and the
+    // screen is the banner alone.
+    await expect(log(page)).toHaveAttribute('aria-busy', 'false');
+    await expect(echoes(page)).toHaveCount(1);
     if (isPhone()) await prompt(page).tap();
     await run(page, 'cat keep.txt');
     await expect(page.locator('[role="log"] .entry').last()).toContainText('kept');

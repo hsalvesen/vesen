@@ -8,7 +8,7 @@ describe('the line reader', () => {
     reader.request.subscribe((value) => seen.push(value));
     const answer = reader.read({ prompt: 'name? ', hint: 'a hint' });
     const request = reader.request.get();
-    expect(request).toMatchObject({ prompt: 'name? ', secret: false, hint: 'a hint', before: [] });
+    expect(request).toMatchObject({ prompt: 'name? ', secret: false, hint: 'a hint' });
     reader.answer(request?.id ?? -1, 'guest');
     await expect(answer).resolves.toBe('guest');
     expect(reader.request.get()).toBeNull();

@@ -8,15 +8,16 @@
 //
 // - The input is never disabled. While a command runs, what is typed stays in it as type-ahead,
 //   and Enter rings the bell instead of running it.
-// - Enter commits the line at once: it leaves the input and shows frozen at the prompt, then
-//   preflight runs inside the key press (so a URL can open) and the shell starts the line.
-// - ^C, Escape and the status line interrupt; the prompt returns at once, and the job's entry,
-//   ending in ^C, follows.
+// - Enter commits the line at once: it leaves the input, and the shell puts it on the screen as
+//   its entry, where the output streams in under it; preflight runs first, inside the key press
+//   (so a URL can open).
+// - ^C, Escape and the status line interrupt; the prompt returns at once, and the job's entry
+//   ends in ^C.
 // - Edits made here wait while an input method is composing, except a tapped chip.
 // - A secret (sudo's password) is masked as it is typed, never reaches history, the screen,
 //   storage or the kill ring, and is emptied when the prompt loses focus or the page is hidden.
 
-import type { Block, Line } from '../../output/model';
+import type { Line } from '../../output/model';
 import {
   TAB_IDLE,
   type Chip,
@@ -96,8 +97,6 @@ export interface PromptRead {
   readonly secret: boolean;
   /** A dim line above the prompt. */
   readonly hint: string | null;
-  /** What the command printed before it asked. */
-  readonly before: readonly Block[];
   /** The first key answers: `Display all N possibilities? (y or n)`. */
   readonly oneKey: boolean;
   /** The line being edited stays, and the question shows under it. */
@@ -779,7 +778,7 @@ export class PromptController {
     if (asking.phase === 'asking') {
       const engine = this.completion?.engine;
       this.beginRead(
-        { id: OWN_READ, prompt: effect.question ?? '', secret: false, hint: null, before: [], oneKey: true, keepLine: true },
+        { id: OWN_READ, prompt: effect.question ?? '', secret: false, hint: null, oneKey: true, keepLine: true },
         (answer) => {
           if (engine !== undefined) this.applyTab(engine.answer(asking, answer === 'y'));
         },
@@ -855,7 +854,7 @@ export class PromptController {
     }
     if (this.read?.id === request.id) return;
     this.beginRead(
-      { id: request.id, prompt: request.prompt, secret: request.secret, hint: request.hint, before: request.before, oneKey: false, keepLine: false },
+      { id: request.id, prompt: request.prompt, secret: request.secret, hint: request.hint, oneKey: false, keepLine: false },
       (text) => this.shell.answerRead(request.id, text),
     );
   }
@@ -952,7 +951,7 @@ export class PromptController {
     this.ring = settleRing(this.ring);
     const prompt = this.ps2?.prompt ?? this.shell.renderPrompt();
     this.ps2 = null;
-    // Committed at once: the line leaves the input and shows frozen at the prompt.
+    // Committed at once: the line leaves the input, and its entry goes on the screen.
     this.write({ text: '', cursor: 0 }, { replace: true, force: true });
     this.running = { line, prompt };
     // Inside the key press or tap: a command that opens a URL opens it now, while it may.
@@ -1014,9 +1013,9 @@ export class PromptController {
     this.startLine('exit', 'keyboard');
   }
 
-  /** Ctrl+L: the screen clears and the line stays. */
+  /** Ctrl+L: the screen clears and the line stays; so does a line still running, and its output. */
   clearScreen(): void {
-    this.screen.clear();
+    this.screen.clear((entry) => entry.state === 'running');
   }
 
   // ── Feedback ─────────────────────────────────────────────────────────────────────────────

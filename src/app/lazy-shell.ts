@@ -1,11 +1,23 @@
 // The shell as the UI sees it while the kernel's chunk loads. The kernel (parser, executor,
 // streams, the legacy adapter) is the largest part of the app, so it loads right after the first
 // paint instead of before it: the banner and the prompt appear at once, and a line typed before
-// the chunk arrives runs as soon as it does. ^C on such a line ends it at once, with ^C and
-// status 130, and it never runs.
+// the chunk arrives runs as soon as it does. Its entry is on the screen from the moment it is
+// typed, as any line's is, and the kernel carries on with that entry. ^C on such a line ends it
+// at once, with ^C and status 130, and it never runs.
 
 import type { Line } from '../output/model';
-import type { AppRequest, Completion, JobHandle, JobOrigin, JobResult, PreflightResult, ReadRequest, ScreenSink, ShellPort } from '../shell/index';
+import type {
+  AppRequest,
+  Completion,
+  JobHandle,
+  JobOrigin,
+  JobResult,
+  LiveOutput,
+  PreflightResult,
+  ReadRequest,
+  ScreenSink,
+  ShellPort,
+} from '../shell/index';
 import { readonly, writable, type Readable } from '../shell/observable';
 import { promptLine } from '../shell/prompt';
 import { GUEST, type ExitCode, type JobInfo } from '../shell/types';
@@ -17,6 +29,8 @@ export interface LazyShell extends ShellPort {
 
 /** A line typed before the kernel arrived. */
 interface Waiting {
+  /** Its id while it waits, which its entry on the screen goes by. */
+  readonly id: number;
   readonly line: string;
   readonly origin: JobOrigin | undefined;
   started(handle: JobHandle): void;
@@ -30,8 +44,14 @@ function forward<T>(from: Readable<T>, to: { set(value: T): void }): void {
   from.subscribe((value) => to.set(value));
 }
 
+/** What a waiting line has written: nothing yet. */
+const NO_OUTPUT: LiveOutput = { blocks: [], screen: 'keep', clears: 0 };
+
 export interface LazyShellOptions {
-  /** Where a line that waited for a chunk that never came is recorded. */
+  /**
+   * The transcript: a waiting line's entry begins there when it is typed, and is recorded there
+   * when ^C ends it or the chunk never comes. The kernel's own screen carries on with it.
+   */
   readonly screen?: ScreenSink;
   readonly now?: () => number;
   /** The terminal's width, for the prompt until the shell is here. */
@@ -80,7 +100,7 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
       for (const line of remembered.splice(0)) loaded.remember(line);
       // The waiting lines start before the stores are forwarded, so the job never reads as idle
       // in between. Each one interrupts the one before, as lines typed at a busy shell do.
-      for (const entry of waiting.splice(0)) entry.started(loaded.start(entry.line, entry.origin));
+      for (const entry of waiting.splice(0)) entry.started(loaded.start(entry.line, entry.origin, { continues: entry.id }));
       forward(loaded.cwd, cwd);
       forward(loaded.lastStatus, lastStatus);
       forward(loaded.job, job);
@@ -116,13 +136,15 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
     return result;
   };
 
-  const start = (line: string, origin?: JobOrigin): JobHandle => {
-    if (shell !== null) return shell.start(line, origin);
+  const start: ShellPort['start'] = (line, origin, startOptions) => {
+    if (shell !== null) return shell.start(line, origin, startOptions);
     nextId -= 1;
     const id = nextId;
     const prompt = renderPrompt();
     const startedAt = now();
     job.set({ name: line.trim().split(/\s+/)[0] ?? '', label: null, startedAt });
+    // On the screen at once, as a line the kernel runs is.
+    options.screen?.begin?.({ id, line, origin: origin ?? 'keyboard', prompt, startedAt, output: () => NO_OUTPUT });
     let entry: Waiting | undefined;
     const done = new Promise<JobResult>((resolve) => {
       let settled = false;
@@ -132,6 +154,7 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
         resolve(result);
       };
       entry = {
+        id,
         line,
         origin,
         started: (handle) => settle(handle.done),

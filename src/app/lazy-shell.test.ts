@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AppRequest, Completion, JobResult, ReadRequest, ScreenCommit, ShellPort } from '../shell/index';
+import type { AppRequest, Completion, JobResult, ReadRequest, ScreenCommit, ScreenStart, ShellPort, StartOptions } from '../shell/index';
 import { writable, type Writable } from '../shell/observable';
 import type { JobInfo } from '../shell/types';
 import { lazyShell } from './lazy-shell';
@@ -8,6 +8,7 @@ import { lazyShell } from './lazy-shell';
 function fakeShell() {
   const job = writable<JobInfo | null>(null);
   const started: string[] = [];
+  const startOptions: (StartOptions | undefined)[] = [];
   const aborted: string[] = [];
   const remembered: string[] = [];
   const closed: [number, unknown][] = [];
@@ -18,8 +19,9 @@ function fakeShell() {
     lastStatus: writable(0),
     job,
     preflight: (line) => ({ argv: [line], spec: undefined }),
-    start: (line) => {
+    start: (line, _origin, options) => {
       started.push(line);
+      startOptions.push(options);
       job.set({ name: line, label: null, startedAt: 0 });
       let interrupted = false;
       return {
@@ -44,7 +46,7 @@ function fakeShell() {
     closeApp: (id, result) => closed.push([id, result]),
     restoreCwd: (path) => restored.push(path),
   };
-  return { shell, started, aborted, remembered, closed, restored };
+  return { shell, started, startOptions, aborted, remembered, closed, restored };
 }
 
 function deferred<T>() {
@@ -82,6 +84,21 @@ describe('lazyShell', () => {
     expect(fake.started).toEqual(['ls']);
     expect(lazy.cwd.get()).toBe('/home/guest');
     expect(lazy.preflight('pwd')).toEqual({ argv: ['pwd'], spec: undefined });
+  });
+
+  it('puts a waiting line on the screen at once, and has the kernel carry on with that entry', async () => {
+    const fake = fakeShell();
+    const loading = deferred<ShellPort>();
+    const begun: ScreenStart[] = [];
+    const lazy = lazyShell(() => loading.promise, { screen: { begin: (start) => begun.push(start), commit: () => {} }, now: () => 3 });
+    lazy.start('ls', 'chip');
+    expect(begun).toHaveLength(1);
+    const [waiting] = begun;
+    expect(waiting).toMatchObject({ line: 'ls', origin: 'chip', startedAt: 3 });
+    expect(waiting?.output()).toEqual({ blocks: [], screen: 'keep', clears: 0 });
+    loading.resolve(fake.shell);
+    await lazy.ready;
+    expect(fake.startOptions).toEqual([{ continues: waiting?.id }]);
   });
 
   it('starts the waiting lines in order before it shows the kernel’s job, so the prompt never looks idle', async () => {

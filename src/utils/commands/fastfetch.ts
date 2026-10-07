@@ -568,13 +568,16 @@ export async function fastfetch(args: string[], signal?: AbortSignal): Promise<s
         
         // Values come from the browser (the WebGL renderer, the user agent), so they are text.
         // WM Theme alone is markup, a span the theme store keeps current.
-        const infoHtml = infoData.map(({ label, value }) => 
-          `<div style="display: flex; margin-bottom: 1px;"><span style="color: var(--theme-cyan); font-weight: bold; width: 140px; display: inline-block;">${label}:</span><span style="color: var(--theme-white);">${label === 'WM Theme' ? value : escapeHtml(value)}</span></div>`
+        // Key: value rows in two columns, which stack into `key: value` lines when the details are
+        // narrow (styles/components.css, .out-kv).
+        const infoHtml = infoData.map(({ label, value }) =>
+          `<div class="out-kv-row"><span class="out-kv-key" style="color: var(--theme-cyan); font-weight: bold;">${label}:</span><span class="out-kv-value" style="color: var(--theme-white);">${label === 'WM Theme' ? value : escapeHtml(value)}</span></div>`
         ).join('');
         
-        // The logo and the details side by side where there is room, the details under the logo
-        // where there is not: the row wraps, so it follows the screen without measuring it.
-        const result = `<div style="display: flex; flex-wrap: wrap; gap: 12px 30px;"><div style="flex-shrink: 0; max-width: 100%;">${logoHtml}${colourBlocksAscii}</div><div style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; justify-content: flex-start;">${userHostHtml}${infoHtml}</div></div>`;
+        // The logo and the details side by side where the output has room, the details under the
+        // logo where it has not: the layout follows the output's own width, so a rotated phone
+        // reflows it without running fastfetch again (styles/components.css, .out-split).
+        const result = `<div class="out-split"><div class="out-split-side">${logoHtml}${colourBlocksAscii}</div><div class="out-split-main out-kv">${userHostHtml}${infoHtml}</div></div>`;
         
         resolve(result);
       } catch (error) {

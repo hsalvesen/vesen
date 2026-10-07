@@ -37,6 +37,7 @@ import { GUEST } from '../vfs/identity';
 import type { VirtualFile } from '../vfs/types';
 import type { Vfs } from '../vfs/vfs';
 import { lazyShell } from './lazy-shell';
+import { transcriptScreen } from './transcript';
 
 export interface BootOptions {
   readonly window: Window;
@@ -191,11 +192,9 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
       return app.shell;
     },
     {
-      // Only if the kernel's chunk never arrives: the line that waited for it says so.
-      screen: {
-        commit: ({ line, blocks, prompt, status, origin, startedAt, endedAt }) =>
-          screen.push({ prompt, line, blocks, status, origin, startedAt, endedAt }),
-      },
+      // A line typed while the chunk loads shows at once; the kernel carries on with its entry.
+      // If the chunk never arrives, the line says so there.
+      screen: transcriptScreen(screen, banner, () => shell.renderPrompt()),
       columns: () => get(columns),
     },
   );
