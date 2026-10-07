@@ -408,6 +408,35 @@ describe('the Worker', () => {
     if (outcome.ok === true) expect(outcome.quote.symbol).toBe('CBA.AX');
   });
 
+  it("says nothing was resolved when a name's saved copy is asked for by its own ticker", async () => {
+    const kv = memoryKv();
+    const client = worker({ storage: kv });
+    net.answer(() => json({ ...envelope('AAPL'), resolvedFrom: 'APPLE' }));
+    await client.quote('APPLE', '1d');
+    net.answer(failed);
+    const byTicker = await settle(client.quote('AAPL', '1d', { force: true }));
+    expect(byTicker).toMatchObject({ ok: true, freshness: 'saved', quote: { symbol: 'AAPL', resolvedFrom: null } });
+    // Asked for by the name again, it still says what the name resolved to.
+    const byName = await settle(client.quote('APPLE', '1d', { force: true }));
+    expect(byName).toMatchObject({ ok: true, freshness: 'saved', quote: { symbol: 'AAPL', resolvedFrom: 'APPLE' } });
+  });
+
+  it('asks nothing with no time left, and gives the saved copy or a timeout, remembering no failure', async () => {
+    const kv = memoryKv();
+    const client = worker({ storage: kv });
+    net.answer(() => json(envelope('AAPL')));
+    await client.quote('AAPL', '1d');
+    await vi.advanceTimersByTimeAsync(MARKET_LIMITS.memoryMs);
+    const calls = net.calls.length;
+    expect(await client.quote('AAPL', '1d', { budgetMs: 0 })).toMatchObject({ ok: true, freshness: 'saved', reason: 'timeout' });
+    expect(await client.quote('TEAM', '1d', { budgetMs: MARKET_LIMITS.minAttemptMs - 1 })).toEqual({ ok: false, error: { code: 'timeout' } });
+    expect(net.calls).toHaveLength(calls);
+    // With time again, it asks at once: no failure was kept for the lookups that never went out.
+    net.answer(() => json(envelope('TEAM')));
+    expect(await client.quote('TEAM', '1d')).toMatchObject({ ok: true, freshness: 'live' });
+    expect(net.calls).toHaveLength(calls + 1);
+  });
+
   it("asks for the Worker's snapshot of a curated ticker when there is no saved copy", async () => {
     const quote = { ...envelope('TEAM'), source: 'snapshot', series: null };
     const snapshot: SnapshotEnvelope = { v: 1, kind: 'snapshot', generatedAt: RECORDED_AT_MS / 1000, quotes: [quote as QuoteEnvelope], missing: [] };

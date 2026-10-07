@@ -269,8 +269,18 @@ async function copyBody(ctx: CommandContext, stream: NetStream, sink: Sink, forc
   }
 }
 
+/** A percent-decoded part of a URL, or null when its escapes are malformed (%zz, or %E0%A4%A cut short). */
+function percentDecoded(part: string): string | null {
+  try {
+    return decodeURIComponent(part);
+  } catch {
+    return null;
+  }
+}
+
 async function fetchFile(ctx: CommandContext, o: Options, url: URL, sink: Sink): Promise<{ code: ExitCode; bytes: number }> {
-  const path = decodeURIComponent(url.pathname);
+  const path = percentDecoded(url.pathname);
+  if (path === null) return { code: await report(ctx, o, new Failure(3, 'URL rejected: Malformed input to a URL function')), bytes: 0 };
   let text: string;
   try {
     if (url.host !== '' && url.host !== 'localhost') throw new Failure(37, `Couldn't read a file:// file from another host: ${url.host}`);
@@ -292,7 +302,9 @@ async function fetchOne(ctx: CommandContext, o: Options, word: string, outputPat
 
   let path = outputPath;
   if (path === null && o.remoteName) {
-    const name = decodeURIComponent(url.pathname.split('/').pop() ?? '');
+    // As named in the URL; decoded where its escapes allow, as typed where they do not.
+    const segment = url.pathname.split('/').pop() ?? '';
+    const name = percentDecoded(segment) ?? segment;
     if (name === '') return report(ctx, o, new Failure(23, 'Remote file name has no length'));
     path = name;
   }

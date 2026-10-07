@@ -11,7 +11,7 @@ export const doc: CommandDoc = {
 
 interface ThirdParty {
   readonly service: string;
-  /** The commands that talk to it. */
+  /** The commands that talk to it: the row is shown only while one of them is registered. */
   readonly commands: readonly string[];
   /** Who asks, as the table says it. */
   readonly askedBy: string;
@@ -25,7 +25,8 @@ function stockSource(): ThirdParty {
     : { service: 'allorigins.win, then Yahoo Finance', commands: ['stock'], askedBy: 'stock, until its own service runs', sent: 'the ticker, through a public proxy' };
 }
 
-export const THIRD_PARTIES: readonly ThirdParty[] = [
+/** Every service a command may talk to, with stock's as this build has it. */
+export const thirdParties = (): readonly ThirdParty[] => [
   { service: 'Open-Meteo', commands: ['weather'], askedBy: 'weather', sent: 'the place you name, or its coordinates' },
   { service: 'OpenStreetMap Nominatim', commands: ['weather'], askedBy: 'weather', sent: 'a place Open-Meteo cannot find, or coordinates to name' },
   {
@@ -38,29 +39,33 @@ export const THIRD_PARTIES: readonly ThirdParty[] = [
   { service: 'Cloudflare speed test', commands: ['speedtest'], askedBy: 'speedtest', sent: 'test data, down and up' },
   { service: 'Cloudflare or Google DNS-over-HTTPS', commands: ['dig', 'host', 'nslookup'], askedBy: 'dig, host, nslookup', sent: 'the name you look up' },
   { service: 'RDAP (rdap.org and the registries)', commands: ['whois'], askedBy: 'whois', sent: 'the domain you look up' },
-  { service: 'GitHub', commands: ['git', 'repo'], askedBy: 'git log in ~/projects/vesen', sent: 'nothing but the request' },
+  // repo only opens a link; git would ask GitHub's API.
+  { service: 'GitHub', commands: ['git'], askedBy: 'git log in ~/projects/vesen', sent: 'nothing but the request' },
   { service: 'ipify', commands: ['fastfetch'], askedBy: 'fastfetch --net', sent: 'nothing but the request: it answers with your public IP' },
 ];
 
 const NOTES: readonly string[] = [
   'Every request carries your IP address, as any web request does. Nothing else you type is sent, except as listed.',
   'IP address and location lookups happen only on request: weather with no place, and fastfetch --net.',
-  "weather --here asks the browser for this device's location; once you allow it, weather with no place uses it too. It is rounded to about a kilometre before it is used, and no location is ever saved. The last five places you looked up are kept in this browser until weather --forget or reset.",
-  "curl and wget fetch the address you give them, straight from your browser; curl --via-proxy, where this site has a proxy of its own, sends it through that proxy.",
+  "Only weather --here asks the browser for this device's location. It is rounded to about a kilometre before it is used, and no location is ever saved; OpenStreetMap's name for it is kept until the page closes. The last five places you looked up, and the answers to up to 50 place searches for 30 days, are kept in this browser until weather --forget or reset.",
+  "curl fetches the address you give it, straight from your browser; curl --via-proxy, where this site has a proxy of its own, sends it through that proxy.",
   'qr makes its codes in your browser: nothing you encode is sent anywhere.',
   'Links open only when you tap them, or in a desktop browser when whoami, linkedin, repo or open opens one.',
-  'This browser keeps the theme, your settings, history, your files under ~, recent weather places, and the last quotes and tickers stock showed (local storage), and a snapshot of the screen for Back for 30 minutes (session storage). What you type at sudo is never kept.',
+  'This browser keeps the theme, your settings, history, your files under ~, recent weather places and place searches, and the last quotes and tickers stock showed (local storage), and a snapshot of the screen for Back for 30 minutes (session storage). What you type at sudo is never kept.',
   'No analytics, and no cookies.',
 ];
 
 export async function run(ctx: CommandContext): Promise<ExitCode> {
   const [extra] = ctx.args;
   if (extra !== undefined) return ctx.usage(`extra operand '${extra}'`);
+  // Only what can happen here: a service whose commands this shell does not have is left out.
+  const registry = ctx.shell.registry;
+  const shown = thirdParties().filter((row) => row.commands.some((name) => registry.get(name) !== undefined));
   const cell = (text: string): Line => [out.span(text)];
   await ctx.stdout.block(out.lines([[out.span('What vesen sends, and where', { fg: 'accent', bold: true })], []]));
   await ctx.stdout.block(
     out.table(
-      THIRD_PARTIES.map((row) => [[out.span(row.service, { fg: 'fg-strong' })], cell(row.askedBy), cell(row.sent)]),
+      shown.map((row) => [[out.span(row.service, { fg: 'fg-strong' })], cell(row.askedBy), cell(row.sent)]),
       { head: [cell('Service'), cell('Asked by'), cell('What it is sent')], stackBelowCols: 100 },
     ),
   );

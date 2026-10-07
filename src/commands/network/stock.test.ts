@@ -1,7 +1,7 @@
 // stock (docs/plan/07-stock-and-proxy.md): its spec and words, and what it prints for a quote,
 // several, a search, and every failure, with the market client faked through its port. The
 // exact error copy is the plan's; no request is made for bare `stock` or an invalid ticker.
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { runLine, session } from '../../../tests/harness';
 import { isTrustedAction, lineText, type Action, type Block } from '../../output/model';
 import { CURATED_SYMBOLS, RANGES, SYMBOL_RE } from '../../services/market/contract';
@@ -9,6 +9,7 @@ import { provideMarket, type Market, type QuoteOutcome } from '../../services/ma
 import { RECORDED_AT_MS, fakeMarket, quoteOf } from '../../testing/quotes';
 import { buildRegistry } from '../index';
 import spec, { RANGE_VALUES, TICKER_VALUES, stockLabel } from './stock';
+import { DRAW_MS, USAGE, USAGE_NARROW } from './stock.run';
 import type { QuoteCardView, QuoteTableView } from './stock/view';
 
 afterEach(() => provideMarket(null));
@@ -92,6 +93,14 @@ describe('bare stock', () => {
     expect(market.calls).toEqual([]);
   });
 
+  it('breaks its usage between forms on a narrow phone, never inside an option', async () => {
+    const narrow = await runLine('stock', { cols: 36 });
+    expect(narrow.stdoutPlain.split('\n').slice(0, 2)).toEqual([...USAGE_NARROW]);
+    expect((await runLine('stock', { cols: USAGE.length })).stdoutPlain.split('\n')[0]).toBe(USAGE);
+    // A pipe keeps the one line, whatever its width.
+    expect((await runLine('stock', { cols: 36, tty: false })).stdoutPlain.split('\n')[0]).toBe(USAGE);
+  });
+
   it('works with no client at all, and in a pipe', async () => {
     const terminal = await runLine('stock');
     expect(terminal.status).toBe(0);
@@ -169,13 +178,24 @@ describe('one ticker', () => {
     const piped = await runLine('stock AAPL', { tty: false });
     expect(piped.stdoutPlain).toBe(plain.stdoutPlain);
     const json = await runLine('stock --json AAPL');
-    expect(JSON.parse(json.stdoutPlain)).toEqual(quoteOf('AAPL'));
+    expect(JSON.parse(json.stdoutPlain)).toEqual({ ...quoteOf('AAPL'), via: 'worker', freshness: 'live' });
+  });
+
+  it('says in --json when a quote came through the interim proxy, or from memory', async () => {
+    use(fakeMarket({ AAPL: { ok: true, quote: quoteOf('AAPL'), freshness: 'memory', via: 'interim' } }));
+    expect(JSON.parse((await runLine('stock --json AAPL')).stdoutPlain)).toMatchObject({ symbol: 'AAPL', via: 'interim', freshness: 'memory' });
   });
 
   it('marks a saved copy as one in --json', async () => {
     use(fakeMarket({ AAPL: { ok: true, quote: quoteOf('AAPL'), freshness: 'saved', savedAt: RECORDED_AT_MS, reason: 'offline', via: 'worker' } }));
     const { stdoutPlain } = await runLine('stock --json AAPL');
-    expect(JSON.parse(stdoutPlain)).toEqual({ ...quoteOf('AAPL'), stale: true, savedCopy: { savedAt: RECORDED_AT_MS / 1000, reason: 'offline' } });
+    expect(JSON.parse(stdoutPlain)).toEqual({
+      ...quoteOf('AAPL'),
+      via: 'worker',
+      freshness: 'saved',
+      stale: true,
+      savedCopy: { savedAt: RECORDED_AT_MS / 1000, reason: 'offline' },
+    });
   });
 });
 
@@ -322,7 +342,94 @@ describe('several tickers', () => {
   it('print a JSON list', async () => {
     use(fakeMarket({ AAPL: live('AAPL') }));
     const { stdoutPlain } = await runLine('stock --json AAPL ZZZZQQ');
-    expect(JSON.parse(stdoutPlain)).toEqual([quoteOf('AAPL'), { symbol: 'ZZZZQQ', error: { code: 'not_found' } }]);
+    expect(JSON.parse(stdoutPlain)).toEqual([{ ...quoteOf('AAPL'), via: 'worker', freshness: 'live' }, { symbol: 'ZZZZQQ', error: { code: 'not_found' } }]);
+  });
+});
+
+describe('the 10 s budget', () => {
+  /** A slow market: each lookup takes all the time it is given, then gives its saved copy. */
+  function slowMarket(options: { ignoreBudget?: boolean } = {}): Market & { readonly asked: { symbol: string; at: number; budgetMs: number }[] } {
+    const asked: { symbol: string; at: number; budgetMs: number }[] = [];
+    const savedCopy = (symbol: string): QuoteOutcome => ({ ok: true, quote: quoteOf(symbol), freshness: 'saved', savedAt: RECORDED_AT_MS, reason: 'timeout', via: 'interim' });
+    return {
+      ...fakeMarket({}),
+      asked,
+      quote(symbol, _range, opts = {}) {
+        const budgetMs = opts.budgetMs ?? 9500;
+        asked.push({ symbol, at: Date.now(), budgetMs });
+        // As the client does: with no time left it asks nothing and gives the saved copy.
+        if (budgetMs < 250) return Promise.resolve(savedCopy(symbol));
+        return new Promise((resolve) => {
+          const timer = options.ignoreBudget === true ? undefined : setTimeout(() => resolve(savedCopy(symbol)), budgetMs);
+          opts.signal?.addEventListener(
+            'abort',
+            () => {
+              clearTimeout(timer);
+              resolve({ ok: false, error: { code: 'cancelled' } });
+            },
+            { once: true },
+          );
+        });
+      },
+    };
+  }
+
+  afterEach(() => vi.useRealTimers());
+
+  it("plans every lookup inside the budget, counted from the command's start, and draws the table", async () => {
+    await import('./stock.run');
+    vi.useFakeTimers({ now: RECORDED_AT_MS });
+    const market = slowMarket();
+    use(market);
+    const s = await session({ now: () => Date.now() });
+    const started = Date.now();
+    const pending = s.run('stock AAPL CBA.AX BTC-USD TEAM');
+    await vi.advanceTimersByTimeAsync(11_000);
+    const { status, blocks, stderrPlain } = await pending;
+    s.stop();
+    // Three at once take what there is; the fourth, with nothing left, asks nothing.
+    expect(market.asked.map((ask) => ask.symbol)).toEqual(['AAPL', 'CBA.AX', 'BTC-USD', 'TEAM']);
+    for (const ask of market.asked) expect(ask.at + ask.budgetMs).toBeLessThanOrEqual(started + 10_000 - DRAW_MS);
+    expect(market.asked[3]?.budgetMs).toBe(0);
+    expect(stderrPlain).not.toContain('timed out');
+    expect(status).toBe(0);
+    const table = component(blocks);
+    expect(table?.type === 'component' && (table.props as QuoteTableView).rows.map((row) => [row.symbol, row.stale])).toEqual([
+      ['AAPL', true],
+      ['CBA.AX', true],
+      ['BTC-USD', true],
+      ['TEAM', true],
+    ]);
+  });
+
+  it('draws the rows in hand when the budget cuts lookups off, with saved copies for the rest', async () => {
+    await import('./stock.run');
+    vi.useFakeTimers({ now: RECORDED_AT_MS });
+    const market = slowMarket({ ignoreBudget: true });
+    use(market);
+    const s = await session({ now: () => Date.now() });
+    const pending = s.run('stock AAPL CBA.AX');
+    await vi.advanceTimersByTimeAsync(11_000);
+    const { status, blocks, stderrPlain } = await pending;
+    s.stop();
+    expect(stderrPlain).not.toContain('timed out');
+    expect(status).toBe(0);
+    const table = component(blocks);
+    expect(table?.type === 'component' && (table.props as QuoteTableView).rows.map((row) => row.symbol)).toEqual(['AAPL', 'CBA.AX']);
+    // Asked again with no time once cut off: no request, only the saved copy.
+    expect(market.asked.slice(2).map((ask) => ask.budgetMs)).toEqual([0, 0]);
+  });
+
+  it('still stops at once on ^C', async () => {
+    const market = slowMarket({ ignoreBudget: true });
+    use(market);
+    const s = await session();
+    const pending = s.run('stock AAPL CBA.AX');
+    await vi.waitFor(() => expect(market.asked).toHaveLength(2));
+    s.app.shell.abort();
+    expect((await pending).status).toBe(130);
+    expect(market.asked).toHaveLength(2);
+    s.stop();
   });
 });
 

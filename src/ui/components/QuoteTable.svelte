@@ -154,12 +154,13 @@
     overflow-wrap: anywhere;
   }
 
+  /* A ticker that opens its card: chip text on the chip, bold, as the other cards' chips are. */
   .chip {
     padding: 0 1ch;
-    border: 1px solid var(--role-muted);
+    border: 1px solid var(--role-chip-fg);
     border-radius: 4px;
     background: var(--role-chip-bg);
-    color: var(--role-accent);
+    color: var(--role-chip-fg);
     font: inherit;
     font-weight: bold;
     cursor: pointer;
@@ -169,6 +170,7 @@
     .chip {
       min-height: 44px;
       min-width: 44px;
+      padding: 0 1.5ch;
     }
   }
 

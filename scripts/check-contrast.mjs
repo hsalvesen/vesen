@@ -5,7 +5,8 @@
 //            src/lib/roles.ts, the code platform/theme-apply.ts runs. Every text role must reach
 //            4.5:1 on the background (and on its own panel tint where it titles a panel), body
 //            text 4.5:1 on every panel tint and on the selection, ghost text and the cursor 3:1,
-//            chip text 4.5:1 on the chip, and QR ink 7:1 on its paper.
+//            chip text 4.5:1 on the chip, a selected chip's accent outline 3:1 on the chip, and QR
+//            ink 7:1 on its paper.
 //   palette  The palette slots legacy output still uses as text, on the background, against the
 //            committed baseline of pairs that failed before the palette work: no pair may newly
 //            fail or get worse. The baseline should only shrink.

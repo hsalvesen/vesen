@@ -76,7 +76,8 @@
 
   // ── Text art, or the card it falls back to ──
   const style = $derived(view === null || view.options.type === 'svg' ? null : view.options.type);
-  const art = $derived(view === null || style === null ? null : toText(view, { style, margin: view.options.margin }));
+  // utf8 is drawn on an ink field, so the half line under odd rows is padded light, not left as ink.
+  const art = $derived(view === null || style === null ? null : toText(view, { style, margin: view.options.margin, padLight: style === 'utf8' }));
   const artColumns = $derived(view === null || style === null ? 0 : textColumns(view, { style, margin: view.options.margin }));
   const artPx = $derived(width > 0 && artColumns > 0 ? Math.min(fontPx, width / (artColumns * chRatio)) : fontPx);
   const asArt = $derived(art !== null && artPx >= MIN_ART_PX);
@@ -317,14 +318,19 @@
     font-variant-ligatures: none;
     font-weight: normal;
     text-shadow: none;
+    /* Block glyphs at a fractional advance leave antialiased hairlines between columns and lines,
+       which split a camera's runs of modules; a thin stroke in the glyph's own colour closes them. */
+    -webkit-text-stroke: 0.06em currentColor;
+    paint-order: stroke fill;
     background: var(--role-qr-ink, #000);
     color: var(--role-qr-paper, #fff);
     user-select: text;
     -webkit-user-select: text;
   }
 
-  /* ascii marks the dark modules, so it is ink on paper. */
+  /* ascii marks the dark modules, so it is ink on paper, and its # need no stroke. */
   .qr-text-ascii {
+    -webkit-text-stroke: 0;
     background: var(--role-qr-paper, #fff);
     color: var(--role-qr-ink, #000);
   }

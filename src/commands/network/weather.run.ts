@@ -1,11 +1,11 @@
 // The body of weather; its spec, in weather.ts, loads this the first time weather runs.
 //
 // A place is found in a fixed order (services/weather/resolve.ts): coordinates, the curated
-// table, the place cache, Open-Meteo, then OpenStreetMap. With no place, the device's position
-// is used if the visitor has already allowed it, else an approximate one from their network,
-// else the last place they looked up, else a few to try. `--here` asks for the device's
-// position, and explains when it gets none. One Open-Meteo call brings seven days in metric;
-// units and days are the card's business.
+// table, the place cache, Open-Meteo, then OpenStreetMap. With no place, an approximate one from
+// the visitor's network is used (docs/plan/05-weather.md: the device is asked by --here only),
+// else the last place they looked up, else a few to try. `--here` asks for the device's position,
+// and explains when it gets none. One Open-Meteo call brings seven days in metric; units and days
+// are the card's business.
 //
 // On the terminal the forecast is a `weather-card` component block (ui/components/WeatherCard)
 // with chips made here, as trusted actions; its plain text, for pipes and files, is the compact
@@ -35,7 +35,7 @@ import { weatherService } from '../lib/weather';
 /** What --help, help and man say about weather, besides its spec (weather.ts). */
 export const doc: CommandDoc = {
   description:
-    'Shows the current weather and the next days for a place: a name, "City, Country" or "City, Region", or lat,lon. With no place, it uses this device\'s location if you have already allowed it, else an approximate one from your network, else the last place you looked up. Units follow your browser\'s language until you choose them.',
+    'Shows the current weather and the next days for a place: a name, "City, Country" or "City, Region", or lat,lon. With no place, it uses an approximate location from your network, else the last place you looked up; --here uses this device\'s location instead. Units follow your browser\'s language until you choose them.',
   man: [
     {
       heading: 'PLACES',
@@ -43,11 +43,11 @@ export const doc: CommandDoc = {
     },
     {
       heading: 'LOCATION',
-      body: "--here asks the browser for this device's location, rounded to about a kilometre and never saved. When it gets none, the card says why and uses an approximate location from your network (GeoJS, then ipinfo.io), which is never saved either.",
+      body: "--here asks the browser for this device's location, rounded to about a kilometre and never saved; OpenStreetMap names it, and the name is kept only until the page closes. When it gets none, the card says why and uses an approximate location from your network (GeoJS, then ipinfo.io), which is never saved either.",
     },
     {
       heading: 'DATA',
-      body: 'Weather data by Open-Meteo.com (CC BY 4.0). Place search © OpenStreetMap contributors (ODbL). The last five places you looked up are kept in this browser; weather --forget, or reset, clears them.',
+      body: 'Weather data by Open-Meteo.com (CC BY 4.0). Place search © OpenStreetMap contributors (ODbL). The last five places you looked up are kept in this browser, and the answers to up to 50 place searches for 30 days, so a name is not searched for again; weather --forget, or reset, clears them.',
     },
   ],
 };
@@ -381,18 +381,12 @@ async function here(ctx: CommandContext, service: WeatherService): Promise<Locat
   return { place, notes: [{ kind: 'device-fallback', reason: failure, ...(app === undefined ? {} : { app }) }] };
 }
 
-/** A bare `weather`: the device if already allowed, the network, the last place, or help. */
+/**
+ * A bare `weather`: the network's approximate location, the last place, or help. The device is
+ * asked only by --here, even once it has been allowed (docs/plan/05-weather.md); the card offers
+ * [use precise location] for that.
+ */
 async function wherever(ctx: CommandContext, service: WeatherService): Promise<Located> {
-  const geo = service.geolocation;
-  if ((await geo.permission()) === 'granted') {
-    ctx.tty.status('Locating you…');
-    try {
-      const fix = await geo.locate({ timeoutMs: LOCATE_GRANTED_MS, signal: ctx.signal });
-      return { place: await devicePlace(ctx, service, fix.lat, fix.lon), notes: [] };
-    } catch (error) {
-      if (abortedBy(ctx, error)) throw error;
-    }
-  }
   try {
     return { place: await fromNetwork(ctx, service), notes: [] };
   } catch (error) {
@@ -433,6 +427,17 @@ function locate(ctx: CommandContext, service: WeatherService, args: WeatherArgs)
 /** The card switches to the wide layout from this many columns (WeatherCard.svelte's query). */
 export const WIDE_FROM = WIDE_COLS + 2;
 
+/**
+ * Whether asking for the device again could give a different answer: not inside an in-app
+ * browser, which the card has just said cannot share one, nor where the browser cannot share one
+ * at all, nor on a page that is not secure.
+ */
+function deviceMayAnswer(located: Located): boolean {
+  return !located.notes.some(
+    (note) => note.kind === 'device-fallback' && (note.app !== undefined || note.reason === 'unsupported' || note.reason === 'insecure'),
+  );
+}
+
 function cardChips(args: WeatherArgs, located: Located, view: WeatherView): { chips: ChipItem[]; also: ChipItem[] } {
   const place = placeArgument(located.place, located.typed);
   const units = unitFlag(args.units);
@@ -441,8 +446,11 @@ function cardChips(args: WeatherArgs, located: Located, view: WeatherView): { ch
   if (view.units.system === 'imperial') chips.push(chip('°C', line('-m', ...days, place)));
   else chips.push(chip('°F', line('-u', ...days, place)));
   if (args.days < MAX_DAYS) chips.push(chip(`${MAX_DAYS} days`, line(...units, '-d', String(MAX_DAYS), place)));
-  if (located.place.approximate) chips.push(chip('use precise location', line('--here', ...units)));
-  else if (located.place.source !== 'device') chips.push(chip('my location', line('--here', ...units)));
+  // Where asking again would be a dead end, the card's note says where to get a precise location.
+  if (deviceMayAnswer(located)) {
+    if (located.place.approximate) chips.push(chip('use precise location', line('--here', ...units)));
+    else if (located.place.source !== 'device') chips.push(chip('my location', line('--here', ...units)));
+  }
 
   const also: ChipItem[] = [];
   for (const note of located.notes) {

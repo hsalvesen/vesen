@@ -227,10 +227,12 @@
     margin-top: 0.25em;
   }
 
-  /* Low-key outlined text on a desktop; the current range outlined in the accent. */
+  /* Chip text on the chip, as every card's chips are; the current range is bold and outlined in
+     the accent, which reaches 3:1 on the chip in every theme (lib/roles.ts checks it), while its
+     text stays the chip's own colour, which reaches 4.5:1. */
   .chip {
     padding: 0 1ch;
-    border: 1px solid var(--role-muted);
+    border: 1px solid var(--role-chip-fg);
     border-radius: 4px;
     background: var(--role-chip-bg);
     color: var(--role-chip-fg);
@@ -240,7 +242,7 @@
 
   .chip.active {
     border-color: var(--role-accent);
-    color: var(--role-accent);
+    box-shadow: inset 0 0 0 1px var(--role-accent);
     font-weight: bold;
   }
 

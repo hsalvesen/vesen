@@ -106,6 +106,21 @@ describe('text renderer', () => {
     expect(toText(qr, { style: 'utf8i', margin: 2 })[0]).toBe(' '.repeat(25));
     expect(() => toText(qr, { style: 'utf8', margin: -1 })).toThrow(RangeError);
   });
+
+  it('pads the half line below utf8 art with light when asked, so it ends in no band of ink', () => {
+    const qr = encodeText('vesen'); // 21 + 4 = 25 module rows: the last line has a top half only
+    const plain = toText(qr, { style: 'utf8', margin: 2 });
+    const padded = toText(qr, { style: 'utf8', margin: 2, padLight: true });
+    expect(plain[plain.length - 1]).toBe('▀'.repeat(25));
+    expect(padded[padded.length - 1]).toBe('█'.repeat(25));
+    // Everything else is as it was, and the other styles ignore it.
+    expect(padded.slice(0, -1)).toEqual(plain.slice(0, -1));
+    expect(toText(qr, { style: 'utf8i', margin: 2, padLight: true })).toEqual(toText(qr, { style: 'utf8i', margin: 2 }));
+    expect(toText(qr, { style: 'ascii', margin: 2, padLight: true })).toEqual(toText(qr, { style: 'ascii', margin: 2 }));
+    // With an even number of rows there is no half line to pad.
+    expect(toText(qr, { style: 'utf8', margin: 1, padLight: true })).toHaveLength(Math.ceil(23 / 2));
+    expect(toText(qr, { style: 'utf8', margin: 3, padLight: true })).toEqual(toText(qr, { style: 'utf8', margin: 3 }).slice(0, -1).concat(['█'.repeat(27)]));
+  });
 });
 
 describe('SVG renderer', () => {

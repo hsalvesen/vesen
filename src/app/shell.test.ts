@@ -172,11 +172,35 @@ describe('createAppShell', () => {
       version: '0.0.0',
       yieldToHost: () => Promise.resolve(),
     });
-    await app.prefetch();
+    expect(await app.prefetch()).toBe(true);
     expect(load).toHaveBeenCalledTimes(1);
     expect(broken).toHaveBeenCalledTimes(1);
     expect((await app.shell.run('lazy')).status).toBe(0);
     app.stop();
+  });
+
+  it('fetches nothing ahead on Data Saver or mobile data', async () => {
+    for (const connection of [{ saveData: true, type: 'wifi' }, { type: 'cellular' }, { effectiveType: '3g' }]) {
+      const load = vi.fn(async () => ({ run: () => 0 }));
+      const app = createAppShell({
+        banner: () => '',
+        specs: [...stubCommands(), { name: 'lazy', category: 'shell', summary: 'x', load }],
+        screen: createScreen(),
+        version: '0.0.0',
+        sysHost: {
+          navigator: { userAgent: 'test', languages: ['en-AU'], hardwareConcurrency: 4, connection },
+          screen: { width: 390, height: 844, colorDepth: 24 },
+          devicePixelRatio: 3,
+        },
+        yieldToHost: () => Promise.resolve(),
+      });
+      expect(await app.prefetch(), JSON.stringify(connection)).toBe(false);
+      expect(load).not.toHaveBeenCalled();
+      // The first run still loads it.
+      expect((await app.shell.run('lazy')).status).toBe(0);
+      expect(load).toHaveBeenCalledTimes(1);
+      app.stop();
+    }
   });
 
   it('says once, dimly, that nothing is kept when there is no storage', async () => {

@@ -196,12 +196,14 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
       // ~/.bashrc first, so a line typed while the chunk loaded already has ll and la.
       await app.boot();
       // Then, once the page is idle, the commands that load lazily, so none waits on first use,
-      // and the shim the legacy commands' HTML is drawn through.
+      // and the shim the legacy commands' HTML is drawn through. Not on Data Saver or mobile
+      // data, where each command's code comes with its first run instead (app.prefetch).
       idle(win, () => {
-        void app.prefetch();
+        void app.prefetch().then((fetched) => {
+          // The weather card too, so the first card draws at once rather than after its plain text.
+          if (fetched) void import('../ui/components/registry').then(({ loadComponent }) => loadComponent('weather-card')).catch(() => {});
+        });
         if (parts !== null) loadLegacyShim().catch(() => {});
-        // The weather card too, so the first card draws at once rather than after its plain text.
-        void import('../ui/components/registry').then(({ loadComponent }) => loadComponent('weather-card')).catch(() => {});
       });
       return app.shell;
     },

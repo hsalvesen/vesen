@@ -97,7 +97,9 @@ export function cleanBlock(block: unknown): Block | null {
       case 'columns': {
         const side = (blocks: unknown): Block[] => (Array.isArray(blocks) ? blocks.map(cleanBlock).filter((b): b is Block => b !== null) : []);
         const at = typeof raw.stackBelowCols === 'number' ? raw.stackBelowCols : 60;
-        return out.columns(side(raw.left), side(raw.right), at);
+        // A left side of its own width (fastfetch's logo) keeps it, so the layout comes back as it was.
+        const leftCh = typeof raw.leftCh === 'number' && Number.isFinite(raw.leftCh) && raw.leftCh > 0 ? raw.leftCh : undefined;
+        return out.columns(side(raw.left), side(raw.right), at, leftCh);
       }
       case 'legacyHtml': {
         // Sanitised again when it is drawn (ui/legacy-html.ts), as at first.

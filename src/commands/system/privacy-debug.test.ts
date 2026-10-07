@@ -1,39 +1,54 @@
 // privacy and debug (docs/plan/10-tooling-hosting-docs.md, 0.10): what vesen sends where, and a
 // report to paste into an issue.
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { runLine, session } from '../../../tests/harness';
 import { lineText, type Block } from '../../output/model';
 import { buildRegistry } from '../index';
-import { THIRD_PARTIES } from './privacy.run';
+import { thirdParties } from './privacy.run';
 
 const tableRows = (blocks: readonly Block[]): string[] =>
   blocks.flatMap((block) => (block.type === 'table' ? block.rows.map((row) => lineText(row[0] ?? [])) : []));
 
 describe('privacy', () => {
-  it('lists every third party, who asks and what it is sent', async () => {
+  // A developer's .env.local may name a stock Worker; each test says which build it is.
+  beforeEach(() => vi.stubEnv('VITE_STOCK_API', ''));
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('lists the third party of every command this shell has, who asks and what it is sent', async () => {
     const { status, blocks, stdoutPlain } = await runLine('privacy');
     expect(status).toBe(0);
+    // Services of commands that do not exist here (dig, host, nslookup, whois, git) are left out.
     expect(tableRows(blocks)).toEqual([
       'Open-Meteo',
       'OpenStreetMap Nominatim',
       'GeoJS, then ipinfo.io',
-      // No VITE_STOCK_API in tests: the interim proxy, until the stock Worker is deployed.
+      // No VITE_STOCK_API: the interim proxy, until the stock Worker is deployed.
       'allorigins.win, then Yahoo Finance',
       'Cloudflare speed test',
-      'Cloudflare or Google DNS-over-HTTPS',
-      'RDAP (rdap.org and the registries)',
-      'GitHub',
       'ipify',
     ]);
     expect(stdoutPlain).toContain('IP address and location lookups happen only on request');
     expect(stdoutPlain).toContain('What you type at sudo is never kept.');
+    expect(stdoutPlain).not.toContain('wget');
+  });
+
+  it("names the stock Worker in a build that has one", async () => {
+    vi.stubEnv('VITE_STOCK_API', 'https://stock.example.workers.dev');
+    expect(tableRows((await runLine('privacy')).blocks)).toContain("vesen's stock Worker");
+  });
+
+  it('says how location and place searches are kept, as weather does', async () => {
+    const { stdoutPlain } = await runLine('privacy');
+    expect(stdoutPlain).toContain('Only weather --here asks the browser for this device');
+    expect(stdoutPlain).toContain('no location is ever saved');
+    expect(stdoutPlain).toContain('up to 50 place searches for 30 days');
   });
 
   it('names no source a ported command has left behind', () => {
     // weather left wttr.in, and stock's interim proxy is the labelled row above until its Worker runs.
-    const services = THIRD_PARTIES.map((row) => row.service).join(' ');
+    const services = thirdParties().map((row) => row.service).join(' ');
     expect(services).not.toMatch(/wttr/);
-    expect(THIRD_PARTIES.map((row) => row.askedBy).join(' ')).not.toMatch(/for now/);
+    expect(thirdParties().map((row) => row.askedBy).join(' ')).not.toMatch(/for now/);
     expect(buildRegistry([]).get('privacy')).toBeDefined();
   });
 

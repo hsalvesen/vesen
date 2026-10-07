@@ -3,6 +3,7 @@
 // `quote-card` for one ticker or a `quote-table` for several, with their plain text for pipes.
 // Every failure is said in plain words; no exception text ever reaches the screen.
 
+import { DeadlineExceeded } from '../../lib/signals';
 import { out, type ChipItem, type Line, type SpanStyle } from '../../output/model';
 import { RANGES, isRange, normaliseSymbol, type InstrumentType, type Range, type SearchHit } from '../../services/market/contract';
 import { getMarket, type FetchPhase, type Market, type MarketFailure, type QuoteOutcome } from '../../services/market/port';
@@ -43,22 +44,41 @@ export const MAX_SYMBOLS = 6;
 /** Quotes asked for at once, for a table. */
 const CONCURRENCY = 3;
 
-/** The client's budget: the spec's 10 s, less time to draw a saved copy. */
+/** The client's budget when the kernel gives no deadline: the spec's 10 s, less time to draw. */
 export const LOOKUP_BUDGET_MS = 9500;
 
-/** Every lookup gets at least this long, even late in a table's second round. */
-const MIN_LOOKUP_MS = 1000;
+/** What is kept back from the command's budget to draw the card or the table. */
+export const DRAW_MS = 500;
 
-/** The time left for lookups, counted from when the command started, so a table's second round shares it. */
+/**
+ * The time left for lookups: until the kernel's deadline (counted from before this body loaded)
+ * less time to draw, so a table's later lookups share what the first ones left and none runs
+ * past it. Zero when none is left; the client then asks nothing and gives the saved copy.
+ */
 function budget(ctx: CommandContext): () => number {
-  const deadline = ctx.clock.now() + LOOKUP_BUDGET_MS;
-  return () => Math.max(MIN_LOOKUP_MS, deadline - ctx.clock.now());
+  const end = ctx.deadline !== undefined ? ctx.deadline - DRAW_MS : ctx.clock.now() + LOOKUP_BUDGET_MS;
+  return () => Math.max(0, end - ctx.clock.now());
 }
 
-/** A quote as --json prints it: a saved copy says that it is one, and why. */
+/**
+ * A lookup as it stands once the client has answered. ^C stops the command. When the budget ran
+ * out with the lookup still in flight, it is asked again with no time, which makes no request
+ * and gives the saved copy or a timeout, so whatever is in hand can still be drawn.
+ */
+async function settled(ctx: CommandContext, market: Market, symbol: string, range: Range, outcome: QuoteOutcome): Promise<QuoteOutcome> {
+  if (!ctx.signal.aborted) return outcome;
+  if (!(ctx.signal.reason instanceof DeadlineExceeded)) throw ctx.signal.reason;
+  return outcome.ok === false && outcome.error.code === 'cancelled' ? market.quote(symbol, range, { budgetMs: 0 }) : outcome;
+}
+
+/**
+ * A quote as --json prints it, with where it came from (`via`: the stock Worker, or the interim
+ * public proxy) and how fresh it is; a saved copy says that it is one, and why.
+ */
 function jsonQuote(outcome: Extract<QuoteOutcome, { ok: true }>): unknown {
-  if (outcome.freshness !== 'saved') return outcome.quote;
-  return { ...outcome.quote, stale: true, savedCopy: { savedAt: Math.floor(outcome.savedAt / 1000), reason: outcome.reason } };
+  const labelled = { ...outcome.quote, via: outcome.via, freshness: outcome.freshness };
+  if (outcome.freshness !== 'saved') return labelled;
+  return { ...labelled, stale: true, savedCopy: { savedAt: Math.floor(outcome.savedAt / 1000), reason: outcome.reason } };
 }
 
 const ERROR: SpanStyle = { fg: 'error' };
@@ -66,6 +86,9 @@ const WARN: SpanStyle = { fg: 'warn' };
 const MUTED: SpanStyle = { fg: 'muted' };
 
 export const USAGE = 'usage: stock [-r RANGE] [-s QUERY] [-f] [--json|--plain] SYMBOL...';
+
+/** The synopsis on an output too narrow for USAGE, broken between forms rather than inside one. */
+export const USAGE_NARROW = ['usage: stock [-r RANGE] [-f] SYMBOL...', '       stock -s QUERY'] as const;
 
 type Mode = 'card' | 'plain' | 'json';
 
@@ -136,13 +159,13 @@ function phases(ctx: CommandContext, what: string): (phase: FetchPhase, attempt:
 // ── One ticker ─────────────────────────────────────────────────────────────────────────────
 
 async function single(ctx: CommandContext, market: Market, wanted: Wanted, range: Range, mode: Mode, left: () => number): Promise<ExitCode> {
-  const outcome = await market.quote(wanted.symbol, range, {
+  const asked = await market.quote(wanted.symbol, range, {
     signal: ctx.signal,
     force: ctx.opts.force === true,
     budgetMs: left(),
     onPhase: phases(ctx, wanted.symbol),
   });
-  if (ctx.signal.aborted) throw ctx.signal.reason;
+  const outcome = await settled(ctx, market, wanted.symbol, range, asked);
   if (outcome.ok === false) return failure(ctx, outcome.error, wanted, range);
 
   if (mode === 'json') {
@@ -180,7 +203,7 @@ const SEARCH_WORD = /^[\p{L}\p{N}][\p{L}\p{N}.-]{0,39}$/u;
 
 async function many(ctx: CommandContext, market: Market, wanted: readonly Wanted[], range: Range, mode: Mode, left: () => number): Promise<ExitCode> {
   const what = wanted.map((item) => item.symbol).join(', ');
-  const outcomes = await eachLimited(wanted, CONCURRENCY, (item) =>
+  const asked = await eachLimited(wanted, CONCURRENCY, (item) =>
     market.quote(item.symbol, range, {
       signal: ctx.signal,
       force: ctx.opts.force === true,
@@ -188,7 +211,8 @@ async function many(ctx: CommandContext, market: Market, wanted: readonly Wanted
       onPhase: phases(ctx, what),
     }),
   );
-  if (ctx.signal.aborted) throw ctx.signal.reason;
+  // Rows already in hand are drawn even when the budget cut the last lookups off.
+  const outcomes = await Promise.all(wanted.map((item, i) => settled(ctx, market, item.symbol, range, asked[i] as QuoteOutcome)));
   const rows = wanted.map((item, i) => ({ symbol: item.symbol, outcome: outcomes[i] as QuoteOutcome }));
   const shown = rows.filter((row) => row.outcome.ok === true).length;
 
@@ -277,7 +301,9 @@ async function searchFailure(ctx: CommandContext, error: MarketFailure): Promise
 
 /** Bare `stock`: how to use it, and tickers to tap. No request is made. */
 async function usage(ctx: CommandContext): Promise<ExitCode> {
-  await ctx.stdout.line(out.span(USAGE));
+  // On a narrow phone the one line would wrap inside an option ('[-' then 'f]').
+  if (ctx.stdout.isTTY && ctx.stdout.columns < USAGE.length) for (const text of USAGE_NARROW) await ctx.stdout.line(out.span(text));
+  else await ctx.stdout.line(out.span(USAGE));
   await ctx.stdout.line(out.span('Delayed quotes for up to 6 tickers, or find one by name with -s.', MUTED));
   let recent: readonly string[] = [];
   const loading = getMarket();

@@ -36,6 +36,22 @@ const sideways = (page: Page) =>
     };
   });
 
+/** The contrast of a chip's text on its own background, as WCAG measures it, from computed styles. */
+const chipContrast = (chip: Locator) =>
+  chip.evaluate((element) => {
+    const rgb = (value: string): number[] => (value.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+    const luminance = ([r = 0, g = 0, b = 0]: number[]): number => {
+      const [lr, lg, lb] = [r, g, b].map((c) => {
+        const s = c / 255;
+        return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * (lr ?? 0) + 0.7152 * (lg ?? 0) + 0.0722 * (lb ?? 0);
+    };
+    const style = getComputedStyle(element);
+    const [a, b] = [luminance(rgb(style.color)), luminance(rgb(style.backgroundColor))];
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  });
+
 test.describe('stock', { tag: '@smoke' }, () => {
   test.skip(() => test.info().project.name === 'pixel-7', 'the desktop and the Instagram iPhone cover it');
 
@@ -97,6 +113,39 @@ test.describe('stock', { tag: '@smoke' }, () => {
     await expect(stop).toBeHidden();
     await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
   });
+
+  test('bare stock prints its usage and chips a thumb high, with nothing to scroll sideways', async ({ page, hasTouch }) => {
+    await page.setViewportSize({ width: 320, height: 720 });
+    await routeQuotes(page);
+    await page.goto('/');
+    await run(page, 'stock');
+    const entry = lastEntry(page);
+    // Broken between its forms on a narrow phone, never inside an option.
+    await expect(entry).toContainText('usage: stock [-r RANGE] [-f] SYMBOL...');
+    const chips = entry.locator('.chips button.chip');
+    await expect(chips.first()).toHaveText('AAPL');
+    if (hasTouch) {
+      for (const chip of await chips.all()) expect((await chip.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+    expect(await sideways(page), 'nothing scrolls sideways').toEqual({ page: 0, body: 0, transcript: 0 });
+  });
+
+  for (const theme of ['cockatoo', 'swamphen', 'treefrog']) {
+    test(`chip text reads at 4.5:1 on the chip in ${theme}: the selected range and the table's tickers`, async ({ page }) => {
+      await page.setViewportSize({ width: 375, height: 720 });
+      await routeQuotes(page);
+      await page.goto('/');
+      await run(page, `theme set ${theme}`);
+      await run(page, 'stock AAPL');
+      const selected = lastEntry(page).locator('.quote .chip[aria-pressed="true"]');
+      await expect(selected).toHaveText('1d');
+      expect(await chipContrast(selected)).toBeGreaterThanOrEqual(4.5);
+      await run(page, 'stock AAPL CBA.AX');
+      const tickers = lastEntry(page).locator('.quotes button.chip');
+      await expect(tickers).toHaveCount(2);
+      for (const chip of await tickers.all()) expect(await chipContrast(chip)).toBeGreaterThanOrEqual(4.5);
+    });
+  }
 
   test('several tickers make a table, each ticker a chip', async ({ page, hasTouch }) => {
     await page.setViewportSize({ width: 320, height: 720 });

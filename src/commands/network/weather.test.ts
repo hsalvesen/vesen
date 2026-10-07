@@ -447,9 +447,20 @@ describe('location', () => {
     fresh.stop();
   });
 
-  it('uses the device silently once permission is granted, named by OpenStreetMap', async () => {
+  it('keeps a bare weather on the network location even once the device is allowed', async () => {
     const r = rig({ geo: fakeGeo('granted') });
     const result = await r.run('weather');
+    expect(r.geo.asked).toEqual([]);
+    expect(r.network.callsTo('get.geojs.io')).toHaveLength(1);
+    expect(r.network.callsTo(NOMINATIM)).toEqual([]);
+    expect(result.card?.props.place).toMatchObject({ name: 'Sydney', approximate: true });
+    expect(labelled(result.chips)['use precise location']).toBe('weather --here');
+    r.stop();
+  });
+
+  it('uses the device with --here once permission is granted, named by OpenStreetMap, and keeps none of it', async () => {
+    const r = rig({ geo: fakeGeo('granted') });
+    const result = await r.run('weather --here');
     expect(r.geo.asked).toEqual([LOCATE_GRANTED_MS]);
     expect(r.network.callsTo('get.geojs.io')).toEqual([]);
     expect(r.network.callsTo(NOMINATIM)[0]?.pathname).toBe('/reverse');
@@ -458,6 +469,10 @@ describe('location', () => {
     // The chips never carry the device's position.
     expect(lines(result.chips)).toEqual(['weather -u', 'weather -d 7']);
     expect(r.service.recent()).toEqual([]);
+    // Neither the position nor its name is kept in storage.
+    const stored = r.kv.get(STORAGE_KEYS.weather.key) ?? '';
+    expect(stored).not.toContain('151.21');
+    expect(stored).not.toContain('rev:');
     r.stop();
   });
 
@@ -492,7 +507,7 @@ describe('location', () => {
     r.stop();
   });
 
-  it("says Instagram didn't share the location, and how to get a precise one", async () => {
+  it("says Instagram didn't share the location, and how to get a precise one, with no chip to ask again", async () => {
     const geo = fakeGeo('prompt');
     geo.answer = () => Promise.reject(new GeoError('timeout'));
     const r = rig({ geo, inApp: 'instagram' });
@@ -500,6 +515,20 @@ describe('location', () => {
     expect(result.card?.props.notes).toContain(
       "Instagram didn't share your location, so this uses an approximate network location. Open vesen.app in Safari or Chrome for a precise fix.",
     );
+    // Asking again in the same in-app browser gets the same answer.
+    expect(labelled(result.chips)['use precise location']).toBeUndefined();
+    // A bare weather there still offers it: the visitor has not been asked yet.
+    expect(labelled((await r.run('weather')).chips)['use precise location']).toBe('weather --here');
+    r.stop();
+  });
+
+  it('offers to ask again after a refusal in a normal browser, but not where it cannot work', async () => {
+    const geo = fakeGeo('prompt');
+    geo.answer = () => Promise.reject(new GeoError('denied'));
+    const r = rig({ geo });
+    expect(labelled((await r.run('weather --here')).chips)['use precise location']).toBe('weather --here');
+    geo.state = 'insecure';
+    expect(labelled((await r.run('weather --here')).chips)['use precise location']).toBeUndefined();
     r.stop();
   });
 });
@@ -514,6 +543,11 @@ describe('failures', () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toBe("weather: Open-Meteo didn't answer within 8 s.");
     expect(lines(result.chips)).toEqual(['weather Gadigal']);
+    // The chip asks Open-Meteo again at once, rather than replaying the failure for 30 s.
+    const again = r.run('weather Gadigal');
+    await vi.advanceTimersByTimeAsync(8000);
+    expect((await again).stderr).toBe("weather: Open-Meteo didn't answer within 8 s.");
+    expect(r.network.callsTo(FORECAST)).toHaveLength(2);
     r.stop();
   });
 

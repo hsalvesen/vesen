@@ -1,10 +1,16 @@
 // How the build names its stock Worker, and how the command reaches the client.
 import { readFileSync } from 'node:fs';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { findBoundaryViolations } from '../../../scripts/check-boundaries.mjs';
 import { getMarket, marketBackend, provideMarket, stockApiBase, type Market } from './port';
 
-afterEach(() => provideMarket(null));
+// A developer's .env.local may name a Worker (README → Stock quotes); these tests choose their own.
+beforeEach(() => vi.stubEnv('VITE_STOCK_API', ''));
+
+afterEach(() => {
+  provideMarket(null);
+  vi.unstubAllEnvs();
+});
 
 const fake = (): Market => ({
   backend: 'interim',
@@ -21,13 +27,18 @@ describe('stockApiBase', () => {
   });
 
   it('treats unset, empty (an unset CI variable) and anything else as none', () => {
-    for (const raw of [undefined, '', '   ', 'vesen-stock.workers.dev', 'javascript:alert(1)', 'https://a b', 'https://x.test?q=1']) {
+    for (const raw of ['', '   ', 'vesen-stock.workers.dev', 'javascript:alert(1)', 'https://a b', 'https://x.test?q=1']) {
       expect(stockApiBase(raw), String(raw)).toBeNull();
     }
+    // With no argument it reads the build's VITE_STOCK_API, unset here.
+    expect(stockApiBase()).toBeNull();
   });
 
-  it('chooses the interim proxy in a build without one, as the tests are', () => {
+  it('chooses the interim proxy in a build without one, and the Worker in a build with one', () => {
     expect(marketBackend()).toBe('interim');
+    vi.stubEnv('VITE_STOCK_API', 'https://stock.example.workers.dev/');
+    expect(stockApiBase()).toBe('https://stock.example.workers.dev');
+    expect(marketBackend()).toBe('worker');
   });
 
   it('is DOM-free, so command code may import it', () => {

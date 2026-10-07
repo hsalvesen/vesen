@@ -238,6 +238,9 @@ describe('speedtest at the prompt', () => {
     expect(tableText(result.blocks)).toEqual(['Server', 'Latency', 'Jitter', 'Download', 'Upload', 'Data used']);
     expect(result.stderrPlain).toContain('A light run: up to 6 MB down and 256 KB up, 8 s for each of latency, download and upload, because of a touch screen.');
     expect(result.stdoutPlain).toContain('(light run)');
+    // Said once before and once in the table; after it, only the way to a full run.
+    expect(result.stdoutPlain).toContain('speedtest --full measures longer, with up to 45 MB.');
+    expect(`${result.stdoutPlain}\n${result.stderrPlain}`.match(/A light run/g)).toHaveLength(1);
     const sizes = fetchMock.mock.calls.map(([url]) => String(url)).filter((url) => url.includes('/__down') && !url.endsWith('bytes=0'));
     expect(sizes).toEqual(['https://speed.cloudflare.com/__down?bytes=1048576', 'https://speed.cloudflare.com/__down?bytes=5242880']);
     const uploads = fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST');

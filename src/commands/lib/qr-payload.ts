@@ -110,8 +110,11 @@ function asBareHost(text: string): string | null {
 
 /** What `raw` encodes as, or why it will not be encoded. */
 export function classifyPayload(raw: string, o: PayloadOptions = {}): Payload | PayloadError {
+  // A javascript: or vbscript: link is refused however it is asked for, --text included. Prose
+  // that only starts with the word ('JavaScript: The Good Parts') has spaces, so it is text, as
+  // anything with spaces is; asked for as a link with --url, it is refused all the same.
   const refused = REFUSED.exec(raw);
-  if (refused) return { error: `won't encode ${refused[1]!.toLowerCase()}: links` };
+  if (refused && (o.force === 'url' || !/\s/.test(raw.trim()))) return { error: `won't encode ${refused[1]!.toLowerCase()}: links` };
 
   if (o.force === 'text') return { value: raw, kind: 'text' };
 

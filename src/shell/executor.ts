@@ -678,8 +678,9 @@ export class Executor {
     job.describe(spec.name, spec.loadingLabel?.(argv) ?? null);
     const budgetMs = spec.budgetMs ?? (spec.network ? DEFAULT_BUDGET_MS : undefined);
     const budget = budgetMs === undefined ? null : deadline(budgetMs);
+    const deadlineAt = budgetMs === undefined ? undefined : this.deps.clock.now() + budgetMs;
     const signal = budget === null ? job.signal : combineSignals(job.signal, budget.signal);
-    const ctx = this.context({ spec, name, argv, args, opts: parsed.opts, sub, io, env, signal, job, frame });
+    const ctx = this.context({ spec, name, argv, args, opts: parsed.opts, sub, io, env, signal, deadlineAt, job, frame });
 
     try {
       let run: RunFn;
@@ -783,6 +784,7 @@ export class Executor {
     io: Io;
     env: CommandContext['env'];
     signal: AbortSignal;
+    deadlineAt: number | undefined;
     job: Job;
     frame: Frame;
   }): CommandContext {
@@ -805,6 +807,7 @@ export class Executor {
       fs: deps.fs,
       user: scope.user,
       signal: o.signal,
+      ...(o.deadlineAt === undefined ? {} : { deadline: o.deadlineAt }),
       tty: this.tty(o.job, o.frame, o.spec),
       net: deps.net,
       sys: deps.sys,

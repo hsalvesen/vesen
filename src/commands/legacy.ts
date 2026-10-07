@@ -57,14 +57,6 @@ export function legacyStatus(html: string): ExitCode {
   return 0;
 }
 
-/** The specs `legacy` made, so privacy can tell which backend a command still uses. */
-const LEGACY_SPECS = new WeakSet<CommandSpec>();
-
-/** True for a spec the legacy adapter wrapped, until that command is ported. */
-export function isLegacySpec(spec: CommandSpec): boolean {
-  return LEGACY_SPECS.has(spec);
-}
-
 /** Wraps one legacy function as a command spec. */
 export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpec {
   const { help, prelude, argsFor, ...shown } = meta;
@@ -97,6 +89,5 @@ export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpe
       return status;
     },
   };
-  LEGACY_SPECS.add(spec);
   return spec;
 }

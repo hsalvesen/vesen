@@ -291,8 +291,12 @@ export interface MemoOptions {
  */
 export interface Memo {
   <T>(key: string, ttlMs: number, load: () => Promise<T>): Promise<T>;
-  /** Forgets one key, so the next call loads again. */
-  forget(key: string): void;
+  /**
+   * Forgets one key, so the next call loads again. With `only`, just while the key still holds
+   * that promise: a caller that saw it fail can let the next ask go out without dropping a newer
+   * request someone else has started since.
+   */
+  forget(key: string, only?: Promise<unknown>): void;
   /** Forgets every key. */
   clear(): void;
 }
@@ -339,8 +343,8 @@ export function createMemo(options: MemoOptions = {}): Memo {
   };
 
   return Object.assign(memo, {
-    forget: (key: string): void => {
-      entries.delete(key);
+    forget: (key: string, only?: Promise<unknown>): void => {
+      if (only === undefined || entries.get(key)?.promise === only) entries.delete(key);
     },
     clear: (): void => entries.clear(),
   });

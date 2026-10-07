@@ -106,6 +106,29 @@ describe('forget', () => {
 });
 
 describe('naming a point', () => {
+  it("keeps the name of a device's position for the page only, never in storage", async () => {
+    const weather = service();
+    expect(await weather.reverse(-33.87, 151.21)).toMatchObject({ name: 'Sydney', lat: -33.87, lon: 151.21 });
+    const stored = kv.get(STORAGE_KEYS.weather.key);
+    expect(stored === null ? [] : Object.keys((JSON.parse(stored) as { geo: object }).geo)).toEqual([]);
+    expect(stored ?? '').not.toContain('151.21');
+    // Asked once for the page...
+    await weather.reverse(-33.87, 151.21);
+    expect(network.callsTo(NOMINATIM)).toHaveLength(1);
+    // ...and again after a reload, since nothing was kept.
+    await service().reverse(-33.87, 151.21);
+    expect(network.callsTo(NOMINATIM)).toHaveLength(2);
+  });
+
+  it('drops a position an earlier build kept, the next time the place cache is written', async () => {
+    const hit = { place: { id: 'pt:-33.87,151.21', name: 'Sydney', lat: -33.87, lon: 151.21, kind: 'point', source: 'nominatim' }, alternatives: [] };
+    kv.set(STORAGE_KEYS.weather.key, JSON.stringify({ v: 1, geo: { 'rev:-33.87,151.21': { at: clock, hit } } }));
+    const weather = service();
+    await weather.resolve('Oslo');
+    const stored = JSON.parse(kv.get(STORAGE_KEYS.weather.key) ?? '{}') as { geo: object };
+    expect(Object.keys(stored.geo)).toEqual(['q:oslo']);
+  });
+
   it('asks OpenStreetMap, and gives null rather than an error', async () => {
     const weather = service();
     expect(await weather.reverse(-33.87, 151.21)).toMatchObject({ name: 'Sydney', region: 'New South Wales', credit: 'osm' });
@@ -122,6 +145,36 @@ describe('naming a point', () => {
     const controller = new AbortController();
     controller.abort();
     expect(await rejectionOf(service().reverse(5, 6, controller.signal))).toMatchObject({ kind: 'abort' });
+  });
+});
+
+describe('trying again', () => {
+  it('asks again after a failure it has said, rather than replaying it for the cool-down', async () => {
+    let down = true;
+    useNetwork((url) => (down ? json({ error: true }, 503) : undefined));
+    const weather = service({ nominatim: false });
+    expect(await rejectionOf(weather.forecast(-33.87, 151.21))).toMatchObject({ kind: 'http', status: 503 });
+    expect(await rejectionOf(weather.forecast(-33.87, 151.21))).toMatchObject({ kind: 'http', status: 503 });
+    expect(network.callsTo('api.open-meteo.com')).toHaveLength(2);
+    expect(await rejectionOf(weather.resolve('Oslo'))).toMatchObject({ kind: 'http', status: 503 });
+    expect(await rejectionOf(weather.ipLocate())).toMatchObject({ kind: 'http', status: 503 });
+    down = false;
+    expect((await weather.forecast(-33.87, 151.21)).forecast.timezone).toBe('Australia/Sydney');
+    expect((await weather.resolve('Oslo')).place.name).toBe('Oslo');
+    expect((await weather.ipLocate()).name).toBe('Sydney');
+  });
+
+  it('still shares one request between callers who ask at once', async () => {
+    let answer: (response: Response) => void = () => {};
+    useNetwork((url) => (url.host === 'api.open-meteo.com' ? new Promise<Response>((resolve) => (answer = resolve)) : undefined));
+    const weather = service();
+    const first = rejectionOf(weather.forecast(-33.87, 151.21));
+    const second = rejectionOf(weather.forecast(-33.87, 151.21));
+    await Promise.resolve();
+    answer(json({ error: true }, 503));
+    expect(await first).toMatchObject({ status: 503 });
+    expect(await second).toMatchObject({ status: 503 });
+    expect(network.callsTo('api.open-meteo.com')).toHaveLength(1);
   });
 });
 

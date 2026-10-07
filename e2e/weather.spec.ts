@@ -168,7 +168,38 @@ test.describe('weather', () => {
         : 'so this uses an approximate network location.',
     );
     await expect(card.locator('.sr-only')).toContainText('≈ Sydney, New South Wales, AU (approximate, from your network)');
-    await expect(card.getByRole('button', { name: 'use precise location' })).toBeVisible();
+    // Inside Instagram, asking again would get the same answer: the note says where to go instead.
+    if (inApp) await expect(card.getByRole('button', { name: 'use precise location' })).toHaveCount(0);
+    else await expect(card.getByRole('button', { name: 'use precise location' })).toBeVisible();
+  });
+
+  test('a failed forecast offers [try again], a thumb high on a touch screen, which asks again', async ({ page }) => {
+    const network = await weatherNetwork(page);
+    let down = true;
+    await page.route('https://api.open-meteo.com/**', (route) => {
+      network.forecasts.push(route.request().url());
+      if (down) return route.abort('internetdisconnected');
+      return route.fulfill({ contentType: 'application/json', body: body('forecast-sydney.json'), headers: { 'access-control-allow-origin': '*' } });
+    });
+    await page.setViewportSize({ width: 320, height: 700 });
+    await page.goto('/');
+    await run(page, 'weather Gadigal');
+    const entry = page.locator('[role="log"] .entry').last();
+    await expect(entry).toContainText("weather: couldn't reach Open-Meteo.");
+    const again = entry.getByRole('button', { name: 'try again' });
+    await expect(again).toBeVisible();
+    if (test.info().project.use.hasTouch) expect((await again.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(await sideways(page)).toBe(0);
+
+    down = false;
+    const echoes = page.locator('[role="log"] .command-input-display');
+    const before = await echoes.count();
+    if (test.info().project.use.hasTouch) await again.tap();
+    else await again.click();
+    await expect(echoes).toHaveCount(before + 1);
+    await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
+    await expect(page.locator('[data-weather-card]').last()).toBeVisible();
+    expect(network.forecasts).toHaveLength(2);
   });
 
   test('hostile input is printed as text, never as markup', async ({ page }) => {

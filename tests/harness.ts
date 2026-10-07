@@ -39,6 +39,8 @@ export interface RunOptions {
   readonly fullscreen?: (view: FullscreenView, props: unknown) => Promise<unknown>;
   /** The system facts; none by default, as with no page to read them from. */
   readonly sys?: SysInfo;
+  /** The clock, in ms: frozen by default, a minute later each line. Fake timers can drive one. */
+  readonly now?: () => number;
 }
 
 export interface LineResult {
@@ -116,7 +118,7 @@ export async function session(options: RunOptions = {}): Promise<Session> {
     specs,
     screen: createScreen(),
     version: '0.0.0-test',
-    clock: createClock({ now: () => now, random: () => 0.5, timeZone: TIME_ZONE }),
+    clock: createClock({ now: options.now ?? (() => now), random: () => 0.5, timeZone: TIME_ZONE }),
     terminal: {
       size: () => ({ cols, rows: 24 }),
       touch: options.touch ?? false,

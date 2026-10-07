@@ -14,6 +14,13 @@ export interface TextOptions {
   style: TextStyle;
   /** Quiet zone in modules. Default 2. */
   margin?: number;
+  /**
+   * When the module rows are odd, the half line below the art is drawn light: half a module more
+   * quiet zone. For art drawn on an ink field (the card's utf8), whose last line would otherwise
+   * end in a band of ink under the bottom quiet zone. utf8 only: utf8i's quiet zone is the
+   * field itself, and ascii is a line a row.
+   */
+  padLight?: boolean;
 }
 
 type Matrix = Pick<QrSymbol, 'size' | 'modules'>;
@@ -49,8 +56,9 @@ export function toText(qr: Matrix, o: TextOptions): string[] {
   }
 
   const paintDark = o.style === 'utf8i';
-  // A cell below the last row lies outside the art and is never painted.
-  const painted = (x: number, y: number): boolean => y < n && dark(x, y) === paintDark;
+  // A cell below the last row lies outside the art: unpainted, or light when asked to pad.
+  const padBelow = o.padLight === true && !paintDark;
+  const painted = (x: number, y: number): boolean => (y < n ? dark(x, y) === paintDark : padBelow);
   for (let y = 0; y < n; y += 2) {
     let line = '';
     for (let x = 0; x < n; x++) {

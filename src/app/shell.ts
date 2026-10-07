@@ -86,9 +86,10 @@ export interface AppShell {
   /**
    * Loads the bodies of the commands that load lazily, and the parts of the kernel that do, so
    * none of them waits for the network the first time it runs. Settles when all have loaded or
-   * failed.
+   * failed, true; on a connection with Data Saver on, or a cellular or slow one, it fetches
+   * nothing and settles false at once: each command's code then comes with its first run.
    */
-  prefetch(): Promise<void>;
+  prefetch(): Promise<boolean>;
   /** Disconnects the stores the shell keeps in step, and stops saving. */
   stop(): void;
 }
@@ -184,10 +185,13 @@ export function createAppShell(options: AppShellOptions): AppShell {
       persistence.start();
     },
     async prefetch() {
+      const connection = sys.connection();
+      if (connection.saveData || connection.cellular) return false;
       const loads: Promise<unknown>[] = registry.list({ includeHidden: true }).flatMap((spec) => (spec.load === undefined ? [] : [spec.load()]));
       // And what the kernel itself loads on first use: $(( )) arithmetic.
       loads.push(loadArith());
       await Promise.allSettled(loads);
+      return true;
     },
     stop() {
       unbind();

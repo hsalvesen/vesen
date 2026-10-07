@@ -1,12 +1,14 @@
 // Yahoo Finance's v8 chart response, turned into the QuoteEnvelope of the wire contract. One copy
 // serves both sides: the stock Worker (worker/stock) normalises what it fetches with it, and the
 // app's interim provider (interim.ts) does the same while the Worker is not deployed. It imports
-// only the contract and touches no browser API, so the Worker bundles it as it is, and
-// check-boundaries holds it to the DOM-free rules.
+// only the contract and the shared upstream-text cleaner (lib/upstream-text.ts), and touches no
+// browser API, so the Worker bundles it as it is, and check-boundaries holds it to the DOM-free
+// rules.
 //
 // Nothing upstream is trusted: every number is checked with Number.isFinite, a missing value is
 // null (never 0), and text has its control and bidirectional-override characters removed.
 
+import { upstreamText } from '../../lib/upstream-text';
 import {
   INSTRUMENT_TYPES,
   MAX_SERIES_POINTS,
@@ -41,17 +43,10 @@ export function positive(value: unknown): number | null {
 
 /**
  * Display text from an upstream: control and bidirectional-override characters removed (so a
- * name cannot reorder the text around it), spaces collapsed, length capped.
+ * name cannot reorder the text around it), spaces collapsed, length capped. The one copy is in
+ * lib/upstream-text.ts, which weather's sources use too.
  */
-export function text(value: unknown, max = 120): string | null {
-  if (typeof value !== 'string') return null;
-  const clean = value
-    .replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ')
-    .replace(/[‎‏‪-‮⁦-⁩]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return clean === '' ? null : clean.slice(0, max);
-}
+export const text: (value: unknown, max?: number) => string | null = upstreamText;
 
 export function round(value: number, decimals: number): number {
   const factor = 10 ** decimals;

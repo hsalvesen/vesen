@@ -166,7 +166,8 @@ export interface RoleCheck {
 /**
  * Every contrast requirement the roles must meet, measured on the applied colours: text roles
  * on the background and on their own panel tint, body text on every panel tint and on the
- * selection, the ghost text and the cursor at 3:1, chip text on the chip, and QR ink on paper.
+ * selection, the ghost text and the cursor at 3:1, chip text on the chip, the accent outline of a
+ * selected chip at 3:1 on the chip, and QR ink on paper.
  */
 export function roleChecks(theme: ThemeColours, roles: RoleColours = deriveRoles(theme)): RoleCheck[] {
   const background = slot(theme, 'background');
@@ -185,6 +186,8 @@ export function roleChecks(theme: ThemeColours, roles: RoleColours = deriveRoles
   add('ghost', 'background', background, NON_TEXT_MIN);
   add('cursor', 'background', background, NON_TEXT_MIN);
   add('chip-fg', 'chip-bg', roles['chip-bg'], TEXT_MIN);
+  // The selected chip's outline (stock's range chips): a non-text mark on the chip.
+  add('accent', 'chip-bg', roles['chip-bg'], NON_TEXT_MIN);
   add('qr-ink', 'qr-paper', roles['qr-paper'], QR_MIN);
   return checks;
 }

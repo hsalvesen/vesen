@@ -255,10 +255,15 @@ class SavedQuotes {
     }
   }
 
-  /** The last good copy of `symbol`, or of what it resolved to (CBA → CBA.AX). */
+  /**
+   * The last good copy of `symbol`, or of what it resolved to (CBA → CBA.AX). Asked for by its
+   * own ticker, a copy saved from a name (`stock apple`) says it was resolved from nothing, so
+   * `stock AAPL` never reads "'AAPL' isn't a ticker on its own".
+   */
   get(symbol: string, now: number): SavedQuote | null {
     const found = this.read().quotes.find((entry) => entry.quote.symbol === symbol || entry.quote.resolvedFrom === symbol);
-    return found && now - found.savedAt <= MARKET_LIMITS.savedMaxAgeMs ? found : null;
+    if (!found || now - found.savedAt > MARKET_LIMITS.savedMaxAgeMs) return null;
+    return found.quote.symbol === symbol && found.quote.resolvedFrom !== null ? { ...found, quote: { ...found.quote, resolvedFrom: null } } : found;
   }
 
   save(quote: QuoteEnvelope, now: number): void {
@@ -408,6 +413,9 @@ export function createMarketClient(options: MarketClientOptions = {}): Market {
     };
 
     if (!online()) return fallback({ code: 'offline' });
+    // No time to ask (a table's last ticker late in the command's budget): the saved copy, or a
+    // timeout, with no request, and no failure remembered for a request that never went out.
+    if (budgetMs < MARKET_LIMITS.minAttemptMs) return fallback({ code: 'timeout' });
 
     const key = `quote:${symbol}:${range}`;
     if (opts.force === true) memo.forget(key);

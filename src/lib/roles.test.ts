@@ -50,6 +50,8 @@ describe('roles', () => {
     for (const tone of PANEL_TONES) expect(checks.some((c) => c.role === tone && c.against === `tint:${tone}`)).toBe(true);
     expect(checks.find((c) => c.role === 'ghost')?.min).toBe(3);
     expect(checks.find((c) => c.role === 'chip-fg')?.against).toBe('chip-bg');
+    // A selected chip's outline is the accent: a mark, measured on the chip at 3:1.
+    expect(checks.find((c) => c.role === 'accent' && c.against === 'chip-bg')?.min).toBe(3);
     expect(checks.find((c) => c.role === 'qr-ink')?.min).toBe(QR_MIN);
   });
 

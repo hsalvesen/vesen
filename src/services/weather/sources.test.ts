@@ -143,6 +143,28 @@ describe('parsing', () => {
     expect(parseGeoJs({ latitude: 'nil' })).toBeNull();
     expect(parseIpinfo({ loc: '' })).toBeNull();
   });
+
+  it('cleans every name it is given: no escape sequence or bidirectional override survives', () => {
+    // An OSC 8 link and an SGR colour in a name, a right-to-left override in a region.
+    const link = 'Evil\u001b]8;;https://evil.example\u0007Town\u001b]8;;\u0007';
+    const red = '\u001b[31mRed\u001b[0m Hill';
+    const flipped = 'South \u202eWales\u202c';
+    const unsafe = /[\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069]/;
+    const places = [
+      ...parseGeocoding({ results: [{ name: link, admin1: flipped, admin2: red, country: red, latitude: 1, longitude: 2 }] }),
+      ...parseNominatimSearch([{ addresstype: 'city', name: link, lat: '1', lon: '2', address: { state: flipped, country: red } }]),
+      parseNominatimReverse({ address: { city: link, state: flipped, country: red } }, 1, 2),
+      parseGeoJs({ latitude: '1', longitude: '2', city: link, region: flipped, country: red }),
+      parseIpinfo({ loc: '1,2', city: link, region: flipped, country: 'NZ' }),
+    ];
+    expect(places).toHaveLength(5);
+    for (const place of places) {
+      expect(place).not.toBeNull();
+      for (const value of Object.values(place ?? {})) if (typeof value === 'string') expect(value).not.toMatch(unsafe);
+      expect(place?.name).toBe('Evil ]8;;https://evil.example Town ]8;;');
+    }
+    expect(places[0]).toMatchObject({ region: 'South Wales', district: '[31mRed [0m Hill' });
+  });
 });
 
 describe('forecast', () => {
@@ -252,17 +274,23 @@ describe('geocode', () => {
     expect(network.calls).toEqual([geocodeUrl('Paris', 'FR')]);
   });
 
-  it('remembers a failed search for 30 s', async () => {
+  it('asks again after a failed search it has said, so [try again] really tries', async () => {
     const network = weatherFetch(() => json({ error: true }, 502));
     vi.stubGlobal('fetch', network.fetch);
     const sources = testSources();
     expect(await rejectionOf(sources.geocode('Oslo'))).toMatchObject({ kind: 'http', status: 502 });
-    clock += 29_999;
+    clock += 1000;
     expect(await rejectionOf(sources.geocode('Oslo'))).toMatchObject({ kind: 'http', status: 502 });
-    expect(network.calls).toHaveLength(1);
-    clock += 1;
-    await rejectionOf(sources.geocode('Oslo'));
     expect(network.calls).toHaveLength(2);
+  });
+
+  it('shares one failed search between callers who asked at once', async () => {
+    const network = weatherFetch(() => json({ error: true }, 502));
+    vi.stubGlobal('fetch', network.fetch);
+    const sources = testSources();
+    const both = await Promise.all([rejectionOf(sources.geocode('Oslo')), rejectionOf(sources.geocode('Oslo'))]);
+    expect(both).toMatchObject([{ status: 502 }, { status: 502 }]);
+    expect(network.calls).toHaveLength(1);
   });
 });
 
@@ -378,14 +406,22 @@ describe('Nominatim', () => {
     expect(network.callsTo('nominatim.openstreetmap.org')).toHaveLength(1);
   });
 
-  it('caches reverse lookups with place searches', async () => {
+  it('keeps reverse lookups for the page only: a position is never stored', async () => {
     const network = weatherFetch();
     vi.stubGlobal('fetch', network.fetch);
     const kv = memoryKV();
     const sources = testSources(kv);
     expect((await sources.nominatimReverse(-33.8688, 151.2093))?.name).toBe('Sydney');
-    expect((await testSources(kv).nominatimReverse(-33.87, 151.21))?.name).toBe('Sydney');
+    expect((await sources.nominatimReverse(-33.87, 151.21))?.name).toBe('Sydney');
     expect(network.calls).toHaveLength(1);
+    expect(kv.store.size).toBe(0);
+    // A reload asks again.
+    expect((await testSources(kv).nominatimReverse(-33.87, 151.21))?.name).toBe('Sydney');
+    expect(network.calls).toHaveLength(2);
+    // And forgetting forgets the names too.
+    sources.forget();
+    await sources.nominatimReverse(-33.87, 151.21);
+    expect(network.calls).toHaveLength(3);
   });
 });
 

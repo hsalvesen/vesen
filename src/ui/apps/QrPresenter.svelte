@@ -207,21 +207,24 @@
   {:else}
     <h2 id="qr-present-title" class="sr-only">QR code for {display}</h2>
     <img class="code" {src} alt="QR code for {display}" />
-    <p class="payload" title={view.payload} use:measureWidth={(w) => (textWidth = w)}>{shown}</p>
-    <p class="meta" title={raisedNote(view)}>{metaLine(view)}</p>
-    {#if env.inApp}
-      <p class="hint">Press and hold the code to save it, or take a screenshot</p>
-    {/if}
-    <div class="actions">
-      {#if !env.inApp}
-        <button type="button" onclick={onSave}>Save image</button>
+    <div class="details">
+      <p class="payload" title={view.payload} use:measureWidth={(w) => (textWidth = w)}>{shown}</p>
+      <!-- Each label stays with its value ('mask 0'): the line wraps only between them. -->
+      <p class="meta" title={raisedNote(view)}>{#each metaLine(view).split(' · ') as part, i}{#if i > 0}{' · '}{/if}<span class="together">{part}</span>{/each}</p>
+      {#if env.inApp}
+        <p class="hint">Press and hold the code to save it, or take a screenshot</p>
       {/if}
-      {#if env.canShareFiles}
-        <button type="button" onclick={onShare}>Share</button>
-      {/if}
-      <button type="button" onclick={onCopy}>{view.kind === 'link' ? 'Copy link' : 'Copy text'}</button>
+      <div class="actions">
+        {#if !env.inApp}
+          <button type="button" onclick={onSave}>Save image</button>
+        {/if}
+        {#if env.canShareFiles}
+          <button type="button" onclick={onShare}>Share</button>
+        {/if}
+        <button type="button" onclick={onCopy}>{view.kind === 'link' ? 'Copy link' : 'Copy text'}</button>
+      </div>
+      <p class="status" role="status" aria-live="polite">{status}</p>
     </div>
-    <p class="status" role="status" aria-live="polite">{status}</p>
   {/if}
 </div>
 
@@ -297,6 +300,16 @@
     }
   }
 
+  /* What goes with the code: under it, or beside it on a phone held sideways. */
+  .details {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+  }
+
   .payload {
     width: min(100%, 40rem);
     margin: 0;
@@ -318,6 +331,10 @@
   .meta,
   .hint {
     color: #444;
+  }
+
+  .together {
+    white-space: nowrap;
   }
 
   .status {
@@ -352,5 +369,30 @@
   .actions button:focus-visible {
     outline: 3px solid #0a58ca;
     outline-offset: 2px;
+  }
+
+  /* A phone on its side: the height would leave the code smaller than on the card, so the text
+     and buttons go beside it and the code takes the whole height less the margins. */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .qr-present {
+      flex-direction: row;
+      gap: 24px;
+    }
+
+    .code {
+      flex: none;
+      width: min(100vh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom)), 100vw - 360px);
+    }
+
+    @supports (height: 100dvh) {
+      .code {
+        width: min(100dvh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom)), 100vw - 360px);
+      }
+    }
+
+    .details {
+      flex: 0 1 320px;
+      width: auto;
+    }
   }
 </style>

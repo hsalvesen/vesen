@@ -348,6 +348,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   }
   if (result.latency === null && result.download === null) return ctx.fail(`${SERVER} did not answer in time`);
   await ctx.stdout.block(out.table(resultRows(result)));
-  if (name === 'light' && ctx.stdout.isTTY) await ctx.stdout.line(out.span('A light run. speedtest --full measures longer, with up to 45 MB.', { fg: 'muted' }));
+  // The plan above and the table's data row already say it was a light run: only the way to a full one.
+  if (name === 'light' && ctx.stdout.isTTY) await ctx.stdout.line(out.span('speedtest --full measures longer, with up to 45 MB.', { fg: 'muted' }));
   return 0;
 }

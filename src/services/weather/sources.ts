@@ -4,6 +4,7 @@
 // typed NetError. One instance per page holds the caches and the Nominatim throttle; the
 // composition root builds it with the storage service.
 
+import { upstreamText } from '../../lib/upstream-text';
 import { NetError, createMemo, fetchAndRead, fetchJson, isNetError, untilAborted, type Memo } from '../net';
 import { STORAGE_KEYS } from '../storage-keys';
 import { REQUEST_TIMEOUT_MS, type KV } from '../types';
@@ -91,6 +92,8 @@ const hostOf = (url: string): string => new URL(url).host;
 
 /** The longest provider reason kept for an error message. */
 const MAX_REASON = 200;
+/** The longest upstream string kept: a reason, a place's name, region or country. */
+const MAX_TEXT = MAX_REASON;
 
 /**
  * An HTTP failure, with the reason the provider's error body gives: Open-Meteo answers a bad
@@ -130,7 +133,12 @@ type Rec = Readonly<Record<string, unknown>>;
 
 const isRecord = (value: unknown): value is Rec => typeof value === 'object' && value !== null && !Array.isArray(value);
 const num = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) ? value : null);
-const str = (value: unknown): string | undefined => (typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined);
+/**
+ * A string from an upstream, cleaned as every upstream text is (lib/upstream-text.ts): place names
+ * from geocoders and IP lookups reach the terminal, so no control or bidirectional override
+ * survives. Undefined when nothing is left.
+ */
+const str = (value: unknown): string | undefined => upstreamText(value, MAX_TEXT) ?? undefined;
 const numeric = (value: unknown): number | null => {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (typeof value !== 'string' || value.trim() === '') return null;
@@ -377,10 +385,14 @@ function parseEntry(value: unknown): GeoEntry | undefined {
   return { at: value.at as number, hit: { place: hit.place, alternatives: hit.alternatives.filter(isPlace) } };
 }
 
+/** What a reverse lookup was cached under in earlier builds: a device's position, never kept now. */
+const REVERSE_KEY = /^rev:/;
+
 function parseStored(raw: unknown): StoredWeather | undefined {
   if (!isRecord(raw) || raw.v !== 1 || !isRecord(raw.geo)) return undefined;
   const geo: Record<string, GeoEntry> = {};
   for (const [key, value] of Object.entries(raw.geo)) {
+    if (REVERSE_KEY.test(key)) continue;
     const entry = parseEntry(value);
     if (entry) geo[key] = entry;
   }
@@ -388,8 +400,9 @@ function parseStored(raw: unknown): StoredWeather | undefined {
 }
 
 /**
- * Place lookups by query, kept in `vesen:weather:v1`: hits for 30 days, misses for an hour, at
- * most 50. Without a storage area the cache lives in memory for the page.
+ * Place searches by query, kept in `vesen:weather:v1`: hits for 30 days, misses for an hour, at
+ * most 50. Without a storage area the cache lives in memory for the page. A position named by a
+ * reverse lookup is never kept here (see createWeatherSources).
  */
 export class GeoCache {
   private memory: StoredWeather = { v: 1, geo: {} };
@@ -525,13 +538,16 @@ export interface WeatherSources {
   geocode(name: string, countryCode?: string, signal?: AbortSignal | null): Promise<Place[]>;
   /** Nominatim place search, at least 1.1 s after the previous Nominatim call. */
   nominatimSearch(query: string, signal?: AbortSignal | null): Promise<Place[]>;
-  /** A label for a point from Nominatim, cached like a search; null when it has none. */
+  /**
+   * A label for a point from Nominatim; null when it has none. Kept in memory for the page only,
+   * since the point may be the device's own position, which is never saved.
+   */
   nominatimReverse(lat: number, lon: number, signal?: AbortSignal | null): Promise<Place | null>;
   /** The visitor's approximate location from their IP address: GeoJS, then ipinfo.io. Never stored. */
   ipLocate(signal?: AbortSignal | null): Promise<Place>;
   readonly geoCache: GeoCache;
   readonly recents: RecentPlaces;
-  /** Forgets everything: the stored places and lookups, and the forecasts and location in memory. */
+  /** Forgets everything: the stored places and lookups, and the forecasts, names and location in memory. */
   forget(): void;
 }
 
@@ -575,6 +591,15 @@ export function createWeatherSources(options: WeatherSourcesOptions = {}): Weath
   const geoCache = new GeoCache(options.kv ?? null, now);
   const recents = new RecentPlaces(options.kv ?? null);
   const lastGood = new Map<string, Forecast>();
+  /** Points named by Nominatim, for the page only: a device's position never reaches storage. */
+  const named = new Map<string, GeoEntry>();
+
+  /**
+   * Lets the next ask for `key` go out, after a failure this caller has surfaced: the visitor's
+   * [try again] must ask again, not replay the failure memo keeps for 30 s. Only callers sharing
+   * the failed request see it, and a newer request someone has started is left alone.
+   */
+  const askAgainAfter = (key: string, failed: Promise<unknown>): void => memo.forget(key, failed);
 
   const remember = (key: string, forecast: Forecast): void => {
     lastGood.delete(key);
@@ -597,7 +622,8 @@ export function createWeatherSources(options: WeatherSourcesOptions = {}): Weath
   const forecast = async (lat: number, lon: number, signal?: AbortSignal | null): Promise<ForecastResult> => {
     if (signal?.aborted) throw new NetError('abort', hostOf(OPEN_METEO_FORECAST));
     const key = forecastKey(lat, lon);
-    const shared = memo(`weather:forecast:${key}`, WEATHER_TTL.forecastFresh, () => loadForecast(lat, lon));
+    const memoKey = `weather:forecast:${key}`;
+    const shared = memo(memoKey, WEATHER_TTL.forecastFresh, () => loadForecast(lat, lon));
     try {
       const result = await untilAborted(shared, signal, hostOf(OPEN_METEO_FORECAST));
       remember(key, result);
@@ -607,7 +633,10 @@ export function createWeatherSources(options: WeatherSourcesOptions = {}): Weath
       const cause = staleCause(error);
       const last = lastGood.get(key);
       const ageMs = last ? now() - last.fetchedAt : Number.POSITIVE_INFINITY;
+      // A stale copy stands in quietly for the cool-down; with none, the failure is said and
+      // the next ask goes out.
       if (last && cause && ageMs <= WEATHER_TTL.forecastStale) return { forecast: last, stale: { ageMs, cause } };
+      askAgainAfter(memoKey, shared);
       throw error;
     }
   };
@@ -615,11 +644,15 @@ export function createWeatherSources(options: WeatherSourcesOptions = {}): Weath
   const geocode = async (name: string, countryCode?: string, signal?: AbortSignal | null): Promise<Place[]> => {
     const url = geocodeUrl(name, countryCode);
     if (signal?.aborted) throw new NetError('abort', hostOf(url));
-    // Successes persist in the place cache; memo only shares requests and remembers failures.
-    const shared = memo(`weather:geocode:${url}`, 0, async () =>
-      parseGeocoding(await fetchJsonWithReason(url, WEATHER_TIMEOUTS.geocoding)),
-    );
-    return untilAborted(shared, signal, hostOf(url));
+    // Successes persist in the place cache; memo only shares requests in flight.
+    const memoKey = `weather:geocode:${url}`;
+    const shared = memo(memoKey, 0, async () => parseGeocoding(await fetchJsonWithReason(url, WEATHER_TIMEOUTS.geocoding)));
+    try {
+      return await untilAborted(shared, signal, hostOf(url));
+    } catch (error) {
+      if (!aborted(error, signal)) askAgainAfter(memoKey, shared);
+      throw error;
+    }
   };
 
   const nominatim = async <T>(url: string, signal: AbortSignal | null | undefined, parse: (raw: unknown) => T): Promise<T> => {
@@ -632,11 +665,18 @@ export function createWeatherSources(options: WeatherSourcesOptions = {}): Weath
     nominatim(nominatimSearchUrl(query), signal, parseNominatimSearch);
 
   const nominatimReverse = async (lat: number, lon: number, signal?: AbortSignal | null): Promise<Place | null> => {
-    const key = `rev:${forecastKey(lat, lon)}`;
-    const cached = geoCache.get(key);
-    if (cached !== undefined) return cached?.place ?? null;
+    const key = forecastKey(lat, lon);
+    const cached = named.get(key);
+    const ttl = cached?.hit ? WEATHER_TTL.geocodeHit : WEATHER_TTL.geocodeMiss;
+    if (cached && cached.at <= now() && now() - cached.at < ttl) return cached.hit?.place ?? null;
     const place = await nominatim(nominatimReverseUrl(lat, lon), signal, (raw) => parseNominatimReverse(raw, lat, lon));
-    geoCache.set(key, place ? { place, alternatives: [] } : null);
+    named.delete(key);
+    named.set(key, { at: now(), hit: place ? { place, alternatives: [] } : null });
+    while (named.size > GEO_CACHE_MAX) {
+      const oldest = named.keys().next().value;
+      if (oldest === undefined) break;
+      named.delete(oldest);
+    }
     return place;
   };
 
@@ -654,7 +694,13 @@ export function createWeatherSources(options: WeatherSourcesOptions = {}): Weath
 
   const ipLocate = async (signal?: AbortSignal | null): Promise<Place> => {
     if (signal?.aborted) throw new NetError('abort', hostOf(GEOJS));
-    return untilAborted(memo('weather:ip', WEATHER_TTL.ip, locateByIp), signal, hostOf(GEOJS));
+    const shared = memo('weather:ip', WEATHER_TTL.ip, locateByIp);
+    try {
+      return await untilAborted(shared, signal, hostOf(GEOJS));
+    } catch (error) {
+      if (!aborted(error, signal)) askAgainAfter('weather:ip', shared);
+      throw error;
+    }
   };
 
   const forget = (): void => {
@@ -662,6 +708,7 @@ export function createWeatherSources(options: WeatherSourcesOptions = {}): Weath
     recents.clear();
     options.kv?.remove(STORAGE_KEYS.weather.key);
     lastGood.clear();
+    named.clear();
     memo.clear();
   };
 

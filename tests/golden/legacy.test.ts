@@ -152,7 +152,8 @@ async function boot(viewport: Viewport): Promise<LegacyTerminal> {
   // stock's client, as app/bootstrap.ts provides it, over the mocked fetch and no storage.
   const { provideMarket } = await import('../../src/services/market/port');
   const { createMarketClient } = await import('../../src/services/market/client');
-  provideMarket(() => Promise.resolve(createMarketClient({ storage: null })));
+  // No Worker, whatever a developer's .env.local says: the recordings are the interim proxy's.
+  provideMarket(() => Promise.resolve(createMarketClient({ baseUrl: null, storage: null })));
   const { decideTier, readSignals } = await import('../../src/platform/perf');
   crtTier.set(decideTier(readSignals(window)));
   const { createWeatherService } = await import('../../src/services/weather/service');

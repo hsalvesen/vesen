@@ -13,6 +13,7 @@ import type { AppPlatform } from './ui/platform';
 import { fakeOpener } from './testing/opener';
 import { createMarketClient } from './services/market/client';
 import { provideMarket } from './services/market/port';
+import { out } from './output/model';
 
 async function settle(): Promise<void> {
   for (let i = 0; i < 20; i += 1) await Promise.resolve();
@@ -31,8 +32,9 @@ beforeEach(() => {
   const app = legacyAppShell({ banner: () => bannerBlocks({ version: '0.0.0-test', columns: 80, touch: false }), yieldToHost: () => Promise.resolve() });
   shell = app.shell;
   stopShell = app.stop;
-  // stock's client, as bootstrap provides it; each test that runs stock stubs fetch.
-  provideMarket(() => Promise.resolve(createMarketClient({ storage: null })));
+  // stock's client, as bootstrap provides it, with no Worker whatever .env.local says; each test
+  // that runs stock stubs fetch.
+  provideMarket(() => Promise.resolve(createMarketClient({ baseUrl: null, storage: null })));
 });
 
 afterEach(() => {
@@ -274,6 +276,31 @@ describe('Tab completion and the completion row', () => {
     await settle();
     expect(promptBox().value).toBe('theme set kookaburra ');
     expect(document.activeElement).toBe(promptBox());
+  });
+
+  it('opens and shares nothing without the opener: a chip that would rings the bell instead', async () => {
+    const opened = vi.spyOn(window, 'open').mockReturnValue(null);
+    const share = vi.fn(() => Promise.resolve());
+    vi.stubGlobal('navigator', { ...navigator, share });
+    const { container } = renderApp();
+    const items = [
+      { label: 'site', action: out.action.open('https://www.vesen.app/') },
+      { label: 'share', action: out.action.share('https://www.vesen.app/') },
+    ];
+    transcript.push({ prompt: null, line: 'links', blocks: [out.chips(items)], status: 0 });
+    for (const label of ['site', 'share']) {
+      const chip = await vi.waitFor(() => {
+        const found = Array.from(container.querySelectorAll<HTMLButtonElement>('button.chip')).find((button) => button.textContent === label);
+        expect(found).toBeDefined();
+        return found as HTMLButtonElement;
+      });
+      await fireEvent.click(chip);
+      await settle();
+    }
+    expect(opened).not.toHaveBeenCalled();
+    expect(share).not.toHaveBeenCalled();
+    expect(container.querySelector('.input-box.bell')).not.toBeNull();
+    opened.mockRestore();
   });
 
   it("rings the visual bell and says 'No completions' when nothing completes", async () => {

@@ -192,6 +192,42 @@ test.describe('the QR card', { tag: '@smoke' }, () => {
     expect(await sideways(page)).toEqual({ page: 0, body: 0, transcript: 0 });
   });
 
+  test('Present mode on a phone held sideways is at least as large as the card, beside its text', async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 340 });
+    await page.goto('/');
+    await expect(page.locator('[data-completion="ready"]')).toHaveCount(1);
+    await run(page, 'qr vesen.app');
+    const figure = lastFigure(page);
+    await expect(figure).toBeVisible();
+    const inline = (await figure.boundingBox())?.width ?? 0;
+    await tapOrClick(figure);
+    const dialog = page.getByRole('dialog', { name: 'QR code for https://vesen.app' });
+    const image = dialog.getByRole('img', { name: 'QR code for https://vesen.app' });
+    await expect(image).toBeVisible();
+    const shown = await image.boundingBox();
+    expect(shown?.width ?? 0).toBeGreaterThanOrEqual(inline);
+    // All of it on the screen, and the meta line beside it rather than under it.
+    expect((shown?.y ?? -1) + (shown?.height ?? 0)).toBeLessThanOrEqual(340);
+    const meta = await dialog.locator('.meta').boundingBox();
+    expect(meta?.x ?? 0).toBeGreaterThan((shown?.x ?? 0) + (shown?.width ?? 0));
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+  });
+
+  test("Present mode's meta line breaks only between its parts on a 320 px phone", async ({ page }) => {
+    await open(page, 320);
+    await run(page, 'qr vesen.app');
+    await tapOrClick(lastFigure(page));
+    const parts = page.getByRole('dialog').locator('.meta .together');
+    await expect(parts).toHaveText(['v2', '25×25', 'EC Q', '17/22 B', 'mask 0']);
+    // Each part is on one line: as tall as one line of its text.
+    for (const part of await parts.all()) {
+      const lines = await part.evaluate((element) => element.getClientRects().length);
+      expect(lines).toBe(1);
+    }
+    await page.keyboard.press('Escape');
+  });
+
   test('qr -f opens Present mode, and the prompt comes back when it closes', async ({ page }) => {
     await open(page);
     await prompt(page).fill('qr -f vesen.app');
@@ -238,6 +274,16 @@ test.describe('the QR card', { tag: '@smoke' }, () => {
     expect(shown.userSelect).not.toBe('none');
     expect(shown.lineHeight).toBeCloseTo(1.2, 2);
     expect(shown.overflow).toBeLessThanOrEqual(0);
+  });
+
+  test('utf8 art on a light theme ends in paper, not a band of ink, and a screenshot of it scans', async ({ page }) => {
+    await open(page);
+    await run(page, 'theme set cockatoo');
+    await run(page, 'qr -t utf8 vesen.app');
+    const art = lastEntry(page).locator('[data-qr-text]');
+    await expect(art).toBeVisible();
+    expect((await art.innerText()).split('\n').pop()).toMatch(/^█+$/);
+    expect((await scan(page, art)).text).toBe('https://vesen.app');
   });
 
   test('text art too wide for an 8 px font, and a size too big for the window, become a card that fits', async ({ page }) => {

@@ -218,11 +218,12 @@
         if (screen) scrollToEnd(screen);
         break;
       case 'open':
-        // A new tab, or the same view inside an in-app browser.
+        // A new tab, or the same view inside an in-app browser. Only the opener opens anything
+        // (02, section 7): with none, as in a test mount, the bell says nothing happened.
         if (opener) {
           if (opener.plan(action.href).target === '_self') beforeLeaving();
           opener.open(action.href);
-        } else window.open(action.href, '_blank', 'noopener,noreferrer');
+        } else prompt.ringBell();
         break;
       case 'copy':
         void clipboard.copy(action.text).then((copied) => {
@@ -231,7 +232,7 @@
         break;
       case 'share':
         if (opener) void opener.share({ url: action.url, ...(action.title ? { title: action.title } : {}) });
-        else void navigator.share?.({ url: action.url, ...(action.title ? { title: action.title } : {}) }).catch(() => {});
+        else prompt.ringBell();
         break;
     }
   }

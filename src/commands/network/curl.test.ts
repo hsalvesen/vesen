@@ -104,6 +104,18 @@ describe('curl prints what it fetches', () => {
     expect(await runLine('curl file:///etc/hostname')).toMatchObject({ status: 0, stdoutPlain: 'vesen' });
     expect(await runLine('curl file:///nope')).toMatchObject({ status: 37, stderrPlain: "curl: (37) Couldn't open file /nope" });
   });
+
+  it('rejects a malformed percent-escape in its own words, never as an exception', async () => {
+    const rejected = { status: 3, stderrPlain: 'curl: (3) URL rejected: Malformed input to a URL function' };
+    expect(await runLine('curl file:///a%zz')).toMatchObject(rejected);
+    expect(await runLine('curl file:///%E0%A4%A')).toMatchObject(rejected);
+    // -O names the file as the URL writes it when its escapes cannot be read.
+    serve('saved\n');
+    const s = await session();
+    expect((await s.run('curl -O https://example.test/%E0%A4%A')).status).toBe(0);
+    expect(s.app.vfs.readFile('/home/guest/%E0%A4%A')).toBe('saved\n');
+    s.stop();
+  });
 });
 
 describe('curl and HTTP errors', () => {

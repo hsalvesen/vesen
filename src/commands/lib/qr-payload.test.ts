@@ -37,6 +37,13 @@ describe('classifyPayload', () => {
   it('refuses javascript: even as text or a link', () => {
     expect(classifyPayload('javascript:alert(1)', { force: 'text' })).toHaveProperty('error');
     expect(classifyPayload('javascript:alert(1)', { force: 'url' })).toHaveProperty('error');
+    expect(classifyPayload('javascript: alert(1)', { force: 'url' })).toHaveProperty('error');
+  });
+
+  it('encodes prose that only starts with the word as text, as anything with spaces is', () => {
+    expect(classifyPayload('JavaScript: The Good Parts')).toEqual({ value: 'JavaScript: The Good Parts', kind: 'text' });
+    expect(classifyPayload('javascript: notes', { force: 'text' })).toEqual({ value: 'javascript: notes', kind: 'text' });
+    expect(classifyPayload('javascript:alert(1)\n')).toHaveProperty('error');
   });
 
   it('encodes the name of a file here as text, with a tip', () => {

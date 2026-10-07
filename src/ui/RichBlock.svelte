@@ -267,6 +267,17 @@
     cursor: pointer;
   }
 
+  /* A thumb's target on a touch screen, as the cards' own chips are (plan 09: 44 px at least). */
+  @media (pointer: coarse) {
+    button.chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      min-width: 44px;
+      padding: 0 1.5ch;
+    }
+  }
+
   /* Side by side until the row is narrower than --stack-at, then stacked, without a query. */
   .columns {
     display: flex;

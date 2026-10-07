@@ -166,7 +166,9 @@ describe('QrCard', () => {
   it('draws text art with -t utf8: light on an ink field, hidden from screen readers', () => {
     const { container, view } = show(['-t', 'utf8', 'hello']);
     const art = container.querySelector<HTMLElement>('[data-qr-text]')!;
-    expect(art.textContent).toBe(toText(view, { style: 'utf8', margin: 2 }).join('\n'));
+    // The half line under the odd rows is light, not a band of ink under the quiet zone.
+    expect(art.textContent).toBe(toText(view, { style: 'utf8', margin: 2, padLight: true }).join('\n'));
+    expect(art.textContent?.split('\n').pop()).toMatch(/^█+$/);
     expect(art.getAttribute('aria-hidden')).toBe('true');
     expect(container.querySelector('svg')).toBeNull();
     expect(container.querySelector('.sr-only')?.textContent).toBe('QR code for hello');

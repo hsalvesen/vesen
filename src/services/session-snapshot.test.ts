@@ -159,6 +159,15 @@ describe('restoring', () => {
     expect(snapshotText(snapshot!)).toBe(`$ whoami\n${blocks.map(plain).join('')}`);
   });
 
+  it("keeps a columns block's left width, as fastfetch's logo has it", () => {
+    const sized = out.columns([out.art('##\n##', 'logo')], [out.lines([[out.span('OS: test')]])], 60, 24);
+    const even = out.columns([out.lines([[out.span('a')]])], [out.lines([[out.span('b')]])], 40);
+    const restored = reviveSnapshot(snapshotJson(source([sized, even]), NOW), NOW)?.entries[0]?.blocks ?? [];
+    expect(restored).toEqual([sized, even]);
+    expect(restored[0]).toMatchObject({ type: 'columns', leftCh: 24 });
+    expect(restored[1]).not.toHaveProperty('leftCh');
+  });
+
   it('turns tap actions into text, and a rich card into its plain text', () => {
     const blocks = [out.lines([[out.run('help', 'help')]]), out.component('weather-card', {}, 'Oslo: 9 °C', 'Weather')];
     const restored = reviveSnapshot(snapshotJson(source(blocks), NOW), NOW)?.entries[0]?.blocks ?? [];

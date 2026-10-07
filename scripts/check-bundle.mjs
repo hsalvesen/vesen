@@ -2,7 +2,8 @@
 // Bundle budget: gzips every JS chunk in dist/assets, prints the sizes, and fails when
 // the JavaScript a visitor must download before first paint exceeds the budget.
 // That is the entry chunk referenced by dist/index.html plus any chunk the page
-// modulepreloads alongside it. Lazy chunks are reported but not budgeted.
+// modulepreloads alongside it. The kernel, and what stock's first quote fetches, have budgets
+// of their own; other lazy chunks are reported but not budgeted.
 // Zero dependencies; run `npm run build` first, then `npm run check:bundle`.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
@@ -53,6 +54,39 @@ export function staticImports(code) {
     if (match[1]) found.add(match[1]);
   }
   return [...found];
+}
+
+/**
+ * What `stock SYMBOL` fetches the first time, in kB gzip, beyond the page and the kernel: its
+ * body, the market client and the quote card, with what they import. Plan 07 asks for 12 kB; the
+ * interim provider (Yahoo through a public proxy, its normaliser and the short list of names)
+ * takes it to about 18.3 until the stock Worker is deployed and the interim code goes
+ * (docs/adr/0001-architecture.md, amendments). This holds it there meanwhile.
+ */
+export const STOCK_BUDGET_KB = 19;
+
+/** The chunks stock's first quote loads by name: its body, the client and the card. */
+export const STOCK_ROOTS = [/^stock\.run-[\w-]+\.js$/, /^client-[\w-]+\.js$/, /^QuoteCard-[\w-]+\.js$/];
+
+/**
+ * `roots` and every chunk they import statically, leaving out those in `loaded`.
+ * @param {readonly string[]} roots
+ * @param {ReadonlySet<string>} loaded
+ * @param {(name: string) => string} read
+ * @returns {Set<string>}
+ */
+export function closure(roots, loaded, read) {
+  const parts = new Set(roots);
+  const queue = [...roots];
+  while (queue.length > 0) {
+    const name = queue.shift() ?? '';
+    for (const imported of staticImports(read(name))) {
+      if (loaded.has(imported) || parts.has(imported)) continue;
+      parts.add(imported);
+      queue.push(imported);
+    }
+  }
+  return parts;
 }
 
 /** @param {number} bytes */
@@ -106,16 +140,8 @@ function main() {
     console.error('check-bundle: no shell-*.js kernel chunk found.');
     process.exit(1);
   }
-  const parts = new Set([kernel.name]);
-  const queue = [kernel.name];
-  while (queue.length > 0) {
-    const name = queue.shift() ?? '';
-    for (const imported of staticImports(readFileSync(join(ASSETS, name), 'utf8'))) {
-      if (initial.has(imported) || parts.has(imported)) continue;
-      parts.add(imported);
-      queue.push(imported);
-    }
-  }
+  const read = (/** @type {string} */ name) => readFileSync(join(ASSETS, name), 'utf8');
+  const parts = closure([kernel.name], initial, read);
   const kernelGzip = chunks.filter((chunk) => parts.has(chunk.name)).reduce((sum, chunk) => sum + chunk.gzip, 0);
   const kernelVerdict = `kernel ${kb(kernelGzip).trim()} kB gzip in ${[...parts].join(' + ')} (budget ${KERNEL_BUDGET_KB} kB)`;
   if (kernelGzip > KERNEL_BUDGET_KB * 1000) {
@@ -123,6 +149,26 @@ function main() {
     process.exit(1);
   }
   console.log(`check-bundle: ok: ${kernelVerdict}`);
+
+  // stock's first quote: what it fetches beyond the page and the kernel.
+  const roots = STOCK_ROOTS.map((pattern) => chunks.filter((chunk) => pattern.test(chunk.name)));
+  const ambiguous = roots.findIndex((found) => found.length !== 1);
+  if (ambiguous !== -1) {
+    console.error(`check-bundle: expected one chunk matching ${STOCK_ROOTS[ambiguous]}, found ${roots[ambiguous]?.length ?? 0}.`);
+    process.exit(1);
+  }
+  const stock = closure(
+    roots.map((found) => found[0]?.name ?? ''),
+    new Set([...initial, ...parts]),
+    read,
+  );
+  const stockGzip = chunks.filter((chunk) => stock.has(chunk.name)).reduce((sum, chunk) => sum + chunk.gzip, 0);
+  const stockVerdict = `stock's first quote ${kb(stockGzip).trim()} kB gzip in ${[...stock].join(' + ')} (budget ${STOCK_BUDGET_KB} kB)`;
+  if (stockGzip > STOCK_BUDGET_KB * 1000) {
+    console.error(`check-bundle: over budget: ${stockVerdict}`);
+    process.exit(1);
+  }
+  console.log(`check-bundle: ok: ${stockVerdict}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

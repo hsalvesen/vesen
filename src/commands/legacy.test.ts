@@ -1,10 +1,13 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { lineText, type Block } from '../output/model';
 import { harness } from '../testing/shell-harness';
 import { CommandRegistry } from '../shell/registry';
 import { takesRawArgs } from '../shell/flags';
 import { buildRegistry } from './index';
-import { isLegacySpec, legacy, legacyStatus, type LegacyFn } from './legacy';
+import { legacy, legacyStatus, type LegacyFn } from './legacy';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -126,7 +129,6 @@ describe('the adapter', () => {
       return 'ok';
     };
     const spec = legacy('old', fn, { category: 'network', summary: 'an old command', help: '<div>old help</div>' });
-    expect(isLegacySpec(spec)).toBe(true);
     expect(takesRawArgs(spec)).toBe(true);
     const registry = new CommandRegistry([spec]);
     expect(registry.validate()).toEqual([]);
@@ -138,12 +140,17 @@ describe('the adapter', () => {
 });
 
 describe('the catalogue', () => {
-  it('has no legacy command left: every command is a spec of its own', () => {
+  it('has no legacy command left: every command is a spec of its own, and only tests reach the adapter', () => {
     const registry = buildRegistry([]);
     for (const name of ['weather', 'qr', 'stock', 'curl', 'speedtest', 'fastfetch', 'ls', 'help', 'poweroff']) {
       const spec = registry.get(name);
       expect(spec, name).toBeDefined();
-      expect(isLegacySpec(spec!), name).toBe(false);
+      expect(spec && 'legacyHelp' in spec, name).toBe(false);
     }
+    const src = fileURLToPath(new URL('..', import.meta.url));
+    const importers = readdirSync(src, { recursive: true, encoding: 'utf8' })
+      .filter((file) => /\.(?:ts|svelte)$/.test(file) && !/\.test\.ts$/.test(file) && !file.startsWith('testing'))
+      .filter((file) => /from '(?:\.{1,2}\/)+(?:commands\/)?legacy'/.test(readFileSync(join(src, file), 'utf8')));
+    expect(importers).toEqual([]);
   });
 });

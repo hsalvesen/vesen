@@ -526,6 +526,12 @@ export interface CommandContext {
   readonly user: User;
   /** Aborts on ^C and when the budget runs out. */
   readonly signal: AbortSignal;
+  /**
+   * When the whole-command budget runs out, in `clock` time (ms), counted from before the body
+   * loaded; absent for a command without one. A command that draws what it has when time runs
+   * short (stock's table) plans its requests against it.
+   */
+  readonly deadline?: number;
   readonly tty: Tty;
   readonly net: Net;
   readonly sys: SysInfo;

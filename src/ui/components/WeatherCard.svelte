@@ -145,8 +145,11 @@
     display: inline-block;
   }
 
+  /* No shadow either: vintage mode's colour fringes (styles/crt.css) are fixed colours, which
+     transparent glyphs would still cast. */
   .wx-bar-text {
     color: transparent;
+    text-shadow: none;
   }
 
   .wx-track,
