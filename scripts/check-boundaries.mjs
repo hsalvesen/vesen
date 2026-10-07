@@ -22,9 +22,16 @@ export const DOM_FREE_DIRS = ['src/shell', 'src/output', 'src/vfs', 'src/lib', '
 /**
  * Modules outside those folders that DOM-free code may import: the service contracts, which are
  * types, constants and pure functions only. They are held to the same rules as the folders.
- * The market contract is also bundled by the stock Worker (worker/stock).
+ * The market contract and chart normaliser are also bundled by the stock Worker (worker/stock);
+ * the market port is how the stock command reaches the client the composition root provides.
  */
-export const DOM_FREE_IMPORTABLE = ['src/services/types', 'src/services/storage-keys', 'src/services/market/contract'];
+export const DOM_FREE_IMPORTABLE = [
+  'src/services/types',
+  'src/services/storage-keys',
+  'src/services/market/contract',
+  'src/services/market/normalise',
+  'src/services/market/port',
+];
 
 /** Browser globals the DOM-free folders may not reference. Services reach the browser for them. */
 export const FORBIDDEN_GLOBALS = [

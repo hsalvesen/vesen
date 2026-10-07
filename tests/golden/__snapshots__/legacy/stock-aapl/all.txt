@@ -1,25 +1,10 @@
 $ stock AAPL
-AAPL - Apple Inc.
-$332.89 ↘ -0.80 (-0.24%)
-
-
-Day Range: $331.65 ━━▼─────── $336.19
-
-Open: $332.89
-Previous Close: $333.69
-Volume: 34,328,912
-
-Trends:
-From Open: $0.00 (0.00%)
-From Previous: $-0.80 (-0.24%)
-
-OHLC Chart:
-H─  336.19
-│
-│
-│
-│
-│
-O/C─  332.89
-│
-L─  331.65
+AAPL  Apple Inc.
+332.89 USD  ▼ −0.80 (−0.24%)
+○ After hours · closed 4:00 PM EDT
+▁▃▆▇█
+9:30 AM · prev close 333.69 · 4:00 PM
+Day 331.65 ├──●──────┤ 336.19
+52w 243.42 ├───────●─┤ 345.34
+First trade 332.80 · Vol 34.3M · Exch NasdaqGS
+Yahoo Finance via public proxy, may be slow · may be delayed · updated 2 h ago

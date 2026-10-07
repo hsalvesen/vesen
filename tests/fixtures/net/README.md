@@ -9,4 +9,4 @@ Response bodies served by the mocked `fetch` in tests, so no test touches the ne
 | `httpbin-get.json` | `GET https://httpbin.org/get` | `origin` and `X-Amzn-Trace-Id` are replaced with a documentation address (203.0.113.0/24) and a zeroed id. |
 | `ipify.json` | `GET https://api.ipify.org?format=json` | A documentation address, not a capture. |
 
-`stock` reaches Yahoo through `https://api.allorigins.win/get?url=…`. The tests wrap the body in that service's JSON envelope (`{ contents, status }`) at runtime, so the files hold only the upstream body and stay reusable once the proxy changes. `curl`, `weather` and `fastfetch` fetch their hosts directly.
+`stock` reaches Yahoo through `https://api.allorigins.win/get?url=…` until the stock Worker is deployed (its interim source, `src/services/market/interim.ts`, asks for `…/chart/AAPL?range=1d&interval=5m&includePrePost=false`, which this file also answers). The tests wrap the body in that service's JSON envelope (`{ contents, status }`) at runtime, so the files hold only the upstream body and stay reusable once the proxy changes. `curl`, `weather` and `fastfetch` fetch their hosts directly.

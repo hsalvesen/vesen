@@ -2,6 +2,7 @@
 
 import { out, type Line } from '../../output/model';
 import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
+import { marketBackend } from '../../services/market/port';
 import { isLegacySpec } from '../legacy';
 
 /** What --help, help and man say about privacy, besides its spec (privacy.ts). */
@@ -20,6 +21,13 @@ interface ThirdParty {
   readonly legacy?: boolean;
 }
 
+/** Where stock's quotes come from in this build: the owned Worker when it names one, else the interim proxy. */
+function stockSource(): ThirdParty {
+  return marketBackend() === 'worker'
+    ? { service: "vesen's stock Worker", commands: ['stock'], askedBy: 'stock', sent: 'the ticker' }
+    : { service: 'allorigins.win, then Yahoo Finance', commands: ['stock'], askedBy: 'stock, until its own service runs', sent: 'the ticker, through a public proxy' };
+}
+
 export const THIRD_PARTIES: readonly ThirdParty[] = [
   { service: 'Open-Meteo', commands: ['weather'], askedBy: 'weather', sent: 'the place you name, or its coordinates' },
   { service: 'OpenStreetMap Nominatim', commands: ['weather'], askedBy: 'weather', sent: 'a place Open-Meteo cannot find, or coordinates to name' },
@@ -29,7 +37,7 @@ export const THIRD_PARTIES: readonly ThirdParty[] = [
     askedBy: 'weather with no place',
     sent: 'nothing but the request: they answer with your approximate location',
   },
-  { service: "vesen's stock Worker", commands: ['stock'], askedBy: 'stock', sent: 'the ticker' },
+  stockSource(),
   { service: 'Cloudflare speed test', commands: ['speedtest'], askedBy: 'speedtest', sent: 'test data, down and up' },
   { service: 'Cloudflare or Google DNS-over-HTTPS', commands: ['dig', 'host', 'nslookup'], askedBy: 'dig, host, nslookup', sent: 'the name you look up' },
   { service: 'RDAP (rdap.org and the registries)', commands: ['whois'], askedBy: 'whois', sent: 'the domain you look up' },
@@ -37,7 +45,6 @@ export const THIRD_PARTIES: readonly ThirdParty[] = [
   { service: 'ipify', commands: ['fastfetch'], askedBy: 'fastfetch', sent: 'nothing but the request: it answers with your public IP' },
   // What the legacy commands use until their ports land.
   { service: 'wttr.in', commands: ['weather'], askedBy: 'weather, for now', sent: 'the place you name', legacy: true },
-  { service: 'allorigins.win, then Yahoo Finance', commands: ['stock'], askedBy: 'stock, for now', sent: 'the ticker', legacy: true },
 ];
 
 const NOTES: readonly string[] = [

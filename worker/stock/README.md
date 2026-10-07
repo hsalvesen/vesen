@@ -25,7 +25,7 @@ Every request gets one 6.5 s budget across all its upstream calls.
 
 ## API
 
-The wire format lives in [`src/services/market/contract.ts`](../../src/services/market/contract.ts), which the Worker and the app both compile against. All times are Unix seconds. A value the source did not give is `null`, never `0`.
+The wire format lives in [`src/services/market/contract.ts`](../../src/services/market/contract.ts), which the Worker and the app both compile against. So does the Yahoo chart normaliser, [`src/services/market/normalise.ts`](../../src/services/market/normalise.ts), which the app's interim source uses until this Worker is deployed, so a quote reads the same from either; `test/client.test.ts` runs the app's market client against this handler in-process. All times are Unix seconds. A value the source did not give is `null`, never `0`.
 
 | Request | Answer |
 |---|---|

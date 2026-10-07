@@ -149,6 +149,10 @@ async function boot(viewport: Viewport): Promise<LegacyTerminal> {
   const { outputBlocks } = await import('../../src/interfaces/command');
   const { bannerBlocks } = await import('../../src/commands/lib/banner');
   const { crtTier } = await import('../../src/stores/cathode');
+  // stock's client, as app/bootstrap.ts provides it, over the mocked fetch and no storage.
+  const { provideMarket } = await import('../../src/services/market/port');
+  const { createMarketClient } = await import('../../src/services/market/client');
+  provideMarket(() => Promise.resolve(createMarketClient({ storage: null })));
   const { decideTier, readSignals } = await import('../../src/platform/perf');
   crtTier.set(decideTier(readSignals(window)));
   const app = legacyAppShell({

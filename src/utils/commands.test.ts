@@ -67,10 +67,10 @@ describe('qr', () => {
 describe('help', () => {
   it('lays out each legacy help text as panels, for the shell to show on --help', async () => {
     const { legacyHelpHtml } = await import('./commands');
-    expect(legacyHelpHtml('stock')).toContain('<div class="out-panel tone-link"><div class="out-panel-title">Usage:</div>');
+    expect(legacyHelpHtml('curl')).toContain('<div class="out-panel tone-link"><div class="out-panel-title">Usage:</div>');
     expect(legacyHelpHtml('constructor')).toBeUndefined();
     // A ported command's help comes from its spec, so its legacy help text is gone.
-    for (const ported of ['ls', 'help', 'theme', 'cathode', 'banner']) expect(legacyHelpHtml(ported), ported).toBeUndefined();
+    for (const ported of ['ls', 'help', 'theme', 'cathode', 'banner', 'stock']) expect(legacyHelpHtml(ported), ported).toBeUndefined();
   });
 });
 

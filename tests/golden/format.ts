@@ -114,6 +114,7 @@ type GoldenBlock =
   | { readonly type: 'lines'; readonly lines: readonly (readonly GoldenSpan[])[] }
   | { readonly type: 'grid'; readonly items: readonly GoldenSpan[]; readonly notes?: readonly (readonly GoldenSpan[])[] }
   | { readonly type: 'art'; readonly text: string; readonly alt: string }
+  | { readonly type: 'component'; readonly name: string; readonly plain: string; readonly alt: string }
   | { readonly type: string };
 
 const ROLES = new Set([
@@ -151,8 +152,9 @@ function spanHtml(span: GoldenSpan): string {
  * command's lines (and the shell's own, such as command not found) as the equivalent spans, a
  * grid (ls) as its items' spans two spaces apart on one line, since the page lays the columns
  * out to its width, a grid with notes (help) as one item and its note per line, and art as its
- * hidden text with the alternative. Tap actions and live bindings have no HTML form: a live span
- * is recorded as it read when it was written.
+ * hidden text with the alternative, and a rich card (a component block) as its plain text. Tap
+ * actions and live bindings have no HTML form: a live span is recorded as it read when it was
+ * written.
  */
 export function blocksToGoldenHtml(blocks: readonly GoldenBlock[]): string {
   return blocks
@@ -163,6 +165,9 @@ export function blocksToGoldenHtml(blocks: readonly GoldenBlock[]): string {
         const notes = block.notes;
         if (notes === undefined) return block.items.map(spanHtml).join('  ');
         return block.items.map((item, i) => `${spanHtml(item)}  ${(notes[i] ?? []).map(spanHtml).join('')}`).join('\n');
+      }
+      if ('plain' in block && 'name' in block) {
+        return `<div>${escapeText(block.plain).replace(/\n$/, '')}</div>`;
       }
       if ('alt' in block && 'text' in block) {
         return `<div class="art" aria-hidden="true">${escapeText(block.text)}</div><span class="sr-only">${escapeText(block.alt)}</span>`;

@@ -1,0 +1,3006 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the card for every recorded chart > ^AXJO 1d > alt 1`] = `"^AXJO, S&P/ASX 200 [XJO]: 8,750.90 AUD. up +68.80 (+0.79%). Open · closes 4:12 PM AEDT."`;
+
+exports[`the card for every recorded chart > ^AXJO 1d > plain 1`] = `
+"^AXJO  S&P/ASX 200 [XJO]
+8,750.90 AUD  ▲ +68.80 (+0.79%)
+● Open · closes 4:12 PM AEDT
+▂▃▄▃▃▃▁▂▂▄▄▄▄▅▅▆▆▅▆▆▆▇▇▆▇▇▇▇▇███
+10:00 AM · prev close 8,682.10 · 4:12 PM
+Day 8,686.40 ├────────●┤ 8,753.00
+52w 8,262.40 ├────●────┤ 9,296.70
+Yahoo Finance · may be delayed · updated 18 min ago
+"
+`;
+
+exports[`the card for every recorded chart > ^AXJO 1d > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 96.8,
+      "high": "8,753.00",
+      "label": "Day",
+      "low": "8,686.40",
+    },
+    {
+      "at": 47.2,
+      "high": "9,296.70",
+      "label": "52w",
+      "low": "8,262.40",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▲ +68.80 (+0.79%)",
+    "tone": "up",
+  },
+  "chart": {
+    "baseline": 56,
+    "height": 60,
+    "label": "^AXJO today: up, from 8,712.20 to 8,750.90, above the previous close of 8,682.10",
+    "labels": {
+      "end": "4:12 PM",
+      "middle": "prev close 8,682.10",
+      "start": "10:00 AM",
+    },
+    "last": {
+      "x": 67.8,
+      "y": 9,
+    },
+    "path": "M0 33.9L4 30.3L8.1 30.6L12.1 22.6L16.1 25.3L20.2 27.9L24.2 30.5L28.2 32.3L32.3 29.5L36.3 36L40.3 40.6L44.4 46.4L48.4 35L52.4 35.6L56.5 31.3L60.5 26.5L64.5 23.4L68.5 25.6L72.6 26.8L76.6 28.2L80.6 27.3L84.7 20.7L88.7 21.5L92.7 20.2L96.8 16.9L100.8 14.8L104.8 14.4L108.9 22.2L112.9 21.1L116.9 19.1L121 16.9L125 16.7L129 15.1L133.1 13L137.1 13.9L141.1 10.8L145.2 7.1L149.2 11.7L153.2 12.7L157.3 10.8L161.3 11.8L165.3 10.8L169.4 11.5L173.4 11.4L177.4 9.7L181.5 11.3L185.5 9.3L189.5 8.9L193.5 5L197.6 4L201.6 5.5L203.4 5.4",
+    "tone": "up",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f ^AXJO",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh ^AXJO",
+    },
+    {
+      "action": "run: stock ^AXJO",
+      "active": true,
+      "label": "1d",
+      "title": "Show ^AXJO today",
+    },
+    {
+      "action": "run: stock -r 5d ^AXJO",
+      "active": false,
+      "label": "5d",
+      "title": "Show ^AXJO over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo ^AXJO",
+      "active": false,
+      "label": "1mo",
+      "title": "Show ^AXJO over a month",
+    },
+    {
+      "action": "run: stock -r 1y ^AXJO",
+      "active": false,
+      "label": "1y",
+      "title": "Show ^AXJO over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 18 min ago",
+  "kind": "quote-card",
+  "name": "S&P/ASX 200 [XJO]",
+  "phase": {
+    "live": true,
+    "text": "● Open · closes 4:12 PM AEDT",
+  },
+  "price": "8,750.90 AUD",
+  "stale": null,
+  "stats": [],
+  "symbol": "^AXJO",
+}
+`;
+
+exports[`the card for every recorded chart > ^GSPC 1d > alt 1`] = `"^GSPC, S&P 500: 7,773.95 USD. up +51.23 (+0.66%). Closed · last trade 4:00 PM EDT."`;
+
+exports[`the card for every recorded chart > ^GSPC 1d > plain 1`] = `
+"^GSPC  S&P 500
+7,773.95 USD  ▲ +51.23 (+0.66%)
+○ Closed · last trade 4:00 PM EDT
+▂▁▁▃▄▃▃▄▄▄▄▄▄▄▅▆▆▅▆▆▆▆▆▆▇▇▇██▇▆▆
+9:30 AM · prev close 7,722.72 · 4:00 PM
+Day 7,727.59 ├──────●──┤ 7,794.35
+52w 6,316.91 ├────────●┤ 7,816.70
+Yahoo Finance · may be delayed · updated 8 h ago
+"
+`;
+
+exports[`the card for every recorded chart > ^GSPC 1d > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 69.4,
+      "high": "7,794.35",
+      "label": "Day",
+      "low": "7,727.59",
+    },
+    {
+      "at": 97.1,
+      "high": "7,816.70",
+      "label": "52w",
+      "low": "6,316.91",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▲ +51.23 (+0.66%)",
+    "tone": "up",
+  },
+  "chart": {
+    "baseline": 56,
+    "height": 60,
+    "label": "^GSPC today: up, from 7,738.31 to 7,773.95, above the previous close of 7,722.72",
+    "labels": {
+      "end": "4:00 PM",
+      "middle": "prev close 7,722.72",
+      "start": "9:30 AM",
+    },
+    "last": {
+      "x": 100,
+      "y": 30.3,
+    },
+    "path": "M0 44.5L3.8 46.7L7.7 46.5L11.5 47.6L15.4 48.3L19.2 46.1L23.1 43.8L26.9 38.2L30.8 37.2L34.6 33.3L38.5 31.3L42.3 31.5L46.2 38.2L50 34.2L53.8 35L57.7 33.9L61.5 33.7L65.4 30.8L69.2 31L73.1 33.8L76.9 32.5L80.8 32.2L84.6 31L88.5 30.5L92.3 29.2L96.2 28.9L100 27.1L103.8 26.8L107.7 27.2L111.5 27L115.4 29.4L119.2 28.2L123.1 27.9L126.9 29.6L130.8 25.7L134.6 25L138.5 24.5L142.3 22.4L146.2 18.8L150 19.8L153.8 19.4L157.7 21.4L161.5 23.2L165.4 22.1L169.2 20.7L173.1 19.9L176.9 19.4L180.8 19.5L184.6 20.2L188.5 21L192.3 16.1L196.2 17L200 17.5L203.8 16.5L207.7 15.9L211.5 17.2L215.4 16.5L219.2 16.1L223.1 15.2L226.9 13.6L230.8 13.8L234.6 13.4L238.5 13.8L242.3 13.9L246.2 13L250 10.6L253.8 8.1L257.7 8.9L261.5 6.1L265.4 4L269.2 5.7L273.1 6.3L276.9 8.8L280.8 8.8L284.6 10.4L288.5 14.9L292.3 19.9L296.2 18L300 18.2",
+    "tone": "up",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f ^GSPC",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh ^GSPC",
+    },
+    {
+      "action": "run: stock ^GSPC",
+      "active": true,
+      "label": "1d",
+      "title": "Show ^GSPC today",
+    },
+    {
+      "action": "run: stock -r 5d ^GSPC",
+      "active": false,
+      "label": "5d",
+      "title": "Show ^GSPC over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo ^GSPC",
+      "active": false,
+      "label": "1mo",
+      "title": "Show ^GSPC over a month",
+    },
+    {
+      "action": "run: stock -r 1y ^GSPC",
+      "active": false,
+      "label": "1y",
+      "title": "Show ^GSPC over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 8 h ago",
+  "kind": "quote-card",
+  "name": "S&P 500",
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "7,773.95 USD",
+  "stale": null,
+  "stats": [],
+  "symbol": "^GSPC",
+}
+`;
+
+exports[`the card for every recorded chart > AAPL 1d > alt 1`] = `"AAPL, Apple Inc.: 332.89 USD. down −0.80 (−0.24%). Closed · last trade 4:00 PM EDT."`;
+
+exports[`the card for every recorded chart > AAPL 1d > plain 1`] = `
+"AAPL  Apple Inc.
+332.89 USD  ▼ −0.80 (−0.24%)
+○ Closed · last trade 4:00 PM EDT
+█▅▄▃▃▄▄▃▄▃▃▃▃▃▄▅▆▃▃▃▃▁▁▂▁▂▃▄▃▂▁▂
+9:30 AM · prev close 333.69 · 4:00 PM
+Day 331.65 ├──●──────┤ 336.19
+52w 243.42 ├───────●─┤ 345.34
+First trade 332.80 · Vol 34.3M · Exch NasdaqGS
+Yahoo Finance · may be delayed · updated 8 h ago
+"
+`;
+
+exports[`the card for every recorded chart > AAPL 1d > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 27.3,
+      "high": "336.19",
+      "label": "Day",
+      "low": "331.65",
+    },
+    {
+      "at": 87.8,
+      "high": "345.34",
+      "label": "52w",
+      "low": "243.42",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▼ −0.80 (−0.24%)",
+    "tone": "down",
+  },
+  "chart": {
+    "baseline": 39.6,
+    "height": 60,
+    "label": "AAPL today: down, from 336.07 to 332.89, below the previous close of 333.69",
+    "labels": {
+      "end": "4:00 PM",
+      "middle": "prev close 333.69",
+      "start": "9:30 AM",
+    },
+    "last": {
+      "x": 100,
+      "y": 85.8,
+    },
+    "path": "M0 4L3.8 14.2L7.7 16.7L11.5 24.1L15.4 21.1L19.2 36.7L23.1 40L26.9 44.1L30.8 37.3L34.6 43.2L38.5 39.9L42.3 43.7L46.2 39.8L50 31.9L53.8 37.6L57.7 30.6L61.5 37L65.4 41.6L69.2 38.8L73.1 37.7L76.9 33.5L80.8 45.5L84.6 42.9L88.5 44L92.3 41.4L96.2 39.2L100 42L103.8 38.7L107.7 42L111.5 41.2L115.4 42.4L119.2 41.5L123.1 40.9L126.9 37.9L130.8 29.3L134.6 32.3L138.5 29.3L142.3 29.7L146.2 27.6L150 24.8L153.8 21.8L157.7 25.8L161.5 27.3L165.4 41.1L169.2 41.9L173.1 42.5L176.9 43.3L180.8 41.8L184.6 44.2L188.5 44.5L192.3 43.3L196.2 47.3L200 49.4L203.8 55.3L207.7 55L211.5 52L215.4 52.4L219.2 52.7L223.1 48.8L226.9 47.9L230.8 52.3L234.6 50.9L238.5 56L242.3 48L246.2 44.8L250 39.1L253.8 37L257.7 38.8L261.5 35.9L265.4 33L269.2 37.8L273.1 35.6L276.9 38.8L280.8 45L284.6 52.6L288.5 54L292.3 50.8L296.2 47.9L300 51.5",
+    "tone": "down",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f AAPL",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh AAPL",
+    },
+    {
+      "action": "run: stock AAPL",
+      "active": true,
+      "label": "1d",
+      "title": "Show AAPL today",
+    },
+    {
+      "action": "run: stock -r 5d AAPL",
+      "active": false,
+      "label": "5d",
+      "title": "Show AAPL over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo AAPL",
+      "active": false,
+      "label": "1mo",
+      "title": "Show AAPL over a month",
+    },
+    {
+      "action": "run: stock -r 1y AAPL",
+      "active": false,
+      "label": "1y",
+      "title": "Show AAPL over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 8 h ago",
+  "kind": "quote-card",
+  "name": "Apple Inc.",
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "332.89 USD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "332.80",
+    },
+    {
+      "label": "Vol",
+      "value": "34.3M",
+    },
+    {
+      "label": "Exch",
+      "value": "NasdaqGS",
+    },
+  ],
+  "symbol": "AAPL",
+}
+`;
+
+exports[`the card for every recorded chart > AAPL 5d > alt 1`] = `"AAPL, Apple Inc.: 332.89 USD. down −0.80 (−0.24%). Closed · last trade 4:00 PM EDT."`;
+
+exports[`the card for every recorded chart > AAPL 5d > plain 1`] = `
+"AAPL  Apple Inc.
+332.89 USD  ▼ −0.80 (−0.24%)
+○ Closed · last trade 4:00 PM EDT
+▄▄▄▃▄▃▂█▇▇▆▇▆▂▂▁▁▂▂▄▃▄▅▄▅▆▅▅▅▄▅▄
+Sep 29 · from 332.53 · Oct 5
+Day 331.65 ├──●──────┤ 336.19
+52w 243.42 ├───────●─┤ 345.34
+First trade 332.80 · Vol 34.3M · Exch NasdaqGS
+Yahoo Finance · may be delayed · updated 8 h ago
+"
+`;
+
+exports[`the card for every recorded chart > AAPL 5d > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 27.3,
+      "high": "336.19",
+      "label": "Day",
+      "low": "331.65",
+    },
+    {
+      "at": 87.8,
+      "high": "345.34",
+      "label": "52w",
+      "low": "243.42",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▼ −0.80 (−0.24%)",
+    "tone": "down",
+  },
+  "chart": {
+    "baseline": 30.5,
+    "height": 60,
+    "label": "AAPL over 5 days: up, from 332.53 to 332.89, above the first close of 332.53",
+    "labels": {
+      "end": "Oct 5",
+      "middle": "from 332.53",
+      "start": "Sep 29",
+    },
+    "last": {
+      "x": 100,
+      "y": 48,
+    },
+    "path": "M0 30.5L0.5 29L1 27.7L1.5 32.5L2 33L2.5 30.9L3 30.3L3.5 33.9L4 32.8L4.5 35.7L5 36.4L5.5 37.6L6.5 36.3L7 36.8L7.5 34.7L8 31.9L8.5 34.4L9 34.6L9.5 34.1L10 34.9L10.5 37.6L11 38.9L12 44.4L12.5 43.5L47.8 30.8L48.3 16L48.8 8.7L49.3 5.5L49.8 4L50.3 4.3L50.8 8.5L51.3 9L51.8 7.1L52.8 11.4L53.3 11.7L53.8 11.2L54.3 13.1L54.8 15.1L55.3 16L55.8 14.2L56.3 13L56.8 12.2L57.3 13.6L57.8 11.9L58.8 14.7L59.3 16.6L59.8 18.4L60.3 28.3L95.7 33.2L96.2 39.7L96.7 42L97.2 37.6L97.7 37.3L98.2 41L98.7 42.8L99.7 56L100.2 53.8L100.7 50.2L101.2 48.5L101.7 51L102.2 51.3L102.7 49.8L103.2 46.6L103.7 43.9L104.2 47.4L104.7 43.9L105.6 42.5L106.1 42.5L106.6 42.6L107.1 42.6L107.6 42.8L108.1 39.6L143.5 34.4L144 31.9L144.5 24.2L145 22.5L146 28.5L146.5 35.5L147 31.2L147.5 31.8L148 31L148.5 28.5L149 29L149.5 27.4L150 26.7L150.5 25.7L151 26.5L152 26.9L152.5 28.4L153 28.4L153.5 25.4L154 25.2L154.5 27.4L155 27.2L155.5 25.7L156 24.8L287 18.5L287.5 24.4L288.5 26.5L289 24.7L289.5 25.9L290 23.5L290.5 26.6L291 26L291.5 25.8L292 25.7L292.5 23.1L293 21.7L293.5 21.2L294.5 26L295 26.4L295.5 30L296 29.1L296.5 27.8L297 30.2L297.5 25.2L298 24.2L298.5 24.1L299 29.2L300 28.8",
+    "tone": "up",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f -r 5d AAPL",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh AAPL",
+    },
+    {
+      "action": "run: stock AAPL",
+      "active": false,
+      "label": "1d",
+      "title": "Show AAPL today",
+    },
+    {
+      "action": "run: stock -r 5d AAPL",
+      "active": true,
+      "label": "5d",
+      "title": "Show AAPL over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo AAPL",
+      "active": false,
+      "label": "1mo",
+      "title": "Show AAPL over a month",
+    },
+    {
+      "action": "run: stock -r 1y AAPL",
+      "active": false,
+      "label": "1y",
+      "title": "Show AAPL over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 8 h ago",
+  "kind": "quote-card",
+  "name": "Apple Inc.",
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "332.89 USD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "332.80",
+    },
+    {
+      "label": "Vol",
+      "value": "34.3M",
+    },
+    {
+      "label": "Exch",
+      "value": "NasdaqGS",
+    },
+  ],
+  "symbol": "AAPL",
+}
+`;
+
+exports[`the card for every recorded chart > AUDUSD=X 1d > alt 1`] = `"AUDUSD=X, AUD/USD: 0.6978 USD. up +0.0004 (+0.06%). Open · closes 11:59 PM BST."`;
+
+exports[`the card for every recorded chart > AUDUSD=X 1d > plain 1`] = `
+"AUDUSD=X  AUD/USD
+0.6978 USD  ▲ +0.0004 (+0.06%)
+● Open · closes 11:59 PM BST
+▄▄▄▄▄▄▄▁▁▂▁▂▃▄▅▅▄▅▅▅▄▄▄▄▄▄▃▄▄▆▇█
+12:00 AM · prev close 0.6974 · 11:59 PM
+Day 0.6966 ├────────●┤ 0.6978
+52w 0.6422 ├─────●───┤ 0.7277
+Yahoo Finance · may be delayed · updated 3 min ago
+"
+`;
+
+exports[`the card for every recorded chart > AUDUSD=X 1d > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 100,
+      "high": "0.6978",
+      "label": "Day",
+      "low": "0.6966",
+    },
+    {
+      "at": 65,
+      "high": "0.7277",
+      "label": "52w",
+      "low": "0.6422",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▲ +0.0004 (+0.06%)",
+    "tone": "up",
+  },
+  "chart": {
+    "baseline": 22,
+    "height": 60,
+    "label": "AUDUSD=X today: up, from 0.6972 to 0.6978, above the previous close of 0.6974",
+    "labels": {
+      "end": "11:59 PM",
+      "middle": "prev close 0.6974",
+      "start": "12:00 AM",
+    },
+    "last": {
+      "x": 18.5,
+      "y": 6.7,
+    },
+    "path": "M0 32L1 38L2.1 36L3.1 30L4.2 28L5.2 30L6.3 30L7.3 32L8.3 30L9.4 30L10.4 34L11.5 42L12.5 52L13.6 56L14.6 52L15.6 48L16.7 52L17.7 54L18.8 44L19.8 44L20.8 44L21.9 40L22.9 36L24 34L25 24L26.1 28L27.1 26.1L28.1 32L29.2 26.1L30.2 24L31.3 22L32.3 24L33.4 22L34.4 26.1L35.4 34L36.5 34L37.5 36L38.6 36L39.6 34L40.7 32L41.7 28L42.7 30L43.8 32L44.8 32L45.9 40L46.9 36L47.9 32L49 32L50 30L51.1 28L52.1 18L53.2 14L54.2 4L55.6 4",
+    "tone": "up",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f AUDUSD=X",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh AUDUSD=X",
+    },
+    {
+      "action": "run: stock AUDUSD=X",
+      "active": true,
+      "label": "1d",
+      "title": "Show AUDUSD=X today",
+    },
+    {
+      "action": "run: stock -r 5d AUDUSD=X",
+      "active": false,
+      "label": "5d",
+      "title": "Show AUDUSD=X over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo AUDUSD=X",
+      "active": false,
+      "label": "1mo",
+      "title": "Show AUDUSD=X over a month",
+    },
+    {
+      "action": "run: stock -r 1y AUDUSD=X",
+      "active": false,
+      "label": "1y",
+      "title": "Show AUDUSD=X over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 3 min ago",
+  "kind": "quote-card",
+  "name": "AUD/USD",
+  "phase": {
+    "live": true,
+    "text": "● Open · closes 11:59 PM BST",
+  },
+  "price": "0.6978 USD",
+  "stale": null,
+  "stats": [],
+  "symbol": "AUDUSD=X",
+}
+`;
+
+exports[`the card for every recorded chart > BHP.AX 1d > alt 1`] = `"BHP.AX, BHP Group Limited: 62.63 AUD. up +0.73 (+1.19%). Open · closes 4:12 PM AEDT."`;
+
+exports[`the card for every recorded chart > BHP.AX 1d > plain 1`] = `
+"BHP.AX  BHP Group Limited
+62.63 AUD  ▲ +0.73 (+1.19%)
+● Open · closes 4:12 PM AEDT
+▄▃▃▁▂▃▂▁▂▄▅▄▅▆▆▇▇▆▇▇▇▇█▇▇▇▆▆▇▇▇▇
+10:00 AM · prev close 61.89 · 4:12 PM
+Day 62.06 ├───────●─┤ 62.73
+52w 40.17 ├──────●──┤ 68.77
+First trade 62.25 · Vol 2.4M · Exch ASX
+Yahoo Finance · may be delayed · updated 17 min ago
+"
+`;
+
+exports[`the card for every recorded chart > BHP.AX 1d > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 84.3,
+      "high": "62.73",
+      "label": "Day",
+      "low": "62.06",
+    },
+    {
+      "at": 78.5,
+      "high": "68.77",
+      "label": "52w",
+      "low": "40.17",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▲ +0.73 (+1.19%)",
+    "tone": "up",
+  },
+  "chart": {
+    "baseline": 56,
+    "height": 60,
+    "label": "BHP.AX today: up, from 62.33 to 62.63, above the previous close of 61.89",
+    "labels": {
+      "end": "4:12 PM",
+      "middle": "prev close 61.89",
+      "start": "10:00 AM",
+    },
+    "last": {
+      "x": 67.9,
+      "y": 14.7,
+    },
+    "path": "M0 27.8L4 28.4L8.1 31L12.1 33.5L16.1 36.1L20.2 43.8L24.2 34.2L28.2 40.6L32.3 32.9L36.3 37.4L40.3 39.3L44.4 40L48.4 43.2L52.4 37.4L56.5 34.2L60.5 27.1L64.5 22L68.5 22L72.6 29L76.6 30.3L80.6 23.9L84.7 16.2L88.7 16.8L92.7 14.3L96.8 11.1L100.8 9.8L104.8 10.4L108.9 18.8L112.9 16.2L116.9 15.2L121 11.7L125 9.1L129 10.7L133.1 12.3L137.1 12.3L141.1 8.5L145.2 4L149.2 9.8L153.2 8.5L157.3 10.4L161.3 14.3L165.3 10.1L169.4 11.7L173.4 14.6L177.4 16.2L181.5 14.3L185.5 11.1L189.5 12.3L193.5 8.2L197.6 7.9L201.6 8.8L203.8 8.8",
+    "tone": "up",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f BHP.AX",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh BHP.AX",
+    },
+    {
+      "action": "run: stock BHP.AX",
+      "active": true,
+      "label": "1d",
+      "title": "Show BHP.AX today",
+    },
+    {
+      "action": "run: stock -r 5d BHP.AX",
+      "active": false,
+      "label": "5d",
+      "title": "Show BHP.AX over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo BHP.AX",
+      "active": false,
+      "label": "1mo",
+      "title": "Show BHP.AX over a month",
+    },
+    {
+      "action": "run: stock -r 1y BHP.AX",
+      "active": false,
+      "label": "1y",
+      "title": "Show BHP.AX over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 17 min ago",
+  "kind": "quote-card",
+  "name": "BHP Group Limited",
+  "phase": {
+    "live": true,
+    "text": "● Open · closes 4:12 PM AEDT",
+  },
+  "price": "62.63 AUD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "62.25",
+    },
+    {
+      "label": "Vol",
+      "value": "2.4M",
+    },
+    {
+      "label": "Exch",
+      "value": "ASX",
+    },
+  ],
+  "symbol": "BHP.AX",
+}
+`;
+
+exports[`the card for every recorded chart > BTC-USD 1d > alt 1`] = `"BTC-USD, Bitcoin USD: 85,459.57 USD. down −600.89 (−0.70%). Trading 24/7."`;
+
+exports[`the card for every recorded chart > BTC-USD 1d > plain 1`] = `
+"BTC-USD  Bitcoin USD
+85,459.57 USD  ▼ −600.89 (−0.70%)  24h
+● Trading 24/7
+▅▅▆▇▅▅▅▅▆██▆▇▅▅▄▃▃▂▁▂▄▂▃▂▂▂▂▂▂▁▁
+12:00 AM · prev close 85,750.58 · 11:59 PM
+Day 85,453.82 ├●────────┤ 86,054.39
+52w 57,747.77 ├───●─────┤ 125,184.02
+First trade 85,766.77 · Vol 28.2B · Exch CCC
+Yahoo Finance · may be delayed · updated 2 min ago
+"
+`;
+
+exports[`the card for every recorded chart > BTC-USD 1d > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 1,
+      "high": "86,054.39",
+      "label": "Day",
+      "low": "85,453.82",
+    },
+    {
+      "at": 41.1,
+      "high": "125,184.02",
+      "label": "52w",
+      "low": "57,747.77",
+    },
+  ],
+  "change": {
+    "basis": "24h",
+    "text": "▼ −600.89 (−0.70%)",
+    "tone": "down",
+  },
+  "chart": {
+    "baseline": 30.6,
+    "height": 60,
+    "label": "BTC-USD today: down, from 85,792.02 to 85,459.57, below the previous close of 85,750.58",
+    "labels": {
+      "end": "11:59 PM",
+      "middle": "prev close 85,750.58",
+      "start": "12:00 AM",
+    },
+    "last": {
+      "x": 14.5,
+      "y": 92.5,
+    },
+    "path": "M0 27L1 24L2.1 25.2L3.1 20.3L4.2 13.2L5.2 24.7L6.3 23L7.3 27.5L8.3 27.2L9.4 24.4L10.4 23L11.5 17.6L12.5 4L13.6 8L14.6 4.2L15.6 20L16.7 13.4L17.7 11.2L18.8 27.1L19.8 28.2L20.8 37.1L21.9 37.1L22.9 39.4L24 42.3L25 45.9L26.1 53.8L27.1 56L28.1 50.3L29.2 33L30.2 41.1L31.3 45.5L32.3 39.1L33.4 45.6L34.4 44.9L35.4 49.1L36.5 49.9L37.5 46L38.6 49.2L39.6 51L40.7 47.5L41.7 51.1L42.7 54.3L43.4 55.5",
+    "tone": "down",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f BTC-USD",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh BTC-USD",
+    },
+    {
+      "action": "run: stock BTC-USD",
+      "active": true,
+      "label": "1d",
+      "title": "Show BTC-USD today",
+    },
+    {
+      "action": "run: stock -r 5d BTC-USD",
+      "active": false,
+      "label": "5d",
+      "title": "Show BTC-USD over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo BTC-USD",
+      "active": false,
+      "label": "1mo",
+      "title": "Show BTC-USD over a month",
+    },
+    {
+      "action": "run: stock -r 1y BTC-USD",
+      "active": false,
+      "label": "1y",
+      "title": "Show BTC-USD over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 2 min ago",
+  "kind": "quote-card",
+  "name": "Bitcoin USD",
+  "phase": {
+    "live": true,
+    "text": "● Trading 24/7",
+  },
+  "price": "85,459.57 USD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "85,766.77",
+    },
+    {
+      "label": "Vol",
+      "value": "28.2B",
+    },
+    {
+      "label": "Exch",
+      "value": "CCC",
+    },
+  ],
+  "symbol": "BTC-USD",
+}
+`;
+
+exports[`the card for every recorded chart > CBA.AX 1d > alt 1`] = `"CBA.AX, Commonwealth Bank of Australia: 152.09 AUD. up +0.87 (+0.58%). Open · closes 4:12 PM AEDT."`;
+
+exports[`the card for every recorded chart > CBA.AX 1d > plain 1`] = `
+"CBA.AX  Commonwealth Bank of Australia
+152.09 AUD  ▲ +0.87 (+0.58%)
+● Open · closes 4:12 PM AEDT
+▅▅▇▇▇▅▂▁▁▃▂▂▂▃▂▂▃▃▃▃▃▄▅▆▆▇▆▇▇▇██
+10:00 AM · prev close 151.22 · 4:12 PM
+Day 150.50 ├───────●─┤ 152.29
+52w 146.98 ├─●───────┤ 185.59
+First trade 152.23 · Vol 647.8K · Exch ASX
+Yahoo Finance · may be delayed · updated 22 min ago
+"
+`;
+
+exports[`the card for every recorded chart > CBA.AX 1d > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 88.8,
+      "high": "152.29",
+      "label": "Day",
+      "low": "150.50",
+    },
+    {
+      "at": 13.2,
+      "high": "185.59",
+      "label": "52w",
+      "low": "146.98",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▲ +0.87 (+0.58%)",
+    "tone": "up",
+  },
+  "chart": {
+    "baseline": 34.9,
+    "height": 60,
+    "label": "CBA.AX today: up, from 151.50 to 152.09, above the previous close of 151.22",
+    "labels": {
+      "end": "4:12 PM",
+      "middle": "prev close 151.22",
+      "start": "10:00 AM",
+    },
+    "last": {
+      "x": 66.7,
+      "y": 7.8,
+    },
+    "path": "M0 25.3L4 25.5L8.1 23.1L12.1 10.9L16.1 17.2L20.2 13L24.2 12.3L28.2 22L32.3 23.8L36.3 38.7L40.3 48.7L44.4 56L48.4 49.2L52.4 55.7L56.5 48.5L60.5 43.9L64.5 46.3L68.5 43.2L72.6 49.8L76.6 50.6L80.6 49.1L84.7 44.6L88.7 48.4L92.7 49.4L96.8 50.1L100.8 38.5L104.8 40.4L108.9 41.8L112.9 40.9L116.9 41.8L121 39.2L125 42.5L129 42.5L133.1 36.4L137.1 35.7L141.1 27.9L145.2 25.8L149.2 21L153.2 15.1L157.3 18.9L161.3 10.6L165.3 13.7L169.4 18L173.4 9.9L177.4 9.5L181.5 11.3L185.5 9.7L189.5 13.4L193.5 6.8L197.6 4L200.2 4.7",
+    "tone": "up",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f CBA.AX",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh CBA.AX",
+    },
+    {
+      "action": "run: stock CBA.AX",
+      "active": true,
+      "label": "1d",
+      "title": "Show CBA.AX today",
+    },
+    {
+      "action": "run: stock -r 5d CBA.AX",
+      "active": false,
+      "label": "5d",
+      "title": "Show CBA.AX over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo CBA.AX",
+      "active": false,
+      "label": "1mo",
+      "title": "Show CBA.AX over a month",
+    },
+    {
+      "action": "run: stock -r 1y CBA.AX",
+      "active": false,
+      "label": "1y",
+      "title": "Show CBA.AX over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 22 min ago",
+  "kind": "quote-card",
+  "name": "Commonwealth Bank of Australia",
+  "phase": {
+    "live": true,
+    "text": "● Open · closes 4:12 PM AEDT",
+  },
+  "price": "152.09 AUD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "152.23",
+    },
+    {
+      "label": "Vol",
+      "value": "647.8K",
+    },
+    {
+      "label": "Exch",
+      "value": "ASX",
+    },
+  ],
+  "symbol": "CBA.AX",
+}
+`;
+
+exports[`the card for every recorded chart > MSFT 1d > alt 1`] = `"MSFT, Microsoft Corporation: 525.18 USD. up +7.65 (+1.48%). Closed · last trade 4:00 PM EDT."`;
+
+exports[`the card for every recorded chart > MSFT 1d > plain 1`] = `
+"MSFT  Microsoft Corporation
+525.18 USD  ▲ +7.65 (+1.48%)
+○ Closed · last trade 4:00 PM EDT
+█▇▇▄▅▅▄▄▃▅▃▅▂▁▄▅▅▃▃▂▃▂▂▂▃▆▆███▆▂
+9:30 AM · prev close 517.53 · 4:00 PM
+Day 521.53 ├───●─────┤ 532.35
+52w 349.20 ├───────●─┤ 553.72
+First trade 521.82 · Vol 26.3M · Exch NasdaqGS
+Yahoo Finance · may be delayed · updated 8 h ago
+"
+`;
+
+exports[`the card for every recorded chart > MSFT 1d > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 33.7,
+      "high": "532.35",
+      "label": "Day",
+      "low": "521.53",
+    },
+    {
+      "at": 86,
+      "high": "553.72",
+      "label": "52w",
+      "low": "349.20",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▲ +7.65 (+1.48%)",
+    "tone": "up",
+  },
+  "chart": {
+    "baseline": 56,
+    "height": 60,
+    "label": "MSFT today: up, from 528.19 to 525.18, above the previous close of 517.53",
+    "labels": {
+      "end": "4:00 PM",
+      "middle": "prev close 517.53",
+      "start": "9:30 AM",
+    },
+    "last": {
+      "x": 100,
+      "y": 46.8,
+    },
+    "path": "M0 17.1L3.8 15.5L7.7 4L11.5 17.4L15.4 17.3L19.2 19.2L23.1 23.9L26.9 23.4L30.8 25.1L34.6 23.1L38.5 22.3L42.3 21.5L46.2 25.7L50 22.9L53.8 25.5L57.7 24.2L61.5 25.3L65.4 24.4L69.2 24.4L73.1 27.4L76.9 27.5L80.8 23L84.6 23.3L88.5 23.1L92.3 24.4L96.2 27.1L100 26.4L103.8 24.2L107.7 22.8L111.5 23.4L115.4 28L119.2 27.6L123.1 30.8L126.9 31L130.8 28.6L134.6 25.1L138.5 25.2L142.3 24.7L146.2 22.8L150 23.4L153.8 23.1L157.7 25.8L161.5 27.7L165.4 26.8L169.2 26.7L173.1 25.9L176.9 24.7L180.8 27.1L184.6 28.8L188.5 29.6L192.3 27.2L196.2 27.9L200 28.9L203.8 29.7L207.7 28.6L211.5 29.1L215.4 28L219.2 28.5L223.1 28.2L226.9 26.7L230.8 26.9L234.6 25.4L238.5 24.4L242.3 21.2L246.2 21.2L250 20.1L253.8 16.6L257.7 18L261.5 16.7L265.4 15.1L269.2 16.2L273.1 15L276.9 16.3L280.8 16.5L284.6 18.1L288.5 19.5L292.3 26.9L296.2 27L300 28.1",
+    "tone": "up",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f MSFT",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh MSFT",
+    },
+    {
+      "action": "run: stock MSFT",
+      "active": true,
+      "label": "1d",
+      "title": "Show MSFT today",
+    },
+    {
+      "action": "run: stock -r 5d MSFT",
+      "active": false,
+      "label": "5d",
+      "title": "Show MSFT over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo MSFT",
+      "active": false,
+      "label": "1mo",
+      "title": "Show MSFT over a month",
+    },
+    {
+      "action": "run: stock -r 1y MSFT",
+      "active": false,
+      "label": "1y",
+      "title": "Show MSFT over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 8 h ago",
+  "kind": "quote-card",
+  "name": "Microsoft Corporation",
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "525.18 USD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "521.82",
+    },
+    {
+      "label": "Vol",
+      "value": "26.3M",
+    },
+    {
+      "label": "Exch",
+      "value": "NasdaqGS",
+    },
+  ],
+  "symbol": "MSFT",
+}
+`;
+
+exports[`the card for every recorded chart > NVDA 1d > alt 1`] = `"NVDA, NVIDIA Corporation: 238.90 USD. up +4.95 (+2.12%). Closed · last trade 4:00 PM EDT."`;
+
+exports[`the card for every recorded chart > NVDA 1d > plain 1`] = `
+"NVDA  NVIDIA Corporation
+238.90 USD  ▲ +4.95 (+2.12%)
+○ Closed · last trade 4:00 PM EDT
+▃▃▃▂▃▃▃▃▃▂▂▂▂▁▁▁▂▃▃▄▄▄▄▅▆▆▇████▆
+9:30 AM · prev close 233.95 · 4:00 PM
+Day 235.15 ├──────●──┤ 240.10
+52w 164.27 ├────────●┤ 240.10
+First trade 236.07 · Vol 126.4M · Exch NasdaqGS
+Yahoo Finance · may be delayed · updated 8 h ago
+"
+`;
+
+exports[`the card for every recorded chart > NVDA 1d > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 75.8,
+      "high": "240.10",
+      "label": "Day",
+      "low": "235.15",
+    },
+    {
+      "at": 98.4,
+      "high": "240.10",
+      "label": "52w",
+      "low": "164.27",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▲ +4.95 (+2.12%)",
+    "tone": "up",
+  },
+  "chart": {
+    "baseline": 56,
+    "height": 60,
+    "label": "NVDA today: up, from 237.38 to 238.90, above the previous close of 233.95",
+    "labels": {
+      "end": "4:00 PM",
+      "middle": "prev close 233.95",
+      "start": "9:30 AM",
+    },
+    "last": {
+      "x": 100,
+      "y": 21.3,
+    },
+    "path": "M0 26.1L3.8 29L7.7 23.6L11.5 27.9L15.4 26.2L19.2 27.1L23.1 28.7L26.9 30.4L30.8 30.7L34.6 33.6L38.5 29.3L42.3 29L46.2 28.6L50 26.9L53.8 29.8L57.7 28.1L61.5 27.9L65.4 27L69.2 26.3L73.1 27.9L76.9 27.6L80.8 28L84.6 29.2L88.5 33.4L92.3 33.3L96.2 33.8L100 32.4L103.8 30.4L107.7 31.2L111.5 31.1L115.4 31.5L119.2 30.4L123.1 31.2L126.9 34.5L130.8 34.9L134.6 36.8L138.5 36.6L142.3 36.9L146.2 35.5L150 34.5L153.8 30.9L157.7 30.8L161.5 27.8L165.4 26.5L169.2 26.7L173.1 29L176.9 27.3L180.8 25.6L184.6 24.9L188.5 25.4L192.3 22.1L196.2 22.6L200 23.3L203.8 24.3L207.7 23.2L211.5 22.3L215.4 21L219.2 18.8L223.1 18.1L226.9 15L230.8 15.5L234.6 15.6L238.5 13.7L242.3 13.6L246.2 11.4L250 8.3L253.8 7.2L257.7 7L261.5 5.6L265.4 5.8L269.2 6.1L273.1 7L276.9 4.9L280.8 4L284.6 6.3L288.5 5.8L292.3 9.8L296.2 11L300 12.8",
+    "tone": "up",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f NVDA",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh NVDA",
+    },
+    {
+      "action": "run: stock NVDA",
+      "active": true,
+      "label": "1d",
+      "title": "Show NVDA today",
+    },
+    {
+      "action": "run: stock -r 5d NVDA",
+      "active": false,
+      "label": "5d",
+      "title": "Show NVDA over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo NVDA",
+      "active": false,
+      "label": "1mo",
+      "title": "Show NVDA over a month",
+    },
+    {
+      "action": "run: stock -r 1y NVDA",
+      "active": false,
+      "label": "1y",
+      "title": "Show NVDA over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 8 h ago",
+  "kind": "quote-card",
+  "name": "NVIDIA Corporation",
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "238.90 USD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "236.07",
+    },
+    {
+      "label": "Vol",
+      "value": "126.4M",
+    },
+    {
+      "label": "Exch",
+      "value": "NasdaqGS",
+    },
+  ],
+  "symbol": "NVDA",
+}
+`;
+
+exports[`the card for every recorded chart > TEAM 1d > alt 1`] = `"TEAM, Atlassian Corporation: 196.65 USD. up +8.76 (+4.66%). Closed · last trade 4:00 PM EDT."`;
+
+exports[`the card for every recorded chart > TEAM 1d > plain 1`] = `
+"TEAM  Atlassian Corporation
+196.65 USD  ▲ +8.76 (+4.66%)
+○ Closed · last trade 4:00 PM EDT
+▁▄▄▄▇▆▆▆▆▆▇▆▆▆▇▆▇▇▇▇▆▆▆▇█▇█▇▇█▇▇
+9:30 AM · prev close 187.89 · 4:00 PM
+Day 186.50 ├───────●─┤ 197.50
+52w 56.01 ├────────●┤ 200.00
+First trade 187.88 · Vol 3M · Exch NasdaqGS
+Yahoo Finance · may be delayed · updated 8 h ago
+"
+`;
+
+exports[`the card for every recorded chart > TEAM 1d > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 92.3,
+      "high": "197.50",
+      "label": "Day",
+      "low": "186.50",
+    },
+    {
+      "at": 97.7,
+      "high": "200.00",
+      "label": "52w",
+      "low": "56.01",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▲ +8.76 (+4.66%)",
+    "tone": "up",
+  },
+  "chart": {
+    "baseline": 56,
+    "height": 60,
+    "label": "TEAM today: up, from 191.40 to 196.65, above the previous close of 187.89",
+    "labels": {
+      "end": "4:00 PM",
+      "middle": "prev close 187.89",
+      "start": "9:30 AM",
+    },
+    "last": {
+      "x": 100,
+      "y": 11.5,
+    },
+    "path": "M0 36.3L3.8 26.5L7.7 21.7L11.5 24.2L15.4 23.5L19.2 21.7L23.1 16.7L26.9 16.3L30.8 23L34.6 16.1L38.5 10.2L42.3 12.8L46.2 12.2L50 13.2L53.8 13.5L57.7 15.6L61.5 14.2L65.4 13.2L69.2 12L73.1 15.8L76.9 15.1L80.8 11.2L84.6 11.6L88.5 12.1L92.3 8.4L96.2 9.6L100 9.3L103.8 10.3L107.7 12.2L111.5 11.7L115.4 12.8L119.2 11.1L123.1 11.3L126.9 13.3L130.8 11.2L134.6 10.4L138.5 11.1L142.3 11.9L146.2 12.2L150 10.1L153.8 10.8L157.7 11.9L161.5 11L165.4 10.1L169.2 9.4L173.1 10.1L176.9 8.4L180.8 9.6L184.6 10L188.5 9.6L192.3 11.2L196.2 11.3L200 10.3L203.8 14.6L207.7 15.8L211.5 14.1L215.4 11L219.2 9.8L223.1 9.7L226.9 6.2L230.8 5.7L234.6 7L238.5 6.5L242.3 7.1L246.2 4.2L250 4.2L253.8 4.3L257.7 7.9L261.5 8.5L265.4 8.8L269.2 7.8L273.1 7.6L276.9 4L280.8 4.4L284.6 4.4L288.5 8.8L292.3 7.1L296.2 6.4L300 6.9",
+    "tone": "up",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f TEAM",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh TEAM",
+    },
+    {
+      "action": "run: stock TEAM",
+      "active": true,
+      "label": "1d",
+      "title": "Show TEAM today",
+    },
+    {
+      "action": "run: stock -r 5d TEAM",
+      "active": false,
+      "label": "5d",
+      "title": "Show TEAM over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo TEAM",
+      "active": false,
+      "label": "1mo",
+      "title": "Show TEAM over a month",
+    },
+    {
+      "action": "run: stock -r 1y TEAM",
+      "active": false,
+      "label": "1y",
+      "title": "Show TEAM over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 8 h ago",
+  "kind": "quote-card",
+  "name": "Atlassian Corporation",
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "196.65 USD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "187.88",
+    },
+    {
+      "label": "Vol",
+      "value": "3M",
+    },
+    {
+      "label": "Exch",
+      "value": "NasdaqGS",
+    },
+  ],
+  "symbol": "TEAM",
+}
+`;
+
+exports[`the card in every state > Cboe, 15 minutes delayed > plain 1`] = `
+"AAPL
+332.89 USD  ▼ −0.80 (−0.24%)
+○ Closed · last trade 4:00 PM EDT
+Day 331.65 ├──●──────┤ 336.19
+Open 332.80 · Vol 34.3M · Exch NasdaqGS
+Cboe · 15-min delayed · 4:00 PM EDT
+"
+`;
+
+exports[`the card in every state > Cboe, 15 minutes delayed > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 27.3,
+      "high": "336.19",
+      "label": "Day",
+      "low": "331.65",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▼ −0.80 (−0.24%)",
+    "tone": "down",
+  },
+  "chart": null,
+  "chips": [
+    {
+      "action": "run: stock -f AAPL",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh AAPL",
+    },
+    {
+      "action": "run: stock AAPL",
+      "active": true,
+      "label": "1d",
+      "title": "Show AAPL today",
+    },
+    {
+      "action": "run: stock -r 5d AAPL",
+      "active": false,
+      "label": "5d",
+      "title": "Show AAPL over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo AAPL",
+      "active": false,
+      "label": "1mo",
+      "title": "Show AAPL over a month",
+    },
+    {
+      "action": "run: stock -r 1y AAPL",
+      "active": false,
+      "label": "1y",
+      "title": "Show AAPL over a year",
+    },
+  ],
+  "footer": "Cboe · 15-min delayed · 4:00 PM EDT",
+  "kind": "quote-card",
+  "name": null,
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "332.89 USD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "Open",
+      "value": "332.80",
+    },
+    {
+      "label": "Vol",
+      "value": "34.3M",
+    },
+    {
+      "label": "Exch",
+      "value": "NasdaqGS",
+    },
+  ],
+  "symbol": "AAPL",
+}
+`;
+
+exports[`the card in every state > London pence > plain 1`] = `
+"VOD.L  Vodafone Group Plc
+127.20p  ▲ +0.73 (+1.19%)
+● Open · closes 4:12 PM AEDT
+▄▃▃▁▂▃▂▁▂▄▅▄▅▆▆▇▇▆▇▇▇▇█▇▇▇▆▆▇▇▇▇
+10:00 AM · prev close 61.89 · 4:12 PM
+Day 62.06 ├────────●┤ 62.73
+52w 40.17 ├────────●┤ 68.77
+First trade 62.25 · Vol 2.4M · Exch LSE
+Yahoo Finance · may be delayed · updated 17 min ago
+"
+`;
+
+exports[`the card in every state > London pence > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 100,
+      "high": "62.73",
+      "label": "Day",
+      "low": "62.06",
+    },
+    {
+      "at": 100,
+      "high": "68.77",
+      "label": "52w",
+      "low": "40.17",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▲ +0.73 (+1.19%)",
+    "tone": "up",
+  },
+  "chart": {
+    "baseline": 56,
+    "height": 60,
+    "label": "VOD.L today: up, from 62.33 to 62.63, above the previous close of 61.89",
+    "labels": {
+      "end": "4:12 PM",
+      "middle": "prev close 61.89",
+      "start": "10:00 AM",
+    },
+    "last": {
+      "x": 67.9,
+      "y": 14.7,
+    },
+    "path": "M0 27.8L4 28.4L8.1 31L12.1 33.5L16.1 36.1L20.2 43.8L24.2 34.2L28.2 40.6L32.3 32.9L36.3 37.4L40.3 39.3L44.4 40L48.4 43.2L52.4 37.4L56.5 34.2L60.5 27.1L64.5 22L68.5 22L72.6 29L76.6 30.3L80.6 23.9L84.7 16.2L88.7 16.8L92.7 14.3L96.8 11.1L100.8 9.8L104.8 10.4L108.9 18.8L112.9 16.2L116.9 15.2L121 11.7L125 9.1L129 10.7L133.1 12.3L137.1 12.3L141.1 8.5L145.2 4L149.2 9.8L153.2 8.5L157.3 10.4L161.3 14.3L165.3 10.1L169.4 11.7L173.4 14.6L177.4 16.2L181.5 14.3L185.5 11.1L189.5 12.3L193.5 8.2L197.6 7.9L201.6 8.8L203.8 8.8",
+    "tone": "up",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f VOD.L",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh VOD.L",
+    },
+    {
+      "action": "run: stock VOD.L",
+      "active": true,
+      "label": "1d",
+      "title": "Show VOD.L today",
+    },
+    {
+      "action": "run: stock -r 5d VOD.L",
+      "active": false,
+      "label": "5d",
+      "title": "Show VOD.L over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo VOD.L",
+      "active": false,
+      "label": "1mo",
+      "title": "Show VOD.L over a month",
+    },
+    {
+      "action": "run: stock -r 1y VOD.L",
+      "active": false,
+      "label": "1y",
+      "title": "Show VOD.L over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 17 min ago",
+  "kind": "quote-card",
+  "name": "Vodafone Group Plc",
+  "phase": {
+    "live": true,
+    "text": "● Open · closes 4:12 PM AEDT",
+  },
+  "price": "127.20p",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "62.25",
+    },
+    {
+      "label": "Vol",
+      "value": "2.4M",
+    },
+    {
+      "label": "Exch",
+      "value": "LSE",
+    },
+  ],
+  "symbol": "VOD.L",
+}
+`;
+
+exports[`the card in every state > a currency pair > plain 1`] = `
+"AUDUSD=X  AUD/USD
+0.6978 USD  ▲ +0.0004 (+0.06%)
+● Open · closes 11:59 PM BST
+▄▄▄▄▄▄▄▁▁▂▁▂▃▄▅▅▄▅▅▅▄▄▄▄▄▄▃▄▄▆▇█
+12:00 AM · prev close 0.6974 · 11:59 PM
+Day 0.6966 ├────────●┤ 0.6978
+52w 0.6422 ├─────●───┤ 0.7277
+Yahoo Finance · may be delayed · updated 3 min ago
+"
+`;
+
+exports[`the card in every state > a currency pair > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 100,
+      "high": "0.6978",
+      "label": "Day",
+      "low": "0.6966",
+    },
+    {
+      "at": 65,
+      "high": "0.7277",
+      "label": "52w",
+      "low": "0.6422",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▲ +0.0004 (+0.06%)",
+    "tone": "up",
+  },
+  "chart": {
+    "baseline": 22,
+    "height": 60,
+    "label": "AUDUSD=X today: up, from 0.6972 to 0.6978, above the previous close of 0.6974",
+    "labels": {
+      "end": "11:59 PM",
+      "middle": "prev close 0.6974",
+      "start": "12:00 AM",
+    },
+    "last": {
+      "x": 18.5,
+      "y": 6.7,
+    },
+    "path": "M0 32L1 38L2.1 36L3.1 30L4.2 28L5.2 30L6.3 30L7.3 32L8.3 30L9.4 30L10.4 34L11.5 42L12.5 52L13.6 56L14.6 52L15.6 48L16.7 52L17.7 54L18.8 44L19.8 44L20.8 44L21.9 40L22.9 36L24 34L25 24L26.1 28L27.1 26.1L28.1 32L29.2 26.1L30.2 24L31.3 22L32.3 24L33.4 22L34.4 26.1L35.4 34L36.5 34L37.5 36L38.6 36L39.6 34L40.7 32L41.7 28L42.7 30L43.8 32L44.8 32L45.9 40L46.9 36L47.9 32L49 32L50 30L51.1 28L52.1 18L53.2 14L54.2 4L55.6 4",
+    "tone": "up",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f AUDUSD=X",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh AUDUSD=X",
+    },
+    {
+      "action": "run: stock AUDUSD=X",
+      "active": true,
+      "label": "1d",
+      "title": "Show AUDUSD=X today",
+    },
+    {
+      "action": "run: stock -r 5d AUDUSD=X",
+      "active": false,
+      "label": "5d",
+      "title": "Show AUDUSD=X over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo AUDUSD=X",
+      "active": false,
+      "label": "1mo",
+      "title": "Show AUDUSD=X over a month",
+    },
+    {
+      "action": "run: stock -r 1y AUDUSD=X",
+      "active": false,
+      "label": "1y",
+      "title": "Show AUDUSD=X over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 3 min ago",
+  "kind": "quote-card",
+  "name": "AUD/USD",
+  "phase": {
+    "live": true,
+    "text": "● Open · closes 11:59 PM BST",
+  },
+  "price": "0.6978 USD",
+  "stale": null,
+  "stats": [],
+  "symbol": "AUDUSD=X",
+}
+`;
+
+exports[`the card in every state > a hostile name > plain 1`] = `
+"AAPL  <img src=x onerror=alert(1)><script>alert(2)</script>
+332.89 USD  ▼ −0.80 (−0.24%)
+○ Closed · last trade 4:00 PM EDT
+█▅▄▃▃▄▄▃▄▃▃▃▃▃▄▅▆▃▃▃▃▁▁▂▁▂▃▄▃▂▁▂
+9:30 AM · prev close 333.69 · 4:00 PM
+Day 331.65 ├──●──────┤ 336.19
+52w 243.42 ├───────●─┤ 345.34
+First trade 332.80 · Vol 34.3M · Exch <b>NMS</b>
+Yahoo Finance · may be delayed · updated 8 h ago
+"
+`;
+
+exports[`the card in every state > a hostile name > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 27.3,
+      "high": "336.19",
+      "label": "Day",
+      "low": "331.65",
+    },
+    {
+      "at": 87.8,
+      "high": "345.34",
+      "label": "52w",
+      "low": "243.42",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▼ −0.80 (−0.24%)",
+    "tone": "down",
+  },
+  "chart": {
+    "baseline": 39.6,
+    "height": 60,
+    "label": "AAPL today: down, from 336.07 to 332.89, below the previous close of 333.69",
+    "labels": {
+      "end": "4:00 PM",
+      "middle": "prev close 333.69",
+      "start": "9:30 AM",
+    },
+    "last": {
+      "x": 100,
+      "y": 85.8,
+    },
+    "path": "M0 4L3.8 14.2L7.7 16.7L11.5 24.1L15.4 21.1L19.2 36.7L23.1 40L26.9 44.1L30.8 37.3L34.6 43.2L38.5 39.9L42.3 43.7L46.2 39.8L50 31.9L53.8 37.6L57.7 30.6L61.5 37L65.4 41.6L69.2 38.8L73.1 37.7L76.9 33.5L80.8 45.5L84.6 42.9L88.5 44L92.3 41.4L96.2 39.2L100 42L103.8 38.7L107.7 42L111.5 41.2L115.4 42.4L119.2 41.5L123.1 40.9L126.9 37.9L130.8 29.3L134.6 32.3L138.5 29.3L142.3 29.7L146.2 27.6L150 24.8L153.8 21.8L157.7 25.8L161.5 27.3L165.4 41.1L169.2 41.9L173.1 42.5L176.9 43.3L180.8 41.8L184.6 44.2L188.5 44.5L192.3 43.3L196.2 47.3L200 49.4L203.8 55.3L207.7 55L211.5 52L215.4 52.4L219.2 52.7L223.1 48.8L226.9 47.9L230.8 52.3L234.6 50.9L238.5 56L242.3 48L246.2 44.8L250 39.1L253.8 37L257.7 38.8L261.5 35.9L265.4 33L269.2 37.8L273.1 35.6L276.9 38.8L280.8 45L284.6 52.6L288.5 54L292.3 50.8L296.2 47.9L300 51.5",
+    "tone": "down",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f AAPL",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh AAPL",
+    },
+    {
+      "action": "run: stock AAPL",
+      "active": true,
+      "label": "1d",
+      "title": "Show AAPL today",
+    },
+    {
+      "action": "run: stock -r 5d AAPL",
+      "active": false,
+      "label": "5d",
+      "title": "Show AAPL over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo AAPL",
+      "active": false,
+      "label": "1mo",
+      "title": "Show AAPL over a month",
+    },
+    {
+      "action": "run: stock -r 1y AAPL",
+      "active": false,
+      "label": "1y",
+      "title": "Show AAPL over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 8 h ago",
+  "kind": "quote-card",
+  "name": "<img src=x onerror=alert(1)><script>alert(2)</script>",
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "332.89 USD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "332.80",
+    },
+    {
+      "label": "Vol",
+      "value": "34.3M",
+    },
+    {
+      "label": "Exch",
+      "value": "<b>NMS</b>",
+    },
+  ],
+  "symbol": "AAPL",
+}
+`;
+
+exports[`the card in every state > a resolved name > plain 1`] = `
+"CBA.AX  Commonwealth Bank of Australia
+152.09 AUD  ▲ +0.87 (+0.58%)
+● Open · closes 4:12 PM AEDT
+▅▅▇▇▇▅▂▁▁▃▂▂▂▃▂▂▃▃▃▃▃▄▅▆▆▇▆▇▇▇██
+10:00 AM · prev close 151.22 · 4:12 PM
+Day 150.50 ├───────●─┤ 152.29
+52w 146.98 ├─●───────┤ 185.59
+First trade 152.23 · Vol 647.8K · Exch ASX
+Yahoo Finance · may be delayed · updated 22 min ago
+"
+`;
+
+exports[`the card in every state > a resolved name > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 88.8,
+      "high": "152.29",
+      "label": "Day",
+      "low": "150.50",
+    },
+    {
+      "at": 13.2,
+      "high": "185.59",
+      "label": "52w",
+      "low": "146.98",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▲ +0.87 (+0.58%)",
+    "tone": "up",
+  },
+  "chart": {
+    "baseline": 34.9,
+    "height": 60,
+    "label": "CBA.AX today: up, from 151.50 to 152.09, above the previous close of 151.22",
+    "labels": {
+      "end": "4:12 PM",
+      "middle": "prev close 151.22",
+      "start": "10:00 AM",
+    },
+    "last": {
+      "x": 66.7,
+      "y": 7.8,
+    },
+    "path": "M0 25.3L4 25.5L8.1 23.1L12.1 10.9L16.1 17.2L20.2 13L24.2 12.3L28.2 22L32.3 23.8L36.3 38.7L40.3 48.7L44.4 56L48.4 49.2L52.4 55.7L56.5 48.5L60.5 43.9L64.5 46.3L68.5 43.2L72.6 49.8L76.6 50.6L80.6 49.1L84.7 44.6L88.7 48.4L92.7 49.4L96.8 50.1L100.8 38.5L104.8 40.4L108.9 41.8L112.9 40.9L116.9 41.8L121 39.2L125 42.5L129 42.5L133.1 36.4L137.1 35.7L141.1 27.9L145.2 25.8L149.2 21L153.2 15.1L157.3 18.9L161.3 10.6L165.3 13.7L169.4 18L173.4 9.9L177.4 9.5L181.5 11.3L185.5 9.7L189.5 13.4L193.5 6.8L197.6 4L200.2 4.7",
+    "tone": "up",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f CBA.AX",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh CBA.AX",
+    },
+    {
+      "action": "run: stock CBA.AX",
+      "active": true,
+      "label": "1d",
+      "title": "Show CBA.AX today",
+    },
+    {
+      "action": "run: stock -r 5d CBA.AX",
+      "active": false,
+      "label": "5d",
+      "title": "Show CBA.AX over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo CBA.AX",
+      "active": false,
+      "label": "1mo",
+      "title": "Show CBA.AX over a month",
+    },
+    {
+      "action": "run: stock -r 1y CBA.AX",
+      "active": false,
+      "label": "1y",
+      "title": "Show CBA.AX over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 22 min ago",
+  "kind": "quote-card",
+  "name": "Commonwealth Bank of Australia",
+  "phase": {
+    "live": true,
+    "text": "● Open · closes 4:12 PM AEDT",
+  },
+  "price": "152.09 AUD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "152.23",
+    },
+    {
+      "label": "Vol",
+      "value": "647.8K",
+    },
+    {
+      "label": "Exch",
+      "value": "ASX",
+    },
+  ],
+  "symbol": "CBA.AX",
+}
+`;
+
+exports[`the card in every state > a snapshot > plain 1`] = `
+"TEAM  Atlassian Corporation
+196.65 USD  ▲ +8.76 (+4.66%)
+○ Closed · last trade 4:00 PM EDT
+Day 186.50 ├───────●─┤ 197.50
+52w 56.01 ├────────●┤ 200.00
+First trade 187.88 · Vol 3M · Exch NasdaqGS
+Yahoo Finance · snapshot as of 11:30 PM EDT
+"
+`;
+
+exports[`the card in every state > a snapshot > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 92.3,
+      "high": "197.50",
+      "label": "Day",
+      "low": "186.50",
+    },
+    {
+      "at": 97.7,
+      "high": "200.00",
+      "label": "52w",
+      "low": "56.01",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▲ +8.76 (+4.66%)",
+    "tone": "up",
+  },
+  "chart": null,
+  "chips": [
+    {
+      "action": "run: stock -f TEAM",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh TEAM",
+    },
+    {
+      "action": "run: stock TEAM",
+      "active": true,
+      "label": "1d",
+      "title": "Show TEAM today",
+    },
+    {
+      "action": "run: stock -r 5d TEAM",
+      "active": false,
+      "label": "5d",
+      "title": "Show TEAM over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo TEAM",
+      "active": false,
+      "label": "1mo",
+      "title": "Show TEAM over a month",
+    },
+    {
+      "action": "run: stock -r 1y TEAM",
+      "active": false,
+      "label": "1y",
+      "title": "Show TEAM over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · snapshot as of 11:30 PM EDT",
+  "kind": "quote-card",
+  "name": "Atlassian Corporation",
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "196.65 USD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "187.88",
+    },
+    {
+      "label": "Vol",
+      "value": "3M",
+    },
+    {
+      "label": "Exch",
+      "value": "NasdaqGS",
+    },
+  ],
+  "symbol": "TEAM",
+}
+`;
+
+exports[`the card in every state > an index > plain 1`] = `
+"^AXJO  S&P/ASX 200 [XJO]
+8,750.90 AUD  ▲ +68.80 (+0.79%)
+● Open · closes 4:12 PM AEDT
+▂▃▄▃▃▃▁▂▂▄▄▄▄▅▅▆▆▅▆▆▆▇▇▆▇▇▇▇▇███
+10:00 AM · prev close 8,682.10 · 4:12 PM
+Day 8,686.40 ├────────●┤ 8,753.00
+52w 8,262.40 ├────●────┤ 9,296.70
+Yahoo Finance · may be delayed · updated 18 min ago
+"
+`;
+
+exports[`the card in every state > an index > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 96.8,
+      "high": "8,753.00",
+      "label": "Day",
+      "low": "8,686.40",
+    },
+    {
+      "at": 47.2,
+      "high": "9,296.70",
+      "label": "52w",
+      "low": "8,262.40",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▲ +68.80 (+0.79%)",
+    "tone": "up",
+  },
+  "chart": {
+    "baseline": 56,
+    "height": 60,
+    "label": "^AXJO today: up, from 8,712.20 to 8,750.90, above the previous close of 8,682.10",
+    "labels": {
+      "end": "4:12 PM",
+      "middle": "prev close 8,682.10",
+      "start": "10:00 AM",
+    },
+    "last": {
+      "x": 67.8,
+      "y": 9,
+    },
+    "path": "M0 33.9L4 30.3L8.1 30.6L12.1 22.6L16.1 25.3L20.2 27.9L24.2 30.5L28.2 32.3L32.3 29.5L36.3 36L40.3 40.6L44.4 46.4L48.4 35L52.4 35.6L56.5 31.3L60.5 26.5L64.5 23.4L68.5 25.6L72.6 26.8L76.6 28.2L80.6 27.3L84.7 20.7L88.7 21.5L92.7 20.2L96.8 16.9L100.8 14.8L104.8 14.4L108.9 22.2L112.9 21.1L116.9 19.1L121 16.9L125 16.7L129 15.1L133.1 13L137.1 13.9L141.1 10.8L145.2 7.1L149.2 11.7L153.2 12.7L157.3 10.8L161.3 11.8L165.3 10.8L169.4 11.5L173.4 11.4L177.4 9.7L181.5 11.3L185.5 9.3L189.5 8.9L193.5 5L197.6 4L201.6 5.5L203.4 5.4",
+    "tone": "up",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f ^AXJO",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh ^AXJO",
+    },
+    {
+      "action": "run: stock ^AXJO",
+      "active": true,
+      "label": "1d",
+      "title": "Show ^AXJO today",
+    },
+    {
+      "action": "run: stock -r 5d ^AXJO",
+      "active": false,
+      "label": "5d",
+      "title": "Show ^AXJO over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo ^AXJO",
+      "active": false,
+      "label": "1mo",
+      "title": "Show ^AXJO over a month",
+    },
+    {
+      "action": "run: stock -r 1y ^AXJO",
+      "active": false,
+      "label": "1y",
+      "title": "Show ^AXJO over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 18 min ago",
+  "kind": "quote-card",
+  "name": "S&P/ASX 200 [XJO]",
+  "phase": {
+    "live": true,
+    "text": "● Open · closes 4:12 PM AEDT",
+  },
+  "price": "8,750.90 AUD",
+  "stale": null,
+  "stats": [],
+  "symbol": "^AXJO",
+}
+`;
+
+exports[`the card in every state > crypto over 24 hours > plain 1`] = `
+"BTC-USD  Bitcoin USD
+85,459.57 USD  ▼ −600.89 (−0.70%)  24h
+● Trading 24/7
+▅▅▆▇▅▅▅▅▆██▆▇▅▅▄▃▃▂▁▂▄▂▃▂▂▂▂▂▂▁▁
+12:00 AM · prev close 85,750.58 · 11:59 PM
+Day 85,453.82 ├●────────┤ 86,054.39
+52w 57,747.77 ├───●─────┤ 125,184.02
+First trade 85,766.77 · Vol 28.2B · Exch CCC
+Yahoo Finance · may be delayed · updated 2 min ago
+"
+`;
+
+exports[`the card in every state > crypto over 24 hours > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 1,
+      "high": "86,054.39",
+      "label": "Day",
+      "low": "85,453.82",
+    },
+    {
+      "at": 41.1,
+      "high": "125,184.02",
+      "label": "52w",
+      "low": "57,747.77",
+    },
+  ],
+  "change": {
+    "basis": "24h",
+    "text": "▼ −600.89 (−0.70%)",
+    "tone": "down",
+  },
+  "chart": {
+    "baseline": 30.6,
+    "height": 60,
+    "label": "BTC-USD today: down, from 85,792.02 to 85,459.57, below the previous close of 85,750.58",
+    "labels": {
+      "end": "11:59 PM",
+      "middle": "prev close 85,750.58",
+      "start": "12:00 AM",
+    },
+    "last": {
+      "x": 14.5,
+      "y": 92.5,
+    },
+    "path": "M0 27L1 24L2.1 25.2L3.1 20.3L4.2 13.2L5.2 24.7L6.3 23L7.3 27.5L8.3 27.2L9.4 24.4L10.4 23L11.5 17.6L12.5 4L13.6 8L14.6 4.2L15.6 20L16.7 13.4L17.7 11.2L18.8 27.1L19.8 28.2L20.8 37.1L21.9 37.1L22.9 39.4L24 42.3L25 45.9L26.1 53.8L27.1 56L28.1 50.3L29.2 33L30.2 41.1L31.3 45.5L32.3 39.1L33.4 45.6L34.4 44.9L35.4 49.1L36.5 49.9L37.5 46L38.6 49.2L39.6 51L40.7 47.5L41.7 51.1L42.7 54.3L43.4 55.5",
+    "tone": "down",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f BTC-USD",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh BTC-USD",
+    },
+    {
+      "action": "run: stock BTC-USD",
+      "active": true,
+      "label": "1d",
+      "title": "Show BTC-USD today",
+    },
+    {
+      "action": "run: stock -r 5d BTC-USD",
+      "active": false,
+      "label": "5d",
+      "title": "Show BTC-USD over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo BTC-USD",
+      "active": false,
+      "label": "1mo",
+      "title": "Show BTC-USD over a month",
+    },
+    {
+      "action": "run: stock -r 1y BTC-USD",
+      "active": false,
+      "label": "1y",
+      "title": "Show BTC-USD over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 2 min ago",
+  "kind": "quote-card",
+  "name": "Bitcoin USD",
+  "phase": {
+    "live": true,
+    "text": "● Trading 24/7",
+  },
+  "price": "85,459.57 USD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "85,766.77",
+    },
+    {
+      "label": "Vol",
+      "value": "28.2B",
+    },
+    {
+      "label": "Exch",
+      "value": "CCC",
+    },
+  ],
+  "symbol": "BTC-USD",
+}
+`;
+
+exports[`the card in every state > five days > plain 1`] = `
+"AAPL  Apple Inc.
+332.89 USD  ▼ −0.80 (−0.24%)
+○ Closed · last trade 4:00 PM EDT
+▄▄▄▃▄▃▂█▇▇▆▇▆▂▂▁▁▂▂▄▃▄▅▄▅▆▅▅▅▄▅▄
+Sep 29 · from 332.53 · Oct 5
+Day 331.65 ├──●──────┤ 336.19
+52w 243.42 ├───────●─┤ 345.34
+First trade 332.80 · Vol 34.3M · Exch NasdaqGS
+Yahoo Finance · may be delayed · updated 8 h ago
+"
+`;
+
+exports[`the card in every state > five days > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 27.3,
+      "high": "336.19",
+      "label": "Day",
+      "low": "331.65",
+    },
+    {
+      "at": 87.8,
+      "high": "345.34",
+      "label": "52w",
+      "low": "243.42",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▼ −0.80 (−0.24%)",
+    "tone": "down",
+  },
+  "chart": {
+    "baseline": 30.5,
+    "height": 60,
+    "label": "AAPL over 5 days: up, from 332.53 to 332.89, above the first close of 332.53",
+    "labels": {
+      "end": "Oct 5",
+      "middle": "from 332.53",
+      "start": "Sep 29",
+    },
+    "last": {
+      "x": 100,
+      "y": 48,
+    },
+    "path": "M0 30.5L0.5 29L1 27.7L1.5 32.5L2 33L2.5 30.9L3 30.3L3.5 33.9L4 32.8L4.5 35.7L5 36.4L5.5 37.6L6.5 36.3L7 36.8L7.5 34.7L8 31.9L8.5 34.4L9 34.6L9.5 34.1L10 34.9L10.5 37.6L11 38.9L12 44.4L12.5 43.5L47.8 30.8L48.3 16L48.8 8.7L49.3 5.5L49.8 4L50.3 4.3L50.8 8.5L51.3 9L51.8 7.1L52.8 11.4L53.3 11.7L53.8 11.2L54.3 13.1L54.8 15.1L55.3 16L55.8 14.2L56.3 13L56.8 12.2L57.3 13.6L57.8 11.9L58.8 14.7L59.3 16.6L59.8 18.4L60.3 28.3L95.7 33.2L96.2 39.7L96.7 42L97.2 37.6L97.7 37.3L98.2 41L98.7 42.8L99.7 56L100.2 53.8L100.7 50.2L101.2 48.5L101.7 51L102.2 51.3L102.7 49.8L103.2 46.6L103.7 43.9L104.2 47.4L104.7 43.9L105.6 42.5L106.1 42.5L106.6 42.6L107.1 42.6L107.6 42.8L108.1 39.6L143.5 34.4L144 31.9L144.5 24.2L145 22.5L146 28.5L146.5 35.5L147 31.2L147.5 31.8L148 31L148.5 28.5L149 29L149.5 27.4L150 26.7L150.5 25.7L151 26.5L152 26.9L152.5 28.4L153 28.4L153.5 25.4L154 25.2L154.5 27.4L155 27.2L155.5 25.7L156 24.8L287 18.5L287.5 24.4L288.5 26.5L289 24.7L289.5 25.9L290 23.5L290.5 26.6L291 26L291.5 25.8L292 25.7L292.5 23.1L293 21.7L293.5 21.2L294.5 26L295 26.4L295.5 30L296 29.1L296.5 27.8L297 30.2L297.5 25.2L298 24.2L298.5 24.1L299 29.2L300 28.8",
+    "tone": "up",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f -r 5d AAPL",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh AAPL",
+    },
+    {
+      "action": "run: stock AAPL",
+      "active": false,
+      "label": "1d",
+      "title": "Show AAPL today",
+    },
+    {
+      "action": "run: stock -r 5d AAPL",
+      "active": true,
+      "label": "5d",
+      "title": "Show AAPL over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo AAPL",
+      "active": false,
+      "label": "1mo",
+      "title": "Show AAPL over a month",
+    },
+    {
+      "action": "run: stock -r 1y AAPL",
+      "active": false,
+      "label": "1y",
+      "title": "Show AAPL over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 8 h ago",
+  "kind": "quote-card",
+  "name": "Apple Inc.",
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "332.89 USD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "332.80",
+    },
+    {
+      "label": "Vol",
+      "value": "34.3M",
+    },
+    {
+      "label": "Exch",
+      "value": "NasdaqGS",
+    },
+  ],
+  "symbol": "AAPL",
+}
+`;
+
+exports[`the card in every state > from memory > plain 1`] = `
+"AAPL  Apple Inc.
+332.89 USD  ▼ −0.80 (−0.24%)
+○ Closed · last trade 4:00 PM EDT
+█▅▄▃▃▄▄▃▄▃▃▃▃▃▄▅▆▃▃▃▃▁▁▂▁▂▃▄▃▂▁▂
+9:30 AM · prev close 333.69 · 4:00 PM
+Day 331.65 ├──●──────┤ 336.19
+52w 243.42 ├───────●─┤ 345.34
+First trade 332.80 · Vol 34.3M · Exch NasdaqGS
+Yahoo Finance · may be delayed · updated 8 h ago
+"
+`;
+
+exports[`the card in every state > from memory > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 27.3,
+      "high": "336.19",
+      "label": "Day",
+      "low": "331.65",
+    },
+    {
+      "at": 87.8,
+      "high": "345.34",
+      "label": "52w",
+      "low": "243.42",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▼ −0.80 (−0.24%)",
+    "tone": "down",
+  },
+  "chart": {
+    "baseline": 39.6,
+    "height": 60,
+    "label": "AAPL today: down, from 336.07 to 332.89, below the previous close of 333.69",
+    "labels": {
+      "end": "4:00 PM",
+      "middle": "prev close 333.69",
+      "start": "9:30 AM",
+    },
+    "last": {
+      "x": 100,
+      "y": 85.8,
+    },
+    "path": "M0 4L3.8 14.2L7.7 16.7L11.5 24.1L15.4 21.1L19.2 36.7L23.1 40L26.9 44.1L30.8 37.3L34.6 43.2L38.5 39.9L42.3 43.7L46.2 39.8L50 31.9L53.8 37.6L57.7 30.6L61.5 37L65.4 41.6L69.2 38.8L73.1 37.7L76.9 33.5L80.8 45.5L84.6 42.9L88.5 44L92.3 41.4L96.2 39.2L100 42L103.8 38.7L107.7 42L111.5 41.2L115.4 42.4L119.2 41.5L123.1 40.9L126.9 37.9L130.8 29.3L134.6 32.3L138.5 29.3L142.3 29.7L146.2 27.6L150 24.8L153.8 21.8L157.7 25.8L161.5 27.3L165.4 41.1L169.2 41.9L173.1 42.5L176.9 43.3L180.8 41.8L184.6 44.2L188.5 44.5L192.3 43.3L196.2 47.3L200 49.4L203.8 55.3L207.7 55L211.5 52L215.4 52.4L219.2 52.7L223.1 48.8L226.9 47.9L230.8 52.3L234.6 50.9L238.5 56L242.3 48L246.2 44.8L250 39.1L253.8 37L257.7 38.8L261.5 35.9L265.4 33L269.2 37.8L273.1 35.6L276.9 38.8L280.8 45L284.6 52.6L288.5 54L292.3 50.8L296.2 47.9L300 51.5",
+    "tone": "down",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f AAPL",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh AAPL",
+    },
+    {
+      "action": "run: stock AAPL",
+      "active": true,
+      "label": "1d",
+      "title": "Show AAPL today",
+    },
+    {
+      "action": "run: stock -r 5d AAPL",
+      "active": false,
+      "label": "5d",
+      "title": "Show AAPL over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo AAPL",
+      "active": false,
+      "label": "1mo",
+      "title": "Show AAPL over a month",
+    },
+    {
+      "action": "run: stock -r 1y AAPL",
+      "active": false,
+      "label": "1y",
+      "title": "Show AAPL over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 8 h ago",
+  "kind": "quote-card",
+  "name": "Apple Inc.",
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "332.89 USD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "332.80",
+    },
+    {
+      "label": "Vol",
+      "value": "34.3M",
+    },
+    {
+      "label": "Exch",
+      "value": "NasdaqGS",
+    },
+  ],
+  "symbol": "AAPL",
+}
+`;
+
+exports[`the card in every state > live from the Worker > plain 1`] = `
+"AAPL  Apple Inc.
+332.89 USD  ▼ −0.80 (−0.24%)
+○ Closed · last trade 4:00 PM EDT
+█▅▄▃▃▄▄▃▄▃▃▃▃▃▄▅▆▃▃▃▃▁▁▂▁▂▃▄▃▂▁▂
+9:30 AM · prev close 333.69 · 4:00 PM
+Day 331.65 ├──●──────┤ 336.19
+52w 243.42 ├───────●─┤ 345.34
+First trade 332.80 · Vol 34.3M · Exch NasdaqGS
+Yahoo Finance · may be delayed · updated 8 h ago
+"
+`;
+
+exports[`the card in every state > live from the Worker > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 27.3,
+      "high": "336.19",
+      "label": "Day",
+      "low": "331.65",
+    },
+    {
+      "at": 87.8,
+      "high": "345.34",
+      "label": "52w",
+      "low": "243.42",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▼ −0.80 (−0.24%)",
+    "tone": "down",
+  },
+  "chart": {
+    "baseline": 39.6,
+    "height": 60,
+    "label": "AAPL today: down, from 336.07 to 332.89, below the previous close of 333.69",
+    "labels": {
+      "end": "4:00 PM",
+      "middle": "prev close 333.69",
+      "start": "9:30 AM",
+    },
+    "last": {
+      "x": 100,
+      "y": 85.8,
+    },
+    "path": "M0 4L3.8 14.2L7.7 16.7L11.5 24.1L15.4 21.1L19.2 36.7L23.1 40L26.9 44.1L30.8 37.3L34.6 43.2L38.5 39.9L42.3 43.7L46.2 39.8L50 31.9L53.8 37.6L57.7 30.6L61.5 37L65.4 41.6L69.2 38.8L73.1 37.7L76.9 33.5L80.8 45.5L84.6 42.9L88.5 44L92.3 41.4L96.2 39.2L100 42L103.8 38.7L107.7 42L111.5 41.2L115.4 42.4L119.2 41.5L123.1 40.9L126.9 37.9L130.8 29.3L134.6 32.3L138.5 29.3L142.3 29.7L146.2 27.6L150 24.8L153.8 21.8L157.7 25.8L161.5 27.3L165.4 41.1L169.2 41.9L173.1 42.5L176.9 43.3L180.8 41.8L184.6 44.2L188.5 44.5L192.3 43.3L196.2 47.3L200 49.4L203.8 55.3L207.7 55L211.5 52L215.4 52.4L219.2 52.7L223.1 48.8L226.9 47.9L230.8 52.3L234.6 50.9L238.5 56L242.3 48L246.2 44.8L250 39.1L253.8 37L257.7 38.8L261.5 35.9L265.4 33L269.2 37.8L273.1 35.6L276.9 38.8L280.8 45L284.6 52.6L288.5 54L292.3 50.8L296.2 47.9L300 51.5",
+    "tone": "down",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f AAPL",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh AAPL",
+    },
+    {
+      "action": "run: stock AAPL",
+      "active": true,
+      "label": "1d",
+      "title": "Show AAPL today",
+    },
+    {
+      "action": "run: stock -r 5d AAPL",
+      "active": false,
+      "label": "5d",
+      "title": "Show AAPL over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo AAPL",
+      "active": false,
+      "label": "1mo",
+      "title": "Show AAPL over a month",
+    },
+    {
+      "action": "run: stock -r 1y AAPL",
+      "active": false,
+      "label": "1y",
+      "title": "Show AAPL over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 8 h ago",
+  "kind": "quote-card",
+  "name": "Apple Inc.",
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "332.89 USD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "332.80",
+    },
+    {
+      "label": "Vol",
+      "value": "34.3M",
+    },
+    {
+      "label": "Exch",
+      "value": "NasdaqGS",
+    },
+  ],
+  "symbol": "AAPL",
+}
+`;
+
+exports[`the card in every state > live through the interim proxy > plain 1`] = `
+"AAPL  Apple Inc.
+332.89 USD  ▼ −0.80 (−0.24%)
+○ Closed · last trade 4:00 PM EDT
+█▅▄▃▃▄▄▃▄▃▃▃▃▃▄▅▆▃▃▃▃▁▁▂▁▂▃▄▃▂▁▂
+9:30 AM · prev close 333.69 · 4:00 PM
+Day 331.65 ├──●──────┤ 336.19
+52w 243.42 ├───────●─┤ 345.34
+First trade 332.80 · Vol 34.3M · Exch NasdaqGS
+Yahoo Finance via public proxy, may be slow · may be delayed · updated 8 h ago
+"
+`;
+
+exports[`the card in every state > live through the interim proxy > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 27.3,
+      "high": "336.19",
+      "label": "Day",
+      "low": "331.65",
+    },
+    {
+      "at": 87.8,
+      "high": "345.34",
+      "label": "52w",
+      "low": "243.42",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▼ −0.80 (−0.24%)",
+    "tone": "down",
+  },
+  "chart": {
+    "baseline": 39.6,
+    "height": 60,
+    "label": "AAPL today: down, from 336.07 to 332.89, below the previous close of 333.69",
+    "labels": {
+      "end": "4:00 PM",
+      "middle": "prev close 333.69",
+      "start": "9:30 AM",
+    },
+    "last": {
+      "x": 100,
+      "y": 85.8,
+    },
+    "path": "M0 4L3.8 14.2L7.7 16.7L11.5 24.1L15.4 21.1L19.2 36.7L23.1 40L26.9 44.1L30.8 37.3L34.6 43.2L38.5 39.9L42.3 43.7L46.2 39.8L50 31.9L53.8 37.6L57.7 30.6L61.5 37L65.4 41.6L69.2 38.8L73.1 37.7L76.9 33.5L80.8 45.5L84.6 42.9L88.5 44L92.3 41.4L96.2 39.2L100 42L103.8 38.7L107.7 42L111.5 41.2L115.4 42.4L119.2 41.5L123.1 40.9L126.9 37.9L130.8 29.3L134.6 32.3L138.5 29.3L142.3 29.7L146.2 27.6L150 24.8L153.8 21.8L157.7 25.8L161.5 27.3L165.4 41.1L169.2 41.9L173.1 42.5L176.9 43.3L180.8 41.8L184.6 44.2L188.5 44.5L192.3 43.3L196.2 47.3L200 49.4L203.8 55.3L207.7 55L211.5 52L215.4 52.4L219.2 52.7L223.1 48.8L226.9 47.9L230.8 52.3L234.6 50.9L238.5 56L242.3 48L246.2 44.8L250 39.1L253.8 37L257.7 38.8L261.5 35.9L265.4 33L269.2 37.8L273.1 35.6L276.9 38.8L280.8 45L284.6 52.6L288.5 54L292.3 50.8L296.2 47.9L300 51.5",
+    "tone": "down",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f AAPL",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh AAPL",
+    },
+    {
+      "action": "run: stock AAPL",
+      "active": true,
+      "label": "1d",
+      "title": "Show AAPL today",
+    },
+    {
+      "action": "run: stock -r 5d AAPL",
+      "active": false,
+      "label": "5d",
+      "title": "Show AAPL over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo AAPL",
+      "active": false,
+      "label": "1mo",
+      "title": "Show AAPL over a month",
+    },
+    {
+      "action": "run: stock -r 1y AAPL",
+      "active": false,
+      "label": "1y",
+      "title": "Show AAPL over a year",
+    },
+  ],
+  "footer": "Yahoo Finance via public proxy, may be slow · may be delayed · updated 8 h ago",
+  "kind": "quote-card",
+  "name": "Apple Inc.",
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "332.89 USD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "332.80",
+    },
+    {
+      "label": "Vol",
+      "value": "34.3M",
+    },
+    {
+      "label": "Exch",
+      "value": "NasdaqGS",
+    },
+  ],
+  "symbol": "AAPL",
+}
+`;
+
+exports[`the card in every state > no periods, no change > plain 1`] = `
+"AAPL  Apple Inc.
+332.89 USD
+Last trade 4:00 PM EDT
+█▅▄▃▃▄▄▃▄▃▃▃▃▃▄▅▆▃▃▃▃▁▁▂▁▂▃▄▃▂▁▂
+9:30 AM · prev close 333.69 · 4:00 PM
+Day 331.65 ├──●──────┤ 336.19
+52w 243.42 ├───────●─┤ 345.34
+First trade 332.80 · Vol 34.3M · Exch NasdaqGS
+Yahoo Finance · may be delayed · updated 8 h ago
+"
+`;
+
+exports[`the card in every state > no periods, no change > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 27.3,
+      "high": "336.19",
+      "label": "Day",
+      "low": "331.65",
+    },
+    {
+      "at": 87.8,
+      "high": "345.34",
+      "label": "52w",
+      "low": "243.42",
+    },
+  ],
+  "change": null,
+  "chart": {
+    "baseline": 39.6,
+    "height": 60,
+    "label": "AAPL today: down, from 336.07 to 332.89, below the previous close of 333.69",
+    "labels": {
+      "end": "4:00 PM",
+      "middle": "prev close 333.69",
+      "start": "9:30 AM",
+    },
+    "last": {
+      "x": 100,
+      "y": 85.8,
+    },
+    "path": "M0 4L3.8 14.2L7.7 16.7L11.5 24.1L15.4 21.1L19.2 36.7L23.1 40L26.9 44.1L30.8 37.3L34.6 43.2L38.5 39.9L42.3 43.7L46.2 39.8L50 31.9L53.8 37.6L57.7 30.6L61.5 37L65.4 41.6L69.2 38.8L73.1 37.7L76.9 33.5L80.8 45.5L84.6 42.9L88.5 44L92.3 41.4L96.2 39.2L100 42L103.8 38.7L107.7 42L111.5 41.2L115.4 42.4L119.2 41.5L123.1 40.9L126.9 37.9L130.8 29.3L134.6 32.3L138.5 29.3L142.3 29.7L146.2 27.6L150 24.8L153.8 21.8L157.7 25.8L161.5 27.3L165.4 41.1L169.2 41.9L173.1 42.5L176.9 43.3L180.8 41.8L184.6 44.2L188.5 44.5L192.3 43.3L196.2 47.3L200 49.4L203.8 55.3L207.7 55L211.5 52L215.4 52.4L219.2 52.7L223.1 48.8L226.9 47.9L230.8 52.3L234.6 50.9L238.5 56L242.3 48L246.2 44.8L250 39.1L253.8 37L257.7 38.8L261.5 35.9L265.4 33L269.2 37.8L273.1 35.6L276.9 38.8L280.8 45L284.6 52.6L288.5 54L292.3 50.8L296.2 47.9L300 51.5",
+    "tone": "down",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f AAPL",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh AAPL",
+    },
+    {
+      "action": "run: stock AAPL",
+      "active": true,
+      "label": "1d",
+      "title": "Show AAPL today",
+    },
+    {
+      "action": "run: stock -r 5d AAPL",
+      "active": false,
+      "label": "5d",
+      "title": "Show AAPL over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo AAPL",
+      "active": false,
+      "label": "1mo",
+      "title": "Show AAPL over a month",
+    },
+    {
+      "action": "run: stock -r 1y AAPL",
+      "active": false,
+      "label": "1y",
+      "title": "Show AAPL over a year",
+    },
+  ],
+  "footer": "Yahoo Finance · may be delayed · updated 8 h ago",
+  "kind": "quote-card",
+  "name": "Apple Inc.",
+  "phase": {
+    "live": false,
+    "text": "Last trade 4:00 PM EDT",
+  },
+  "price": "332.89 USD",
+  "stale": null,
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "332.80",
+    },
+    {
+      "label": "Vol",
+      "value": "34.3M",
+    },
+    {
+      "label": "Exch",
+      "value": "NasdaqGS",
+    },
+  ],
+  "symbol": "AAPL",
+}
+`;
+
+exports[`the card in every state > saved copy after a timeout > plain 1`] = `
+"AAPL  Apple Inc.  [STALE]
+332.89 USD  ▼ −0.80 (−0.24%)
+○ Closed · last trade 4:00 PM EDT
+█▅▄▃▃▄▄▃▄▃▃▃▃▃▄▅▆▃▃▃▃▁▁▂▁▂▃▄▃▂▁▂
+9:30 AM · prev close 333.69 · 4:00 PM
+Day 331.65 ├──●──────┤ 336.19
+52w 243.42 ├───────●─┤ 345.34
+First trade 332.80 · Vol 34.3M · Exch NasdaqGS
+Saved copy from 2 h ago · live data unavailable (timed out)
+"
+`;
+
+exports[`the card in every state > saved copy after a timeout > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 27.3,
+      "high": "336.19",
+      "label": "Day",
+      "low": "331.65",
+    },
+    {
+      "at": 87.8,
+      "high": "345.34",
+      "label": "52w",
+      "low": "243.42",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▼ −0.80 (−0.24%)",
+    "tone": "down",
+  },
+  "chart": {
+    "baseline": 39.6,
+    "height": 60,
+    "label": "AAPL today: down, from 336.07 to 332.89, below the previous close of 333.69",
+    "labels": {
+      "end": "4:00 PM",
+      "middle": "prev close 333.69",
+      "start": "9:30 AM",
+    },
+    "last": {
+      "x": 100,
+      "y": 85.8,
+    },
+    "path": "M0 4L3.8 14.2L7.7 16.7L11.5 24.1L15.4 21.1L19.2 36.7L23.1 40L26.9 44.1L30.8 37.3L34.6 43.2L38.5 39.9L42.3 43.7L46.2 39.8L50 31.9L53.8 37.6L57.7 30.6L61.5 37L65.4 41.6L69.2 38.8L73.1 37.7L76.9 33.5L80.8 45.5L84.6 42.9L88.5 44L92.3 41.4L96.2 39.2L100 42L103.8 38.7L107.7 42L111.5 41.2L115.4 42.4L119.2 41.5L123.1 40.9L126.9 37.9L130.8 29.3L134.6 32.3L138.5 29.3L142.3 29.7L146.2 27.6L150 24.8L153.8 21.8L157.7 25.8L161.5 27.3L165.4 41.1L169.2 41.9L173.1 42.5L176.9 43.3L180.8 41.8L184.6 44.2L188.5 44.5L192.3 43.3L196.2 47.3L200 49.4L203.8 55.3L207.7 55L211.5 52L215.4 52.4L219.2 52.7L223.1 48.8L226.9 47.9L230.8 52.3L234.6 50.9L238.5 56L242.3 48L246.2 44.8L250 39.1L253.8 37L257.7 38.8L261.5 35.9L265.4 33L269.2 37.8L273.1 35.6L276.9 38.8L280.8 45L284.6 52.6L288.5 54L292.3 50.8L296.2 47.9L300 51.5",
+    "tone": "down",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f AAPL",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh AAPL",
+    },
+    {
+      "action": "run: stock AAPL",
+      "active": true,
+      "label": "1d",
+      "title": "Show AAPL today",
+    },
+    {
+      "action": "run: stock -r 5d AAPL",
+      "active": false,
+      "label": "5d",
+      "title": "Show AAPL over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo AAPL",
+      "active": false,
+      "label": "1mo",
+      "title": "Show AAPL over a month",
+    },
+    {
+      "action": "run: stock -r 1y AAPL",
+      "active": false,
+      "label": "1y",
+      "title": "Show AAPL over a year",
+    },
+  ],
+  "footer": "Saved copy from 2 h ago · live data unavailable (timed out)",
+  "kind": "quote-card",
+  "name": "Apple Inc.",
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "332.89 USD",
+  "stale": "timed out",
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "332.80",
+    },
+    {
+      "label": "Vol",
+      "value": "34.3M",
+    },
+    {
+      "label": "Exch",
+      "value": "NasdaqGS",
+    },
+  ],
+  "symbol": "AAPL",
+}
+`;
+
+exports[`the card in every state > saved copy while offline > plain 1`] = `
+"AAPL  Apple Inc.  [STALE]
+332.89 USD  ▼ −0.80 (−0.24%)
+○ Closed · last trade 4:00 PM EDT
+█▅▄▃▃▄▄▃▄▃▃▃▃▃▄▅▆▃▃▃▃▁▁▂▁▂▃▄▃▂▁▂
+9:30 AM · prev close 333.69 · 4:00 PM
+Day 331.65 ├──●──────┤ 336.19
+52w 243.42 ├───────●─┤ 345.34
+First trade 332.80 · Vol 34.3M · Exch NasdaqGS
+Saved copy from 2 h ago · live data unavailable (you're offline)
+"
+`;
+
+exports[`the card in every state > saved copy while offline > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 27.3,
+      "high": "336.19",
+      "label": "Day",
+      "low": "331.65",
+    },
+    {
+      "at": 87.8,
+      "high": "345.34",
+      "label": "52w",
+      "low": "243.42",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▼ −0.80 (−0.24%)",
+    "tone": "down",
+  },
+  "chart": {
+    "baseline": 39.6,
+    "height": 60,
+    "label": "AAPL today: down, from 336.07 to 332.89, below the previous close of 333.69",
+    "labels": {
+      "end": "4:00 PM",
+      "middle": "prev close 333.69",
+      "start": "9:30 AM",
+    },
+    "last": {
+      "x": 100,
+      "y": 85.8,
+    },
+    "path": "M0 4L3.8 14.2L7.7 16.7L11.5 24.1L15.4 21.1L19.2 36.7L23.1 40L26.9 44.1L30.8 37.3L34.6 43.2L38.5 39.9L42.3 43.7L46.2 39.8L50 31.9L53.8 37.6L57.7 30.6L61.5 37L65.4 41.6L69.2 38.8L73.1 37.7L76.9 33.5L80.8 45.5L84.6 42.9L88.5 44L92.3 41.4L96.2 39.2L100 42L103.8 38.7L107.7 42L111.5 41.2L115.4 42.4L119.2 41.5L123.1 40.9L126.9 37.9L130.8 29.3L134.6 32.3L138.5 29.3L142.3 29.7L146.2 27.6L150 24.8L153.8 21.8L157.7 25.8L161.5 27.3L165.4 41.1L169.2 41.9L173.1 42.5L176.9 43.3L180.8 41.8L184.6 44.2L188.5 44.5L192.3 43.3L196.2 47.3L200 49.4L203.8 55.3L207.7 55L211.5 52L215.4 52.4L219.2 52.7L223.1 48.8L226.9 47.9L230.8 52.3L234.6 50.9L238.5 56L242.3 48L246.2 44.8L250 39.1L253.8 37L257.7 38.8L261.5 35.9L265.4 33L269.2 37.8L273.1 35.6L276.9 38.8L280.8 45L284.6 52.6L288.5 54L292.3 50.8L296.2 47.9L300 51.5",
+    "tone": "down",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f AAPL",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh AAPL",
+    },
+    {
+      "action": "run: stock AAPL",
+      "active": true,
+      "label": "1d",
+      "title": "Show AAPL today",
+    },
+    {
+      "action": "run: stock -r 5d AAPL",
+      "active": false,
+      "label": "5d",
+      "title": "Show AAPL over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo AAPL",
+      "active": false,
+      "label": "1mo",
+      "title": "Show AAPL over a month",
+    },
+    {
+      "action": "run: stock -r 1y AAPL",
+      "active": false,
+      "label": "1y",
+      "title": "Show AAPL over a year",
+    },
+  ],
+  "footer": "Saved copy from 2 h ago · live data unavailable (you're offline)",
+  "kind": "quote-card",
+  "name": "Apple Inc.",
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "332.89 USD",
+  "stale": "you're offline",
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "332.80",
+    },
+    {
+      "label": "Vol",
+      "value": "34.3M",
+    },
+    {
+      "label": "Exch",
+      "value": "NasdaqGS",
+    },
+  ],
+  "symbol": "AAPL",
+}
+`;
+
+exports[`the card in every state > stale from the Worker > plain 1`] = `
+"AAPL  Apple Inc.  [STALE]
+332.89 USD  ▼ −0.80 (−0.24%)
+○ Closed · last trade 4:00 PM EDT
+█▅▄▃▃▄▄▃▄▃▃▃▃▃▄▅▆▃▃▃▃▁▁▂▁▂▃▄▃▂▁▂
+9:30 AM · prev close 333.69 · 4:00 PM
+Day 331.65 ├──●──────┤ 336.19
+52w 243.42 ├───────●─┤ 345.34
+First trade 332.80 · Vol 34.3M · Exch NasdaqGS
+Saved copy from 2 h ago · live data unavailable (service unavailable)
+"
+`;
+
+exports[`the card in every state > stale from the Worker > view 1`] = `
+{
+  "bars": [
+    {
+      "at": 27.3,
+      "high": "336.19",
+      "label": "Day",
+      "low": "331.65",
+    },
+    {
+      "at": 87.8,
+      "high": "345.34",
+      "label": "52w",
+      "low": "243.42",
+    },
+  ],
+  "change": {
+    "basis": null,
+    "text": "▼ −0.80 (−0.24%)",
+    "tone": "down",
+  },
+  "chart": {
+    "baseline": 39.6,
+    "height": 60,
+    "label": "AAPL today: down, from 336.07 to 332.89, below the previous close of 333.69",
+    "labels": {
+      "end": "4:00 PM",
+      "middle": "prev close 333.69",
+      "start": "9:30 AM",
+    },
+    "last": {
+      "x": 100,
+      "y": 85.8,
+    },
+    "path": "M0 4L3.8 14.2L7.7 16.7L11.5 24.1L15.4 21.1L19.2 36.7L23.1 40L26.9 44.1L30.8 37.3L34.6 43.2L38.5 39.9L42.3 43.7L46.2 39.8L50 31.9L53.8 37.6L57.7 30.6L61.5 37L65.4 41.6L69.2 38.8L73.1 37.7L76.9 33.5L80.8 45.5L84.6 42.9L88.5 44L92.3 41.4L96.2 39.2L100 42L103.8 38.7L107.7 42L111.5 41.2L115.4 42.4L119.2 41.5L123.1 40.9L126.9 37.9L130.8 29.3L134.6 32.3L138.5 29.3L142.3 29.7L146.2 27.6L150 24.8L153.8 21.8L157.7 25.8L161.5 27.3L165.4 41.1L169.2 41.9L173.1 42.5L176.9 43.3L180.8 41.8L184.6 44.2L188.5 44.5L192.3 43.3L196.2 47.3L200 49.4L203.8 55.3L207.7 55L211.5 52L215.4 52.4L219.2 52.7L223.1 48.8L226.9 47.9L230.8 52.3L234.6 50.9L238.5 56L242.3 48L246.2 44.8L250 39.1L253.8 37L257.7 38.8L261.5 35.9L265.4 33L269.2 37.8L273.1 35.6L276.9 38.8L280.8 45L284.6 52.6L288.5 54L292.3 50.8L296.2 47.9L300 51.5",
+    "tone": "down",
+    "width": 300,
+  },
+  "chips": [
+    {
+      "action": "run: stock -f AAPL",
+      "active": false,
+      "label": "↻ refresh",
+      "title": "Refresh AAPL",
+    },
+    {
+      "action": "run: stock AAPL",
+      "active": true,
+      "label": "1d",
+      "title": "Show AAPL today",
+    },
+    {
+      "action": "run: stock -r 5d AAPL",
+      "active": false,
+      "label": "5d",
+      "title": "Show AAPL over 5 days",
+    },
+    {
+      "action": "run: stock -r 1mo AAPL",
+      "active": false,
+      "label": "1mo",
+      "title": "Show AAPL over a month",
+    },
+    {
+      "action": "run: stock -r 1y AAPL",
+      "active": false,
+      "label": "1y",
+      "title": "Show AAPL over a year",
+    },
+  ],
+  "footer": "Saved copy from 2 h ago · live data unavailable (service unavailable)",
+  "kind": "quote-card",
+  "name": "Apple Inc.",
+  "phase": {
+    "live": false,
+    "text": "○ Closed · last trade 4:00 PM EDT",
+  },
+  "price": "332.89 USD",
+  "stale": "service unavailable",
+  "stats": [
+    {
+      "label": "First trade",
+      "value": "332.80",
+    },
+    {
+      "label": "Vol",
+      "value": "34.3M",
+    },
+    {
+      "label": "Exch",
+      "value": "NasdaqGS",
+    },
+  ],
+  "symbol": "AAPL",
+}
+`;
+
+exports[`the table > has a row per ticker, failures inline > alt 1`] = `"AAPL 332.89 USD ▼ −0.24%; CBA.AX 152.09 AUD ▲ +0.58%; BTC-USD 85,459.57 USD ▼ −0.70%; ZZZZQQ not found; TEAM unavailable"`;
+
+exports[`the table > has a row per ticker, failures inline > plain 1`] = `
+"SYMBOL   LAST           CHG%
+AAPL     332.89 USD     ▼ −0.24%
+CBA.AX   152.09 AUD     ▲ +0.58%  STALE
+BTC-USD  85,459.57 USD  ▼ −0.70%
+ZZZZQQ   — not found
+TEAM     — unavailable
+Yahoo Finance · may be delayed · updated 8 h ago
+"
+`;
+
+exports[`the table > has a row per ticker, failures inline > view 1`] = `
+{
+  "footer": "Yahoo Finance · may be delayed · updated 8 h ago",
+  "kind": "quote-table",
+  "rows": [
+    {
+      "action": "run: stock AAPL",
+      "change": "▼ −0.80",
+      "failure": null,
+      "last": "332.89 USD",
+      "name": "Apple Inc.",
+      "percent": "▼ −0.24%",
+      "spark": {
+        "baseline": 39.6,
+        "height": 60,
+        "label": "AAPL today: down, from 336.07 to 332.89, below the previous close of 333.69",
+        "labels": {
+          "end": "",
+          "middle": "",
+          "start": "",
+        },
+        "last": {
+          "x": 100,
+          "y": 85.8,
+        },
+        "path": "M0 4L3.8 14.2L7.7 16.7L11.5 24.1L15.4 21.1L19.2 36.7L23.1 40L26.9 44.1L30.8 37.3L34.6 43.2L38.5 39.9L42.3 43.7L46.2 39.8L50 31.9L53.8 37.6L57.7 30.6L61.5 37L65.4 41.6L69.2 38.8L73.1 37.7L76.9 33.5L80.8 45.5L84.6 42.9L88.5 44L92.3 41.4L96.2 39.2L100 42L103.8 38.7L107.7 42L111.5 41.2L115.4 42.4L119.2 41.5L123.1 40.9L126.9 37.9L130.8 29.3L134.6 32.3L138.5 29.3L142.3 29.7L146.2 27.6L150 24.8L153.8 21.8L157.7 25.8L161.5 27.3L165.4 41.1L169.2 41.9L173.1 42.5L176.9 43.3L180.8 41.8L184.6 44.2L188.5 44.5L192.3 43.3L196.2 47.3L200 49.4L203.8 55.3L207.7 55L211.5 52L215.4 52.4L219.2 52.7L223.1 48.8L226.9 47.9L230.8 52.3L234.6 50.9L238.5 56L242.3 48L246.2 44.8L250 39.1L253.8 37L257.7 38.8L261.5 35.9L265.4 33L269.2 37.8L273.1 35.6L276.9 38.8L280.8 45L284.6 52.6L288.5 54L292.3 50.8L296.2 47.9L300 51.5",
+        "tone": "down",
+        "width": 300,
+      },
+      "stale": false,
+      "symbol": "AAPL",
+      "tone": "down",
+    },
+    {
+      "action": "run: stock CBA.AX",
+      "change": "▲ +0.87",
+      "failure": null,
+      "last": "152.09 AUD",
+      "name": "Commonwealth Bank of Australia",
+      "percent": "▲ +0.58%",
+      "spark": {
+        "baseline": 34.9,
+        "height": 60,
+        "label": "CBA.AX today: up, from 151.50 to 152.09, above the previous close of 151.22",
+        "labels": {
+          "end": "",
+          "middle": "",
+          "start": "",
+        },
+        "last": {
+          "x": 66.7,
+          "y": 7.8,
+        },
+        "path": "M0 25.3L4 25.5L8.1 23.1L12.1 10.9L16.1 17.2L20.2 13L24.2 12.3L28.2 22L32.3 23.8L36.3 38.7L40.3 48.7L44.4 56L48.4 49.2L52.4 55.7L56.5 48.5L60.5 43.9L64.5 46.3L68.5 43.2L72.6 49.8L76.6 50.6L80.6 49.1L84.7 44.6L88.7 48.4L92.7 49.4L96.8 50.1L100.8 38.5L104.8 40.4L108.9 41.8L112.9 40.9L116.9 41.8L121 39.2L125 42.5L129 42.5L133.1 36.4L137.1 35.7L141.1 27.9L145.2 25.8L149.2 21L153.2 15.1L157.3 18.9L161.3 10.6L165.3 13.7L169.4 18L173.4 9.9L177.4 9.5L181.5 11.3L185.5 9.7L189.5 13.4L193.5 6.8L197.6 4L200.2 4.7",
+        "tone": "up",
+        "width": 300,
+      },
+      "stale": true,
+      "symbol": "CBA.AX",
+      "tone": "up",
+    },
+    {
+      "action": "run: stock BTC-USD",
+      "change": "▼ −600.89",
+      "failure": null,
+      "last": "85,459.57 USD",
+      "name": "Bitcoin USD",
+      "percent": "▼ −0.70%",
+      "spark": {
+        "baseline": 30.6,
+        "height": 60,
+        "label": "BTC-USD today: down, from 85,792.02 to 85,459.57, below the previous close of 85,750.58",
+        "labels": {
+          "end": "",
+          "middle": "",
+          "start": "",
+        },
+        "last": {
+          "x": 14.5,
+          "y": 92.5,
+        },
+        "path": "M0 27L1 24L2.1 25.2L3.1 20.3L4.2 13.2L5.2 24.7L6.3 23L7.3 27.5L8.3 27.2L9.4 24.4L10.4 23L11.5 17.6L12.5 4L13.6 8L14.6 4.2L15.6 20L16.7 13.4L17.7 11.2L18.8 27.1L19.8 28.2L20.8 37.1L21.9 37.1L22.9 39.4L24 42.3L25 45.9L26.1 53.8L27.1 56L28.1 50.3L29.2 33L30.2 41.1L31.3 45.5L32.3 39.1L33.4 45.6L34.4 44.9L35.4 49.1L36.5 49.9L37.5 46L38.6 49.2L39.6 51L40.7 47.5L41.7 51.1L42.7 54.3L43.4 55.5",
+        "tone": "down",
+        "width": 300,
+      },
+      "stale": false,
+      "symbol": "BTC-USD",
+      "tone": "down",
+    },
+    {
+      "action": "run: stock ZZZZQQ",
+      "change": null,
+      "failure": "— not found",
+      "last": null,
+      "name": null,
+      "percent": null,
+      "spark": null,
+      "stale": false,
+      "symbol": "ZZZZQQ",
+      "tone": "flat",
+    },
+    {
+      "action": "run: stock TEAM",
+      "change": null,
+      "failure": "— unavailable",
+      "last": null,
+      "name": null,
+      "percent": null,
+      "spark": null,
+      "stale": false,
+      "symbol": "TEAM",
+      "tone": "flat",
+    },
+  ],
+}
+`;

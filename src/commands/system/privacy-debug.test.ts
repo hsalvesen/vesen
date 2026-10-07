@@ -20,7 +20,8 @@ describe('privacy', () => {
       'Open-Meteo',
       'OpenStreetMap Nominatim',
       'GeoJS, then ipinfo.io',
-      "vesen's stock Worker",
+      // No VITE_STOCK_API in tests: the interim proxy, until the stock Worker is deployed.
+      'allorigins.win, then Yahoo Finance',
       'Cloudflare speed test',
       'Cloudflare or Google DNS-over-HTTPS',
       'RDAP (rdap.org and the registries)',
@@ -37,9 +38,8 @@ describe('privacy', () => {
     await app.boot();
     const result = await app.shell.run('privacy');
     expect(tableRows(result.blocks)).toContain('wttr.in');
-    expect(tableRows(result.blocks)).not.toContain('allorigins.win, then Yahoo Finance');
     app.stop();
-    expect(THIRD_PARTIES.filter((row) => row.legacy === true).map((row) => row.commands)).toEqual([['weather'], ['stock']]);
+    expect(THIRD_PARTIES.filter((row) => row.legacy === true).map((row) => row.commands)).toEqual([['weather']]);
     expect(buildRegistry([]).get('privacy')).toBeDefined();
   });
 

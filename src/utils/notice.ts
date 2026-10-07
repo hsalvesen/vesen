@@ -10,7 +10,6 @@ export function notice(message: string): string {
 const CANCELLED_MESSAGES: ReadonlyMap<string, string> = new Map([
   ['weather', 'Weather request cancelled'],
   ['curl', 'Request cancelled'],
-  ['stock', 'Stock request cancelled'],
   ['speedtest', 'Speed test cancelled'],
   ['fastfetch', 'Fastfetch request cancelled'],
 ]);
