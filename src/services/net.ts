@@ -25,7 +25,7 @@ export const DEFAULT_TIMEOUT_MS = REQUEST_TIMEOUT_MS.default;
 
 export class NetError extends Error implements NetErrorContract {
   readonly kind: NetErrorKind;
-  /** The host the request went to, such as `wttr.in`, or the URL itself when it could not be parsed. */
+  /** The host the request went to, such as `api.open-meteo.com`, or the URL itself when it could not be parsed. */
   readonly host: string;
   /** The response status, for kind `http`. */
   readonly status: number | undefined;

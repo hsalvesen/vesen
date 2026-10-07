@@ -6,7 +6,7 @@ Lines run through the shell kernel (`src/shell`), as the prompt (`src/ui/prompt`
 
 ## Ported commands
 
-A command ported to a spec in `src/commands` keeps its cases here, recording what the port prints: `cat`, `echo`, `history`, `ls`, `mkdir`, `rm` and `touch` (step 2.3a), and `banner`, `help`, `theme` and `cathode` (step 2.3b). Their own, fuller transcripts, at 40, 80 and 120 columns on the terminal and into a pipe, are in `tests/transcripts`. The legacy output these cases first recorded remains in git history at commit `afed6a8`, for comparison:
+A command ported to a spec in `src/commands` keeps its cases here, recording what the port prints: `cat`, `echo`, `history`, `ls`, `mkdir`, `rm` and `touch` (step 2.3a), `banner`, `help`, `theme` and `cathode` (step 2.3b), and `weather` (Phase 4), whose card is recorded as its plain text, over the recordings in `tests/fixtures/weather` (the wttr.in output it replaced is at commit `147bd66`). Their own, fuller transcripts, at 40, 80 and 120 columns on the terminal and into a pipe, are in `tests/transcripts`. The legacy output these cases first recorded remains in git history at commit `afed6a8`, for comparison:
 
 ```sh
 git show afed6a8:tests/golden/__snapshots__/legacy/ls/680.html
@@ -31,7 +31,7 @@ On CI (`CI=true`) a missing golden fails instead of being written.
 
 `__snapshots__/legacy/<case>/<variant>.html` and `.txt`, where `<case>` is a slug from `CASES` in `legacy.test.ts`.
 
-- **Variant `360`, `680`, `1000`:** the window width, for output that depends on it. The legacy code turns width into columns as `floor((innerWidth - 40) / 8)`, so these widths give exactly the plan's 40, 80 and 120 columns. No command case depends on the width any more: the ported `ls` and `help` draw grids that the page lays out (recorded once: `ls`'s items two spaces apart on one line, `help`'s names one per line with their summaries), and `history` lines wrap with CSS, as weather, stock, curl and fastfetch do. Only `rendered-session` is recorded per width, because the boot banner is compact below 50 columns.
+- **Variant `360`, `680`, `1000`:** the window width, for output that depends on it. The legacy code turns width into columns as `floor((innerWidth - 40) / 8)`, so these widths give exactly the plan's 40, 80 and 120 columns. No command case depends on the width any more: the ported `ls` and `help` draw grids that the page lays out (recorded once: `ls`'s items two spaces apart on one line, `help`'s names one per line with their summaries), and `history` lines wrap with CSS, as stock, curl and fastfetch do; the weather card picks its layout by its own width. Only `rendered-session` is recorded per width, because the boot banner is compact below 50 columns.
 - **Variant `all`:** the output is identical at all three widths, and the test asserts that. If a change makes such a case width-dependent on purpose, mark it `responsive: true`.
 - **`rendered-session/<width>.html`:** the markup `Transcript.svelte` renders after boot, `ls`, `cd documents` and `pwd`, one entry per line, each with the prompt it was typed at, once the layout renderer (`RichBlock.svelte`, loaded on first use) has drawn `ls`'s grid. Svelte's comment anchors and scoped `svelte-<hash>` classes are stripped.
 

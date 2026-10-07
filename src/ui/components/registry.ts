@@ -23,7 +23,9 @@ export type BlockComponent = Component<ComponentBlockProps>;
 export type ComponentLoader = () => Promise<{ readonly default: BlockComponent }>;
 
 /** The cards, by name, each loading its own chunk. Each card adds itself here as it lands. */
-const CARDS: Partial<Record<ComponentName, ComponentLoader>> = {};
+const CARDS: Partial<Record<ComponentName, ComponentLoader>> = {
+  'weather-card': () => import('./WeatherCard.svelte'),
+};
 
 const loaders = new Map<ComponentName, ComponentLoader>(Object.entries(CARDS) as [ComponentName, ComponentLoader][]);
 

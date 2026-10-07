@@ -1,6 +1,11 @@
-// The weather data model: places, forecasts, units and the view a card is drawn from.
+// The weather data model: places, forecasts, units and the view a card is drawn from, and the
+// port the weather command reaches the page's weather service through.
 // docs/plan/05-weather.md; designs/weather.md "Key interfaces", adapted to the contracts in
 // docs/plan/02-architecture-and-contracts.md (a `weather-card` component block, not HTML).
+//
+// DOM-free, like the rest of the pure core: src/commands may import it (check-boundaries).
+
+import type { ChipItem } from '../../output/model';
 
 // ── Units ──────────────────────────────────────────────────────────────────────────────────
 
@@ -110,17 +115,23 @@ export interface Forecast {
 
 export type StaleCause = 'offline' | 'timeout' | 'upstream';
 
+/** Why a device position could not be had, so an approximate one is shown instead. */
+export type GeoFailure = 'denied' | 'timeout' | 'unavailable' | 'unsupported' | 'insecure';
+
 /** Something the card says under the forecast. */
 export type Note =
-  | { readonly kind: 'approximate' }
+  /** `label` is the place as 'City, Region, CC'; without it the note is generic. */
+  | { readonly kind: 'approximate'; readonly label?: string }
   | { readonly kind: 'last-place' }
   | { readonly kind: 'country-point' }
   | { readonly kind: 'stale'; readonly ageMs: number; readonly cause: StaleCause }
-  | { readonly kind: 'alternatives'; readonly places: readonly Place[] };
+  | { readonly kind: 'alternatives'; readonly places: readonly Place[] }
+  /** `--here` fell back to the network's location; `app` is the in-app browser that withheld it. */
+  | { readonly kind: 'device-fallback'; readonly reason: GeoFailure; readonly app?: string };
 
 export type WeatherErrorKind = 'usage' | 'not-found';
 
-/** A failure that is the visitor's to fix. Network failures stay NetErrors. */
+/** A failure that is the visitor's to fix. Network failures stay NetErrors (services/types.ts). */
 export class WeatherError extends Error {
   readonly kind: WeatherErrorKind;
   /** What the visitor typed, for the message. */
@@ -244,4 +255,90 @@ export interface WeatherView {
   readonly compact: readonly Line[];
   /** Every line at most 72 columns. */
   readonly wide: readonly Line[];
+}
+
+/** The card component's props: the view, and the chips under it, made by the command with `out.action`. */
+export interface WeatherCardProps extends WeatherView {
+  /** Follow-ups: [°F] or [°C], [7 days], [my location] or [use precise location]. */
+  readonly chips: readonly ChipItem[];
+  /** Same-named places elsewhere, after 'Also:'. */
+  readonly also: readonly ChipItem[];
+}
+
+// ── Results ────────────────────────────────────────────────────────────────────────────────
+
+export interface Resolved {
+  readonly place: Place;
+  /** A country-level point, or same-named alternatives. */
+  readonly notes: readonly Note[];
+}
+
+export interface ForecastResult {
+  readonly forecast: Forecast;
+  /** Set when Open-Meteo failed and an older forecast is shown instead. */
+  readonly stale?: { readonly ageMs: number; readonly cause: StaleCause };
+}
+
+// ── Location ───────────────────────────────────────────────────────────────────────────────
+
+/**
+ * What the browser would do if asked for the location, found without asking: 'granted' and
+ * 'denied' are remembered answers, 'prompt' means it would ask. 'unsupported' and 'insecure'
+ * (an http page) mean it cannot give one at all.
+ */
+export type GeoPermission = 'granted' | 'prompt' | 'denied' | 'unsupported' | 'insecure';
+
+/** A device position, already rounded to two decimals (about 1 km). */
+export interface GeoFix {
+  readonly lat: number;
+  readonly lon: number;
+}
+
+/** Why `Geolocator.locate` gave no position. */
+export class GeoError extends Error {
+  readonly reason: GeoFailure;
+
+  constructor(reason: GeoFailure) {
+    super(`location ${reason}`);
+    this.name = 'GeoError';
+    this.reason = reason;
+  }
+}
+
+/** The device's location (src/platform/geolocation.ts). */
+export interface Geolocator {
+  /** What asking would do; never asks. */
+  permission(): Promise<GeoPermission>;
+  /**
+   * One position, rounded to two decimals before it is returned. May show the browser's
+   * permission prompt. Rejects with a GeoError, after `timeoutMs` on its own timer at the latest
+   * (an in-app browser may never answer), or with the signal's reason when it aborts.
+   */
+  locate(options: { readonly timeoutMs: number; readonly signal?: AbortSignal }): Promise<GeoFix>;
+}
+
+// ── The service port ───────────────────────────────────────────────────────────────────────
+
+/**
+ * What the weather command needs from the page, built once per page by the composition root
+ * (src/services/weather/service.ts) and handed to the command through src/commands/lib/weather.ts.
+ * Network failures reject with the NetErrors of services/net (ctx.net.isError tells them); an
+ * HTTP failure may carry the provider's `reason` as a string.
+ */
+export interface WeatherService {
+  /** A typed place: coordinates, the curated table, the place cache, Open-Meteo, then Nominatim. */
+  resolve(query: string, options?: { readonly signal?: AbortSignal; readonly onPhase?: (label: string) => void }): Promise<Resolved>;
+  /** The forecast at a point: fresh for 10 minutes, and up to 6 hours old when Open-Meteo fails. */
+  forecast(lat: number, lon: number, signal?: AbortSignal): Promise<ForecastResult>;
+  /** A name for a point from OpenStreetMap, or null when it has none or cannot be asked. */
+  reverse(lat: number, lon: number, signal?: AbortSignal): Promise<Place | null>;
+  /** The visitor's approximate location from their network (GeoJS, then ipinfo.io). Never stored. */
+  ipLocate(signal?: AbortSignal): Promise<Place>;
+  readonly geolocation: Geolocator;
+  /** The places looked up, newest first: at most five, never a network or device location. */
+  recent(): readonly Place[];
+  /** Puts a place first among the recent ones; network and device locations are ignored. */
+  remember(place: Place): void;
+  /** `--forget` and `reset`: recent places, the place cache and the forecasts in memory. */
+  forget(): void;
 }

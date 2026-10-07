@@ -134,14 +134,14 @@ function fakeSource(): LegacySource & { calls: string[] } {
 }
 
 describe('the legacy table', () => {
-  it('wraps the 6 commands not yet ported, each once, with a category and a summary', () => {
+  it('wraps the 5 commands not yet ported, each once, with a category and a summary', () => {
     const specs = legacySpecs(fakeSource());
-    expect(specs).toHaveLength(6);
-    expect(new Set(specs.map((spec) => spec.name)).size).toBe(6);
+    expect(specs).toHaveLength(5);
+    expect(new Set(specs.map((spec) => spec.name)).size).toBe(5);
     expect(specs.every(isLegacySpec)).toBe(true);
     // Ported to src/commands: the file and text core, history, clear, cd, pwd, reset, help, theme,
     // cathode, banner, sudo, the openers and the power commands.
-    const ported = ['cd', 'ls', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'history', 'clear', 'help', 'theme', 'cathode', 'banner', 'sudo'];
+    const ported = ['cd', 'ls', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'history', 'clear', 'help', 'theme', 'cathode', 'banner', 'sudo', 'weather'];
     for (const name of [...ported, 'whoami', 'email', 'repo', 'poweroff']) {
       expect(specs.map((spec) => spec.name)).not.toContain(name);
     }
@@ -149,7 +149,6 @@ describe('the legacy table', () => {
     expect(registry.validate()).toEqual([]);
     expect(specs.every((spec) => takesRawArgs(spec))).toBe(true);
     expect(registry.get('stock')).toMatchObject({ category: 'network', summary: 'show the price of a stock', legacyHelp: '<div>stock help</div>' });
-    expect(registry.get('weather')).toMatchObject({ network: true, budgetMs: 25_000 });
     expect(registry.get('stock')).toMatchObject({ network: true, budgetMs: 10_000 });
     expect(registry.get('curl')?.network).toBe(true);
     expect(registry.get('fastfetch')?.category).toBe('system');
@@ -164,7 +163,7 @@ describe('the legacy table', () => {
 
   it('describes arguments for completion', () => {
     const registry = new CommandRegistry(legacySpecs(fakeSource()));
-    expect(registry.get('weather')?.args?.[0]?.source).toEqual({ kind: 'examples', caseInsensitive: true, fromHistory: true });
+    expect(registry.get('stock')?.args?.[0]?.source).toEqual({ kind: 'examples', caseInsensitive: true });
   });
 
   it('passes every word, unparsed, to the legacy function', async () => {

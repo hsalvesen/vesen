@@ -3,7 +3,7 @@ import { flushSync, tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import themes from '../../themes.json';
 import { activeContent } from '../../tests/support/xss';
-import { out, type Action, type Block, type SafeHref, type Span } from '../output/model';
+import { out, type Action, type Block, type ComponentName, type SafeHref, type Span } from '../output/model';
 import { cathode } from '../stores/cathode';
 import { theme } from '../stores/theme';
 import FakeCard from '../testing/FakeCard.svelte';
@@ -219,7 +219,9 @@ describe('OutputView: layout blocks', () => {
   });
 
   it('shows a component with no registered card as its plain text', async () => {
-    const root = await view([out.component('weather-card', { place: 'Oslo' }, 'Oslo: 9°C, light rain\n', 'Weather in Oslo')]);
+    // A name no card is registered for: every real name gets a card as its workstream lands.
+    const unregistered = 'no-such-card' as ComponentName;
+    const root = await view([out.component(unregistered, { place: 'Oslo' }, 'Oslo: 9°C, light rain\n', 'Weather in Oslo')]);
     expect(root.textContent).toBe('Oslo: 9°C, light rain\n');
   });
 

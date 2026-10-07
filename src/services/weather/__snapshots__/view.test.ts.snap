@@ -10,7 +10,8 @@ exports[`cards > draws the Gadigal card 1`] = `
 Today  16° -===|  26°  98% T-storm
 Wed    14° ==---  17°  96% Drizzle
 Thu    12° ==---  17°  54% Drizzle
-Open-Meteo.com · 14:15 GMT+11"
+Weather data by Open-Meteo.com
+(CC BY 4.0) · Updated 14:15 GMT+11"
 `;
 
 exports[`cards > draws the Gadigal card 2`] = `
@@ -44,7 +45,8 @@ Fri    39° ==---  47°  63% Drizzle
 Sat    40° ===--  49°  61% Drizzle
 Sun    42° ==---  47°  28% Showers
 Mon    38° ===--  49°  46% Drizzle
-Open-Meteo.com · 05:15 GMT+2"
+Weather data by Open-Meteo.com
+(CC BY 4.0) · Updated 05:15 GMT+2"
 `;
 
 exports[`cards > draws the Oslo card at night in imperial units over seven days 2`] = `

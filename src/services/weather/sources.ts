@@ -4,11 +4,11 @@
 // typed NetError. One instance per page holds the caches and the Nominatim throttle; the
 // composition root builds it with the storage service.
 
-import { NetError, createMemo, fetchJson, isNetError, untilAborted, type Memo } from '../net';
+import { NetError, createMemo, fetchAndRead, fetchJson, isNetError, untilAborted, type Memo } from '../net';
 import { STORAGE_KEYS } from '../storage-keys';
 import { REQUEST_TIMEOUT_MS, type KV } from '../types';
 import { countryLabel } from './places';
-import type { Current, Daily, Forecast, Place, PlaceKind, StaleCause } from './types';
+import type { Current, Daily, Forecast, ForecastResult, Place, PlaceKind, StaleCause } from './types';
 import { round } from './units';
 
 // ── Endpoints and limits ───────────────────────────────────────────────────────────────────
@@ -88,6 +88,41 @@ export function nominatimReverseUrl(lat: number, lon: number): string {
 }
 
 const hostOf = (url: string): string => new URL(url).host;
+
+/** The longest provider reason kept for an error message. */
+const MAX_REASON = 200;
+
+/**
+ * An HTTP failure, with the reason the provider's error body gives: Open-Meteo answers a bad
+ * request with HTTP 400 and `{"error": true, "reason": "..."}`. A NetError of kind `http`.
+ */
+export class UpstreamError extends NetError {
+  readonly reason: string | undefined;
+
+  constructor(host: string, status: number, reason?: string) {
+    super('http', host, { status });
+    this.name = 'UpstreamError';
+    this.reason = reason;
+  }
+}
+
+/** Fetches JSON within `timeoutMs`; a non-2xx answer becomes an UpstreamError with the body's reason. */
+function fetchJsonWithReason(url: string, timeoutMs: number): Promise<unknown> {
+  return fetchAndRead(url, { timeoutMs, throwHttpErrors: false }, async (response) => {
+    if (!response.ok && response.type !== 'opaque') {
+      let reason: string | undefined;
+      try {
+        const body: unknown = await response.json();
+        const text = isRecord(body) ? str(body.reason) : undefined;
+        reason = text === undefined ? undefined : text.slice(0, MAX_REASON);
+      } catch {
+        // No readable reason; the status says enough.
+      }
+      throw new UpstreamError(hostOf(url), response.status, reason);
+    }
+    return (await response.json()) as unknown;
+  });
+}
 
 // ── Parsing ────────────────────────────────────────────────────────────────────────────────
 
@@ -402,6 +437,46 @@ export class GeoCache {
   }
 }
 
+// ── Recent places ──────────────────────────────────────────────────────────────────────────
+
+/** How many recent places are kept, for `weather -`, did-you-mean and the bare `weather`. */
+export const RECENT_MAX = 5;
+
+function parseRecent(raw: unknown): readonly Place[] | undefined {
+  if (!isRecord(raw) || raw.v !== 1 || !Array.isArray(raw.recent)) return undefined;
+  return raw.recent.filter(isPlace);
+}
+
+/**
+ * The places looked up, newest first, kept in `vesen:weather:v1` beside the place cache. A
+ * location from the visitor's network or device is never kept.
+ */
+export class RecentPlaces {
+  private memory: readonly Place[] = [];
+
+  constructor(private readonly kv: KV<'local'> | null) {}
+
+  list(): readonly Place[] {
+    const places = this.kv ? this.kv.getJson(STORAGE_KEYS.weather.key, parseRecent) ?? [] : this.memory;
+    return places.slice(0, RECENT_MAX);
+  }
+
+  add(place: Place): void {
+    if (place.source === 'ip' || place.source === 'device' || place.approximate) return;
+    const next = [place, ...this.list().filter((p) => p.id !== place.id)].slice(0, RECENT_MAX);
+    if (!this.kv) {
+      this.memory = next;
+      return;
+    }
+    const state = this.kv.getJson(STORAGE_KEYS.weather.key, parseStored) ?? { v: 1, geo: {} };
+    this.kv.setJson(STORAGE_KEYS.weather.key, { ...state, v: 1, recent: next });
+  }
+
+  clear(): void {
+    this.memory = [];
+  }
+}
+
 // ── Throttle ───────────────────────────────────────────────────────────────────────────────
 
 function sleep(ms: number, signal: AbortSignal | null | undefined, host: string): Promise<void> {
@@ -441,11 +516,7 @@ export class Throttle {
 
 // ── Sources ────────────────────────────────────────────────────────────────────────────────
 
-export interface ForecastResult {
-  readonly forecast: Forecast;
-  /** Set when Open-Meteo failed and an older forecast is shown instead. */
-  readonly stale?: { readonly ageMs: number; readonly cause: StaleCause };
-}
+export type { ForecastResult };
 
 export interface WeatherSources {
   /** The forecast at a point: cached for 10 minutes, and up to 6 hours old when Open-Meteo fails. */
@@ -459,6 +530,9 @@ export interface WeatherSources {
   /** The visitor's approximate location from their IP address: GeoJS, then ipinfo.io. Never stored. */
   ipLocate(signal?: AbortSignal | null): Promise<Place>;
   readonly geoCache: GeoCache;
+  readonly recents: RecentPlaces;
+  /** Forgets everything: the stored places and lookups, and the forecasts and location in memory. */
+  forget(): void;
 }
 
 export interface WeatherSourcesOptions {
@@ -499,6 +573,7 @@ export function createWeatherSources(options: WeatherSourcesOptions = {}): Weath
   const memo = options.memo ?? createMemo({ now });
   const throttle = new Throttle(options.nominatimGapMs ?? NOMINATIM_GAP_MS, now);
   const geoCache = new GeoCache(options.kv ?? null, now);
+  const recents = new RecentPlaces(options.kv ?? null);
   const lastGood = new Map<string, Forecast>();
 
   const remember = (key: string, forecast: Forecast): void => {
@@ -513,7 +588,7 @@ export function createWeatherSources(options: WeatherSourcesOptions = {}): Weath
 
   const loadForecast = async (lat: number, lon: number): Promise<Forecast> => {
     const url = forecastUrl(lat, lon);
-    const raw = await fetchJson<unknown>(url, { timeoutMs: WEATHER_TIMEOUTS.forecast });
+    const raw = await fetchJsonWithReason(url, WEATHER_TIMEOUTS.forecast);
     const forecast = parseForecast(raw, now());
     if (!forecast) throw new NetError('parse', hostOf(url));
     return forecast;
@@ -542,7 +617,7 @@ export function createWeatherSources(options: WeatherSourcesOptions = {}): Weath
     if (signal?.aborted) throw new NetError('abort', hostOf(url));
     // Successes persist in the place cache; memo only shares requests and remembers failures.
     const shared = memo(`weather:geocode:${url}`, 0, async () =>
-      parseGeocoding(await fetchJson<unknown>(url, { timeoutMs: WEATHER_TIMEOUTS.geocoding })),
+      parseGeocoding(await fetchJsonWithReason(url, WEATHER_TIMEOUTS.geocoding)),
     );
     return untilAborted(shared, signal, hostOf(url));
   };
@@ -582,5 +657,13 @@ export function createWeatherSources(options: WeatherSourcesOptions = {}): Weath
     return untilAborted(memo('weather:ip', WEATHER_TTL.ip, locateByIp), signal, hostOf(GEOJS));
   };
 
-  return { forecast, geocode, nominatimSearch, nominatimReverse, ipLocate, geoCache };
+  const forget = (): void => {
+    geoCache.clear();
+    recents.clear();
+    options.kv?.remove(STORAGE_KEYS.weather.key);
+    lastGood.clear();
+    memo.clear();
+  };
+
+  return { forecast, geocode, nominatimSearch, nominatimReverse, ipLocate, geoCache, recents, forget };
 }

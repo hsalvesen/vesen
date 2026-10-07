@@ -104,7 +104,7 @@ export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpe
 // ── The table ──────────────────────────────────────────────────────────────────────────────
 
 /** The legacy command names, in the order help lists them today. */
-export const LEGACY_NAMES = ['curl', 'fastfetch', 'qr', 'speedtest', 'stock', 'weather'] as const;
+export const LEGACY_NAMES = ['curl', 'fastfetch', 'qr', 'speedtest', 'stock'] as const;
 export type LegacyName = (typeof LEGACY_NAMES)[number];
 
 /** What the app layer supplies from src/utils. */
@@ -160,15 +160,6 @@ const TABLE: Readonly<Record<LegacyName, StaticMeta>> = {
     loadingLabel: (argv) => `fetching ${argv[1]?.toUpperCase() ?? 'the quote'}…`,
     args: [{ name: 'TICKER', source: { kind: 'examples', caseInsensitive: true } }],
     examples: examples('stock AAPL', 'stock TEAM'),
-  },
-  weather: {
-    category: 'network',
-    summary: 'show the weather forecast for a place',
-    network: true,
-    budgetMs: 25_000,
-    loadingLabel: (argv) => (argv.length > 1 ? `fetching the weather for ${argv.slice(1).join(' ')}…` : 'fetching the weather…'),
-    args: [{ name: 'PLACE', source: { kind: 'examples', caseInsensitive: true, fromHistory: true }, optional: true, variadic: true }],
-    examples: examples('weather Gadigal', 'weather Oslo', 'weather Aotearoa'),
   },
 };
 

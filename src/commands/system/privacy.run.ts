@@ -26,7 +26,7 @@ export const THIRD_PARTIES: readonly ThirdParty[] = [
   {
     service: 'GeoJS, then ipinfo.io',
     commands: ['weather'],
-    askedBy: 'weather with no place',
+    askedBy: 'weather with no place, or --here without a device location',
     sent: 'nothing but the request: they answer with your approximate location',
   },
   { service: "vesen's stock Worker", commands: ['stock'], askedBy: 'stock', sent: 'the ticker' },
@@ -36,16 +36,16 @@ export const THIRD_PARTIES: readonly ThirdParty[] = [
   { service: 'GitHub', commands: ['git', 'repo'], askedBy: 'git log in ~/projects/vesen', sent: 'nothing but the request' },
   { service: 'ipify', commands: ['fastfetch'], askedBy: 'fastfetch', sent: 'nothing but the request: it answers with your public IP' },
   // What the legacy commands use until their ports land.
-  { service: 'wttr.in', commands: ['weather'], askedBy: 'weather, for now', sent: 'the place you name', legacy: true },
   { service: 'allorigins.win, then Yahoo Finance', commands: ['stock'], askedBy: 'stock, for now', sent: 'the ticker', legacy: true },
 ];
 
 const NOTES: readonly string[] = [
   'Every request carries your IP address, as any web request does. Nothing else you type is sent, except as listed.',
   "IP address and location lookups happen only on request: weather with no place, and fastfetch's Public IP.",
+  "weather --here asks the browser for this device's location; once you allow it, weather with no place uses it too. It is rounded to about a kilometre before it is used, and no location is ever saved. The last five places you looked up are kept in this browser until weather --forget or reset.",
   'curl and wget fetch the address you give them, straight from your browser.',
   'Links open only when you tap them, or in a desktop browser when whoami, linkedin, repo or open opens one.',
-  'This browser keeps the theme, your settings, history and your files under ~ (local storage), and a snapshot of the screen for Back for 30 minutes (session storage). What you type at sudo is never kept.',
+  'This browser keeps the theme, your settings, history, your files under ~ and recent weather places (local storage), and a snapshot of the screen for Back for 30 minutes (session storage). What you type at sudo is never kept.',
   'No analytics, and no cookies.',
 ];
 
