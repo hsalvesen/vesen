@@ -89,6 +89,22 @@ describe('killing and yanking', () => {
     expect(ring.entries).toEqual(['two', 'three']);
   });
 
+  it('starts a new entry when the cursor moved between kills, as a click or an arrow key moves it', () => {
+    // Ctrl+W, then the caret moved left by the browser (no op the ring sees), then Ctrl+K.
+    let { state, ring } = applyOp(at('one two three|'), 'killWordBackUnix', EMPTY_RING);
+    expect(show(state)).toBe('one two |');
+    state = { ...state, cursor: 2 };
+    ({ state, ring } = applyOp(state, 'killToEnd', ring));
+    expect(ring.entries).toEqual(['e two ', 'three']);
+    ({ state, ring } = applyOp(state, 'yank', ring));
+    expect(show(state)).toBe('one two |');
+  });
+
+  it('joins kills in a row that start where the last one left the cursor', () => {
+    const { ring } = run('one two| three', 'killWordBackUnix', 'killToEnd', 'killToStart');
+    expect(ring.entries).toEqual(['one two three']);
+  });
+
   it('a typed edit settles the ring, so the next kill is new', () => {
     let { state, ring } = applyOp(at('alpha beta|'), 'killWordBackAlnum', EMPTY_RING);
     ring = settleRing(ring);
@@ -172,6 +188,12 @@ describe('Alt+.', () => {
     expect(lastArgument('cat my\\ file')).toBe('my\\ file');
     expect(lastArgument("echo 'a b'")).toBe("'a b'");
     expect(lastArgument('   ')).toBeNull();
+  });
+
+  it('skips a word that spans a line break, which the one-line prompt cannot hold', () => {
+    expect(lastArgument('echo "a\nb"')).toBeNull();
+    const inserted = yankLastArg(at('cat |'), ['echo older', 'echo "a\nb"']);
+    expect(inserted && show(inserted.state)).toBe('cat older|');
   });
 });
 

@@ -4,7 +4,8 @@
   lines and art (the boot banner) need. Everything is drawn with text interpolation only.
 
   Markup inside text containers is written without whitespace between tags on purpose: those
-  containers preserve whitespace, so any space Svelte kept there would show.
+  containers preserve whitespace, so any space Svelte kept there would show. A press on a chip
+  never takes focus from the prompt, so a phone's keyboard stays as it was.
 -->
 <script lang="ts">
   import { isTrustedAction, lineText, textWidth, type Action, type Block, type GridBlock } from '../output/model';
@@ -95,7 +96,7 @@
     {/if}
     {#each block.items as item}
       {#if onaction && isTrustedAction(item.action)}
-        <button type="button" class="chip" onclick={() => onaction?.(item.action)}>{item.label}</button>
+        <button type="button" class="chip" onmousedown={(event) => event.preventDefault()} onclick={() => onaction?.(item.action)}>{item.label}</button>
       {:else}
         <span class="chip">{item.label}</span>
       {/if}
@@ -133,7 +134,9 @@
      reflows when the width changes. */
   .grid.by-column {
     display: block;
-    column-width: min(var(--min-col), 100%);
+    /* A length: column-width takes no percentage, and a box narrower than one column gets one
+       column that narrow anyway. */
+    column-width: var(--min-col);
     column-gap: 0;
   }
 

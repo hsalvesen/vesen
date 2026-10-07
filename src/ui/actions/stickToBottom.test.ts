@@ -4,6 +4,8 @@ import {
   LONG_OUTPUT_RATIO,
   MOMENTUM_MS,
   PIN_THRESHOLD_PX,
+  REVEAL_EVENT,
+  SUBMIT_EVENT,
   reactToContent,
   scrollToEnd,
   stickToBottom,
@@ -29,6 +31,12 @@ describe('reactToContent', () => {
     expect(reactToContent({ ...touch, freshEntryHeight: 600 * LONG_OUTPUT_RATIO })).toBe('bottom');
     expect(reactToContent({ ...touch, freshEntryHeight: null }), 'no new entry').toBe('bottom');
     expect(reactToContent({ ...touch, pinned: false, freshEntryHeight: 590 }), 'scrolled up').toBe('pill');
+  });
+
+  it('on touch, keeps the prompt in view rather than a long output’s start while the visitor types', () => {
+    const typing = { ...facts, touch: true, editing: true };
+    expect(reactToContent({ ...typing, freshEntryHeight: 590 })).toBe('bottom');
+    expect(reactToContent({ ...typing, pinned: false, freshEntryHeight: 590 })).toBe('pill');
   });
 });
 
@@ -364,6 +372,58 @@ describe('use:stickToBottom', () => {
     view.metrics.view = 300;
     observer().resize({ target: main, height: 300 });
     grow(view, 820);
+    expect(view.atBottom()).toBe(true);
+  });
+
+  it('on touch, with the keyboard open, follows a long output to the bottom, where the prompt is', () => {
+    coarse = true;
+    const input = main.querySelector('input') as HTMLInputElement;
+    input.focus();
+    const view = start({ view: 300, content: 280 });
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    const help = addEntry(280, 40);
+    grow(view, 320);
+    place(help, main, 280, 900);
+    grow(view, 1180);
+    expect(view.atBottom()).toBe(true);
+    expect(pills).toEqual([]);
+
+    // The same with the prompt blurred but the keyboard marked open (platform/viewport.ts).
+    input.blur();
+    document.documentElement.classList.add('kb-open');
+    const more = addEntry(1180, 40);
+    grow(view, 1220);
+    place(more, main, 1180, 900);
+    grow(view, 2080);
+    expect(view.atBottom()).toBe(true);
+    document.documentElement.classList.remove('kb-open');
+  });
+
+  it('follows a line started by a tap (a chip, the history sheet, a link), though a long output had left the view', () => {
+    coarse = true;
+    const input = main.querySelector('input') as HTMLInputElement;
+    const view = start({ view: 600, content: 500 });
+    // fastfetch, run from a chip: long, so shown from its start, which leaves the view behind.
+    const first = addEntry(500, 40);
+    grow(view, 540);
+    place(first, main, 500, 900);
+    grow(view, 1400);
+    expect(main.scrollTop).toBe(500 - ANCHOR_MARGIN_PX);
+    // Then ls, from a chip: no key press, only the prompt saying a line started.
+    input.dispatchEvent(new CustomEvent(SUBMIT_EVENT, { bubbles: true }));
+    const ls = addEntry(1400, 40);
+    grow(view, 1440);
+    place(ls, main, 1400, 120);
+    grow(view, 1520);
+    expect(view.atBottom()).toBe(true);
+    expect(pills[pills.length - 1]).not.toBe(true);
+  });
+
+  it('goes to the bottom when the prompt asks to be shown (the Type a command key)', () => {
+    const input = main.querySelector('input') as HTMLInputElement;
+    const view = start({ view: 600, content: 2000 });
+    view.scroll(100);
+    input.dispatchEvent(new CustomEvent(REVEAL_EVENT, { bubbles: true }));
     expect(view.atBottom()).toBe(true);
   });
 

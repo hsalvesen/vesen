@@ -201,6 +201,15 @@ describe('paths', () => {
     ['cd docu‸ ls', 'cd documents/‸ ls'],
     ['FOO=~/doc', 'FOO=~/documents/'],
     ['echo ~/doc', 'echo ~/documents/'],
+    // Free text may still name a file, as bash completes one: echo, printf, test and [.
+    ['echo REA', 'echo README.md '],
+    ['printf %s REA', 'printf %s README.md '],
+    ['test -f REA', 'test -f README.md '],
+    ['[ -d doc', '[ -d documents/'],
+    // And past the = of export's and env's NAME=VALUE, the value is a path.
+    ['export DOCS=~/doc', 'export DOCS=~/documents/'],
+    ['env X=~/doc', 'env X=~/documents/'],
+    ['export PA', ['PAGER', 'PATH']],
     ['cat /root/', 'BELL'],
     ['cat nope/', 'BELL'],
     ['nosuchcmd READ', 'nosuchcmd README.md '],

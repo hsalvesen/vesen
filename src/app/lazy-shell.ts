@@ -33,6 +33,8 @@ interface Waiting {
   readonly id: number;
   readonly line: string;
   readonly origin: JobOrigin | undefined;
+  /** False: kept out of history (StartOptions.record). */
+  readonly record: boolean;
   started(handle: JobHandle): void;
   failed(error: unknown): void;
   /** ^C came while it waited: it ends now, and never runs. */
@@ -100,7 +102,9 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
       for (const line of remembered.splice(0)) loaded.remember(line);
       // The waiting lines start before the stores are forwarded, so the job never reads as idle
       // in between. Each one interrupts the one before, as lines typed at a busy shell do.
-      for (const entry of waiting.splice(0)) entry.started(loaded.start(entry.line, entry.origin, { continues: entry.id }));
+      for (const entry of waiting.splice(0)) {
+        entry.started(loaded.start(entry.line, entry.origin, { continues: entry.id, ...(entry.record ? {} : { record: false }) }));
+      }
       forward(loaded.cwd, cwd);
       forward(loaded.lastStatus, lastStatus);
       forward(loaded.job, job);
@@ -157,6 +161,7 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
         id,
         line,
         origin,
+        record: startOptions?.record !== false,
         started: (handle) => settle(handle.done),
         failed: (error) => settle(failure(line, origin, id, error, prompt, startedAt)),
         cancel: () => {

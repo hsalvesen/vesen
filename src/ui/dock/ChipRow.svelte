@@ -98,6 +98,8 @@
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scroll-snap-type: x proximity;
+    /* Snapping honours the padding, so the first chip rests clear of the faded edge. */
+    scroll-padding-inline: 12px;
     scrollbar-width: none;
     /* The row fades at its edges, so a chip cut off says there are more. */
     mask-image: linear-gradient(to right, transparent 0, #000 10px, #000 calc(100% - 16px), transparent 100%);
@@ -176,6 +178,15 @@
   .chip:focus-visible {
     outline: 2px solid var(--role-accent);
     outline-offset: 1px;
+  }
+
+  /* Forced colours (Windows contrast themes) replace the fill and the border: the Tab menu's
+     choice is outlined in the system's highlight instead. */
+  @media (forced-colors: active) {
+    .chip.selected {
+      outline: 3px solid Highlight;
+      outline-offset: 1px;
+    }
   }
 
   .more {

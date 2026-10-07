@@ -8,6 +8,7 @@
 // cannot recreate. Text that came from cat, curl or echo therefore never plants a command a
 // visitor might tap.
 
+import { safeInLine } from '../lib/unsafe-text';
 import { htmlToText } from './html-to-text';
 
 // ── Colours ────────────────────────────────────────────────────────────────────────────────
@@ -302,10 +303,6 @@ export function readableUrl(url: string): string {
   return url.replace(/^https?:\/\/(?:www\.)?/i, '').replace(/\/$/, '');
 }
 
-// Controls, line breaks and bidirectional overrides: a line to run or insert must read exactly
-// as it will execute. Tab is allowed; it is whitespace to the shell.
-const UNSAFE_IN_LINE = /[\u0000-\u0008\u000a-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/;
-
 const trusted = new WeakSet<object>();
 
 /** True only for an Action made by the `out` builders in this page. */
@@ -320,7 +317,9 @@ function seal(data: ActionData): Action {
 }
 
 function singleLine(builder: string, field: string, value: string): string {
-  if (UNSAFE_IN_LINE.test(value)) {
+  // Controls, line breaks and bidirectional overrides: a line to run or insert must read exactly
+  // as it will execute (lib/unsafe-text.ts).
+  if (!safeInLine(value)) {
     throw new TypeError(`out.${builder}: ${field} must be one line without control characters`);
   }
   return value;

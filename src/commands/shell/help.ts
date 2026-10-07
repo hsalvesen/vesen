@@ -28,7 +28,7 @@ export default defineCommand({
   next: ({ status, argv }) => {
     if (status !== 0) return [];
     const topics = argv.slice(1).filter((word) => !word.startsWith('-'));
-    if (topics.length === 0) return ['cat README.md', 'ls', 'fastfetch', 'theme ls', 'man ls'];
+    if (topics.length === 0) return ['cat ~/README.md', 'ls', 'fastfetch', 'theme ls', 'man ls'];
     const [topic] = topics;
     return topics.length === 1 && topic !== undefined && topic !== 'keys' && PLAIN_ARG.test(topic) ? [`man ${topic}`] : [];
   },

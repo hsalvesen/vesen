@@ -303,7 +303,7 @@ describe('Tab completion and the completion row', () => {
     // In the dock, under the screen.
     await vi.waitFor(() => expect(document.querySelector('.dock-slot [role="listbox"]')).not.toBeNull());
     const names = screen.getAllByRole('option').map((o) => o.getAttribute('aria-label'));
-    expect(names).toEqual(['Run: help', 'Run: cat README.md', 'Run: fastfetch', 'Run: ls', 'Run: theme ls', 'Run: cathode ls']);
+    expect(names).toEqual(['Run: help', 'Run: cat ~/README.md', 'Run: fastfetch', 'Run: ls', 'Run: theme ls', 'Run: cathode ls']);
     await fireEvent.click(screen.getByRole('option', { name: 'Run: ls' }));
     await vi.waitFor(() => expect(transcript.entries().map((e) => [e.line, e.state])).toEqual([['ls', 'done']]));
     expect(document.activeElement).not.toBe(promptBox());
@@ -348,7 +348,11 @@ describe('the session snapshot and the alternate screen', () => {
     await type('cd documents');
     await type('echo kept');
     await fireEvent.input(screen.getByRole('combobox', { name: 'Terminal command' }), { target: { value: 'ls -l' } });
-    window.dispatchEvent(new Event('pagehide'));
+    // Saving loads just after the first paint.
+    await vi.waitFor(() => {
+      window.dispatchEvent(new Event('pagehide'));
+      expect(session.items.get(SNAPSHOT_KEY)).toBeDefined();
+    });
     const saved = JSON.parse(session.items.get(SNAPSHOT_KEY) ?? '{}');
     expect(saved.entries.map((entry: { line: string }) => entry.line)).toEqual(['cd documents', 'echo kept']);
     expect(saved).toMatchObject({ v: 1, line: 'ls -l', cwd: '/home/guest/documents' });

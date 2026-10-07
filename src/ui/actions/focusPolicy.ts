@@ -5,6 +5,11 @@
 // focuses it only on the prompt row or the empty space under the last entry, because focusing
 // opens the soft keyboard, and a visitor tapping output is reading, not typing. Printable keys
 // pressed while nothing has focus go to the prompt, so the first character is not lost.
+//
+// Android's Back hides the keyboard and leaves the prompt focused, where focusing it again does
+// nothing (platform/viewport.ts blurs it, but should that not happen): a tap there on a prompt
+// that has focus and no keyboard blurs and focuses it again, inside the tap, which brings the
+// keyboard back.
 import type { ActionReturn } from 'svelte/action';
 
 export type PointerKind = 'mouse' | 'touch' | 'pen';
@@ -57,6 +62,16 @@ function pointerKind(type: string | undefined): PointerKind {
 export interface FocusPolicyOptions {
   /** The prompt's input. */
   readonly input: () => HTMLInputElement | null | undefined;
+  /**
+   * True when the soft keyboard is known to be closed. By default, when platform/viewport.ts
+   * tracks the viewport (it wrote --app-h) and has not marked it open (html.kb-open).
+   */
+  readonly keyboardClosed?: () => boolean;
+}
+
+function viewportSaysClosed(doc: Document): boolean {
+  const root = doc.documentElement;
+  return root.style.getPropertyValue('--app-h') !== '' && !root.classList.contains('kb-open');
 }
 
 export function focusPolicy(node: HTMLElement, options: FocusPolicyOptions): ActionReturn<FocusPolicyOptions> {
@@ -65,9 +80,18 @@ export function focusPolicy(node: HTMLElement, options: FocusPolicyOptions): Act
   const win = doc.defaultView;
   let press: { x: number; y: number; pointer: PointerKind } | null = null;
 
-  const focusInput = (): void => {
+  const focusInput = (pointer: PointerKind | null): void => {
     const input = opts.input();
-    if (input && doc.activeElement !== input) input.focus({ preventScroll: true });
+    if (!input) return;
+    if (doc.activeElement !== input) {
+      input.focus({ preventScroll: true });
+      return;
+    }
+    const closed = opts.keyboardClosed ?? (() => viewportSaysClosed(doc));
+    if (pointer === 'touch' && closed()) {
+      input.blur();
+      input.focus({ preventScroll: true });
+    }
   };
 
   const onPointerDown = (event: PointerEvent): void => {
@@ -88,7 +112,7 @@ export function focusPolicy(node: HTMLElement, options: FocusPolicyOptions): Act
       interactive: target?.closest(INTERACTIVE_SELECTOR) != null,
       promptArea: target?.closest(PROMPT_AREA_SELECTOR) != null,
     });
-    if (decision) focusInput();
+    if (decision) focusInput(start?.pointer ?? 'mouse');
   };
 
   // With nothing focused, a typed character would go nowhere. Focusing the prompt during keydown
@@ -96,7 +120,7 @@ export function focusPolicy(node: HTMLElement, options: FocusPolicyOptions): Act
   const onKeyDown = (event: KeyboardEvent): void => {
     const active = doc.activeElement;
     const idle = active === null || active === doc.body || active === doc.documentElement || active.tagName === 'MAIN';
-    if (idle && !event.defaultPrevented && isPrintableKey(event)) focusInput();
+    if (idle && !event.defaultPrevented && isPrintableKey(event)) focusInput(null);
   };
 
   node.addEventListener('pointerdown', onPointerDown, { capture: true, passive: true });

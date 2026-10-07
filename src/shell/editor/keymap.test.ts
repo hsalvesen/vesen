@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BINDINGS, chordOf, isModifierKey, keyHelp, resolveKey, showChord, type Action, type KeyChord, type KeyCtx, type KeyPlatform } from './keymap';
+import { keyHelp, showChord } from '../keys';
+import { BINDINGS, chordOf, isModifierKey, resolveKey, type Action, type KeyChord, type KeyCtx, type KeyPlatform } from './keymap';
 
 /** A key press: `C-a`, `M-b`, `S-Tab`, `Up`, a plain `x`. */
 function press(chord: string, extra: Partial<KeyChord> = {}): KeyChord {
@@ -112,9 +113,11 @@ describe('keys an input method is composing', () => {
 });
 
 describe('what depends on the moment', () => {
-  it('Ctrl+C copies when text is selected', () => {
+  it('Ctrl+C copies when text is selected, except on a Mac, where Cmd+C copies and Ctrl+C always interrupts', () => {
     expect(action('C-c', { hasSelection: true })).toEqual({ a: 'native' });
     expect(action('C-c', { hasSelection: false })).toEqual({ a: 'interrupt' });
+    expect(action('C-c', { hasSelection: true, platform: 'mac' })).toEqual({ a: 'interrupt' });
+    expect(action('C-c', { hasSelection: false, platform: 'mac' })).toEqual({ a: 'interrupt' });
   });
 
   it('Ctrl+D on an empty line is end of input', () => {
@@ -156,15 +159,23 @@ describe('reverse-i-search', () => {
   });
 
   it('moving keys put the line found on the prompt', () => {
-    for (const chord of ['Left', 'Right', 'Up', 'Down', 'Home', 'End', 'C-a', 'C-e', 'Tab']) expect(action(chord, search), chord).toEqual({ a: 'searchExit' });
+    for (const chord of ['Left', 'Right', 'Up', 'Down', 'Home', 'End', 'C-a', 'C-e', 'Tab', 'C-j']) expect(action(chord, search), chord).toEqual({ a: 'searchExit' });
     expect(action('C-b', { ...search, platform: 'mac' })).toEqual({ a: 'searchExit' });
+  });
+
+  it('cutting and pasting keys end the search too, and act on the line found, as in readline', () => {
+    for (const chord of ['C-k', 'C-u', 'C-y', 'C-d', 'C-l', 'M-d', 'M-Backspace', 'M-.']) expect(action(chord, search), chord).toEqual({ a: 'searchExit' });
+    expect(action('C-Backspace', search)).toEqual({ a: 'searchExit' });
+    for (const chord of ['C-w', 'C-t']) {
+      expect(action(chord, { ...search, platform: 'mac' }), chord).toEqual({ a: 'searchExit' });
+      expect(action(chord, search), chord).toEqual({ a: 'native' });
+    }
   });
 
   it('typing and Backspace edit the query; Ctrl+C still interrupts', () => {
     expect(action('x', search)).toEqual({ a: 'native' });
     expect(action('Backspace', search)).toEqual({ a: 'native' });
     expect(action('C-c', search)).toEqual({ a: 'interrupt' });
-    expect(action('C-d', { ...search, empty: true })).toEqual({ a: 'op', op: 'deleteChar' });
   });
 
   it('Ctrl+S is the browser’s outside a search', () => {
@@ -173,6 +184,23 @@ describe('reverse-i-search', () => {
 });
 
 describe('chords', () => {
+  it('name a Ctrl or Alt letter by the letter the layout types', () => {
+    // German QWERTZ: the key printed Y is where QWERTY has Z.
+    expect(chordOf({ ...press('C-y'), code: 'KeyZ' })).toBe('C-y');
+    expect(chordOf({ ...press('C-z'), code: 'KeyY' })).toBe('C-z');
+    // French AZERTY: A is where QWERTY has Q, W where it has Z.
+    expect(chordOf({ ...press('C-a'), code: 'KeyQ' })).toBe('C-a');
+    expect(chordOf({ ...press('C-w'), code: 'KeyZ' })).toBe('C-w');
+    expect(chordOf({ ...press('M-.'), code: 'Comma' })).toBe('M-.');
+  });
+
+  it('fall back to the physical key when the layout types something else', () => {
+    // Option+B on a Mac types ∫; Ctrl+Ф on a Russian layout is the key QWERTY calls A.
+    expect(chordOf({ ...press('M-b'), key: '∫' })).toBe('M-b');
+    expect(chordOf({ ...press('M-.'), key: '≥' })).toBe('M-.');
+    expect(chordOf({ ...press('C-a'), key: 'ф' })).toBe('C-a');
+  });
+
   it('are written as readline writes them, and shown as people write them', () => {
     expect(chordOf(press('C-a'))).toBe('C-a');
     expect(chordOf(press('S-Tab'))).toBe('S-Tab');

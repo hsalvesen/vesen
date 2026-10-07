@@ -18,7 +18,7 @@
   import type { Action } from './output/model';
   import { coarsePointer, dockWanted, keyPlatform } from './platform/env';
   import { createClipboard } from './services/clipboard';
-  import { saveSnapshot, SNAPSHOT_KEY, type SessionSnapshot } from './services/session-snapshot';
+  import { SNAPSHOT_KEY, type SessionSnapshot } from './services/session-snapshot';
   import type { AppRequest, ShellPort } from './shell/index';
   import { screen as transcript } from './stores/screen';
   import CompletionRow from './ui/CompletionRow.svelte';
@@ -140,11 +140,18 @@
   onMount(() => {
     void restored?.then((snapshot) => snapshot !== null && restoreView(snapshot));
     if (win === undefined || session === null) return;
+    // Saving loads in its own chunk just after the first paint, as the status line does: before
+    // then nothing on the screen is worth putting back.
+    let saver: typeof import('./services/session-save') | null = null;
+    import('./services/session-save').then(
+      (module) => (saver = module),
+      () => {},
+    );
     // Put away (a link opened in the same view, the app switched): the screen goes to the
     // snapshot, for Back. A page kept whole in the back/forward cache needs none of it, unless it
     // came back without its state. WebKit loses what pagehide writes when the next page is on
     // another site, so a tap on a link that opens in this view saves first, as hiding the page does.
-    const save = (): void => void saveSnapshot(session, snapshotSource(), Date.now());
+    const save = (): void => void saver?.saveSnapshot(session, snapshotSource(), Date.now());
     const onPageHide = save;
     const onLinkTap = (event: MouseEvent): void => {
       const link = event.target instanceof Element ? event.target.closest('a[href]') : null;

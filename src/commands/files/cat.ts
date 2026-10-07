@@ -97,7 +97,8 @@ export default defineCommand({
   ],
   args: [{ name: 'FILE', source: { kind: 'path', accept: 'file' }, optional: true, variadic: true }],
   examples: [
-    { line: 'cat README.md', note: 'the guide to this terminal', offline: true, starter: 2 },
+    // From home, so the starter chip works in any folder.
+    { line: 'cat ~/README.md', label: 'cat README.md', note: 'the guide to this terminal', offline: true, starter: 2 },
     { line: 'cat -n documents/linux.txt', note: 'with line numbers', offline: true },
     { line: 'cat .bashrc .profile', note: 'one after the other', offline: true },
     { line: "echo piped | cat -A -", note: 'standard input, with line ends shown', offline: true },

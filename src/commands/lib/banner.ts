@@ -38,6 +38,9 @@ export const KEYS_HINT = 'Tab completes · ↑ history · help <cmd> for details
 /** Under the logo on touch, where the dock's chips run commands. */
 export const TOUCH_HINT = 'Tap a chip below, or type a command';
 
+/** The owner's name, never split across lines. */
+const OWNER = 'Has\u00a0Salvesen';
+
 const MUTED: SpanStyle = { fg: 'muted' };
 const STRONG: SpanStyle = { fg: 'fg-strong' };
 const ACCENT: SpanStyle = { fg: 'accent' };
@@ -46,11 +49,13 @@ const ACCENT: SpanStyle = { fg: 'accent' };
 export function bannerBlocks({ version, columns, touch }: BannerOptions): Block[] {
   const compact = columns < COMPACT_BELOW;
   const lines: Line[] = [
-    [out.span(`vesen v${version} · a terminal by Has Salvesen`, MUTED)],
+    // No-break spaces keep the name whole when the line wraps on a 320px screen.
+    [out.span(`vesen v${version} · a terminal by ${OWNER}`, MUTED)],
     [out.span(touch ? TOUCH_HINT : KEYS_HINT, MUTED)],
     [],
     [out.span('Type ', STRONG), out.run('help', 'help', ACCENT), out.span(' to see all available commands.', STRONG)],
-    [out.span('Type ', STRONG), out.run('cat README.md', 'cat README.md', ACCENT), out.span(' to learn more about this terminal.', STRONG)],
+    // From home, so the link works from whatever folder it is tapped in.
+    [out.span('Type ', STRONG), out.run('cat README.md', 'cat ~/README.md', ACCENT), out.span(' to learn more about this terminal.', STRONG)],
   ];
   return [out.art(compact ? BANNER_ART_COMPACT : BANNER_ART, 'Vesen logo'), out.lines(lines)];
 }

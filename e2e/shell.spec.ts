@@ -261,11 +261,13 @@ test.describe('focus', { tag: '@smoke' }, () => {
     await expect(prompt(page)).not.toBeFocused();
   });
 
-  test('on touch, a long output is shown from its first line', async ({ page }) => {
+  test('on touch, a long output run by a tap is shown from its first line', async ({ page }) => {
     test.skip(!isPhone(), 'phones only');
+    await page.setViewportSize({ width: 390, height: 664 });
     await page.goto('/');
-    await focusPrompt(page);
-    await run(page, 'cat documents/linux.txt');
+    // The keyboard is away: tapping the banner's README link runs it, to be read.
+    await page.getByRole('button', { name: 'cat README.md' }).first().tap();
+    await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
 
     const offset = () =>
       page.evaluate(() => {
@@ -282,7 +284,25 @@ test.describe('focus', { tag: '@smoke' }, () => {
     }, { message: 'the echo line is at the top' }).toBe(true);
   });
 
-  test('on touch, output that arrives after the transcript overflows is followed or anchored', async ({ page }) => {
+  test('on touch, while typing, a long output leaves the prompt in view, as a terminal does', async ({ page }) => {
+    test.skip(!isPhone(), 'phones only');
+    await page.goto('/');
+    await focusPrompt(page);
+    await run(page, 'cat documents/linux.txt');
+    const view = () =>
+      page.evaluate(() => {
+        const main = document.querySelector('main') as HTMLElement;
+        const input = document.querySelector('input.command-input') as HTMLElement;
+        return { inputBottom: input.getBoundingClientRect().bottom, mainBottom: main.getBoundingClientRect().bottom, toEnd: main.scrollHeight - main.scrollTop - main.clientHeight };
+      });
+    await expect.poll(async () => {
+      const { inputBottom, mainBottom, toEnd } = await view();
+      return toEnd <= 1 && inputBottom <= mainBottom + 0.5;
+    }, { message: 'the prompt is in view' }).toBe(true);
+    await expect(prompt(page)).toBeFocused();
+  });
+
+  test('on touch, output that arrives after the transcript overflows is followed', async ({ page }) => {
     test.skip(!isPhone(), 'phones only');
     await page.goto('/');
     await focusPrompt(page);
@@ -306,19 +326,13 @@ test.describe('focus', { tag: '@smoke' }, () => {
       const view = () =>
         page.evaluate(() => {
           const main = document.querySelector('main') as HTMLElement;
-          const all = document.querySelectorAll('[role="log"] .command-input-display');
-          const echo = all[all.length - 1] as HTMLElement;
-          return {
-            echo: echo.getBoundingClientRect().top - main.getBoundingClientRect().top,
-            toEnd: main.scrollHeight - main.scrollTop - main.clientHeight,
-            pill: document.querySelector('.new-output') !== null,
-          };
+          return { toEnd: main.scrollHeight - main.scrollTop - main.clientHeight, pill: document.querySelector('.new-output') !== null };
         });
-      // Either the whole output shows, down to the prompt, or a long one shows from its echo line.
+      // Typing, the view stays at the end, where the prompt is, however long the output.
       await expect
         .poll(async () => {
-          const { echo, toEnd, pill } = await view();
-          return !pill && echo >= 0 && (toEnd <= 1 || echo <= 24);
+          const { toEnd, pill } = await view();
+          return !pill && toEnd <= 1;
         }, { message: `${line}: ${JSON.stringify(await view())}` })
         .toBe(true);
     }

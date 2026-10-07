@@ -18,7 +18,7 @@ export type KeyAction =
   | { readonly type: 'symbols' }
   /** Put the keyboard away. */
   | { readonly type: 'hide' }
-  /** Open the keyboard at the prompt, inside the tap. */
+  /** Open the keyboard at the prompt, inside the tap, and bring the prompt into view. */
   | { readonly type: 'type' };
 
 export interface KeyDef {
@@ -56,8 +56,13 @@ export const COMPACT_KEYS: readonly KeyDef[] = [TAB, UP, INTERRUPT];
 
 const symbol = (text: string, name: string): KeyDef => ({ id: `sym:${text}`, label: text, ariaLabel: name, action: { type: 'insert', text } });
 
-/** The symbols page, then ••• to go back: what a phone keyboard hides away. */
+/**
+ * The symbols page, after ••• to go back (SYMBOLS_PAGE): what a phone keyboard hides away. The
+ * cursor keys come first, beside •••, so the way back and the arrows are never off the edge.
+ */
 export const SYMBOL_KEYS: readonly KeyDef[] = [
+  { id: 'left', label: '←', ariaLabel: 'Cursor left', action: { type: 'key', key: 'ArrowLeft' }, repeat: true },
+  { id: 'right', label: '→', ariaLabel: 'Cursor right', action: { type: 'key', key: 'ArrowRight' }, repeat: true },
   { id: 'esc', label: 'esc', ariaLabel: 'Escape', action: { type: 'key', key: 'Escape' } },
   symbol('|', 'Pipe'),
   symbol('>', 'Greater than'),
@@ -67,9 +72,10 @@ export const SYMBOL_KEYS: readonly KeyDef[] = [
   symbol('*', 'Star'),
   symbol('"', 'Double quote'),
   symbol('$', 'Dollar'),
-  { id: 'left', label: '←', ariaLabel: 'Cursor left', action: { type: 'key', key: 'ArrowLeft' }, repeat: true },
-  { id: 'right', label: '→', ariaLabel: 'Cursor right', action: { type: 'key', key: 'ArrowRight' }, repeat: true },
 ];
+
+/** The symbols page as drawn: ••• (back to the keys) first, then the cursor keys and symbols. */
+export const SYMBOLS_PAGE: readonly KeyDef[] = [SYMBOLS_KEY, ...SYMBOL_KEYS];
 
 /** With the keyboard put away: a bar to bring it back, ↑ and clear. */
 export const CLOSED_KEYS: readonly KeyDef[] = [
@@ -86,6 +92,8 @@ export interface KeyTarget {
   insertText(text: string): void;
   blur(): void;
   focus(options?: { keyboard?: boolean }): void;
+  /** Brings the prompt into view, however far up the transcript was scrolled. */
+  reveal(): void;
 }
 
 /** Does what a key does. The symbols page is the key bar's own; it reports that back. */
@@ -108,6 +116,8 @@ export function runKey(action: KeyAction, target: KeyTarget): 'symbols' | null {
       return null;
     case 'type':
       target.focus({ keyboard: true });
+      // The visitor may have scrolled up to read: the line they are about to type is shown.
+      target.reveal();
       return null;
     case 'symbols':
       return 'symbols';

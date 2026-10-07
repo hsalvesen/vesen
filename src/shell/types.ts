@@ -118,6 +118,11 @@ export interface Example {
   readonly offline?: boolean;
   /** Rank among the starter chips on an empty phone prompt; lower comes first. */
   readonly starter?: number;
+  /**
+   * What a starter chip shows, when not the line itself: `cat README.md` for `cat ~/README.md`,
+   * which runs from any folder. The chip's name for screen readers is still the whole line.
+   */
+  readonly label?: string;
 }
 
 // ── Commands ───────────────────────────────────────────────────────────────────────────────

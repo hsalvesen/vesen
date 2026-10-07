@@ -81,8 +81,42 @@ describe('Dock', () => {
     visibleArea.set({ height: 250, keyboardOpen: true });
     await tick();
     expect(dock.dataset.dockMode).toBe('minimal');
-    expect(dock.querySelector('.chip-row')).toBeNull();
+    // The chips are not drawn; they are still there for screen readers, visually hidden.
+    expect(dock.querySelector('.chip-row')?.closest('.sr-only')).not.toBeNull();
     expect(keyLabels(dock)).toEqual(['tab', '↑', '↓', '^C', 'clear', '•••', '⌄']);
+  });
+
+  it('shows Tab’s list in the minimal dock: the compact row while the list or its menu is open', async () => {
+    const { dock, input } = await setup();
+    input.focus();
+    visibleArea.set({ height: 250, keyboardOpen: true });
+    input.value = 'c';
+    input.setSelectionRange(1, 1);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await tick();
+    expect(dock.querySelector('.one-row')).toBeNull();
+    await tap(screen.getByRole('button', { name: 'Tab: complete' }));
+    // Several commands start with c: the first press lists them, where they can be seen.
+    const row = dock.querySelector('.one-row') as HTMLElement;
+    expect(row).not.toBeNull();
+    expect(row.querySelector('.chip-row')?.closest('.sr-only')).toBeNull();
+    expect(chipLabels(row)).toContain('cat');
+    expect(keyLabels(row)).toEqual(['tab', '↑', '^C']);
+    // The next press steps through them, still in view, the choice marked.
+    await tap(screen.getByRole('button', { name: 'Tab: complete' }));
+    expect(dock.querySelector('.one-row .chip.selected')).not.toBeNull();
+  });
+
+  it('never points the input at a listbox that is not there', async () => {
+    const { dock, input } = await setup();
+    for (const keyboardOpen of [false, true]) {
+      if (keyboardOpen) input.focus();
+      visibleArea.set({ height: 250, keyboardOpen });
+      await tick();
+      const controls = input.getAttribute('aria-controls');
+      expect(controls, String(keyboardOpen)).not.toBeNull();
+      expect(dock.querySelector(`#${controls}`), String(keyboardOpen)).not.toBeNull();
+    }
   });
 
   it('puts the key bar away after a hardware key, keeps the chips, and keys on brings it back', async () => {
@@ -168,6 +202,27 @@ describe('Dock', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(input.value).toBe('pwd');
     expect(document.activeElement).toBe(input);
+  });
+
+  it('gives focus back to the ↑ key when the sheet closes, if the prompt did not have it', async () => {
+    const { input, controller } = await setup();
+    controller.submit('pwd', 'chip');
+    await vi.waitFor(() => expect(controller.running).toBeNull());
+    expect(document.activeElement).not.toBe(input);
+    vi.useFakeTimers();
+    const up = screen.getByRole('button', { name: 'Previous command (hold for history)' });
+    await fireEvent.pointerDown(up, { pointerType: 'touch' });
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    await tick();
+    await fireEvent.pointerUp(up, { pointerType: 'touch' });
+    vi.useRealTimers();
+    const sheet = screen.getByRole('dialog', { name: 'History' });
+    expect(sheet.contains(document.activeElement)).toBe(true);
+    await fireEvent.keyDown(sheet, { key: 'Escape' });
+    await tick();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    // Not the top of the page: the key the sheet was opened from, and no keyboard.
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Previous command (hold for history)' }));
   });
 
   it('walks history with ↑ with the keyboard away, without opening it', async () => {

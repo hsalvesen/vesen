@@ -10,13 +10,16 @@
     with the input.
   - On touch: the native input shows, really 16px so iOS never zooms, drawn at the terminal's
     size by --input-scale (platform/measure.ts). There is no mirror.
-  - A secret (sudo's password) is masked: discs on touch, nothing but the cursor in the mirror.
+  - A secret (sudo's password) is masked: the input holds only bullets (the controller keeps the
+    password), drawn as discs on touch; the mirror shows nothing but the cursor. The read's dim
+    hint (that it is a joke, and nothing is kept) describes the input to screen readers.
+  - The input is keyed on controller.inputEpoch: after a password an input method typed into, a
+    fresh input, with no undo history, takes its place.
 -->
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { nextBoundary } from '../../shell/editor/readline';
   import { COMPLETION_LIST_ID, optionId } from '../CompletionRow.svelte';
-  import { STEADY_MS, type PromptController } from './promptController.svelte';
+  import { READ_HINT_ID, STEADY_MS, type PromptController } from './promptController.svelte';
 
   let { controller }: { controller: PromptController } = $props();
 
@@ -52,6 +55,9 @@
   });
 
   const search = $derived(controller.searchView);
+
+  // The read's hint (PromptLine draws it) is said with the prompt's own description.
+  const describedBy = $derived(controller.read !== null && !controller.read.keepLine && controller.read.hint ? `${READ_HINT_ID} prompt-keys` : 'prompt-keys');
 
   // The grey ghost, split where the block cursor sits on its first character.
   const ghost = $derived.by(() => {
@@ -98,14 +104,24 @@
     controller.ghostElement = ghostElement ?? null;
   });
 
-  onMount(() => {
-    if (!input) return;
-    const detach = controller.attach(input);
-    // A keyboard and mouse can start typing at once. On touch, focus opens the soft keyboard
-    // over the page, so the prompt waits for a tap (ui/actions/focusPolicy.ts).
-    controller.focus();
-    return detach;
-  });
+  let first = true;
+  /** Wires each input the key block makes to the controller, and unwires it when it goes. */
+  function attachInput(node: HTMLInputElement): { destroy(): void } {
+    input = node;
+    const detach = controller.attach(node);
+    if (first) {
+      first = false;
+      // A keyboard and mouse can start typing at once. On touch, focus opens the soft keyboard
+      // over the page, so the prompt waits for a tap (ui/actions/focusPolicy.ts).
+      controller.focus();
+    }
+    return {
+      destroy() {
+        detach();
+        if (input === node) input = undefined;
+      },
+    };
+  }
 </script>
 
 <form
@@ -146,8 +162,9 @@
               >{/if}{/if}{/if}</span
       >
     {/if}
+    {#key controller.inputEpoch}
     <input
-      bind:this={input}
+      use:attachInput
       class="command-input"
       type="text"
       role="combobox"
@@ -156,7 +173,7 @@
       aria-expanded={chips.length > 0}
       aria-controls={chips.length > 0 ? COMPLETION_LIST_ID : undefined}
       aria-activedescendant={activeOption}
-      aria-describedby="prompt-keys"
+      aria-describedby={describedBy}
       placeholder={controller.touch && controller.mode === 'edit' && controller.running === null ? 'Type a command…' : undefined}
       enterkeyhint={controller.read !== null ? 'done' : 'go'}
       autocomplete="off"
@@ -169,6 +186,7 @@
       data-lpignore="true"
       onscroll={syncScroll}
     />
+    {/key}
   </span>
   {#if !mirrored && search}
     <span class="search-tail"

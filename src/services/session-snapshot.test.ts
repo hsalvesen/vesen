@@ -3,7 +3,8 @@
 import { describe, expect, it } from 'vitest';
 import { isTrustedAction, out, plain, type Block } from '../output/model';
 import { reviveSnapshot, snapshotText } from './session-restore';
-import { navigationType, pendingSnapshot, saveSnapshot, SNAPSHOT_KEY, SNAPSHOT_MAX_CHARS, snapshotJson, type SnapshotSource } from './session-snapshot';
+import { NOT_KEPT_NOTE, saveSnapshot, snapshotJson } from './session-save';
+import { navigationType, pendingSnapshot, SNAPSHOT_KEY, SNAPSHOT_MAX_CHARS, type SnapshotSource } from './session-snapshot';
 import { STORAGE_LIMITS } from './storage-keys';
 import type { KV } from './types';
 
@@ -84,6 +85,35 @@ describe('saving', () => {
     const kept = JSON.parse(json).entries as { line: string }[];
     expect(kept.length).toBeGreaterThan(0);
     expect(kept[kept.length - 1]?.line).toBe('cat 19');
+  });
+
+  it('keeps the end of a newest output too long to keep whole, with a note, rather than nothing', () => {
+    // `yes | head -n 20000`, a long cat: the job's own limits allow far more than the snapshot.
+    const lines = Array.from({ length: 20_000 }, (_, i) => [out.span(`line ${i} ${'y'.repeat(60)}`)]);
+    const entries = Array.from({ length: 20 }, (_, i) => ({ prompt, line: `yes ${i}`, blocks: [out.lines(lines)], state: 'done' as const }));
+    const started = performance.now();
+    const json = snapshotJson({ ...source([]), entries }, NOW) ?? '';
+    const took = performance.now() - started;
+    expect(json.length).toBeLessThanOrEqual(SNAPSHOT_MAX_CHARS);
+    const saved = JSON.parse(json) as { entries: { line: string; blocks: { lines: { text: string }[][] }[] }[] };
+    expect(saved.entries.map((entry) => entry.line)).toEqual(['yes 19']);
+    const [note, kept] = saved.entries[0]?.blocks ?? [];
+    expect(note?.lines[0]?.[0]?.text).toBe(NOT_KEPT_NOTE);
+    expect(kept?.lines[kept.lines.length - 1]?.[0]?.text).toBe(`line 19999 ${'y'.repeat(60)}`);
+    expect(kept?.lines.length).toBeGreaterThan(5_000);
+    // One pass: the older entries are never stringified once the newest fills the room.
+    expect(took).toBeLessThan(1_000);
+    // And it restores.
+    expect(reviveSnapshot(json, NOW)?.entries).toHaveLength(1);
+  });
+
+  it('keeps the end of one line too long to keep whole', () => {
+    const huge = `${'a'.repeat(1_500_000)}THE END`;
+    const json = snapshotJson({ ...source([]), entries: [{ prompt, line: 'cat huge', blocks: [out.text(huge)], state: 'done' }] }, NOW) ?? '';
+    expect(json.length).toBeLessThanOrEqual(SNAPSHOT_MAX_CHARS);
+    const text = JSON.stringify(JSON.parse(json).entries);
+    expect(text).toContain(NOT_KEPT_NOTE);
+    expect(text).toContain('THE END');
   });
 
   it('saves under vesen:session:v1 in session storage', () => {

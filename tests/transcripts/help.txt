@@ -152,7 +152,8 @@ $ help keys
 Enter                                    run the line
 Tab                                      complete; again to list the choices, again to step through them
 Shift+Tab                                step back through the choices
-Ctrl+C                                   stop the running command, or abandon the line; with text selected, copy it
+Ctrl+C (Mac)                             stop the running command, or abandon the line
+Ctrl+C (not Mac)                         stop the running command, or abandon the line; with text selected, copy it
 Escape                                   stop the running command; in the choices, put back what you typed
 Ctrl+L                                   clear the screen, keeping the line
 Ctrl+D                                   on an empty line, exit; otherwise delete the character under the cursor
@@ -203,7 +204,8 @@ See also: help
 Enter                                    run the line
 Tab                                      complete; again to list the choices, again to step through them
 Shift+Tab                                step back through the choices
-Ctrl+C                                   stop the running command, or abandon the line; with text selected, copy it
+Ctrl+C (Mac)                             stop the running command, or abandon the line
+Ctrl+C (not Mac)                         stop the running command, or abandon the line; with text selected, copy it
 Escape                                   stop the running command; in the choices, put back what you typed
 Ctrl+L                                   clear the screen, keeping the line
 Ctrl+D                                   on an empty line, exit; otherwise delete the character under the cursor

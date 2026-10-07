@@ -21,15 +21,21 @@ function walk(lines: readonly string[], start: EditState, dirs: (-1 | 1)[]): str
 }
 
 describe('Up and Down', () => {
-  it('step through every line from an empty prompt, skipping a repeat of the line shown', () => {
+  it('step through every line from an empty prompt, each line once, where it was last run', () => {
     expect(walk(LINES, { text: '', cursor: 0 }, [-1, -1, -1, -1, -1, -1])).toEqual([
       'cat readme.md',
       'echo hi',
       'cat notes.txt',
       'cd docs',
-      'cat notes.txt',
       'ls',
+      '(none)',
     ]);
+  });
+
+  it('never offer a line twice, however often it recurs, in either direction', () => {
+    const lines = ['echo a', 'echo b', 'echo a', 'echo b', 'echo a', 'echo c'];
+    const draft = { text: 'echo', cursor: 4 };
+    expect(walk(lines, draft, [-1, -1, -1, -1, 1, 1, 1])).toEqual(['echo c', 'echo a', 'echo b', '(none)', 'echo a', 'echo c', 'echo']);
   });
 
   it('offer only lines starting with what was typed, and Down past the newest restores the draft', () => {

@@ -5,11 +5,12 @@
 // under `vesen:session:v1`; they come back only when the page is reached by Back or Forward, and
 // only for 30 minutes. A reload starts fresh.
 //
-// This file is what every page needs: saving, and deciding whether to restore. Restoring, which
+// This file is what every page needs: the snapshot's shape, and deciding whether to restore.
+// Saving is in session-save.ts, which loads just after the first paint; restoring, which
 // rebuilds what was saved from scratch, is in session-restore.ts and loads only after Back.
 
 import type { Block, Line } from '../output/model';
-import { STORAGE_KEYS, STORAGE_LIMITS } from './storage-keys';
+import { STORAGE_KEYS } from './storage-keys';
 import type { KV } from './types';
 
 export const SNAPSHOT_KEY = STORAGE_KEYS.session.key;
@@ -47,50 +48,6 @@ export interface SnapshotSource {
   readonly line: string | null;
   readonly cwd: string;
   readonly scroll: { readonly top: number; readonly atBottom: boolean };
-}
-
-/**
- * What never goes into a snapshot: tap actions, live bindings, swatches and a rich card's view
- * model. Chips are only actions, so they go whole. The restore checks everything again.
- */
-const DROPPED = new Set(['action', 'live', 'swatches', 'props']);
-
-function strip(key: string, value: unknown): unknown {
-  if (DROPPED.has(key)) return undefined;
-  if (key === 'blocks' && Array.isArray(value)) return value.filter((block: { type?: unknown }) => block?.type !== 'chips');
-  return value;
-}
-
-/** The snapshot as JSON: the last 50 finished entries, stripped, and the rest of the page's state. */
-export function snapshotJson(source: SnapshotSource, now: number): string | null {
-  let entries = source.entries
-    .filter((entry) => entry.state !== 'running')
-    .slice(-STORAGE_LIMITS.sessionEntries)
-    .map(({ prompt, line, blocks, status, state }) => ({ prompt, line, blocks, status, state }));
-  const rest = {
-    v: 1,
-    savedAt: now,
-    line: source.line ?? '',
-    cwd: source.cwd,
-    scroll: { top: Math.max(0, Math.round(source.scroll.top)), atBottom: source.scroll.atBottom },
-  };
-  for (;;) {
-    let text: string;
-    try {
-      text = JSON.stringify({ ...rest, entries }, strip);
-    } catch {
-      return null;
-    }
-    if (text.length <= SNAPSHOT_MAX_CHARS) return text;
-    if (entries.length === 0) return null;
-    entries = entries.slice(Math.max(1, Math.ceil(entries.length / 4)));
-  }
-}
-
-/** Saves the snapshot; false when it could not be. */
-export function saveSnapshot(storage: KV<'session'>, source: SnapshotSource, now: number): boolean {
-  const text = snapshotJson(source, now);
-  return text !== null && storage.set(SNAPSHOT_KEY, text);
 }
 
 // ── When to restore ────────────────────────────────────────────────────────────────────────

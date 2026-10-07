@@ -189,11 +189,6 @@ export function pathPool(typed: string, source: PathSource, env: CompletionEnv):
   return { items, matched: true, caseFolded: caseFolded || folder.caseFolded };
 }
 
-/** True when a word looks like a path, so a free-text argument may still complete one. */
-function looksLikePath(word: string): boolean {
-  return word.includes('/') || word.startsWith('~') || word === '.' || word === '..';
-}
-
 // ── Values ─────────────────────────────────────────────────────────────────────────────────
 
 /** A line's operands for a command, after its name, flags and the subcommand; null for another command. */
@@ -274,8 +269,9 @@ export function valuePool(context: CursorContext, env: CompletionEnv): Pool {
     case 'alias':
       return { items: [...env.aliases()].map(([name, value]) => ({ value: name, label: name, kind: 'alias', summary: short(value), terminal: true })) };
     case 'free':
-      // Free text, but a path is still a path: `echo ~/do`.
-      return looksLikePath(context.prefix) ? pathPool(context.prefix, ANY_PATH, env) : EMPTY;
+      // Free text, but a word being typed may be a file, as bash completes one for echo, printf
+      // and test: `echo REA`, `[ -d doc`. An empty word keeps its placeholder; an option is not a path.
+      return context.prefix !== '' && !context.prefix.startsWith('-') ? pathPool(context.prefix, ANY_PATH, env) : EMPTY;
     default:
       return EMPTY;
   }

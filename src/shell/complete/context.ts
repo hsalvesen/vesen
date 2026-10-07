@@ -309,5 +309,9 @@ export function cursorContext(state: EditState, env: CompletionEnv): CursorConte
   };
   if (found.slot === 'command' && word.value.includes('/')) return { ...context, slot: 'arg', source: EXEC_PATH };
   if (found.valueAt !== undefined) return { ...context, ...inside(word, found.valueAt), atWordStart: false };
+  // export's and env's NAME=VALUE: past the `=`, the value is a path, as for a leading assignment.
+  if (found.slot === 'arg' && found.source?.kind === 'var' && ASSIGNMENT.test(word.value)) {
+    return { ...context, ...inside(word, word.value.indexOf('=') + 1), atWordStart: false, source: ANY_PATH };
+  }
   return context;
 }

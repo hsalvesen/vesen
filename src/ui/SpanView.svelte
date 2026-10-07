@@ -3,7 +3,8 @@
   checked http, https or mailto href becomes a link, and live bindings read the theme and cathode
   stores, so old output stays true after either changes: a highlight moves to the current theme
   or CRT mode, and so does a marker. Swatches are drawn in their own fixed colours, checked again
-  here, for the eye only.
+  here, for the eye only. A press on an action never takes focus from the prompt, so a phone's
+  keyboard stays as it was (02, section 5), as the dock's chips do.
 -->
 <script lang="ts">
   import { hexColour, isTrustedAction, safeHref, type Action, type HexColour, type Span } from '../output/model';
@@ -57,7 +58,14 @@
 {#if swatches !== null}
   <span class="swatches" aria-hidden="true" style="background-color: {swatches.background}">{' '}{#each swatches.colours as colour}<span style="color: {colour}">██</span>{/each}{' '}</span>
 {:else if action !== null && onaction}
-  <button type="button" class="action {classes ?? ''}" style={css} aria-current={current ? 'true' : undefined} onclick={() => onaction(action)}>{text}</button>
+  <button
+    type="button"
+    class="action {classes ?? ''}"
+    style={css}
+    aria-current={current ? 'true' : undefined}
+    onmousedown={(event) => event.preventDefault()}
+    onclick={() => onaction(action)}>{text}</button
+  >
 {:else if marker !== null}
   <span class={classes} style={css} aria-hidden="true">{text}</span>
 {:else if href !== null}

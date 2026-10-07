@@ -8,7 +8,9 @@
 // stops only at spaces, so the path is one.
 //
 // The kill ring keeps the last KILL_RING_MAX kills, newest first. Kills in a row join into one
-// entry, as in readline: killing backwards puts the text in front, forwards behind. Ctrl+Y yanks
+// entry, as in readline: killing backwards puts the text in front, forwards behind. A kill is in
+// a row with the one before only if it starts where that one left the cursor, so a click or an
+// arrow key in between (which the prompt never sees as an edit) starts a new entry. Ctrl+Y yanks
 // the newest; Alt+Y right after it swaps in the one before.
 
 import type { EditState } from '../complete/types';
@@ -41,15 +43,17 @@ export interface KillRing {
   readonly entries: readonly string[];
   /** The edit before this one was a kill in this direction, so the next kill joins it. */
   readonly lastKill: 'back' | 'forward' | null;
+  /** Where that kill left the cursor: the next kill joins it only if it starts there. */
+  readonly killAt?: number | null;
   /** What the last yank put on the line, so Alt+Y can swap it for an older kill. */
   readonly yank: { readonly from: number; readonly to: number; readonly index: number } | null;
 }
 
-export const EMPTY_RING: KillRing = { entries: [], lastKill: null, yank: null };
+export const EMPTY_RING: KillRing = { entries: [], lastKill: null, killAt: null, yank: null };
 
 /** The ring after an edit that is not a kill or a yank: the next kill starts a new entry. */
 export function settleRing(ring: KillRing): KillRing {
-  return ring.lastKill === null && ring.yank === null ? ring : { entries: ring.entries, lastKill: null, yank: null };
+  return ring.lastKill === null && ring.yank === null ? ring : { entries: ring.entries, lastKill: null, killAt: null, yank: null };
 }
 
 const WORD = /[\p{L}\p{N}]/u;
@@ -101,20 +105,25 @@ function clampCursor(st: EditState): number {
   return Math.min(Math.max(st.cursor, 0), st.text.length);
 }
 
-/** Puts `killed` in the ring, joining the newest entry when the edit before was a kill too. */
-function remember(ring: KillRing, killed: string, direction: 'back' | 'forward'): KillRing {
-  if (killed === '') return { entries: ring.entries, lastKill: direction, yank: null };
+/**
+ * Puts `killed` in the ring, joining the newest entry when the edit before was a kill too and
+ * this one starts where it left the cursor (`cursor`); `at` is where this one leaves it.
+ */
+function remember(ring: KillRing, killed: string, direction: 'back' | 'forward', cursor: number, at: number): KillRing {
+  const inRow = ring.lastKill !== null && (ring.killAt ?? null) === cursor;
+  // As readline, killing nothing still counts as a kill.
+  if (killed === '') return { entries: ring.entries, lastKill: direction, killAt: at, yank: null };
   const newest = ring.entries[0];
-  if (ring.lastKill !== null && newest !== undefined) {
+  if (inRow && newest !== undefined) {
     const joined = direction === 'back' ? killed + newest : newest + killed;
-    return { entries: [joined, ...ring.entries.slice(1)], lastKill: direction, yank: null };
+    return { entries: [joined, ...ring.entries.slice(1)], lastKill: direction, killAt: at, yank: null };
   }
-  return { entries: [killed, ...ring.entries].slice(0, KILL_RING_MAX), lastKill: direction, yank: null };
+  return { entries: [killed, ...ring.entries].slice(0, KILL_RING_MAX), lastKill: direction, killAt: at, yank: null };
 }
 
 function kill(st: EditState, from: number, to: number, direction: 'back' | 'forward', ring: KillRing): { state: EditState; ring: KillRing } {
   const killed = st.text.slice(from, to);
-  return { state: { text: st.text.slice(0, from) + st.text.slice(to), cursor: from }, ring: remember(ring, killed, direction) };
+  return { state: { text: st.text.slice(0, from) + st.text.slice(to), cursor: from }, ring: remember(ring, killed, direction, clampCursor(st), from) };
 }
 
 function move(st: EditState, cursor: number, ring: KillRing): { state: EditState; ring: KillRing } {
@@ -154,7 +163,7 @@ export function applyOp(st: EditState, op: EditOp, ring: KillRing = EMPTY_RING):
       const next = text.slice(0, cursor) + newest + text.slice(cursor);
       return {
         state: { text: next, cursor: cursor + newest.length },
-        ring: { entries: ring.entries, lastKill: null, yank: { from: cursor, to: cursor + newest.length, index: 0 } },
+        ring: { entries: ring.entries, lastKill: null, killAt: null, yank: { from: cursor, to: cursor + newest.length, index: 0 } },
       };
     }
     case 'yankPop': {
@@ -168,7 +177,7 @@ export function applyOp(st: EditState, op: EditOp, ring: KillRing = EMPTY_RING):
       const next = text.slice(0, last.from) + older + text.slice(last.to);
       return {
         state: { text: next, cursor: last.from + older.length },
-        ring: { entries: ring.entries, lastKill: null, yank: { from: last.from, to: last.from + older.length, index } },
+        ring: { entries: ring.entries, lastKill: null, killAt: null, yank: { from: last.from, to: last.from + older.length, index } },
       };
     }
     case 'deleteChar': {
@@ -191,10 +200,14 @@ export function applyOp(st: EditState, op: EditOp, ring: KillRing = EMPTY_RING):
 /** A word of a command line: quoted parts and backslash escapes stay inside it. */
 const SHELL_WORD = /(?:[^\s"'\\]|\\.|"(?:[^"\\]|\\.)*"?|'[^']*'?)+/g;
 
-/** The last word of a line as typed, quotes and all: what Alt+. inserts. */
+/**
+ * The last word of a line as typed, quotes and all: what Alt+. inserts. Null for a word that
+ * spans a line break (a quote continued at `> `), which the one-line prompt cannot hold.
+ */
 export function lastArgument(line: string): string | null {
   const words = line.match(SHELL_WORD);
-  return words === null ? null : (words[words.length - 1] ?? null);
+  const word = words === null ? null : (words[words.length - 1] ?? null);
+  return word === null || /[\r\n]/.test(word) ? null : word;
 }
 
 /** Where Alt+. last inserted an argument, so pressing it again swaps in an older line's. */

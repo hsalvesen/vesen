@@ -13,9 +13,15 @@
 //   (so a URL can open).
 // - ^C, Escape and the status line interrupt; the prompt returns at once, and the job's entry
 //   ends in ^C.
-// - Edits made here wait while an input method is composing, except a tapped chip.
-// - A secret (sudo's password) is masked as it is typed, never reaches history, the screen,
-//   storage or the kill ring, and is emptied when the prompt loses focus or the page is hidden.
+// - Edits made here wait while an input method is composing, except a tapped chip, and are
+//   dropped if what it commits is not the text they were made from.
+// - A secret (sudo's password) never reaches the input's value: each key is taken in beforeinput
+//   and kept here, and the input holds only as many bullets, so no screen reader, undo history
+//   or copy can give it back. It never reaches history, the screen, storage or the kill ring,
+//   and is emptied when the prompt loses focus or the page is hidden. Text an input method put
+//   in the input itself goes with the input: a fresh one replaces it when the read ends.
+// - Lines from history with line breaks in them (a quote continued at `> `) come back as typed:
+//   their earlier lines at the `> ` prompt, the last in the input.
 
 import type { Line } from '../../output/model';
 import {
@@ -36,10 +42,12 @@ import { NAV_IDLE, searchLabel, searchResult, startSearch, stepHistory, stepSear
 import { chordOf, isModifierKey, resolveKey, type Action, type KeyChord, type KeyCtx, type KeyPlatform } from '../../shell/editor/keymap';
 import { normalizePaste, normalizeTyped } from '../../shell/editor/normalize';
 import { EMPTY_RING, applyOp, replaceRange, settleRing, yankLastArg, type EditOp, type KillRing, type LastArgState } from '../../shell/editor/readline';
-import type { AppRequest, JobOrigin, ReadRequest, ShellPort } from '../../shell/index';
+import type { AppRequest, JobOrigin, ReadRequest, ShellPort, StartOptions } from '../../shell/index';
 import type { ExitCode, JobInfo } from '../../shell/types';
 import type { ScreenStore } from '../../stores/screen';
-import { writeInput } from './inputDom';
+import { REVEAL_EVENT, SUBMIT_EVENT } from '../actions/stickToBottom';
+import { diffRange, writeInput } from './inputDom';
+import { secretEdit, secretMerge } from './secret';
 
 /** Escape, then Tab within this long, leaves the terminal (F095). */
 export const ESCAPE_TAB_MS = 1000;
@@ -50,6 +58,14 @@ export const STEADY_MS = 600;
 
 /** The id of a read the prompt asks itself: the Tab list's `Display all N possibilities?`. */
 const OWN_READ = -1;
+
+/** The element with a read's dim hint (PromptLine), which describes the input (LineEditor). */
+export const READ_HINT_ID = 'prompt-read-hint';
+
+/** What the input shows for each character of a secret. */
+export const SECRET_MASK = '•';
+
+const EMPTY_LINE: EditState = { text: '', cursor: 0 };
 
 /** The keys on the phone dock's key bar that do what the same key on a keyboard does. */
 export type DockKey = 'Tab' | 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight' | 'Escape';
@@ -107,6 +123,8 @@ interface ActiveRead extends PromptRead {
   readonly answer: (text: string | null) => void;
   /** What was on the prompt when the read began, put back when it ends. */
   readonly stash: EditState | null;
+  /** For a one-key question: the line it was asked over, which a typed answer must not change. */
+  readonly asked: EditState | null;
 }
 
 /** The line that is running, frozen at the prompt it was typed at. */
@@ -139,6 +157,16 @@ interface WriteOptions {
   readonly force?: boolean;
 }
 
+/** An edit that waits for the input method to finish composing. */
+interface PendingWrite {
+  readonly state: EditState;
+  readonly options: WriteOptions;
+  /** The text it was made from: if the composition commits anything else, it is dropped. */
+  readonly base: string;
+  /** The Tab state it leads to, set when it lands. */
+  readonly tab: TabState | null;
+}
+
 export class PromptController {
   // ── State ────────────────────────────────────────────────────────────────────────────────
   text = $state('');
@@ -168,6 +196,8 @@ export class PromptController {
   announce = $state('');
   /** When the line last changed, for the cursor that holds still while typing. */
   editedAt = $state(0);
+  /** Goes up when the <input> must be replaced by a fresh one (LineEditor keys it on this). */
+  inputEpoch = $state(0);
 
   readonly platform: KeyPlatform;
   readonly touch: boolean;
@@ -183,8 +213,22 @@ export class PromptController {
   private input: HTMLInputElement | null = null;
   private suppress = false;
   private composing = false;
-  private pendingWrite: { state: EditState; options: WriteOptions } | null = null;
+  private pendingWrite: PendingWrite | null = null;
   private escapedAt = Number.NEGATIVE_INFINITY;
+  /** sudo's password as typed. The input only ever holds SECRET_MASK for each character. */
+  private secret = '';
+  /** Text an input method composed reached the input during a secret read (or was typed ahead of it). */
+  private secretExposed = false;
+  /** The input being replaced had focus: the new one takes it. */
+  private refocusNext = false;
+  /** Unwires the input now attached. */
+  private detachInput: (() => void) | null = null;
+  /** The line being typed before Up first went into history; Down brings it back (F069). */
+  private historyDraft: EditState | null = null;
+  /** The `> ` lines are a recalled history line's, standing in for these (null: none). */
+  private recalled: { readonly base: Continuation | null } | null = null;
+  /** The last reverse-i-search query, which Ctrl+R on an empty search looks for again. */
+  private lastQuery = '';
   private lastArg: LastArgState | null = null;
   private runs = 0;
   private announced = 0;
@@ -298,6 +342,12 @@ export class PromptController {
     this.input = input;
     writeInput(input, this.state, { undoable: false });
     this.focused = input.ownerDocument.activeElement === input;
+    // A fresh input in place of one that had focus (after a password): the caret stays here.
+    if (this.refocusNext) {
+      this.refocusNext = false;
+      input.focus({ preventScroll: true });
+      this.focused = input.ownerDocument.activeElement === input;
+    }
     const win = input.ownerDocument.defaultView;
     const off: (() => void)[] = [];
     const on = <K extends keyof HTMLElementEventMap>(type: K, listener: (event: HTMLElementEventMap[K]) => void): void => {
@@ -325,11 +375,11 @@ export class PromptController {
     on('blur', () => {
       this.focused = false;
       // A password typed and left is not left lying in the page.
-      if (this.mode === 'secret') this.write({ text: '', cursor: 0 }, { replace: true, force: true });
+      if (this.mode === 'secret') this.clearSecret();
     });
     if (win) {
       const onPageHide = (): void => {
-        if (this.mode === 'secret') this.write({ text: '', cursor: 0 }, { replace: true, force: true });
+        if (this.mode === 'secret') this.clearSecret();
       };
       const onWindowKey = (event: KeyboardEvent): void => this.onWindowKey(event);
       win.addEventListener('pagehide', onPageHide);
@@ -342,8 +392,10 @@ export class PromptController {
     const detach = (): void => {
       for (const stop of off.splice(0)) stop();
       if (this.input === input) this.input = null;
+      if (this.detachInput === detach) this.detachInput = null;
     };
     this.stops.push(detach);
+    this.detachInput = detach;
     return detach;
   }
 
@@ -358,6 +410,14 @@ export class PromptController {
    */
   focus(options: { keyboard?: boolean } = {}): void {
     if (options.keyboard === true || !this.touch) this.input?.focus({ preventScroll: true });
+  }
+
+  /**
+   * Brings the prompt into view, however far up the visitor had scrolled: the transcript goes to
+   * its end (ui/actions/stickToBottom.ts). For a tap that opens the keyboard to type.
+   */
+  reveal(): void {
+    this.input?.dispatchEvent(new CustomEvent(REVEAL_EVENT, { bubbles: true }));
   }
 
   destroy(): void {
@@ -387,12 +447,15 @@ export class PromptController {
   }
 
   /** Puts a line on the prompt: into the input, and into the state. */
-  private write(next: EditState, options: WriteOptions = {}): void {
+  private write(next: EditState, options: WriteOptions = {}, tab: TabState | null = null): void {
     if (this.composing && options.force !== true) {
-      this.pendingWrite = { state: next, options };
+      this.pendingWrite = { state: next, options, base: this.text, tab };
       return;
     }
+    // Whatever waited for the composition is overtaken by this.
+    this.pendingWrite = null;
     if (options.force === true) this.composing = false;
+    const before = this.text;
     const input = this.input;
     if (input !== null) {
       this.suppress = true;
@@ -405,30 +468,54 @@ export class PromptController {
     this.text = next.text;
     this.cursor = Math.min(next.cursor, next.text.length);
     this.selEnd = this.cursor;
-    this.changed(options);
+    this.changed(options, this.text !== before);
   }
 
-  /** What follows any change to the line, typed or made here. */
-  private changed(options: WriteOptions): void {
+  /** What follows any change to the line, typed or made here; `edited` when its text changed. */
+  private changed(options: WriteOptions, edited: boolean): void {
     if (options.keepTab !== true && this.tab.phase !== 'idle') this.tab = TAB_IDLE;
-    if (options.keepNav !== true) this.nav = NAV_IDLE;
+    // Moving the cursor is not editing: Up and Down go on from where they were, as in bash.
+    if (options.keepNav !== true && edited) this.nav = NAV_IDLE;
     if (options.keepLastArg !== true) this.lastArg = null;
-    if (this.search !== null) this.search = updateSearch(this.history, this.search, this.text);
+    if (this.search !== null && edited) this.search = updateSearch(this.history, this.search, this.text);
     this.editedAt = this.now();
   }
 
   private onInput(): void {
     if (this.suppress || this.input === null) return;
+    const read = this.read;
+    if (read?.oneKey === true && read.asked !== null) {
+      // A soft keyboard that composes every word (Gboard) types the answer with no usable key
+      // press: the line goes back to what it was, and the first character typed answers.
+      const value = this.input.value;
+      if (value !== read.asked.text) {
+        const { insert } = diffRange(read.asked.text, value);
+        this.write(read.asked, { replace: true, force: true, keepTab: true });
+        this.answerQuestion(insert === '' ? 'Backspace' : (Array.from(insert)[0] ?? ''));
+      }
+      return;
+    }
+    if (this.mode === 'secret') {
+      // Typing never gets here (onBeforeInput takes it); an input method's composition, or an
+      // undo, does. Once the composition is done, what it added joins the password and the input
+      // is masked again.
+      if (this.composing) this.secretExposed = true;
+      else this.reconcileSecret();
+      return;
+    }
+    const before = this.text;
     this.adopt();
     this.ring = settleRing(this.ring);
-    if (!this.composing && this.mode !== 'secret') {
+    if (!this.composing) {
       const plain = normalizeTyped(this.text);
       if (plain !== this.text) {
         this.write({ text: plain, cursor: normalizeTyped(this.text.slice(0, this.cursor)).length });
         return;
       }
     }
-    this.changed({});
+    // A composition that ends with the line as it was (one the prompt ended itself) changes
+    // nothing: the Tab list it may have just opened stays.
+    if (this.text !== before) this.changed({}, true);
   }
 
   private onCompositionEnd(): void {
@@ -436,20 +523,35 @@ export class PromptController {
     const pending = this.pendingWrite;
     this.pendingWrite = null;
     this.onInput();
-    if (pending !== null) this.write(pending.state, pending.options);
+    // An edit made while composing (a dock key) lands now, unless the input method committed
+    // something other than the text it was made from.
+    if (pending === null || pending.base !== this.text) return;
+    this.write(pending.state, pending.options);
+    if (pending.tab !== null) this.tab = pending.tab;
   }
 
   private onBeforeInput(event: InputEvent): void {
     // A soft keyboard answers `Display all N possibilities?` by typing, with no usable keydown.
-    if (this.read?.oneKey === true && event.inputType === 'insertText' && event.data) {
-      event.preventDefault();
-      this.answerQuestion(event.data.charAt(0), true);
-      return;
+    if (this.read?.oneKey === true) {
+      if (event.inputType === 'insertText' && event.data) {
+        event.preventDefault();
+        this.answerQuestion(event.data.charAt(0));
+        return;
+      }
+      if (event.inputType.startsWith('delete') && event.cancelable) {
+        event.preventDefault();
+        this.answerQuestion('Backspace');
+        return;
+      }
     }
     // Some Android keyboards send Enter only as a line break.
     if (event.inputType === 'insertLineBreak' || event.inputType === 'insertParagraph') {
       event.preventDefault();
       this.submit();
+      return;
+    }
+    if (this.mode === 'secret') {
+      this.secretBeforeInput(event);
       return;
     }
     if (event.inputType === 'insertFromPaste' && event.dataTransfer) {
@@ -470,11 +572,79 @@ export class PromptController {
 
   /** Pasted text, made one line that never runs by itself, at the selection. */
   private paste(pasted: string): void {
-    const text = this.mode === 'secret' ? pasted.replace(/[\r\n]+/g, '') : normalizePaste(pasted);
     const from = Math.min(this.cursor, this.selEnd);
     const to = Math.max(this.cursor, this.selEnd);
+    if (this.mode === 'secret') {
+      this.setSecret(replaceRange(this.secretState(), from, to, pasted.replace(/[\r\n]+/g, '')));
+      return;
+    }
     this.ring = settleRing(this.ring);
-    this.write(replaceRange(this.state, from, to, text));
+    this.write(replaceRange(this.state, from, to, normalizePaste(pasted)));
+  }
+
+  // ── The secret ───────────────────────────────────────────────────────────────────────────
+
+  /** The password and the cursor in it (the mask's cursor: one bullet per UTF-16 unit). */
+  private secretState(): EditState {
+    return { text: this.secret, cursor: Math.min(this.cursor, this.secret.length) };
+  }
+
+  /** The password is now `next`: kept here, and only its mask written to the input. */
+  private setSecret(next: EditState): void {
+    this.secret = next.text;
+    this.write({ text: SECRET_MASK.repeat(next.text.length), cursor: next.cursor }, { replace: true, force: true });
+  }
+
+  /** Empties the password: the prompt lost focus, the page was hidden. */
+  private clearSecret(): void {
+    this.setSecret(EMPTY_LINE);
+    // An input method left text in the input, where its undo history can find it.
+    if (this.secretExposed) this.replaceInput();
+  }
+
+  /** The read is over: the password goes, and so does an input an input method typed it into. */
+  private endSecret(): void {
+    this.secret = '';
+    if (this.secretExposed) this.replaceInput();
+  }
+
+  /**
+   * Puts a fresh <input> in place of this one, whose undo history may hold text from the
+   * password (Cmd+Z after a cleared value brings it back in Chromium). The caret moves with it.
+   */
+  private replaceInput(): void {
+    this.secretExposed = false;
+    const input = this.input;
+    this.refocusNext = input !== null && input.ownerDocument.activeElement === input;
+    // Unwired now, so the blur a browser fires as it goes is not heard while Svelte replaces it.
+    this.detachInput?.();
+    this.inputEpoch += 1;
+  }
+
+  /**
+   * A key typed, pasted, dropped or deleted while the password is read: done here to the
+   * password, so it never reaches the input's value, where screen readers read it out and undo
+   * keeps it. An input method's text cannot be stopped; onInput takes it when the composition ends.
+   */
+  private secretBeforeInput(event: InputEvent): void {
+    const type = event.inputType;
+    if (type === 'insertCompositionText' || type === 'deleteCompositionText' || type === 'insertFromComposition' || !event.cancelable) return;
+    event.preventDefault();
+    const input = this.input;
+    if (input === null) return;
+    const data = event.data ?? event.dataTransfer?.getData('text/plain') ?? '';
+    const start = input.selectionStart ?? this.secret.length;
+    const next = secretEdit(type, data, this.secret, start, input.selectionEnd ?? start);
+    if (next !== null) this.setSecret(next);
+  }
+
+  /** The input changed under the mask (an input method, an undo): the password takes what was added. */
+  private reconcileSecret(): void {
+    const input = this.input;
+    if (input === null || input.value === this.text) return;
+    const merged = secretMerge(this.secret, this.text, input.value, SECRET_MASK);
+    if (merged.added) this.secretExposed = true;
+    this.setSecret(merged.state);
   }
 
   private onPointerUp(event: PointerEvent): void {
@@ -494,8 +664,9 @@ export class PromptController {
   private onWindowKey(event: KeyboardEvent): void {
     if (event.target === this.input || event.defaultPrevented || this.app !== null) return;
     if (this.running === null && this.read === null) return;
-    const ctrlC = chordOf(event) === 'C-c';
-    if (event.key === 'Escape' || (ctrlC && !this.hasSelection())) {
+    // On a Mac, Cmd+C copies, so Ctrl+C always interrupts, as in Terminal.
+    const ctrlC = chordOf(event) === 'C-c' && (this.platform === 'mac' || !this.hasSelection());
+    if (event.key === 'Escape' || ctrlC) {
       event.preventDefault();
       this.interrupt();
     }
@@ -530,17 +701,16 @@ export class PromptController {
   /** A key press on the prompt, or on the dock's key bar. Returns what it did, or null. */
   private handleKey(event: KeyPress): Action | null {
     if (event.defaultPrevented) return null;
-    if (this.read?.oneKey === true && !event.isComposing && event.keyCode !== 229 && !isModifierKey(event.key)) {
-      const consumed = this.answerQuestion(event.key, false, chordOf(event));
-      if (consumed) {
-        event.preventDefault();
-        return null;
-      }
+    // `Display all N possibilities?` takes every key but the browser's own Cmd shortcuts.
+    if (this.read?.oneKey === true && !event.isComposing && event.keyCode !== 229 && !event.metaKey && !isModifierKey(event.key)) {
+      event.preventDefault();
+      this.answerQuestion(event.key, chordOf(event));
+      return null;
     }
     this.syncSelection();
     const ctx = this.context();
     if (!isModifierKey(event.key)) this.escapedAt = Number.NEGATIVE_INFINITY;
-    const action = resolveKey(event, ctx);
+    const action = this.metaAfterEscape(event, ctx) ?? resolveKey(event, ctx);
 
     // In the Tab menu, a key other than Tab or Escape keeps the choice on the line and carries
     // on; Enter takes the choice without running it.
@@ -554,6 +724,27 @@ export class PromptController {
     }
     this.perform(action, event);
     return action;
+  }
+
+  /**
+   * Escape, then a key within ESCAPE_TAB_MS, is that key with Alt, as readline reads it: Esc .
+   * inserts the last argument, Esc b goes back a word, where Option is not Meta. Only a key the
+   * Alt chord is bound to; Tab after Escape still leaves the terminal.
+   */
+  private metaAfterEscape(event: KeyPress, ctx: KeyCtx): Action | null {
+    if (!ctx.escArmed || event.key === 'Tab' || event.key === 'Escape' || event.ctrlKey || event.altKey || event.metaKey || isModifierKey(event.key)) return null;
+    const meta: KeyChord = {
+      key: event.key,
+      code: event.code,
+      ctrlKey: false,
+      altKey: true,
+      metaKey: false,
+      shiftKey: event.shiftKey,
+      isComposing: event.isComposing,
+      keyCode: event.keyCode,
+    };
+    const action = resolveKey(meta, ctx);
+    return action.a === 'native' ? null : action;
   }
 
   /**
@@ -574,6 +765,10 @@ export class PromptController {
     this.syncSelection();
     const from = Math.min(this.cursor, this.selEnd);
     const to = Math.max(this.cursor, this.selEnd);
+    if (this.mode === 'secret') {
+      this.setSecret(replaceRange(this.secretState(), from, to, text));
+      return;
+    }
     this.ring = settleRing(this.ring);
     this.write(replaceRange(this.state, from, to, text), { force: true });
   }
@@ -622,9 +817,11 @@ export class PromptController {
         return;
       case 'searchExit': {
         this.searchExit();
-        // Then the key does what it does on the line found.
+        // Then the key does what it does on the line found. Ctrl+J only ends the search (and is
+        // never the browser's).
         const next = resolveKey(event, this.context());
-        if (next.a !== 'searchExit') this.perform(next, event);
+        if (next.a === 'native' && event.ctrlKey) event.preventDefault();
+        else if (next.a !== 'searchExit') this.perform(next, event);
         return;
       }
       case 'searchCancel':
@@ -678,10 +875,14 @@ export class PromptController {
   // ── Editing ──────────────────────────────────────────────────────────────────────────────
 
   private editOp(op: EditOp): void {
-    // A secret never enters the kill ring, and nothing comes out of it into a secret.
-    const secret = this.mode === 'secret';
-    const { state, ring } = applyOp(this.state, op, secret ? EMPTY_RING : this.ring);
-    if (!secret) this.ring = ring;
+    if (this.mode === 'secret') {
+      // On the password itself, not its mask. It never enters the kill ring, and nothing comes
+      // out of the ring into it.
+      this.setSecret(applyOp(this.secretState(), op, EMPTY_RING).state);
+      return;
+    }
+    const { state, ring } = applyOp(this.state, op, this.ring);
+    this.ring = ring;
     this.write(state);
   }
 
@@ -697,11 +898,53 @@ export class PromptController {
   private stepHistory(dir: -1 | 1): void {
     // A command's own prompt has no history.
     if (this.read !== null) return;
-    const step = stepHistory(this.history, this.nav, this.state, dir);
+    const whole = this.wholeState();
+    if (dir === 1 && this.nav.index === null) {
+      // Down from a line edited on the way: back to what was being typed before Up.
+      const draft = this.historyDraft;
+      if (draft === null || draft.text === whole.text) return;
+      this.historyDraft = null;
+      this.ring = settleRing(this.ring);
+      this.recall(draft, { replace: true });
+      return;
+    }
+    const step = stepHistory(this.history, this.nav, whole, dir);
     if (step === null) return;
+    if (this.nav.index === null && this.historyDraft === null) this.historyDraft = whole;
     this.ring = settleRing(this.ring);
-    this.write(step.state, { keepNav: true, replace: true });
+    this.recall(step.state, { keepNav: true, replace: true });
     this.nav = step.nav;
+    if (step.nav.index === null && step.state.text === this.historyDraft?.text) this.historyDraft = null;
+  }
+
+  /** The line as it will run: a recalled line's `> ` lines, then the input's. */
+  private wholeState(): EditState {
+    const ps2 = this.ps2;
+    if (this.recalled === null || ps2 === null) return this.state;
+    return { text: `${ps2.text}\n${this.text}`, cursor: ps2.text.length + 1 + this.state.cursor };
+  }
+
+  /**
+   * Puts a line from history on the prompt. One with line breaks (a quote continued at `> `)
+   * comes back as it was typed: its earlier lines above, at the `> ` prompt, and its last in the
+   * input, which holds one line; Enter joins them back into exactly the line that ran. Any `> `
+   * lines it covers come back with a line that has none.
+   */
+  private recall(next: EditState, options: WriteOptions): void {
+    const base = this.recalled === null ? this.ps2 : this.recalled.base;
+    const lines = next.text.split(/\r?\n/);
+    if (lines.length === 1) {
+      this.ps2 = base;
+      this.recalled = null;
+      this.write(next, options);
+      return;
+    }
+    const head = lines.slice(0, -1);
+    const last = lines[lines.length - 1] ?? '';
+    const offset = next.text.length - last.length;
+    this.ps2 = { text: head.join('\n'), reason: 'quote', lines: head, prompt: base?.prompt ?? this.shell.renderPrompt() };
+    this.recalled = { base };
+    this.write({ text: last, cursor: Math.max(0, next.cursor - offset) }, options);
   }
 
   private insertLastArg(): void {
@@ -726,24 +969,35 @@ export class PromptController {
       this.write({ text: '', cursor: 0 }, { replace: true });
       return;
     }
+    if (search.query === '' && this.lastQuery !== '') {
+      // Ctrl+R with nothing typed: the last search again, as bash does.
+      this.write({ text: this.lastQuery, cursor: this.lastQuery.length }, { replace: true });
+      return;
+    }
     this.search = stepSearch(this.history, search, dir);
+  }
+
+  /** The search is over: its query is kept for Ctrl+R on an empty search. */
+  private endSearch(search: SearchState): void {
+    this.search = null;
+    if (search.query !== '') this.lastQuery = search.query;
   }
 
   /** Enter in a search: the line found runs. */
   private searchAccept(): void {
     const search = this.search;
     if (search === null) return;
-    this.search = null;
-    this.write(searchResult(search), { replace: true });
+    this.endSearch(search);
+    this.recall(searchResult(search), { replace: true });
     this.submit();
   }
 
-  /** A moving key in a search: the line found goes on the prompt to be edited. */
+  /** A moving or editing key in a search: the line found goes on the prompt to be edited. */
   private searchExit(): void {
     const search = this.search;
     if (search === null) return;
-    this.search = null;
-    this.write(searchResult(search), { replace: true });
+    this.endSearch(search);
+    this.recall(searchResult(search), { replace: true });
     // Up and Down go on from the line found.
     if (search.hit !== null) this.nav = { index: search.hit.index, prefix: '', draft: search.saved };
   }
@@ -751,7 +1005,7 @@ export class PromptController {
   private searchCancel(): void {
     const search = this.search;
     if (search === null) return;
-    this.search = null;
+    this.endSearch(search);
     this.write(search.saved, { replace: true });
   }
 
@@ -761,6 +1015,11 @@ export class PromptController {
   pressTab(reverse = false): void {
     const completion = this.completion;
     if (completion === null || this.read !== null || this.search !== null || this.running !== null) return;
+    // The `> ` continuation completes nothing (no ghost, no chips): Tab says so, never acts unseen.
+    if (this.ps2 !== null) {
+      this.ringBell();
+      return;
+    }
     this.applyTab(completion.engine.pressTab(this.tab, this.state, completion.env, reverse));
   }
 
@@ -769,8 +1028,14 @@ export class PromptController {
   }
 
   private applyTab(step: TabStep): void {
-    this.tab = step.tab;
     const effect = step.effect;
+    if (effect.edit !== undefined && this.composing) {
+      // The input method is still composing (a dock key): the edit, and the Tab state it leads
+      // to, wait for it, and are dropped if it commits anything but the text they came from.
+      this.write(effect.edit, { keepTab: true }, step.tab);
+      return;
+    }
+    this.tab = step.tab;
     if (effect.edit !== undefined) this.write(effect.edit, { keepTab: true });
     if (effect.bell === true) this.ringBell();
     if (effect.announce !== undefined) this.say(effect.announce);
@@ -839,9 +1104,9 @@ export class PromptController {
   insert(text: string): void {
     this.resetTab();
     this.search = null;
-    this.write({ text, cursor: text.length }, { force: true });
-    // As if typed: the transcript brings the prompt into view (ui/actions/stickToBottom.ts).
-    this.input?.dispatchEvent(new Event('input', { bubbles: true }));
+    this.recall({ text, cursor: text.length }, { force: true });
+    // As typing would, the transcript brings the prompt into view.
+    this.reveal();
   }
 
   // ── Reads ────────────────────────────────────────────────────────────────────────────────
@@ -863,10 +1128,16 @@ export class PromptController {
     if (this.read !== null) this.finishRead(null);
     this.search = null;
     if (!read.keepLine) this.resetTab();
-    // What was typed ahead waits, and comes back when the command has its answer.
-    const stash = read.keepLine ? null : this.state;
-    this.read = { ...read, answer, stash };
-    if (!read.keepLine) this.write({ text: '', cursor: 0 }, { replace: true, force: true });
+    // What was typed ahead waits, and comes back when the command has its answer; never across a
+    // password prompt, where what was typed ahead may be the password (readpassphrase flushes it
+    // too), and the input it was typed into goes when the read ends.
+    const stash = read.keepLine || read.secret ? null : this.state;
+    if (read.secret) {
+      this.secret = '';
+      this.secretExposed = this.text !== '';
+    }
+    this.read = { ...read, answer, stash, asked: read.oneKey ? this.state : null };
+    if (!read.keepLine) this.write(EMPTY_LINE, { replace: true, force: true });
   }
 
   /** Ends the read on the prompt without answering it: the command answered or was stopped. */
@@ -874,7 +1145,8 @@ export class PromptController {
     const read = this.read;
     if (read === null) return;
     this.read = null;
-    if (!read.keepLine) this.write(read.stash ?? { text: '', cursor: 0 }, { replace: true, force: true });
+    if (read.secret) this.endSecret();
+    if (!read.keepLine) this.write(read.stash ?? EMPTY_LINE, { replace: true, force: true });
   }
 
   /** Answers the read on the prompt: what was typed, or null for ^D and ^C. */
@@ -886,18 +1158,20 @@ export class PromptController {
   }
 
   /**
-   * A key while `Display all N possibilities? (y or n)` waits: y or a space lists them; n,
-   * Escape, Enter or ^C does not. Any other key says no and then does what it does. Returns
-   * whether the key was used up.
+   * A key while `Display all N possibilities? (y or n)` waits, as readline asks it: y, a space or
+   * Tab lists them; n, Backspace, Escape, Enter, ^C or ^G does not. Any other key rings the bell
+   * and the question stays.
    */
-  private answerQuestion(key: string, typed: boolean, chord = key): boolean {
+  private answerQuestion(key: string, chord = key): void {
     if (key === 'y' || key === 'Y' || key === ' ' || key === 'Tab') {
       this.finishRead('y');
-      return true;
+      return;
     }
-    const no = key === 'n' || key === 'N' || key === 'Escape' || key === 'Enter' || chord === 'C-c' || chord === 'C-g';
-    this.finishRead('n');
-    return no || typed;
+    if (key === 'n' || key === 'N' || key === 'Backspace' || key === 'Escape' || key === 'Enter' || chord === 'C-c' || chord === 'C-g') {
+      this.finishRead('n');
+      return;
+    }
+    this.ringBell();
   }
 
   // ── Running ──────────────────────────────────────────────────────────────────────────────
@@ -915,7 +1189,7 @@ export class PromptController {
     }
     const read = this.read;
     if (read !== null) {
-      if (!read.oneKey) this.finishRead(this.text);
+      if (!read.oneKey) this.finishRead(read.secret ? this.secret : this.text);
       return;
     }
     if (this.search !== null) {
@@ -938,6 +1212,7 @@ export class PromptController {
     const reason = this.shell.incomplete(joined);
     if (reason !== null) {
       this.ps2 = { text: joined, reason, lines: [...(ps2?.lines ?? []), typed], prompt: ps2?.prompt ?? this.shell.renderPrompt() };
+      this.recalled = null;
       this.resetTab();
       this.write({ text: '', cursor: 0 }, { replace: true });
       return;
@@ -945,19 +1220,23 @@ export class PromptController {
     this.startLine(joined, origin);
   }
 
-  private startLine(line: string, origin: JobOrigin): void {
+  private startLine(line: string, origin: JobOrigin, options: StartOptions = {}): void {
     this.resetTab();
     this.search = null;
     this.ring = settleRing(this.ring);
     const prompt = this.ps2?.prompt ?? this.shell.renderPrompt();
     this.ps2 = null;
+    this.recalled = null;
+    this.historyDraft = null;
     // Committed at once: the line leaves the input, and its entry goes on the screen.
-    this.write({ text: '', cursor: 0 }, { replace: true, force: true });
+    this.write(EMPTY_LINE, { replace: true, force: true });
     this.running = { line, prompt };
+    // The transcript follows this line's output, whatever started it: a key, a chip, a link.
+    this.input?.dispatchEvent(new CustomEvent(SUBMIT_EVENT, { bubbles: true }));
     // Inside the key press or tap: a command that opens a URL opens it now, while it may.
     const preflight = this.shell.preflight(line);
     const run = ++this.runs;
-    const handle = this.shell.start(line, origin);
+    const handle = this.shell.start(line, origin, options);
     const settle = (): void => {
       if (run === this.runs && this.job === null) this.running = null;
     };
@@ -992,6 +1271,8 @@ export class PromptController {
     const typed = this.text;
     const ps2 = this.ps2;
     this.ps2 = null;
+    this.recalled = null;
+    this.historyDraft = null;
     const shown = ps2 === null ? typed : [...ps2.lines, typed].join('\n> ');
     this.screen.push({ prompt: ps2?.prompt ?? this.shell.renderPrompt(), line: `${shown}^C`, blocks: [], status: 130 });
     this.write({ text: '', cursor: 0 }, { replace: true });
@@ -1010,7 +1291,8 @@ export class PromptController {
       this.startLine(ps2.text, 'keyboard');
       return;
     }
-    this.startLine('exit', 'keyboard');
+    // As bash prints exit at the end of input and never keeps it in history.
+    this.startLine('exit', 'keyboard', { record: false });
   }
 
   /** Ctrl+L: the screen clears and the line stays; so does a line still running, and its output. */

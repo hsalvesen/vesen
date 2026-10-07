@@ -23,6 +23,10 @@ describe('ghostFor', () => {
     expect(ghost('the', ['theme ls', 'theme set wombat'])).toEqual({ text: 'me set wombat', source: 'history', acceptable: true });
   });
 
+  it('skips a history line with a line break, which the one-line prompt cannot hold', () => {
+    expect(ghost('echo', ['echo plain', 'echo "a\nb"'])).toEqual({ text: ' plain', source: 'history', acceptable: true });
+  });
+
   it('prefers history to a completion', () => {
     expect(ghost('ca', ['cat README.md'])?.source).toBe('history');
     expect(ghost('ca', [])).toEqual({ text: 't', source: 'completion', acceptable: true });

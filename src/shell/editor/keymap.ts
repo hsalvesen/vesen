@@ -6,8 +6,11 @@
 // Keys are captured only while the prompt has focus. Ctrl+A, E, U, K, Y, R, L and D are readline
 // keys everywhere; Ctrl+W, P, N, F, B and T only on a Mac, because elsewhere the browser owns
 // them (Ctrl+W closes the tab) or they mean something people rely on. Cmd shortcuts on a Mac are
-// always the browser's. Alt keys are matched on the physical key, because Option+B on a Mac
-// types ∫ rather than b. A key pressed while an input method is composing is the IME's.
+// always the browser's. A Ctrl or Alt letter is the letter the layout types, as a terminal reads
+// it (Ctrl+Y on a German keyboard is Ctrl+Y); only when the key types something else (Option+B
+// on a Mac types ∫, and Ctrl+Ф on a Russian layout) is it the physical key's letter. A key
+// pressed while an input method is composing is the IME's. On a Mac, where Cmd+C copies, Ctrl+C
+// always interrupts, as in Terminal; elsewhere it copies while text is selected.
 
 import type { PromptMode } from '../complete/types';
 import type { EditOp } from './readline';
@@ -36,7 +39,7 @@ export type Action =
   | { readonly a: 'search'; readonly dir: -1 | 1 }
   /** Enter in a search: run the line found. */
   | { readonly a: 'searchAccept' }
-  /** A moving key in a search: the line found goes on the prompt, then the key moves in it. */
+  /** A moving or editing key in a search: the line found goes on the prompt, then the key acts on it. */
   | { readonly a: 'searchExit' }
   /** Escape or Ctrl+G in a search: back to the line from before it. */
   | { readonly a: 'searchCancel' }
@@ -96,20 +99,39 @@ const OTHER: readonly KeyPlatform[] = ['other'];
 
 /** Every binding, in order: the first that matches a key press wins. */
 export const BINDINGS: readonly Binding[] = [
-  // Reverse-i-search: Ctrl+R older, Ctrl+S newer, Enter runs, moving keys edit, Escape cancels.
+  // Reverse-i-search: Ctrl+R older, Ctrl+S newer, Enter runs, moving and editing keys act on the
+  // line found, as readline ends the search on any key that is not its own; Escape and Ctrl+G
+  // cancel (designs/terminal-input.md).
   { keys: ['Enter'], when: searching, action: { a: 'searchAccept' }, does: 'in a search: run the line found', shown: 'Enter', section: 'search' },
   { keys: ['C-r'], when: searching, action: { a: 'search', dir: -1 }, does: 'in a search: an older line', shown: 'Ctrl+R', section: 'search' },
   { keys: ['C-s'], when: searching, action: { a: 'search', dir: 1 }, does: 'in a search: a newer line', shown: 'Ctrl+S', section: 'search' },
   { keys: ['Escape', 'C-g'], when: searching, action: { a: 'searchCancel' }, does: 'in a search: put back what you typed', section: 'search' },
   {
-    keys: ['Left', 'Right', 'Up', 'Down', 'Home', 'End', 'Tab', 'C-a', 'C-e', 'M-b', 'M-f'],
+    keys: ['Left', 'Right', 'Up', 'Down', 'Home', 'End', 'Tab', 'C-a', 'C-e', 'M-b', 'M-f', 'C-j'],
     when: searching,
     action: { a: 'searchExit' },
     does: 'in a search: edit the line found',
     shown: '← → ↑ ↓',
     section: 'search',
   },
-  { keys: ['C-b', 'C-f', 'C-p', 'C-n'], platforms: MAC, when: searching, action: { a: 'searchExit' }, does: 'in a search: edit the line found', hidden: true, section: 'search' },
+  {
+    keys: ['C-k', 'C-u', 'C-y', 'C-d', 'C-l', 'M-d', 'M-y', 'M-Backspace', 'M-.'],
+    when: searching,
+    action: { a: 'searchExit' },
+    does: 'in a search: edit the line found',
+    hidden: true,
+    section: 'search',
+  },
+  { keys: ['C-Backspace'], platforms: OTHER, when: searching, action: { a: 'searchExit' }, does: 'in a search: edit the line found', hidden: true, section: 'search' },
+  {
+    keys: ['C-b', 'C-f', 'C-p', 'C-n', 'C-w', 'C-t'],
+    platforms: MAC,
+    when: searching,
+    action: { a: 'searchExit' },
+    does: 'in a search: edit the line found',
+    hidden: true,
+    section: 'search',
+  },
 
   // Escape, then Tab within a second: out of the terminal, so the keyboard is never trapped.
   { keys: ['Tab', 'S-Tab'], when: (c) => c.escArmed, action: { a: 'leave' }, does: 'leave the terminal for the rest of the page', shown: 'Escape, Tab', section: 'leave' },
@@ -117,8 +139,11 @@ export const BINDINGS: readonly Binding[] = [
   { keys: ['Enter'], action: { a: 'submit' }, does: 'run the line' },
   { keys: ['Tab'], action: { a: 'tab', reverse: false }, does: 'complete; again to list the choices, again to step through them' },
   { keys: ['S-Tab'], action: { a: 'tab', reverse: true }, does: 'step back through the choices' },
+  // A Mac copies with Cmd+C, so Ctrl+C is free to interrupt whatever is selected.
+  { keys: ['C-c'], platforms: MAC, action: { a: 'interrupt' }, does: 'stop the running command, or abandon the line' },
   {
     keys: ['C-c'],
+    platforms: OTHER,
     when: (c) => !c.hasSelection,
     action: { a: 'interrupt' },
     does: 'stop the running command, or abandon the line; with text selected, copy it',
@@ -183,14 +208,18 @@ const NAMED: Readonly<Record<string, string>> = {
 /**
  * The chord for a key press: modifiers as `Cmd-`, `C-` (Ctrl), `M-` (Alt or Option) and `S-`
  * (Shift, with a named key or another modifier), then the key. A letter or `.` held with Ctrl
- * or Alt is named by its physical key, whatever the layout makes of it.
+ * or Alt is the one the layout types (Ctrl+Y on QWERTZ is C-y, Ctrl+A on AZERTY is C-a); when
+ * the key types anything else (Option+B's ∫ on a Mac, Ctrl+Ф on a Russian layout), it is named
+ * by its physical key.
  */
 export function chordOf(e: KeyChord): string {
   const named = Object.prototype.hasOwnProperty.call(NAMED, e.key) ? NAMED[e.key] : undefined;
+  const held = e.ctrlKey || e.altKey;
   let name: string;
   if (named !== undefined) name = named;
-  else if ((e.ctrlKey || e.altKey) && /^Key[A-Z]$/.test(e.code)) name = e.code.slice(3).toLowerCase();
-  else if ((e.ctrlKey || e.altKey) && e.code === 'Period') name = '.';
+  else if (held && (/^[a-z]$/i.test(e.key) || e.key === '.')) name = e.key.toLowerCase();
+  else if (held && /^Key[A-Z]$/.test(e.code)) name = e.code.slice(3).toLowerCase();
+  else if (held && e.code === 'Period') name = '.';
   else name = e.key.length === 1 ? e.key.toLowerCase() : e.key;
   const shift = e.shiftKey && (named !== undefined || e.ctrlKey || e.altKey) ? 'S-' : '';
   return `${e.metaKey ? 'Cmd-' : ''}${e.ctrlKey ? 'C-' : ''}${e.altKey ? 'M-' : ''}${shift}${name}`;
@@ -219,56 +248,4 @@ export function resolveKey(e: KeyChord, ctx: KeyCtx): Action {
 /** Keys that only modify another: they never disarm Escape-then-Tab. */
 export function isModifierKey(key: string): boolean {
   return key === 'Shift' || key === 'Control' || key === 'Alt' || key === 'Meta' || key === 'CapsLock' || key === 'AltGraph' || key === 'OS';
-}
-
-const SHOWN_KEYS: Readonly<Record<string, string>> = { Up: '↑', Down: '↓', Left: '←', Right: '→' };
-
-/** A chord as people write it: `C-a` is Ctrl+A, `M-Left` Alt+←, `S-Tab` Shift+Tab. */
-export function showChord(chord: string): string {
-  const parts: string[] = [];
-  let rest = chord;
-  for (const [prefix, word] of [
-    ['Cmd-', 'Cmd'],
-    ['C-', 'Ctrl'],
-    ['M-', 'Alt'],
-    ['S-', 'Shift'],
-  ] as const) {
-    if (rest.startsWith(prefix)) {
-      parts.push(word);
-      rest = rest.slice(prefix.length);
-    }
-  }
-  const key = SHOWN_KEYS[rest] ?? (rest.length === 1 ? rest.toUpperCase() : rest);
-  return [...parts, key].join('+');
-}
-
-/** One row of `help keys`. */
-export interface KeyHelp {
-  readonly keys: string;
-  readonly does: string;
-}
-
-/**
- * The rows of `help keys`, from BINDINGS: one per description, with every key for it. Keys bound
- * only on a Mac say so. With a platform, only that platform's keys are listed.
- */
-export function keyHelp(platform?: KeyPlatform): KeyHelp[] {
-  const rows = new Map<string, string[]>();
-  const sections = new Map<string, number>();
-  for (const binding of BINDINGS) {
-    if (binding.hidden === true) continue;
-    if (platform !== undefined && binding.platforms !== undefined && !binding.platforms.includes(platform)) continue;
-    const macOnly = platform === undefined && binding.platforms !== undefined && binding.platforms.length === 1 && binding.platforms[0] === 'mac';
-    const otherOnly = platform === undefined && binding.platforms !== undefined && binding.platforms.length === 1 && binding.platforms[0] === 'other';
-    const shown = binding.shown ?? binding.keys.map(showChord).join(', ');
-    const keys = macOnly ? `${shown} (Mac)` : otherOnly ? `${shown} (not Mac)` : shown;
-    const row = rows.get(binding.does);
-    if (row === undefined) rows.set(binding.does, [keys]);
-    else if (!row.includes(keys)) row.push(keys);
-    sections.set(binding.does, binding.section === 'search' ? 1 : binding.section === 'leave' ? 2 : 0);
-  }
-  // A stable sort: the editing keys in table order, then the search keys, then leaving.
-  return [...rows]
-    .map(([does, keys]) => ({ keys: keys.join(', '), does }))
-    .sort((a, b) => (sections.get(a.does) ?? 0) - (sections.get(b.does) ?? 0));
 }

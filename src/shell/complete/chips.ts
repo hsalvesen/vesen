@@ -49,7 +49,9 @@ function plainWords(line: string): string[] | null {
   if (!lexed.complete || lexed.commentAt !== null) return null;
   const words: string[] = [];
   for (const token of lexed.tokens) {
-    if (token.kind !== 'word' || token.quoted || token.parts.some((part) => part.kind !== 'lit')) return null;
+    if (token.kind !== 'word' || token.quoted) return null;
+    // A plain `~` (home, never another user's) is the only expansion allowed: `cat ~/README.md`.
+    if (!token.parts.every((part) => part.kind === 'lit' || (part.kind === 'tilde' && part.user === undefined))) return null;
     words.push(token.value);
   }
   return words;
@@ -238,17 +240,28 @@ function followUps(input: ChipInput): Chip[] {
   return chips;
 }
 
-/** The starter commands, by their rank in the specs' examples. */
+/** The starter commands, by their rank in the specs' examples, labelled as the example says. */
 function starters(input: ChipInput): Chip[] {
-  const ranked: { line: string; rank: number; summary: string }[] = [];
+  const ranked: { line: string; label: string; rank: number; summary: string }[] = [];
   for (const spec of input.registry.list()) {
     for (const example of spec.examples ?? []) {
-      if (example.starter !== undefined) ranked.push({ line: example.line, rank: example.starter, summary: example.note ?? spec.summary });
+      if (example.starter !== undefined) {
+        ranked.push({ line: example.line, label: example.label ?? example.line, rank: example.starter, summary: example.note ?? spec.summary });
+      }
     }
   }
   return ranked
     .sort((a, b) => a.rank - b.rank)
-    .map(({ line, summary }) => ({ id: `starter:${line}`, label: line, matchLen: 0, kind: 'starter' as ChipKind, action: { kind: 'run', line }, line, summary }));
+    .map(({ line, label, summary }) => ({ id: `starter:${line}`, label, matchLen: 0, kind: 'starter' as ChipKind, action: { kind: 'run', line }, line, summary }));
+}
+
+/** A follow-up that runs a starter's line wears the starter's label: help's `cat README.md`. */
+function labelledLike(chips: readonly Chip[], starting: readonly Chip[]): Chip[] {
+  const labels = new Map(starting.map((chip) => [chip.line, chip.label]));
+  return chips.map((chip) => {
+    const label = chip.line === undefined ? undefined : labels.get(chip.line);
+    return label === undefined || label === chip.label ? chip : { ...chip, label };
+  });
 }
 
 /** The line itself, first, when it is ready to run and the word at the cursor is whole. */
@@ -304,7 +317,8 @@ export function chipsFor(input: ChipInput): ChipList {
   if (tab.phase === 'asking') return NONE;
 
   if (input.state.text.trim() === '') {
-    const chips = [...afterNotFound(input), ...(input.touch ? [...followUps(input), ...starters(input)] : [])];
+    const starting = input.touch ? starters(input) : [];
+    const chips = [...afterNotFound(input), ...(input.touch ? [...labelledLike(followUps(input), starting), ...starting] : [])];
     return capped(distinct(chips), input.max);
   }
 

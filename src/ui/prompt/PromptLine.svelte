@@ -15,7 +15,7 @@
   import Prompt from '../Prompt.svelte';
   import { PS2 } from '../../shell/editor/continuation';
   import LineEditor from './LineEditor.svelte';
-  import type { PromptController } from './promptController.svelte';
+  import { READ_HINT_ID, type PromptController } from './promptController.svelte';
 
   let { controller, shell }: { controller: PromptController; shell: ShellPort } = $props();
 
@@ -33,7 +33,7 @@
   {/if}
 
   {#if read?.hint}
-    <div class="hint">{read.hint}</div>
+    <div class="hint" id={READ_HINT_ID}>{read.hint}</div>
   {/if}
 
   <!--

@@ -14,6 +14,7 @@ function target(): KeyTarget & { calls: string[] } {
     insertText: (text) => calls.push(`insert:${text}`),
     blur: () => calls.push('blur'),
     focus: (options) => calls.push(`focus:${options?.keyboard === true ? 'keyboard' : ''}`),
+    reveal: () => calls.push('reveal'),
   };
 }
 
@@ -72,7 +73,8 @@ describe('KeyBar', () => {
     render(KeyBar, { props: { target: t } });
     await tap('Symbols');
     expect(screen.getByRole('toolbar', { name: 'Symbols' })).toBeInTheDocument();
-    expect(labels()).toEqual(['esc', '|', '>', '/', '-', '~', '*', '"', '$', '←', '→', '•••']);
+    // The way back, and the cursor keys, first: never off the edge of a narrow screen.
+    expect(labels()).toEqual(['•••', '←', '→', 'esc', '|', '>', '/', '-', '~', '*', '"', '$']);
     expect(screen.getByRole('button', { name: 'Symbols' }).getAttribute('aria-pressed')).toBe('true');
     await tap('Pipe');
     await tap('Escape');
@@ -118,6 +120,7 @@ describe('KeyBar', () => {
     rerender({ variant: 'closed', busy: false });
     expect(labels()).toEqual(['⌨ Type a command…', '↑', 'clear']);
     await tap('Type a command');
-    expect(t.calls).toEqual(['focus:keyboard']);
+    // The keyboard opens, and the prompt comes into view however far up the visitor had read.
+    expect(t.calls).toEqual(['focus:keyboard', 'reveal']);
   });
 });

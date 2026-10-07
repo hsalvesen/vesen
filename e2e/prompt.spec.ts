@@ -246,6 +246,69 @@ test.describe('sudo', { tag: '@smoke' }, () => {
     expect(kept).toEqual({ page: false, local: false, session: false });
     expect(await page.evaluate(() => localStorage.getItem('vesen:history:v1'))).toContain('sudo ls');
   });
+
+  test('never puts the password in the input’s value, so the accessibility tree has only bullets', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-chrome', 'the accessibility tree through Chromium’s DevTools protocol');
+    await open(page);
+    await prompt(page).fill('sudo ls');
+    await prompt(page).press('Enter');
+    await expect(page.locator('.edit-row .read-prompt')).toHaveText('[sudo] password for guest: ');
+    await prompt(page).pressSequentially(SECRET);
+    await expect(prompt(page)).toHaveValue('•'.repeat(SECRET.length));
+    const client = await page.context().newCDPSession(page);
+    await client.send('Accessibility.enable');
+    const { nodes } = (await client.send('Accessibility.getFullAXTree')) as { nodes: { role?: { value?: string }; name?: { value?: string }; value?: { value?: unknown }; description?: { value?: string } }[] };
+    const field = nodes.find((node) => node.role?.value === 'combobox');
+    expect(field?.name?.value).toBe('[sudo] password for guest:');
+    expect(String(field?.value?.value ?? '')).not.toContain('hunter');
+    // Described by the dim line that says it is a joke.
+    expect(field?.description?.value ?? '').toContain('nothing you type is kept');
+    expect(JSON.stringify(nodes)).not.toContain(SECRET);
+  });
+
+  test('Cmd or Ctrl+Z afterwards never brings the password back', async ({ page }) => {
+    test.skip(isPhone(), 'a hardware keyboard');
+    await open(page);
+    await prompt(page).fill('sudo ls');
+    await prompt(page).press('Enter');
+    await expect(page.locator('.edit-row .read-prompt')).toHaveText('[sudo] password for guest: ');
+    await prompt(page).pressSequentially(SECRET);
+    for (let i = 0; i < SECRET.length; i += 1) await prompt(page).press('Backspace');
+    await prompt(page).press('Control+c');
+    await expect(page.locator('.edit-row .read-prompt')).toHaveCount(0);
+    for (const undo of ['ControlOrMeta+z', 'ControlOrMeta+z', 'ControlOrMeta+Shift+z']) {
+      await prompt(page).press(undo);
+      const shown = await page.evaluate(() => ({
+        value: (document.querySelector('input.command-input') as HTMLInputElement).value,
+        mirror: document.querySelector('.mirror')?.textContent ?? '',
+      }));
+      expect(shown.value).not.toContain('hunter');
+      expect(shown.mirror).not.toContain('hunter');
+    }
+  });
+});
+
+test.describe('forced colours', { tag: '@smoke' }, () => {
+  test('outline the Tab menu’s choice, which a fill alone cannot show', async ({ page }) => {
+    test.skip(isPhone(), 'the desktop list');
+    await page.emulateMedia({ forcedColors: 'active' });
+    await open(page);
+    await prompt(page).fill('theme set ');
+    for (let i = 0; i < 3; i += 1) await prompt(page).press('Tab');
+    const selected = page.locator('.completion-row .chip.selected');
+    await expect(selected).toHaveCount(1);
+    const outline = await selected.evaluate((chip) => ({ style: getComputedStyle(chip).outlineStyle, width: getComputedStyle(chip).outlineWidth }));
+    expect(outline.style).toBe('solid');
+    expect(parseFloat(outline.width)).toBeGreaterThanOrEqual(2);
+    // In the dock too.
+    await page.goto('/?dock=1');
+    await expect(page.locator('[data-completion="ready"]')).toHaveCount(1);
+    await prompt(page).fill('theme set ');
+    for (let i = 0; i < 3; i += 1) await page.locator('.dock .key[data-key="tab"]').click();
+    const docked = page.locator('.dock .chip.selected');
+    await expect(docked).toHaveCount(1);
+    expect(await docked.evaluate((chip) => getComputedStyle(chip).outlineStyle)).toBe('solid');
+  });
 });
 
 test.describe('the prompt on a phone', { tag: '@smoke' }, () => {

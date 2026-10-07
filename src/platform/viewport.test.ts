@@ -258,6 +258,43 @@ describe('startViewport', () => {
     expect(height()).toBe('664px');
   });
 
+  /** Android with resizes-content: the layout viewport shrinks with the keyboard. */
+  function androidKeyboard(width: number, height: number): void {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: height });
+    visual.set({ height });
+    flushFrames();
+  }
+
+  it('blurs the field when the keyboard is put away without a blur (Android Back)', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) => ({ matches: query === '(any-pointer: coarse)' }) as MediaQueryList,
+    );
+    const input = document.body.appendChild(document.createElement('input'));
+    stop = startViewport(window);
+    input.focus();
+    androidKeyboard(390, 364);
+    expect(root.classList.contains('kb-open')).toBe(true);
+    expect(document.activeElement).toBe(input);
+    // Back: the page is whole again, and the field kept its focus.
+    androidKeyboard(390, 664);
+    expect(root.classList.contains('kb-open')).toBe(false);
+    expect(document.activeElement).not.toBe(input);
+  });
+
+  it('keeps the field focused when the page rotates with the keyboard up', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) => ({ matches: query === '(any-pointer: coarse)' }) as MediaQueryList,
+    );
+    const input = document.body.appendChild(document.createElement('input'));
+    stop = startViewport(window);
+    input.focus();
+    androidKeyboard(390, 364);
+    expect(root.classList.contains('kb-open')).toBe(true);
+    androidKeyboard(800, 200);
+    expect(document.activeElement).toBe(input);
+  });
+
   it('never takes a shorter desktop window for a keyboard', () => {
     const input = document.createElement('input');
     document.body.append(input);

@@ -129,6 +129,30 @@ describe('use:focusPolicy', () => {
     expect(document.activeElement).toBe(input);
   });
 
+  it('on touch, blurs and focuses a prompt that has focus but no keyboard, so the keyboard comes back', () => {
+    const calls: string[] = [];
+    input.focus();
+    input.addEventListener('blur', () => calls.push('blur'));
+    input.addEventListener('focus', () => calls.push('focus'));
+    // The viewport is tracked and says the keyboard is closed (Android's Back kept focus).
+    document.documentElement.style.setProperty('--app-h', '812px');
+    tap(promptRow, 'touch');
+    expect(calls).toEqual(['blur', 'focus']);
+    expect(document.activeElement).toBe(input);
+
+    // With the keyboard open, or with a mouse, a focused prompt is left alone.
+    calls.length = 0;
+    document.documentElement.classList.add('kb-open');
+    tap(promptRow, 'touch');
+    document.documentElement.classList.remove('kb-open');
+    tap(promptRow, 'mouse');
+    expect(calls).toEqual([]);
+    document.documentElement.style.removeProperty('--app-h');
+    // Nor where the viewport is not tracked, and the keyboard cannot be known.
+    tap(promptRow, 'touch');
+    expect(calls).toEqual([]);
+  });
+
   it('ignores a click made with the keyboard', () => {
     output.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
     expect(document.activeElement).not.toBe(input);

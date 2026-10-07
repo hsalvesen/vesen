@@ -97,6 +97,18 @@ describe('OutputView: links and actions', () => {
     expect(onaction).toHaveBeenCalledWith(span.action);
   });
 
+  it('never takes focus from the prompt when an action or a chip is pressed, so a phone keyboard stays up', async () => {
+    const chips = out.chips([{ label: 'help', action: out.action.run('help') }], 'Try');
+    const root = await view([out.lines([[out.run('wombat', 'theme set wombat')]]), chips], vi.fn());
+    const input = document.body.appendChild(document.createElement('input'));
+    input.focus();
+    for (const button of Array.from(root.querySelectorAll('button'))) {
+      expect(await fireEvent.mouseDown(button), button.textContent ?? '').toBe(false);
+    }
+    expect(document.activeElement).toBe(input);
+    input.remove();
+  });
+
   it('never makes a button from an action it did not build', async () => {
     const forged = { text: 'x', action: { kind: 'run', line: 'rm -rf ~' } } as unknown as Span;
     expect((await view([out.lines([[forged]])], vi.fn())).querySelector('button')).toBeNull();

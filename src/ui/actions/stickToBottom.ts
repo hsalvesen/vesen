@@ -3,9 +3,20 @@
 // who has scrolled up to read is left where they are and offered a '↓ New output' pill instead.
 // On touch, an output taller than three quarters of the screen is shown from its echo line, so it
 // reads from the start: the moment its entry, which is on the screen from the moment the line
-// starts, grows past that as the output streams in. When the screen itself shrinks (the soft keyboard opening), the bottom
-// edge of the view stays put. Pressing Enter or typing in the prompt goes back to the bottom.
+// starts, grows past that as the output streams in. Not while the visitor is typing (the prompt
+// has focus, or the soft keyboard is open): then the prompt, just above the keyboard, stays in
+// view, as in a terminal. When the screen itself shrinks (the soft keyboard opening), the bottom
+// edge of the view stays put.
+//
+// Every line that starts is followed, whatever started it (Enter, a chip, a line from the
+// history sheet, a run link in the output): the prompt says so with SUBMIT_EVENT. Typing in the
+// prompt, or REVEAL_EVENT (a tap that opens the keyboard to type), goes back to the bottom.
 import type { ActionReturn } from 'svelte/action';
+
+/** Dispatched (bubbling) from the prompt when a line starts: its output is followed. */
+export const SUBMIT_EVENT = 'vesen:submit';
+/** Dispatched (bubbling) from the prompt to bring it into view: the view goes to the bottom. */
+export const REVEAL_EVENT = 'vesen:reveal';
 
 /** Within this many pixels of the bottom, the view follows new output. */
 export const PIN_THRESHOLD_PX = 40;
@@ -33,12 +44,17 @@ export interface ContentFacts {
   readonly freshEntryHeight: number | null;
   /** The scroller's visible height. */
   readonly viewHeight: number;
+  /**
+   * The visitor is typing: the prompt has focus or the soft keyboard is open. The prompt, above
+   * the keyboard, stays in view rather than a long output's first line.
+   */
+  readonly editing?: boolean;
 }
 
 /** What to do after the content changed size. */
 export function reactToContent(facts: ContentFacts): ContentReaction {
   if (!facts.pinned) return facts.grew ? 'pill' : 'none';
-  if (facts.touch && facts.freshEntryHeight !== null && facts.freshEntryHeight > facts.viewHeight * LONG_OUTPUT_RATIO) {
+  if (facts.touch && facts.editing !== true && facts.freshEntryHeight !== null && facts.freshEntryHeight > facts.viewHeight * LONG_OUTPUT_RATIO) {
     return 'anchor';
   }
   return 'bottom';
@@ -74,6 +90,13 @@ export interface StickToBottomOptions {
 function isTextField(target: EventTarget | null): boolean {
   const tag = (target as Element | null)?.tagName;
   return tag === 'INPUT' || tag === 'TEXTAREA';
+}
+
+/** A text field in `node` has focus, or the soft keyboard is open (platform/viewport.ts). */
+function typingIn(node: HTMLElement): boolean {
+  const doc = node.ownerDocument;
+  const active = doc.activeElement;
+  return (isTextField(active) && node.contains(active)) || doc.documentElement.classList.contains('kb-open');
 }
 
 export function stickToBottom(node: HTMLElement, options: StickToBottomOptions = {}): ActionReturn<StickToBottomOptions> {
@@ -172,6 +195,7 @@ export function stickToBottom(node: HTMLElement, options: StickToBottomOptions =
       touch: coarsePointer(win),
       freshEntryHeight: fresh ? entryHeight : null,
       viewHeight: node.clientHeight,
+      editing: typingIn(node),
     });
     if (reaction === 'bottom') toBottom();
     else if (reaction === 'pill') setPill(true);
@@ -206,16 +230,24 @@ export function stickToBottom(node: HTMLElement, options: StickToBottomOptions =
   const onKeydown = (event: KeyboardEvent): void => {
     if (event.key === 'Enter' && !event.isComposing && isTextField(event.target)) pinned = true;
   };
+  // A line started, by a key or a tap: the same, so its first output lands in view (or its
+  // echo line, for a long one read from the top).
+  const onSubmit = (): void => {
+    pinned = true;
+  };
   // Typing at the prompt brings it back into view, as in a terminal.
   const onInput = (event: Event): void => {
     if (!pinned && isTextField(event.target)) toBottom();
   };
+  const onReveal = (): void => toBottom();
 
   observer?.observe(node);
   observe();
   node.addEventListener('scroll', onScroll, { passive: true });
   node.addEventListener('keydown', onKeydown);
   node.addEventListener('input', onInput);
+  node.addEventListener(SUBMIT_EVENT, onSubmit);
+  node.addEventListener(REVEAL_EVENT, onReveal);
   node.addEventListener('wheel', onWheel, { passive: true });
   node.addEventListener('touchstart', onTouchStart, { passive: true });
   node.addEventListener('touchmove', onTouchMove, { passive: true });
@@ -234,6 +266,8 @@ export function stickToBottom(node: HTMLElement, options: StickToBottomOptions =
       node.removeEventListener('scroll', onScroll);
       node.removeEventListener('keydown', onKeydown);
       node.removeEventListener('input', onInput);
+      node.removeEventListener(SUBMIT_EVENT, onSubmit);
+      node.removeEventListener(REVEAL_EVENT, onReveal);
       node.removeEventListener('wheel', onWheel);
       node.removeEventListener('touchstart', onTouchStart);
       node.removeEventListener('touchmove', onTouchMove);

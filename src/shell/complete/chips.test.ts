@@ -63,7 +63,8 @@ describe('chipsFor', () => {
     const starters = chipsFor(input('', { touch: true }));
     expect(starters.chips.map((c) => c.label)).toEqual(['help', 'cat README.md', 'fastfetch', 'ls', 'theme ls', 'cathode ls']);
     expect(starters.chips.every((c) => c.kind === 'starter' && c.action.kind === 'run')).toBe(true);
-    expect(starters.chips[1]?.action).toEqual({ kind: 'run', line: 'cat README.md' });
+    // From home, so it works in any folder, labelled as the owner chose.
+    expect(starters.chips[1]?.action).toEqual({ kind: 'run', line: 'cat ~/README.md' });
     expect(chipsFor(input('', { touch: false })).chips).toEqual([]);
   });
 
@@ -172,7 +173,10 @@ describe('the dock: follow-ups after a run', () => {
   it('offers a few commands after help, cd and ls after mkdir, and ls after cd', () => {
     const after = (line: string, status = 0) =>
       runs(chipsFor(thumb('', { last: { line, argv: line.split(' '), status } })).chips.filter((chip) => chip.kind === 'followup'));
-    expect(after('help')).toEqual(['cat README.md', 'ls', 'fastfetch', 'theme ls', 'man ls']);
+    expect(after('help')).toEqual(['cat ~/README.md', 'ls', 'fastfetch', 'theme ls', 'man ls']);
+    // Labelled as the starter that runs the same line.
+    const help = chipsFor(thumb('', { last: { line: 'help', argv: ['help'], status: 0 } })).chips;
+    expect(help.find((chip) => chip.line === 'cat ~/README.md')?.label).toBe('cat README.md');
     expect(after('help ls')).toEqual(['man ls']);
     expect(after('mkdir x')).toEqual(['cd x', 'ls']);
     expect(after('cd documents')).toEqual(['ls']);

@@ -2,6 +2,8 @@
 // the rest of the newest history line that starts with the whole line; otherwise the rest of the
 // one candidate, or of the prefix the candidates share; otherwise the argument's placeholder,
 // dim and never inserted. Only at the end of the line, with nothing selected and no menu open.
+// A history line with a line break in it (a quote continued at `> `) is never a ghost: the
+// prompt is one line.
 
 import { accept, extendToCommon } from './engine';
 import type { CompletionResult, EditState, Ghost, GhostOptions } from './types';
@@ -14,7 +16,7 @@ export function ghostFor(state: EditState, result: CompletionResult | null, hist
 
   for (let i = history.length - 1; i >= 0; i -= 1) {
     const line = history[i] ?? '';
-    if (line.length > text.length && line.startsWith(text)) return { text: line.slice(text.length), source: 'history', acceptable: true };
+    if (line.length > text.length && line.startsWith(text) && !/[\r\n]/.test(line)) return { text: line.slice(text.length), source: 'history', acceptable: true };
   }
   if (result === null) return null;
 

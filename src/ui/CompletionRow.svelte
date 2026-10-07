@@ -132,7 +132,12 @@
     cursor: pointer;
   }
 
-  .chip:hover {
+  /* A hovered chip is the chip colours throughout: its name, a folder's link colour, its
+     description and ⏎ alike, the one pair checked for contrast (lib/roles.ts). */
+  .chip:not(.selected):hover,
+  .chip:not(.selected):hover .label,
+  .chip:not(.selected):hover .summary,
+  .chip:not(.selected):hover .run {
     background: var(--role-chip-bg);
     color: var(--role-chip-fg);
   }
@@ -184,6 +189,15 @@
   .chip.selected .label {
     background: var(--role-selection);
     color: var(--role-fg-strong);
+  }
+
+  /* Forced colours (Windows contrast themes) replace the fill: the Tab menu's choice is
+     outlined in the system's highlight instead. */
+  @media (forced-colors: active) {
+    .chip.selected {
+      outline: 2px solid Highlight;
+      outline-offset: -2px;
+    }
   }
 
   .more {

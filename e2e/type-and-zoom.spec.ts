@@ -92,7 +92,7 @@ test.describe('the terminal font', { tag: '@smoke' }, () => {
 
   test('the banner says whose terminal it is, and how to start: the keys, or the chips on touch (F074)', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText(/^vesen v\S+ · a terminal by Has Salvesen$/).first()).toBeVisible();
+    await expect(page.getByText(/^vesen v\S+ · a terminal by Has\u00a0Salvesen$/).first()).toBeVisible();
     const keys = 'Tab completes · ↑ history · help <cmd> for details';
     const chips = 'Tap a chip below, or type a command';
     const phone = PHONES.includes(test.info().project.name);

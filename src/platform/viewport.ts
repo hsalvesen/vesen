@@ -122,6 +122,24 @@ export function computeViewport(sample: ViewportSample, previous: Viewport): Vie
   };
 }
 
+/**
+ * The soft keyboard went away while a text field kept focus: Android's Back (or a keyboard's own
+ * hide key) does this, where iOS blurs the field. It is the same layout width (not a rotation),
+ * the visible height grew back, and the field still has focus.
+ */
+export function keyboardDismissed(previous: ViewportState | null, next: ViewportState | null, editing: boolean): boolean {
+  return (
+    editing &&
+    previous !== null &&
+    next !== null &&
+    previous.keyboardOpen &&
+    !next.keyboardOpen &&
+    !next.zoomed &&
+    previous.width === next.width &&
+    next.height > previous.height
+  );
+}
+
 /** Writes a state onto the root, or clears it so the CSS fallbacks apply. */
 export function applyViewport(root: HTMLElement, state: ViewportState | null): void {
   if (state === null) {
@@ -179,18 +197,26 @@ export function startViewport(win: Window, options: ViewportOptions = {}): () =>
   const update = (): void => {
     frame = 0;
     if (stopped) return;
+    const previous = viewport.state;
+    const editing = isEditing();
     viewport = computeViewport(
       {
         layoutWidth: win.innerWidth,
         layoutHeight: win.innerHeight,
         visual: visual && { height: visual.height, offsetTop: visual.offsetTop, scale: visual.scale },
-        editing: isEditing(),
+        editing,
       },
       viewport,
     );
     const next = viewport.state;
     // Zoomed, the shell stays where it was; otherwise only a change is written.
     if (next?.zoomed) return;
+    // The keyboard was put away without a blur (Android's Back): blur, as iOS does, so the page
+    // stops behaving as if typing, and a tap on the prompt opens the keyboard again.
+    if (keyboardDismissed(previous, next, editing)) {
+      const active = doc.activeElement;
+      if (isTextField(active)) (active as HTMLElement).blur();
+    }
     const area: VisibleArea = { height: next?.height ?? win.innerHeight, keyboardOpen: next?.keyboardOpen ?? false };
     if (heard === null || heard.height !== area.height || heard.keyboardOpen !== area.keyboardOpen) {
       heard = area;

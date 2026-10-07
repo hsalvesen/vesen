@@ -1,6 +1,7 @@
 // History at the prompt (docs/plan/designs/terminal-input.md, historyStore; F069): Up and Down
-// step through the lines that start with what was typed, skipping repeats, and Down past the
-// newest gives back the line that was being typed (the draft). Ctrl+R searches backwards for a
+// step through the lines that start with what was typed, each line once, at its newest (zsh's
+// HIST_FIND_NO_DUPS), and Down past the newest gives back the line that was being typed (the
+// draft). Ctrl+R searches backwards for a
 // line containing the query, as readline's reverse-i-search does. Pure: the lines are the
 // session's history, oldest first.
 
@@ -34,7 +35,8 @@ export function stepHistory(
   const shown = state.text;
   for (let i = (nav.index ?? lines.length) + dir; i >= 0 && i < lines.length; i += dir) {
     const line = lines[i] ?? '';
-    if (!line.startsWith(prefix) || line === shown) continue;
+    // A line that comes again later is offered only there, so both ways see each line once.
+    if (!line.startsWith(prefix) || line === shown || lines.indexOf(line, i + 1) !== -1) continue;
     return { nav: { index: i, prefix, draft }, state: { text: line, cursor: line.length } };
   }
   if (dir === 1) return { nav: NAV_IDLE, state: draft ?? { text: '', cursor: 0 } };

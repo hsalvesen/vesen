@@ -145,7 +145,7 @@ describe('banner', () => {
     expect(status).toBe(0);
     expect(blocks[0]).toMatchObject({ type: 'art', text: BANNER_ART, alt: 'Vesen logo', fit: 'scale' });
     const lines = rows(blocks).map(lineText);
-    expect(lines[0]).toMatch(/^vesen v.+ · a terminal by Has Salvesen$/);
+    expect(lines[0]).toMatch(/^vesen v.+ · a terminal by Has\u00a0Salvesen$/);
     expect(lines[1]).toBe('Tab completes · ↑ history · help <cmd> for details');
     expect(lines).toContain('Type help to see all available commands.');
     const help = rows(blocks).flat().find((span) => span.text === 'help');
@@ -155,7 +155,7 @@ describe('banner', () => {
   it('is compact under 50 columns, with the same words', async () => {
     const { blocks } = await runLine('banner', { cols: 46 });
     expect(blocks[0]).toMatchObject({ type: 'art', text: BANNER_ART_COMPACT });
-    expect(lineText(rows(blocks)[0] ?? [])).toMatch(/^vesen v.+ · a terminal by Has Salvesen$/);
+    expect(lineText(rows(blocks)[0] ?? [])).toMatch(/^vesen v.+ · a terminal by Has\u00a0Salvesen$/);
     for (const row of BANNER_ART_COMPACT.split('\n')) expect(Array.from(row)).toHaveLength(26);
   });
 
@@ -164,6 +164,6 @@ describe('banner', () => {
     expect(second(true)).toBe(TOUCH_HINT);
     expect(TOUCH_HINT).toBe('Tap a chip below, or type a command');
     expect(second(false)).toBe(KEYS_HINT);
-    expect(lineText(rows(bannerBlocks({ version: '1.2.0', columns: 44, touch: true }))[0] ?? [])).toBe('vesen v1.2.0 · a terminal by Has Salvesen');
+    expect(lineText(rows(bannerBlocks({ version: '1.2.0', columns: 44, touch: true }))[0] ?? [])).toBe('vesen v1.2.0 · a terminal by Has\u00a0Salvesen');
   });
 });

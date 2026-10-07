@@ -99,6 +99,8 @@ export interface ScreenSink {
 export interface StartOptions {
   /** The id of the entry a line typed before the kernel arrived already has (ScreenStart.continues). */
   readonly continues?: number;
+  /** False: the line is not kept in history. Ctrl+D's `exit`, which bash runs and never records. */
+  readonly record?: boolean;
 }
 
 export interface JobHandle {
@@ -309,7 +311,7 @@ export function createShell(deps: ShellDeps): Shell {
     get: () => session.jobs.store.get(),
   };
 
-  async function runLine(line: string, job: Job, io: Io, origin: JobOrigin, fresh: boolean): Promise<ExitCode> {
+  async function runLine(line: string, job: Job, io: Io, origin: JobOrigin, fresh: boolean, record: boolean): Promise<ExitCode> {
     // The session ended with `exit`; a key or a tap starts a new one, files kept.
     if (fresh) await executor.login(job);
     let text = line;
@@ -324,7 +326,7 @@ export function createShell(deps: ShellDeps): Shell {
         text = history.line;
         await io.stdout.line(text);
       }
-      session.history.add(text);
+      if (record) session.history.add(text);
       // `!rm:p` only shows the line, so it can be checked before it is run.
       if (history.printOnly === true) return EXIT.ok;
     }
@@ -391,7 +393,7 @@ export function createShell(deps: ShellDeps): Shell {
     const columns = (): number => terminal.size().cols;
     const io: Io = { stdin: new TtyIn(), stdout: new TtyOut(sink, 'stdout', columns), stderr: new TtyOut(sink, 'stderr', columns) };
 
-    const work = runLine(line, job, io, origin, fresh);
+    const work = runLine(line, job, io, origin, fresh, options.record !== false);
     const done = (async (): Promise<JobResult> => {
       // null when ^C came first.
       const outcome: { status: ExitCode } | { error: unknown } | null = await Promise.race([

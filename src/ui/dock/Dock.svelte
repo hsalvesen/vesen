@@ -8,11 +8,16 @@
   With the keyboard open (the prompt has focus), by the visible height:
   - full, 460px and up: the chip row (40px) over the key bar (44px);
   - compact, 300 to 459px: one 44px row, tab ↑ ^C and then the chips;
-  - minimal, under 300px: the keys only.
+  - minimal, under 300px: the keys only, except while Tab's list is open: then the compact row,
+    since on touch the list is only ever chips (02, section 5, Tab rule 3).
   With the keyboard put away: the chip row, then ⌨ Type a command… ↑ clear.
 
+  Where the chips are not drawn (minimal), they are still there for screen readers, visually
+  hidden, so the input's aria-controls and aria-activedescendant always name a listbox that is.
+
   A hardware keyboard used on a touch screen hides the key bar and keeps the chips, unless
-  `keys on` says otherwise (stores/prefs.ts). Holding ↑ opens the history sheet.
+  `keys on` says otherwise (stores/prefs.ts). Holding ↑ opens the history sheet; when it closes,
+  focus goes back to the prompt if it had it, or else to the ↑ key it was opened from.
 -->
 <script lang="ts">
   import { appleTouch, isPhysicalKey } from './hardware';
@@ -32,10 +37,15 @@
   const keysShown = $derived(keyBarShown($keyBar, $hardwareKeyboard));
   const busy = $derived(controller.running !== null && controller.read === null);
   const chips = $derived(controller.chipList);
+  // Tab's list, or its menu, is open: it is only ever shown as chips on touch.
+  const listing = $derived(controller.listed || controller.tab.phase === 'menu');
 
+  let dockElement: HTMLElement | undefined = $state();
   let sheet = $state(false);
   /** The prompt had focus when the sheet opened: it gets it back when the sheet closes. */
   let refocus = false;
+  /** What else had focus when the sheet opened, to go back to. */
+  let returnTo: HTMLElement | null = null;
 
   const apple = typeof navigator === 'undefined' ? false : appleTouch(navigator);
 
@@ -51,32 +61,53 @@
 
   function openSheet(): void {
     refocus = controller.focused;
+    const active = dockElement?.ownerDocument.activeElement;
+    returnTo = active instanceof HTMLElement && active !== active.ownerDocument.body ? active : null;
     sheet = true;
+  }
+
+  /**
+   * Focus back where it was before the sheet: the prompt (and its keyboard), or what had focus,
+   * or the ↑ key that opened it, so it never falls to the top of the page (the dialog pattern).
+   */
+  function giveFocusBack(): void {
+    if (refocus) {
+      controller.focus({ keyboard: true });
+      return;
+    }
+    const target = returnTo?.isConnected === true ? returnTo : dockElement?.querySelector<HTMLElement>('[data-key="up"]');
+    returnTo = null;
+    target?.focus({ preventScroll: true });
   }
 
   function closeSheet(): void {
     sheet = false;
-    if (refocus) controller.focus({ keyboard: true });
+    giveFocusBack();
   }
 </script>
 
 <svelte:window onkeydowncapture={onkeydown} />
 
-<div class="dock {mode}" class:typing data-dock-mode={mode} role="region" aria-label="Suggestions and keys">
+<div bind:this={dockElement} class="dock {mode}" class:typing data-dock-mode={mode} role="region" aria-label="Suggestions and keys">
   {#if typing}
-    {#if mode === 'compact'}
+    {#if mode === 'compact' || (mode === 'minimal' && keysShown && listing)}
       <div class="one-row">
         {#if keysShown}<KeyBar target={controller} variant="compact" {busy} onhistory={openSheet} />{/if}
         <ChipRow chips={chips.chips} more={chips.more} onchoose={choose} />
       </div>
     {:else if mode === 'minimal' && keysShown}
       <KeyBar target={controller} {busy} onhistory={openSheet} />
+      <div class="sr-only"><ChipRow chips={chips.chips} more={chips.more} onchoose={choose} /></div>
     {:else}
       <ChipRow chips={chips.chips} more={chips.more} onchoose={choose} />
       {#if keysShown && mode === 'full'}<KeyBar target={controller} {busy} onhistory={openSheet} />{/if}
     {/if}
   {:else}
-    {#if mode !== 'minimal'}<ChipRow chips={chips.chips} more={chips.more} onchoose={choose} />{/if}
+    {#if mode !== 'minimal'}
+      <ChipRow chips={chips.chips} more={chips.more} onchoose={choose} />
+    {:else}
+      <div class="sr-only"><ChipRow chips={chips.chips} more={chips.more} onchoose={choose} /></div>
+    {/if}
     <KeyBar target={controller} variant="closed" {busy} onhistory={openSheet} />
   {/if}
 </div>
@@ -92,7 +123,7 @@
     onrun={(line) => {
       sheet = false;
       controller.submit(line, 'chip');
-      if (refocus) controller.focus({ keyboard: true });
+      giveFocusBack();
     }}
     onclose={closeSheet}
   />
