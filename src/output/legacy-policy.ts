@@ -17,19 +17,18 @@ export const LEGACY_DROP_WITH_CONTENT: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Every class name the remaining legacy commands' output uses: fastfetch's "WM Theme" value,
- * which ui/legacy-highlights.ts renames, the art classes (logos, colour blocks, charts and QR
+ * Every class name the remaining legacy commands' output uses: the art classes (charts and QR
  * codes, wide art that shrinks to fit, and a fallback glyph held to one cell) with their
  * screen-reader text, and the output components in styles/components.css (role colours, errors,
- * panels and their tones, and the layouts that follow the output's width: side by side or
- * stacked, and key: value rows). theme, cathode and banner are specs now, so their list and
- * banner classes are gone.
+ * panels and their tones, and the layout that follows the output's width: side by side or
+ * stacked). theme, cathode, banner and fastfetch are specs now, so their list, banner and key:
+ * value classes are gone.
  */
 export const LEGACY_CLASSES: ReadonlySet<string> = new Set([
-  'current-theme-name', 'art', 'art-fit', 'art-cell', 'out-wide', 'sr-only',
+  'art', 'art-fit', 'art-cell', 'out-wide', 'sr-only',
   'out-strong', 'out-accent', 'out-muted', 'out-error',
   'out-panel', 'out-panel-title', 'tone-warn', 'tone-ok', 'tone-error', 'tone-link', 'tone-muted',
-  'out-split', 'out-split-side', 'out-split-main', 'out-kv', 'out-kv-row', 'out-kv-key', 'out-kv-value',
+  'out-split', 'out-split-side', 'out-split-main',
 ]);
 
 /** Attributes kept besides style, class and href, with the values they may hold. */

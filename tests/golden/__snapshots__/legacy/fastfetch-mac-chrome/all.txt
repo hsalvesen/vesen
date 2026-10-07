@@ -17,29 +17,20 @@ $ fastfetch
      ;KMMMMMMMWXXWMMMMMMMk.
        .cooc,.    .,coo:.
 
-
-████████████████████████
-████████████████████████
 guest@vesen
-OS:macOS macOS 26 26.0+ arm64
-Host:MacBook Pro (14-inch, M2 Pro)
-Kernel:Darwin
-Uptime:1 hours, 2 mins
-Packages:npm packages in node_modules
-Shell:Vesen Terminal v0.0.0-golden
-Display:1512x982 @ 60 Hz
-DE:Aqua
-WM:Quartz Compositor
-WM Theme:swamphen
-Font:System Font
-Cursor:Default System Cursor
-Terminal:Vesen Web Terminal
-CPU:Apple M2 Pro (10) @ 3.20 GHz
-GPU:ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Pro, Unspecified Version) [Integrated]
-Memory:4.05 GiB / 24.00 GiB (17%)
-Swap:Not available in browser
-Disk (/):2 GiB / 296 GiB (1%) - WebStorage
-Local IP:203.0.113.7
-Battery:87% [AC connected]
-Power Adapter:67W USB-C Power Adapter
-Locale:en-AU
+-----------
+OS: macOS Tahoe 26.0 arm64
+Host (approximate): MacBook Pro (14-inch)
+Kernel: Darwin 25
+Uptime: 1 hour, 2 mins (this page)
+Shell: vesh 0.0.0-golden
+Display: 3024x1964 (as 1512x982)
+Terminal: vesen
+WM Theme: swamphen
+Font: Vesen Mono
+CPU: Apple M2 Pro (10)
+GPU: Apple M2 Pro
+Memory (approximate): 8 GiB or more
+Disk (WebStorage): 1.60 GiB / 296.00 GiB (1%)
+Battery: 87% [AC connected]
+Locale: en-AU (Australia/Sydney)

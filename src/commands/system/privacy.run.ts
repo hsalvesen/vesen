@@ -34,7 +34,7 @@ export const THIRD_PARTIES: readonly ThirdParty[] = [
   { service: 'Cloudflare or Google DNS-over-HTTPS', commands: ['dig', 'host', 'nslookup'], askedBy: 'dig, host, nslookup', sent: 'the name you look up' },
   { service: 'RDAP (rdap.org and the registries)', commands: ['whois'], askedBy: 'whois', sent: 'the domain you look up' },
   { service: 'GitHub', commands: ['git', 'repo'], askedBy: 'git log in ~/projects/vesen', sent: 'nothing but the request' },
-  { service: 'ipify', commands: ['fastfetch'], askedBy: 'fastfetch', sent: 'nothing but the request: it answers with your public IP' },
+  { service: 'ipify', commands: ['fastfetch'], askedBy: 'fastfetch --net', sent: 'nothing but the request: it answers with your public IP' },
   // What the legacy commands use until their ports land.
   { service: 'wttr.in', commands: ['weather'], askedBy: 'weather, for now', sent: 'the place you name', legacy: true },
   { service: 'allorigins.win, then Yahoo Finance', commands: ['stock'], askedBy: 'stock, for now', sent: 'the ticker', legacy: true },
@@ -42,8 +42,8 @@ export const THIRD_PARTIES: readonly ThirdParty[] = [
 
 const NOTES: readonly string[] = [
   'Every request carries your IP address, as any web request does. Nothing else you type is sent, except as listed.',
-  "IP address and location lookups happen only on request: weather with no place, and fastfetch's Public IP.",
-  'curl and wget fetch the address you give them, straight from your browser.',
+  'IP address and location lookups happen only on request: weather with no place, and fastfetch --net.',
+  "curl and wget fetch the address you give them, straight from your browser; curl --via-proxy, where this site has a proxy of its own, sends it through that proxy.",
   'Links open only when you tap them, or in a desktop browser when whoami, linkedin, repo or open opens one.',
   'This browser keeps the theme, your settings, history and your files under ~ (local storage), and a snapshot of the screen for Back for 30 minutes (session storage). What you type at sudo is never kept.',
   'No analytics, and no cookies.',

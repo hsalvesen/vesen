@@ -1,4 +1,3 @@
-import { systemCommands } from './commands/system';
 import type { networkCommands as NetworkCommands } from './commands/network';
 import { commandHelp } from './helpTexts';
 import { playBeep } from './beep';
@@ -84,7 +83,7 @@ function renderHelp(raw: string): string {
 // The network commands load the first time one of them runs, which keeps them out of the
 // initial chunk. Their names are known up front, so help and completion list them before then.
 type NetworkCommand = keyof typeof NetworkCommands;
-export const NETWORK_COMMAND_NAMES: readonly NetworkCommand[] = ['weather', 'curl', 'stock', 'speedtest'];
+export const NETWORK_COMMAND_NAMES: readonly NetworkCommand[] = ['weather', 'stock'];
 
 let networkModule: Promise<typeof import('./commands/network')> | undefined;
 
@@ -130,7 +129,6 @@ const qrCommands = {
 
 // Combine all commands
 export const commands: Record<string, (args: string[], signal?: AbortSignal, status?: (text: string | null) => void) => Promise<string> | string> = {
-  ...systemCommands,
   ...networkCommands,
   ...qrCommands
 };

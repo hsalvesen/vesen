@@ -23,6 +23,7 @@ import { AmbiguousRedirect, ExpandError, Expander } from './expand';
 import { FlagError, parseFlags, takesRawArgs, tryHelp, wantsLegacyHelp, type ParsedArgs } from './flags';
 import { createFmt } from './fmt';
 import { createGlobber, type GlobFs } from './glob';
+import { dataCostQuestion } from './data-cost';
 import { describeIncomplete, parse } from './parser';
 import type { ReadOptions } from './reader';
 import { loginFiles, type Scope, type Session } from './session';
@@ -652,6 +653,15 @@ export class Executor {
       // It changes the page itself, so a pipe, a script or ~/.bashrc must never set it off.
       await say(io.stderr, [span(`${name}: only at the prompt`, ERROR)]);
       return EXIT.error;
+    }
+    if (spec.dataCost !== undefined && frame.interactive) {
+      // Before the budget starts: the visitor may take a while to answer.
+      const question = dataCostQuestion(spec, argv, { touch: this.deps.terminal.touch, ...this.deps.sys.connection() });
+      if (question !== null) {
+        const answer = await this.readLine(job, { prompt: `${question} [y/N] ` });
+        if (job.signal.aborted) return EXIT.interrupted;
+        if (answer === null || !/^\s*y/i.test(answer)) return EXIT.error;
+      }
     }
 
     let args = parsed.args;

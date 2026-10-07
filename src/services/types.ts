@@ -60,9 +60,42 @@ export interface JsonInit<T> extends NetInit {
   parse?: (raw: unknown) => T;
 }
 
+/** A request whose body is read as it arrives: curl and speedtest. */
+export interface StreamInit extends NetInit {
+  /** 'follow' (the default) follows redirects; 'manual' stops at one, which the browser hides. */
+  redirect?: 'follow' | 'manual';
+  /** 'no-store' skips the HTTP cache, so a measurement measures the network. */
+  cache?: 'default' | 'no-store';
+}
+
+/**
+ * A response whose body has not been read yet. `timeoutMs` covered the request up to its
+ * headers; reading is bounded by the caller's signal, which aborts a read in progress.
+ */
+export interface NetStream {
+  /** Where the response came from, after any redirects. */
+  readonly url: string;
+  /** 0 for a redirect the browser hides (type `opaqueredirect`). */
+  readonly status: number;
+  readonly statusText: string;
+  /** `basic`, `cors`, `opaque` or `opaqueredirect`. */
+  readonly type: string;
+  readonly redirected: boolean;
+  /** The headers the browser lets the page see, names in lower case. */
+  readonly headers: Readonly<Record<string, string>>;
+  /** The next piece of the body, or null at its end. Rejects with a NetError: abort, offline or network. */
+  read(): Promise<Uint8Array | null>;
+  /** Stops reading; the rest is never downloaded. */
+  cancel(): void;
+}
+
 export interface Net {
   /** Fetches and reads the body as text, all within one deadline. */
   text(url: string, init?: NetInit): Promise<NetResponse>;
+  /** Fetches up to the response's headers, and hands back the body to read as it arrives. */
+  open(url: string, init?: StreamInit): Promise<NetStream>;
+  /** True when the page is https and `url` is http, which the browser blocks as mixed content. */
+  mixedContent(url: string): boolean;
   /** Fetches and parses JSON; malformed JSON or a failed `parse` is kind `parse`. */
   json<T = unknown>(url: string, init?: JsonInit<T>): Promise<T>;
   /**
@@ -241,8 +274,33 @@ export interface SysInfo {
   gpu(): string | null;
   battery(): Promise<{ readonly level: number; readonly charging: boolean } | null>;
   storage(): Promise<{ readonly usage: number; readonly quota: number } | null>;
-  /** The visitor's public IP address, labelled "Public IP"; null on failure. */
+  /** The visitor's public IP address, labelled "Public IP"; null on failure. Asked only on request. */
   publicIp(signal?: AbortSignal): Promise<string | null>;
+  /** What User-Agent Client Hints add where the browser has them (Chromium); null elsewhere. */
+  platform(): Promise<PlatformHints | null>;
+  /** The connection as the browser describes it, for speedtest's light profile and its question. */
+  connection(): ConnectionInfo;
+  /** Milliseconds since this page started. */
+  uptimeMs(): number;
+}
+
+/** The high-entropy User-Agent Client Hints: the real OS version that the user agent string hides. */
+export interface PlatformHints {
+  /** Such as `26.0.0` on macOS 26, or `15.0.0` on Windows 11. */
+  readonly platformVersion: string | null;
+  /** `arm` or `x86`. */
+  readonly architecture: string | null;
+  /** `64` or `32`. */
+  readonly bitness: string | null;
+  /** The device model on Android, such as `Pixel 7`. */
+  readonly model: string | null;
+}
+
+export interface ConnectionInfo {
+  /** Data Saver is on. */
+  readonly saveData: boolean;
+  /** A cellular connection, or one the browser rates 3g or slower. */
+  readonly cellular: boolean;
 }
 
 // ── Appearance ─────────────────────────────────────────────────────────────────────────────

@@ -40,12 +40,13 @@ const ELSEWHERE: Readonly<Record<string, { readonly use?: string; readonly hint?
 
 /**
  * Commands a tap on a guess must never run: they open a page or a mail client, take over the
- * page, or end the session. A name typed differently only in case still finds them.
+ * page, spend real data (speedtest), or end the session. A name typed differently only in case
+ * still finds them.
  */
 const NEVER_GUESSED = new Set(['reset', 'exit', 'logout', 'login']);
 
 function guessable(spec: CommandSpec): boolean {
-  return spec.opens === undefined && spec.interactiveOnly !== true && !NEVER_GUESSED.has(spec.name);
+  return spec.opens === undefined && spec.interactiveOnly !== true && spec.dataCost === undefined && !NEVER_GUESSED.has(spec.name);
 }
 
 /**

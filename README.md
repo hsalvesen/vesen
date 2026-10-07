@@ -107,13 +107,15 @@ src/
 │                                 # apropos, history, clear, reset, alias, unalias, export, unset, env,
 │                                 # printenv, set, source, type, which, command, true, false, test, exit,
 │                                 # login, sleep, sudo), system/ (date, keys, poweroff, reboot, shutdown,
-│                                 # privacy, debug); lib/ is what they share, the banner and the link cards
-│                                 # included; legacy.ts wraps the commands not yet ported
+│                                 # privacy, debug, fastfetch), network/ (curl, speedtest); lib/ is what
+│                                 # they share, the banner and the link cards included; legacy.ts wraps
+│                                 # the commands not yet ported
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette
 │                                 # where themes.json does not set them, and the contrast each must meet);
 │                                 # qr/ (the QR encoder: segments, error correction, masks, and text, SVG
-│                                 # and raster renderers)
+│                                 # and raster renderers); sysfacts.ts and sysnames.ts (reading and naming
+│                                 # what a browser says about its system)
 ├── platform/                     # Browser-facing helpers: env.ts (touch, the in-app browser and the
 │                                 # system), errors.ts (recent errors for debug report), canonical host
 │                                 # redirect, stale-chunk reload,
@@ -126,6 +128,8 @@ src/
 │   ├── net.ts                    # fetch with timeouts, cancelling, byte caps and typed network errors
 │   ├── storage.ts                # localStorage and sessionStorage with a memory fallback; one-time migrations
 │   ├── types.ts                  # Service interfaces: net, storage, bell, opener, clipboard, clock, system info
+│   ├── sysinfo.ts                # System facts for fastfetch, /proc and debug report: the user agent, the GPU,
+│   │                             # client hints, battery, storage, and the public IP only when asked
 │   ├── opener.ts                 # The in-app link policy: planOpen, the new tab inside the gesture, and the
 │   │                             # escape to the real browser behind a tap
 │   ├── clipboard.ts              # Copy: the Clipboard API, then execCommand
@@ -155,7 +159,6 @@ src/
 │   │                             # or theme swatches
 │   ├── legacy-html.ts            # use:legacyHtml, which rebuilds legacy HTML from the allowlist
 │   ├── span-style.ts             # Colour tokens to CSS, with role fallbacks
-│   ├── legacy-highlights.ts      # Renames the theme in earlier legacy fastfetch output
 │   ├── actions/                  # stickToBottom (the one scroll owner, with the new-output pill) and
 │   │                             # focusPolicy (when a click, tap or key puts the caret in the prompt)
 │   └── components/               # LinkCard.svelte (the card block: the link, Copy, the in-app escape);
@@ -163,13 +166,12 @@ src/
 ├── testing/                      # Test setup
 └── utils/
     ├── commands.ts               # The legacy command table; the network commands load on first use
-    ├── commands/                 # Legacy commands not yet ported: network, fastfetch, QR; fastfetch
-    │                             # and the network commands load on first use
+    ├── commands/                 # Legacy commands not yet ported: weather, stock and QR, which load on
+    │                             # first use
     ├── virtualFileSystem.ts      # A shim over the VFS for the legacy commands not yet ported
     ├── helpTexts.ts              # Help for each legacy command not yet ported
     ├── notice.ts                 # The one notice panel and the one error style (cmd: message, then a hint)
-    ├── beep.ts                   # The terminal bell
-    └── osLogos.ts                # fastfetch's logos, loaded with it
+    └── beep.ts                   # The terminal bell
 public/                           # 404.html; fonts/ (Vesen Mono
                                   # and its licence, OFL.txt); icons/ and og.png (generated, see scripts/);
                                   # manifest.webmanifest; probe/ (device capability probe, not linked from the app)

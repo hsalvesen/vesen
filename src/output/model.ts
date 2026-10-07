@@ -233,6 +233,11 @@ export interface ColumnsBlock {
   readonly left: readonly Block[];
   readonly right: readonly Block[];
   readonly stackBelowCols: number;
+  /**
+   * Side by side, the left stack's width in cells, such as fastfetch's logo, and the right one
+   * takes the rest; without it the two share the width.
+   */
+  readonly leftCh?: number;
 }
 
 /** A rich card drawn by a registered Svelte component from a typed view model. */
@@ -463,11 +468,12 @@ export const out = {
     return { ...block, escape: escape.hint === undefined ? { url } : { url, hint: escape.hint } };
   },
 
-  columns: (left: readonly Block[], right: readonly Block[], stackBelowCols: number): ColumnsBlock => ({
+  columns: (left: readonly Block[], right: readonly Block[], stackBelowCols: number, leftCh?: number): ColumnsBlock => ({
     type: 'columns',
     left,
     right,
     stackBelowCols,
+    ...(leftCh === undefined ? {} : { leftCh }),
   }),
 
   component: (name: ComponentName, props: unknown, plain: string, alt: string): ComponentBlock => ({

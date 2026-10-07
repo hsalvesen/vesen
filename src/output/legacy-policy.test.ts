@@ -96,17 +96,15 @@ describe('isLegacyStyleProperty', () => {
 
 describe('filterLegacyClasses', () => {
   it('keeps only the class names legacy output uses', () => {
-    expect(filterLegacyClasses('current-theme-name is-current')).toBe('current-theme-name');
+    expect(filterLegacyClasses('current-theme-name is-current')).toBe('');
     expect(filterLegacyClasses('  out-muted  fixed inset-0 z-50 ')).toBe('out-muted');
     expect(filterLegacyClasses('sr-only hidden')).toBe('sr-only');
     expect(filterLegacyClasses('art art-fit art-x')).toBe('art art-fit');
     expect(filterLegacyClasses('out-panel tone-warn fixed')).toBe('out-panel tone-warn');
-    expect(filterLegacyClasses('out-split out-split-side out-kv out-kv-row out-kv-key out-kv-value out-wide flex')).toBe(
-      'out-split out-split-side out-kv out-kv-row out-kv-key out-kv-value out-wide',
-    );
+    expect(filterLegacyClasses('out-split out-split-side out-kv out-kv-row out-wide flex')).toBe('out-split out-split-side out-wide');
     expect([...LEGACY_CLASSES].sort()).toEqual([
-      'art', 'art-cell', 'art-fit', 'current-theme-name',
-      'out-accent', 'out-error', 'out-kv', 'out-kv-key', 'out-kv-row', 'out-kv-value', 'out-muted', 'out-panel', 'out-panel-title',
+      'art', 'art-cell', 'art-fit',
+      'out-accent', 'out-error', 'out-muted', 'out-panel', 'out-panel-title',
       'out-split', 'out-split-main', 'out-split-side', 'out-strong', 'out-wide',
       'sr-only', 'tone-error', 'tone-link', 'tone-muted', 'tone-ok', 'tone-warn',
     ]);

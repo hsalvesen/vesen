@@ -9,11 +9,6 @@ const isPhone = () => PHONES.includes(test.info().project.name);
 
 const prompt = (page: Page) => page.getByRole('combobox', { name: 'Terminal command' });
 
-/** Answers fastfetch's public IP lookup, so nothing waits on the network. */
-async function quietNetwork(page: Page): Promise<void> {
-  await page.route('https://api.ipify.org/**', (route) => route.fulfill({ json: { ip: '203.0.113.7' } }));
-}
-
 /** Runs a line at the prompt and waits until it has finished. */
 async function run(page: Page, line: string): Promise<void> {
   const echoes = page.locator('[role="log"] .command-input-display');
@@ -80,7 +75,6 @@ test.describe('the status line', { tag: '@smoke' }, () => {
 
 test.describe('output reflow', { tag: '@smoke' }, () => {
   test('rotating after help and fastfetch reflows both, without running them again', async ({ page }) => {
-    await quietNetwork(page);
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/');
     await run(page, 'help');
@@ -95,9 +89,7 @@ test.describe('output reflow', { tag: '@smoke' }, () => {
           0,
           ...Array.from(typed('help')?.querySelectorAll('.grid') ?? [], (grid) => new Set(Array.from(grid.children, (cell) => Math.round(cell.getBoundingClientRect().left))).size),
         );
-        const split = typed('fastfetch')?.querySelector('.out-split');
-        const side = split?.querySelector('.out-split-side')?.getBoundingClientRect();
-        const main = split?.querySelector('.out-split-main')?.getBoundingClientRect();
+        const [side, main] = Array.from(typed('fastfetch')?.querySelector('.columns')?.children ?? [], (column) => column.getBoundingClientRect());
         return { entries: entries.length, columns, sideBySide: side !== undefined && main !== undefined && Math.abs(side.top - main.top) < 2 };
       });
 
@@ -122,7 +114,6 @@ test.describe('output reflow', { tag: '@smoke' }, () => {
     test(`at ${width}px nothing makes the page scroll sideways`, async ({ page }) => {
       // Phones at phone widths; the desktop at all of them.
       test.skip(isPhone() && width > 414, 'phone widths on the phones');
-      await quietNetwork(page);
       await page.setViewportSize({ width, height: 800 });
       await page.goto('/');
       expect(await sideways(page), 'banner').toEqual({ page: 0, body: 0, transcript: 0 });
@@ -150,22 +141,21 @@ test.describe('output reflow', { tag: '@smoke' }, () => {
     expect(await sideways(page)).toEqual({ page: 0, body: 0, transcript: 0 });
   });
 
-  test("fastfetch's details stack into key: value lines on a narrow screen", async ({ page }) => {
+  test("fastfetch's logo stacks above its details on a narrow screen, and goes beside them when wide", async ({ page }) => {
     test.skip(isPhone(), 'the desktop window is resized');
-    await quietNetwork(page);
     await page.setViewportSize({ width: 320, height: 800 });
     await page.goto('/');
     await run(page, 'fastfetch');
-    const row = entryOf(page, 'fastfetch').locator('.out-kv-row').first();
-    const display = () => row.evaluate((element) => getComputedStyle(element).display);
-    expect(await display()).toBe('block');
+    const columns = entryOf(page, 'fastfetch').locator('.columns');
+    const lefts = () => columns.evaluate((element) => Array.from(element.children, (column) => Math.round(column.getBoundingClientRect().left)));
+    const [logo, details] = await lefts();
+    expect(details).toBe(logo);
     await page.setViewportSize({ width: 1024, height: 800 });
-    await expect.poll(display).toBe('flex');
-    // In columns, every value starts at the same place.
-    const lefts = await entryOf(page, 'fastfetch')
-      .locator('.out-kv-value')
-      .evaluateAll((values) => new Set(values.map((value) => Math.round(value.getBoundingClientRect().left))).size);
-    expect(lefts).toBe(1);
+    await expect.poll(async () => {
+      const [wideLogo, wideDetails] = await lefts();
+      return (wideDetails ?? 0) > (wideLogo ?? 0);
+    }).toBe(true);
+    expect(await sideways(page)).toEqual({ page: 0, body: 0, transcript: 0 });
   });
 });
 

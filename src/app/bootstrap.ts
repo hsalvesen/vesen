@@ -30,7 +30,6 @@ import { persistPrefs } from '../stores/prefs';
 import { DEFAULT_THEME_NAME, persistTheme, theme, themes } from '../stores/theme';
 import { visibleArea } from '../stores/viewport';
 import { loadLegacyShim } from '../ui/legacy-block';
-import { markCurrentThemeName } from '../ui/legacy-highlights';
 import { loadRichBlock } from '../ui/rich-block';
 import { playBeep } from '../utils/beep';
 import { GUEST } from '../vfs/identity';
@@ -130,7 +129,6 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
     theme.subscribe((value) => {
       applyTheme(doc, value);
       applyRoles(root, value);
-      markCurrentThemeName(doc, value.name);
     }),
     startPerf(win, (next) => {
       signals = next;

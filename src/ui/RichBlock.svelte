@@ -105,7 +105,11 @@
 {:else if block.type === 'card'}
   <LinkCard card={block} />
 {:else if block.type === 'columns'}
-  <div class="columns" style="--stack-at: {block.stackBelowCols}ch">
+  <div
+    class="columns"
+    class:sized={block.leftCh !== undefined}
+    style={block.leftCh === undefined ? `--stack-at: ${block.stackBelowCols}ch` : `--stack-at: ${block.stackBelowCols}ch; --left: ${block.leftCh}ch`}
+  >
     <div class="column"><OutputView blocks={block.left} {onaction} /></div>
     <div class="column"><OutputView blocks={block.right} {onaction} /></div>
   </div>
@@ -274,5 +278,13 @@
     flex-grow: 1;
     flex-basis: calc((var(--stack-at) - 100%) * 999);
     min-width: 0;
+  }
+
+  /* A left stack of a given width (fastfetch's logo): that wide beside the other, which takes the
+     rest, and the whole row when stacked. */
+  .columns.sized > .column:first-child {
+    flex-grow: 0;
+    flex-basis: max(var(--left), calc((var(--stack-at) - 100%) * 999));
+    max-width: 100%;
   }
 </style>

@@ -12,7 +12,7 @@ import type { CommandContext, CommandSpec, Example, ExitCode } from '../shell/ty
 
 /**
  * A legacy command: words in, HTML out. The signal aborts on ^C and when the budget runs out;
- * `status` sets what the status line says while it runs (speedtest's phase).
+ * `status` sets what the status line says while it runs.
  */
 export type LegacyFn = (args: string[], signal?: AbortSignal, status?: (text: string | null) => void) => string | Promise<string>;
 
@@ -104,7 +104,7 @@ export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpe
 // ── The table ──────────────────────────────────────────────────────────────────────────────
 
 /** The legacy command names, in the order help lists them today. */
-export const LEGACY_NAMES = ['curl', 'fastfetch', 'qr', 'speedtest', 'stock', 'weather'] as const;
+export const LEGACY_NAMES = ['qr', 'stock', 'weather'] as const;
 export type LegacyName = (typeof LEGACY_NAMES)[number];
 
 /** What the app layer supplies from src/utils. */
@@ -121,36 +121,11 @@ type StaticMeta = Omit<LegacyMeta, 'help'>;
 
 /** Each legacy command's spec fields, until it is ported. */
 const TABLE: Readonly<Record<LegacyName, StaticMeta>> = {
-  curl: {
-    category: 'network',
-    summary: 'transfer a URL',
-    network: true,
-    loadingLabel: (argv) => `fetching ${argv[1] ?? 'the page'}…`,
-    args: [{ name: 'URL', source: { kind: 'url' } }],
-    examples: examples('curl https://httpbin.org/get', 'curl explainshell.com'),
-  },
-  fastfetch: {
-    category: 'system',
-    summary: 'show information about this system',
-    featured: true,
-    loadingLabel: () => 'gathering system information…',
-    examples: [{ line: 'fastfetch', note: 'this system, at a glance', starter: 3 }],
-  },
   qr: {
     category: 'portfolio',
     summary: 'draw a QR code for a URL or text',
     args: [{ name: 'TEXT', source: { kind: 'examples' }, variadic: true }],
     examples: offline('qr https://tldr.sh', 'qr explainshell.com', 'qr https://shellcheck.net'),
-  },
-  speedtest: {
-    category: 'network',
-    summary: 'measure the speed of the connection',
-    network: true,
-    budgetMs: 120_000,
-    // It downloads megabytes, so only a line typed at the prompt may start it.
-    interactiveOnly: true,
-    loadingLabel: () => 'measuring the connection…',
-    examples: examples('speedtest'),
   },
   stock: {
     category: 'network',

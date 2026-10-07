@@ -176,8 +176,14 @@ export interface CommandSpec {
   readonly budgetMs?: number;
   /** The status line while the command runs, such as 'fetching forecast for Oslo'. */
   readonly loadingLabel?: (argv: readonly string[]) => string;
-  /** Asks before spending this much data in the listed conditions: speedtest. */
-  readonly dataCost?: { readonly bytes: number; readonly confirmOn: readonly ('cellular' | 'saveData' | 'touch')[] };
+  /**
+   * Asks before spending this much data in the listed conditions: speedtest. `bytes` may depend
+   * on the line (`speedtest --full`); 0 asks nothing.
+   */
+  readonly dataCost?: {
+    readonly bytes: number | ((argv: readonly string[]) => number);
+    readonly confirmOn: readonly ('cellular' | 'saveData' | 'touch')[];
+  };
   /** Stops reading flags at the first operand. */
   readonly posixArgs?: boolean;
   /** The flag that `-N` sets, as in `head -5`. */

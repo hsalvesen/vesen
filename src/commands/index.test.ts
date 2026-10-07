@@ -8,10 +8,10 @@ describe('the command catalogue', () => {
   it('finds the spec files under src/commands/<category>/', () => {
     // Each port adds one, and this list grows.
     expect(specFiles().map((found) => found.name).sort()).toEqual([
-      'about', 'alias', 'apropos', 'banner', 'cat', 'cathode', 'cd', 'clear', 'command', 'contact', 'cp', 'date', 'debug', 'echo',
-      'env', 'exit', 'export', 'false', 'help', 'history', 'keys', 'linkedin', 'ln', 'login', 'ls', 'man', 'mkdir', 'mv',
+      'about', 'alias', 'apropos', 'banner', 'cat', 'cathode', 'cd', 'clear', 'command', 'contact', 'cp', 'curl', 'date', 'debug', 'echo',
+      'env', 'exit', 'export', 'false', 'fastfetch', 'help', 'history', 'keys', 'linkedin', 'ln', 'login', 'ls', 'man', 'mkdir', 'mv',
       'open', 'poweroff', 'printenv', 'printf', 'privacy', 'pwd', 'reboot', 'repo', 'reset', 'rm', 'rmdir', 'set', 'shutdown',
-      'sleep', 'source', 'stat', 'sudo', 'test', 'theme', 'touch', 'true', 'type', 'unalias', 'unset', 'whatis', 'which', 'whoami',
+      'sleep', 'source', 'speedtest', 'stat', 'sudo', 'test', 'theme', 'touch', 'true', 'type', 'unalias', 'unset', 'whatis', 'which', 'whoami',
     ]);
   });
 

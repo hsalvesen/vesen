@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 afterEach(() => {
   vi.doUnmock('./commands/network');
-  vi.doUnmock('./commands/fastfetch');
   vi.resetModules();
   vi.unstubAllGlobals();
 });
@@ -28,21 +27,6 @@ describe('the lazily loaded network commands', () => {
     const output = await commands.weather?.(['Oslo']);
 
     expect(output).toContain('weather: could not load the command. Check the connection and try again.');
-    expect(beep).toHaveBeenCalledTimes(1);
-    vi.doUnmock('./beep');
-  });
-});
-
-describe('fastfetch', () => {
-  it('loads on first use, and says so when it cannot', async () => {
-    const beep = vi.fn();
-    vi.doMock('./beep', () => ({ playBeep: beep }));
-    vi.doMock('./commands/fastfetch', () => {
-      throw new TypeError('Failed to fetch dynamically imported module');
-    });
-    const { commands } = await import('./commands');
-
-    expect(await commands.fastfetch?.([])).toContain('fastfetch: could not load the command. Check the connection and try again.');
     expect(beep).toHaveBeenCalledTimes(1);
     vi.doUnmock('./beep');
   });
