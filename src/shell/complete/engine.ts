@@ -7,7 +7,7 @@ import type { Candidate } from '../types';
 import { cursorContext, type CursorContext } from './context';
 import { MAX_CANDIDATES, dedupe, didYouMean, longestCommonPrefix, matchPrefix, sortCandidates } from './match';
 import { cutAt, escapeTail, scanRaw } from './quote';
-import { commandCandidates, gather, valuePool, type Pool } from './sources';
+import { commandCandidates, gather, valuePool, withoutQuiet, type Pool } from './sources';
 import type { AcceptMode, CompletionEnv, CompletionResult, EditState } from './types';
 
 function clampState(state: EditState): EditState {
@@ -71,6 +71,9 @@ function resolve(state: EditState, env: CompletionEnv): Resolved {
     ({ matched, caseFolded } = matchPool(pool, context.prefix));
   }
 
+  // The fun commands keep out of a list of names until they are all that matches.
+  const names = context.slot === 'command' || context.source?.kind === 'command' || context.source?.kind === 'commandLine';
+  if (names && context.slot !== 'subcommand') matched = withoutQuiet(matched, context.prefix, env);
   const unique = dedupe(matched, pool.caseInsensitive === true);
   const ordered = pool.ordered === true ? unique : sortCandidates(unique);
   const placeholder = placeholderFor(context);

@@ -1,6 +1,7 @@
 // The body of rm; its spec, in rm.ts, loads this the first time rm runs, so the kernel's chunk
 // carries only the spec (and not the listing helpers that name a file's type).
 
+import { out } from '../../output/model';
 import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
 import { rmRefusal } from '../../vfs/errors';
 import { join } from '../../vfs/path';
@@ -106,6 +107,8 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
     const refusal = options.recursive || options.dir ? rmRefusal(typed, path, options.recursive) : null;
     if (refusal !== null) {
       for (const line of refusal) await ctx.fail(line.replace(/^rm: /, ''));
+      // `rm -rf /` at the prompt earns a wink after GNU's refusal.
+      if (path === '/' && options.recursive && options.force && ctx.stderr.isTTY) await ctx.stderr.line(out.span('Nice try. / stays right where it is. ;)', { fg: 'muted' }));
       status = 1;
       continue;
     }

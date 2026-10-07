@@ -44,6 +44,26 @@ function variable(env: CompletionEnv, name: string): string | undefined {
 // ── Commands ───────────────────────────────────────────────────────────────────────────────
 
 /**
+ * A command that stays out of a Tab list of command names (docs/plan/08, wave E): one whose spec
+ * says `featured: false`, and every fun command unless it says `featured: true`. `help` still
+ * lists them, under their category.
+ */
+export function keepsQuiet(spec: CommandSpec | undefined): boolean {
+  if (spec === undefined) return false;
+  return spec.featured === false || (spec.category === 'fun' && spec.featured !== true);
+}
+
+/**
+ * Command names without the quiet ones (keepsQuiet), unless one is the word typed whole or
+ * nothing else matches: `c` lists cat and cd but not cowsay, while `cow` finds cowsay and `sl`
+ * keeps sl beside sleep.
+ */
+export function withoutQuiet(items: readonly Candidate[], typed: string, env: CompletionEnv): Candidate[] {
+  const loud = items.filter((c) => c.value === typed || (c.kind !== 'command' && c.kind !== 'alias') || !keepsQuiet(env.registry.get(c.value)));
+  return loud.length > 0 ? loud : [...items];
+}
+
+/**
  * Every command name and its aliases. As a line's first word (`programs`), also the shell's
  * aliases and the scripts on $PATH; as the operand of help, man or which, only the commands.
  */

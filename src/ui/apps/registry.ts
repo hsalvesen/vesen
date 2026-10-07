@@ -17,6 +17,8 @@ type Loader = () => Promise<{ default: Component<AppProps> }>;
 const APPS: Partial<Record<FullscreenView, Loader>> = {
   shutdown: () => import('./Shutdown.svelte'),
   'qr-present': () => import('./QrPresenter.svelte'),
+  sl: () => import('./Train.svelte'),
+  matrix: () => import('./Matrix.svelte'),
 };
 
 /** The loader for a view, or undefined when no app of that name exists yet. */

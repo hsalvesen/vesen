@@ -26,7 +26,7 @@ Shell: alias apropos clear command env exit export fail false hang help history 
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
 Network: curl fetch speedtest stock weather
 
-help --all lists every command with what it does.
+help --all lists every command with what it does. Even the fun ones.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
 privacy says what vesen sends, and where.
 ? 0
@@ -47,6 +47,7 @@ Text: echo head printf rev wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
 Network: curl fetch speedtest stock weather
+Fun: cmatrix cowsay cowthink factor figlet fortune lolcat sl
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
@@ -66,12 +67,13 @@ Text: echo head printf rev wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
 Network: curl fetch speedtest stock weather
+Fun: cmatrix cowsay cowthink factor figlet fortune lolcat sl
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
 privacy says what vesen sends, and where.
 ? 0
-[pipe]
+[pipe at 40 columns]
 Portfolio
 about     about the developer
 banner    show the welcome banner
@@ -88,6 +90,29 @@ Text: echo head printf rev wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
 Network: curl fetch speedtest stock weather
+
+help --all lists every command with what it does. Even the fun ones.
+Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
+privacy says what vesen sends, and where.
+? 0
+[pipe at 80, 120 columns]
+Portfolio
+about     about the developer
+banner    show the welcome banner
+cathode   trial a retro CRT display effect
+contact   email the developer
+linkedin  open the developer's LinkedIn profile
+qr        draw a QR code for a URL or text
+repo      open this terminal's source code
+theme     change the colour theme
+whoami    meet the developer; in a pipe, your user name
+
+Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
+Text: echo head printf rev wc yes
+Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
+System: date debug fastfetch keys open poweroff privacy reboot shutdown
+Network: curl fetch speedtest stock weather
+Fun: cmatrix cowsay cowthink factor figlet fortune lolcat sl
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.

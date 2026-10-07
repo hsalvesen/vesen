@@ -19,7 +19,7 @@ describe('the command catalogue', () => {
   it('finds the catalogue under src/commands/more/<category>/, apart from the kernel', async () => {
     // Each wave adds to it.
     const catalogue = await loadCatalogue();
-    expect(catalogue.map((found) => found.name).sort()).toEqual(['rev']);
+    expect(catalogue.map((found) => found.name).sort()).toEqual(['cmatrix', 'cowsay', 'cowthink', 'factor', 'figlet', 'fortune', 'lolcat', 'rev', 'sl']);
     const core = new Set(specFiles().map((found) => found.name));
     for (const found of catalogue) expect(core.has(found.name), found.name).toBe(false);
     for (const found of catalogue) expect(['text', 'files', 'system', 'network', 'fun', 'editor'], found.name).toContain(found.category);
@@ -41,7 +41,7 @@ describe('the command catalogue', () => {
     expect(registry.get('rev')?.summary).toBe('stand-in');
     await registry.whenComplete();
     expect(registry.get('rev')?.summary).toBe('reverse the characters of each line');
-    expect(registry.names()).toEqual(['cat', 'ls', 'rev']);
+    expect(registry.names()).toEqual(['cat', 'cmatrix', 'cowsay', 'cowthink', 'factor', 'figlet', 'fortune', 'lolcat', 'ls', 'rev', 'sl']);
   });
 
   it('keeps the long help of a command with a lazy body in the spec or the body, never both', async () => {

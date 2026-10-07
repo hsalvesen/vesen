@@ -14,7 +14,7 @@ export default defineCommand({
   summary: 'list the commands, or explain one',
   synopsis: ['help [-a]', 'help COMMAND...', 'help keys'],
   description:
-    "With no COMMAND, lists the portfolio commands with what each does, then the names of the rest by category; with -a, every command with what it does. Tap a name to put it at the prompt. With a COMMAND, shows its options and examples, as 'COMMAND --help' does. 'help keys' lists the keys the terminal answers to.",
+    "With no COMMAND, lists the portfolio commands with what each does, then the names of the rest by category (on a narrow screen, the fun ones wait for -a); with -a, every command with what it does. Tap a name to put it at the prompt. With a COMMAND, shows its options and examples, as 'COMMAND --help' does. 'help keys' lists the keys the terminal answers to.",
   featured: true,
   flags: [{ short: 'a', long: 'all', description: 'list every command, each with what it does' }],
   args: [{ name: 'COMMAND', source: { kind: 'command' }, optional: true, variadic: true }],
@@ -36,7 +36,7 @@ export default defineCommand({
   async run(ctx) {
     const [help, registry] = await Promise.all([import('../../shell/help'), allCommands(ctx)]);
     if (ctx.args.length === 0) {
-      for (const block of help.helpIndex(registry, { all: ctx.opts.all === true })) await ctx.stdout.block(block);
+      for (const block of help.helpIndex(registry, { all: ctx.opts.all === true, columns: ctx.stdout.columns })) await ctx.stdout.block(block);
       return 0;
     }
     let status = 0;

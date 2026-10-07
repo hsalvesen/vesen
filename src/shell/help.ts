@@ -38,6 +38,9 @@ const BOLD: SpanStyle = { bold: true };
 /** Room for a summary beside each name in the help index, before the grid adds a column. */
 const SUMMARY_CH = 26;
 
+/** Below this many columns (a phone), the help index leaves the Fun row to `help --all`. */
+export const FUN_ROW_MIN_COLS = 60;
+
 // ── The index ──────────────────────────────────────────────────────────────────────────────
 
 /** A category's commands as one row: its title, then each name, tappable. */
@@ -71,24 +74,29 @@ const MORE_HELP: Line = [
  * The help index. By default it is short enough to read on a phone without scrolling: the
  * portfolio commands, the reason the site exists, each with its summary, then one row of names
  * for every other category. With `all`, every category gets the table. A name inserts itself
- * at the prompt when tapped; in a pipe the index is plain text.
+ * at the prompt when tapped; in a pipe the index is plain text. Under FUN_ROW_MIN_COLS
+ * `columns`, the Fun row is left to `help --all`, so the index still fits a phone.
  */
-export function helpIndex(registry: Registry, options: { readonly all?: boolean } = {}): Block[] {
+export function helpIndex(registry: Registry, options: { readonly all?: boolean; readonly columns?: number } = {}): Block[] {
   const blocks: Block[] = [];
   const widest = Math.max(1, ...registry.list().map((spec) => textWidth(spec.name)));
   // One column on a phone, two at 80 columns, three at 120.
   const minCh = widest + 2 + SUMMARY_CH;
+  const narrow = options.columns !== undefined && options.columns < FUN_ROW_MIN_COLS;
   const rows: Line[] = [];
+  let funLeftOut = false;
   for (const category of CATEGORY_ORDER) {
     const specs = registry.list({ category });
     if (specs.length === 0) continue;
     if (options.all === true || category === 'portfolio') blocks.push(...categoryTable(category, specs, minCh));
+    else if (category === 'fun' && narrow) funLeftOut = true;
     else rows.push(namesRow(category, specs));
   }
   if (rows.length > 0) blocks.push(out.lines([[], ...rows]));
   const more: Line[] = [[]];
   if (options.all !== true) {
-    more.push([out.run('help --all', 'help --all', STRONG), out.span(' lists every command with what it does.', MUTED)]);
+    const all = funLeftOut ? ' lists every command with what it does. Even the fun ones.' : ' lists every command with what it does.';
+    more.push([out.run('help --all', 'help --all', STRONG), out.span(all, MUTED)]);
   }
   more.push(MORE_HELP);
   // What vesen sends where, one tap away (docs/plan/10-tooling-hosting-docs.md, 0.10).
