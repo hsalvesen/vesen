@@ -104,14 +104,48 @@ describe('translatePosix', () => {
 });
 
 describe('guardRegex', () => {
-  it.each(['(a+)+$', '(a*)*', '(\\w+\\s?)*$', '(a|aa)+', '(a|a?)+', '(.*a){20}', '(x+x+)+y', '(?:a+){2,}', '(a|ab|abc)*d'])(
+  it.each([
+    '(a+)+$',
+    '(a*)*',
+    '(.*)*',
+    '(\\w+\\s?)*$',
+    '((ab)*c)+',
+    '(a|aa)+',
+    '(a|a?)+',
+    '(a|b+)*',
+    '(.*a){20}',
+    '(x+x+)+y',
+    '(x+y){2,}',
+    '(?:a+){2,}',
+    '(a+){2}',
+    '(a{1,9}){9}',
+    '(x{1,100}){1,100}',
+    '(a|ab|abc)*d',
+  ])(
     'refuses %s',
     (source) => {
       expect(() => guardRegex(source, 'u')).toThrow(RegexRefused);
     },
   );
 
-  it.each(['(ab)+', '(foo|bar)+', '(a|b)*c', '^\\w+$', 'a.*b', '(\\d{3})-(\\d{4})', '(ab?)?', '(.)\\1*', '(?:)*', 'x{1,3}y'])(
+  // Small bounded counts inside a bounded repeat, as in an IP address, can split a text only a few
+  // ways, so they pass: ([0-9]{1,3}\.){3} has 27.
+  it.each([
+    '(ab)+',
+    '(foo|bar)+',
+    '(a|b)*c',
+    '^\\w+$',
+    'a.*b',
+    '(\\d{3})-(\\d{4})',
+    '(ab?)?',
+    '(.)\\1*',
+    '(?:)*',
+    'x{1,3}y',
+    '([0-9]{1,3}\\.){3}[0-9]{1,3}',
+    '(ab{1,2}){2,4}',
+    '\\(a+\\)+',
+    '[(a+)+]',
+  ])(
     'allows %s',
     (source) => {
       expect(() => guardRegex(source, 'u')).not.toThrow();

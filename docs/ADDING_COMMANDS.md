@@ -15,7 +15,7 @@ Commands live in one of two places, and the choice decides when their code reach
 | Folder | `src/commands/<category>/<name>.ts` | `src/commands/more/<category>/<name>.ts` |
 | Loads | with the kernel, before the first line runs | in one `catalogue-*.js` chunk, once the page is idle or as soon as a name the kernel lacks is typed |
 | Budget (`npm run check:bundle`) | the kernel's 75 kB gzip, almost spent | the catalogue's 40 kB gzip |
-| Categories | portfolio, files, text, shell, system, network | text, files, system, network, fun, editor |
+| Categories | portfolio, files, text, shell, system, network | text, files, shell, system, network, fun, editor |
 
 **New commands go in the catalogue.** Every spec in the core adds to the kernel, which every line
 waits for. A catalogue spec adds nothing to it: `src/commands/index.ts` reaches the catalogue only
@@ -25,7 +25,9 @@ specs under `more/` with `import.meta.glob`. A new file there is picked up with 
 The core is for the few commands that cannot wait for the catalogue:
 
 - the portfolio commands and the starter chips, which a visitor taps in the first second;
-- the shell's own builtins, and `help`, `man` and the other commands that look commands up;
+- the builtins a login uses (`cd`, `export`, `alias`, `source`), and `help`, `man` and the other
+  commands that look commands up; builtins that are only typed, such as `read`, `time` and
+  `kill`, are in the catalogue's `shell` folder, marked `builtin` as the core's are;
 - a command with `opens()`, which opens a URL inside the Enter or tap gesture: that check runs
   before the line starts, so it sees only commands already registered.
 
@@ -151,8 +153,8 @@ Inside `run`:
   `npm run check:boundaries` enforces it. Avoid `AbortSignal.any` and `AbortSignal.timeout`,
   `Array.prototype.at`, `Object.hasOwn`, `Object.groupBy` and `Promise.withResolvers`: Instagram's
   browser on older iPhones lacks them.
-- **Regular expressions from the visitor** (grep, sed, expr, nl -bp and the like) go
-  through the one shared guard, `src/commands/lib/regex.ts`, never straight into `new RegExp`.
+- **Regular expressions from the visitor** (grep, sed, expr, nl -bp, pgrep and the like)
+  go through the one shared guard, `src/commands/lib/regex.ts`, never straight into `new RegExp`.
   A JavaScript regular expression cannot be interrupted, so one bad pattern would freeze the page.
   `compilePatterns(patterns, { syntax })` translates basic or extended regular expressions (or takes fixed
   strings, or JavaScript's own for `grep -P`) and calls `guardRegex`, which caps the pattern at

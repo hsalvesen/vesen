@@ -2,6 +2,7 @@
 // services are built and the stores are connected to the page. main.ts calls bootstrap() before
 // it mounts the app; nothing else has side effects at import time.
 import { get } from 'svelte/store';
+import { provideDomain } from '../commands/lib/domain';
 import { out } from '../output/model';
 import { applyCathode } from '../platform/crt';
 import { installChunkReload } from '../platform/chunkReload';
@@ -88,6 +89,8 @@ export function bootstrap({ window: win, build, banner }: BootOptions): Booted |
   const clipboard = createClipboard(win);
   // stock's market client, over this browser's storage; its chunk loads with the first quote.
   provideMarket(() => import('../services/market/client').then(({ createMarketClient }) => createMarketClient({ storage: storage.local })));
+  // The site's host name, for `hostname -f`.
+  provideDomain(win.location.hostname);
 
   // The CRT tier follows the quality setting and the device's own settings, which can change
   // while the page is open (reduced motion switched on, say).

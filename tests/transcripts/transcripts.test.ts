@@ -162,6 +162,39 @@ const SESSIONS: Readonly<Record<string, readonly string[]>> = {
   wc: ['wc README.md', 'wc -l .bashrc .profile', 'echo one two | wc', 'wc documents nope'],
   diff: ["printf 'a\\nb\\nc\\n' > old; printf 'a\\nB\\nc\\nd\\n' > new", 'diff old new', 'diff -u old new', 'diff -q old new', 'diff old nope'],
   sort: ['sort /etc/shells', 'cut -d : -f 7 /etc/passwd | sort | uniq -c', 'sort -t : -k 3,3n /etc/passwd', "printf 'b\\na\\n' | sort -c"],
+  // Wave C: the system's facts, from /proc, /etc and the browser's.
+  system: [
+    'uname -a; uname -snrm',
+    'hostname; hostname -f; hostname -i; hostname new',
+    'id; id -Gn; id has; id -n; id bob',
+    'groups; groups has nobody',
+    'who; who -b; who -q',
+    'w',
+    'tty; tty -s; echo $?',
+    'uptime; uptime -p; uptime -s',
+    'free; free -h; free -m -t -w',
+    'nproc; nproc --ignore=2; arch',
+    'lscpu',
+    'locale; LC_ALL=C locale | head -n 3; locale -a; locale charmap',
+    'lsb_release -a; lsb_release -sd; lsb_release',
+    'dmesg; dmesg -t | head -n 2; dmesg -c',
+    'finger has; finger; finger Salvesen root; finger bob',
+    'cal 10 2026; cal -m 2 2027; cal -3 1 2027; cal 13 2026; cal 0',
+  ],
+  // Wave C: the process table, signals and the commands that run other commands.
+  processes: [
+    'ps; ps aux; ps -ef; ps -p 1; ps -p 9 || echo none; ps -Z',
+    'timeout 5 ps -f',
+    'top -b -n 1; top',
+    'kill -l; kill -l 9 KILL 143; kill -s NOPE 1; kill 1; kill 99999; kill %1; kill abc; kill -0 $$; kill',
+    'pgrep vesh; pgrep -l -x init; pgrep -c nope; pgrep -a .; pgrep "(a+)+"; pgrep',
+    'pkill -0 -e vesh; pkill init; pkill nope',
+    'jobs; fg; bg; wait; wait 42',
+    "read A B <<< 'one two three'; echo \"[$A] [$B]\"; read <<< '  kept  '; echo \"[$REPLY]\"; read 1x",
+    'time true; time -p true; TIMEFORMAT=%R time true',
+    'timeout 0.2 sleep 3; echo $?; timeout 5 echo fast; timeout x true; timeout',
+    'nohup echo hi',
+  ],
 };
 
 interface Variant {

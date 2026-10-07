@@ -1,6 +1,6 @@
 // The catalogue's chunk: every spec file under src/commands/more/<category>/<name>.ts (text,
-// files, system, network, fun, editor), gathered here so they load together, after the kernel,
-// as one chunk (`catalogue-*.js`, budgeted by scripts/check-bundle.mjs). src/commands/index.ts
+// files, shell, system, network, fun, editor), gathered here so they load together, after the
+// kernel, as one chunk (`catalogue-*.js`, budgeted by scripts/check-bundle.mjs). src/commands/index.ts
 // reaches this module only through import(), so nothing here is in the kernel's chunk, and a new
 // command adds nothing to it. As in the core folders, a `name.run.ts` is a lazily loaded body,
 // with its long help as `doc`, and stays out of this chunk too.

@@ -235,30 +235,30 @@ describe('Tab completion and the completion row', () => {
 
   it('extends, lists on the second Tab, cycles on the next, and Escape puts back what was typed', async () => {
     await ready();
-    await type('ca');
+    await type('prin');
     await press('Tab');
-    expect(promptBox().value).toBe('cat');
+    expect(promptBox().value).toBe('print');
     await press('Tab');
     await settle();
     expect(screen.getByRole('listbox', { name: 'Completions' })).toBeInTheDocument();
-    expect(screen.getAllByRole('option').map((o) => o.textContent?.startsWith('cath') ? 'cathode' : 'cat')).toEqual(['cat', 'cathode']);
+    expect(screen.getAllByRole('option').map((o) => (o.textContent?.startsWith('printenv') ? 'printenv' : 'printf'))).toEqual(['printenv', 'printf']);
 
     await press('Tab');
     await settle();
-    expect(promptBox().value).toBe('cat');
+    expect(promptBox().value).toBe('printenv');
     expect(screen.getAllByRole('option')[0]?.getAttribute('aria-selected')).toBe('true');
     expect(promptBox().getAttribute('aria-activedescendant')).toBe('completion-list-0');
     await press('Tab');
     await settle();
-    expect(promptBox().value).toBe('cathode');
+    expect(promptBox().value).toBe('printf');
     await press('Tab', { shiftKey: true });
     await settle();
-    expect(promptBox().value).toBe('cat');
+    expect(promptBox().value).toBe('printenv');
 
     const escape = await press('Escape');
     await settle();
     expect(escape).toBe(false);
-    expect(promptBox().value).toBe('cat');
+    expect(promptBox().value).toBe('print');
     expect(screen.queryByRole('listbox', { name: 'Completions' })).toBeNull();
   });
 

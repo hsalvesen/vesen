@@ -1,0 +1,161 @@
+# processes: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ ps; ps aux; ps -ef; ps -p 1; ps -p 9 || echo none; ps -Z
+    PID TTY          TIME CMD
+   4242 pts/0    00:00:00 vesh
+   4243 pts/0    00:00:00 ps
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root           1  0.0  0.1 167812 11904 ?        Ss   20:00   0:00 /sbin/init
+guest       4242  0.0  0.1   8916  5248 pts/0    Ss   20:00   0:00 -vesh
+guest       4244  0.0  0.0   8714  1993 pts/0    R+   20:01   0:00 ps aux
+UID          PID    PPID  C STIME TTY          TIME CMD
+root           1       0  0 20:00 ?        00:00:00 /sbin/init
+guest       4242       1  0 20:00 pts/0    00:00:00 -vesh
+guest       4245    4242  0 20:01 pts/0    00:00:00 ps -ef
+    PID TTY          TIME CMD
+      1 ?        00:00:00 init
+    PID TTY          TIME CMD
+none
+! ps: error: unsupported SysV option
+! Try 'ps --help' for more information.
+? 1
+$ timeout 5 ps -f
+UID          PID    PPID  C STIME TTY          TIME CMD
+guest       4242       1  0 20:00 pts/0    00:00:00 -vesh
+guest       4250    4242  0 20:02 pts/0    00:00:00 timeout 5 ps -f
+guest       4251    4250  0 20:02 pts/0    00:00:00 ps -f
+? 0
+$ top -b -n 1; top
+[terminal]
+top - 20:03:00 up 3 min,  1 user,  load average: 0.25, 0.17, 0.10
+Tasks:   3 total,   1 running,   2 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  4.4 us,  1.6 sy,  0.0 ni, 93.8 id,  0.0 wa,  0.0 hi,  0.3 si,  0.0 st
+MiB Mem :   8192.0 total,   2703.4 free,   3686.4 used,   1622.0 buff/cache
+MiB Swap:      0.0 total,      0.0 free,      0.0 used.   4505.6 avail Mem
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+   4252 guest     20   0    7779   3337   2336 R   0.0   0.0   0:00.00 top
+      1 root      20   0  167812  11904   8333 S   0.0   0.1   0:00.00 init
+   4242 guest     20   0    8916   5248   3674 S   0.0   0.1   0:00.00 vesh
+top - 20:03:00 up 3 min,  1 user,  load average: 0.25, 0.17, 0.10
+Tasks:   3 total,   1 running,   2 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  4.4 us,  1.6 sy,  0.0 ni, 93.8 id,  0.0 wa,  0.0 hi,  0.3 si,  0.0 st
+MiB Mem :   8192.0 total,   2703.4 free,   3686.4 used,   1622.0 buff/cache
+MiB Swap:      0.0 total,      0.0 free,      0.0 used.   4505.6 avail Mem
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+   4253 guest     20   0    7779   3337   2336 R   0.0   0.0   0:00.00 top
+      1 root      20   0  167812  11904   8333 S   0.0   0.1   0:00.00 init
+   4242 guest     20   0    8916   5248   3674 S   0.0   0.1   0:00.00 vesh
+Interactive top isn't available in vesen: this is one snapshot, as `top -b -n 1` prints.
+? 0
+[pipe]
+top - 20:03:00 up 3 min,  1 user,  load average: 0.25, 0.17, 0.10
+Tasks:   3 total,   1 running,   2 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  4.4 us,  1.6 sy,  0.0 ni, 93.8 id,  0.0 wa,  0.0 hi,  0.3 si,  0.0 st
+MiB Mem :   8192.0 total,   2703.4 free,   3686.4 used,   1622.0 buff/cache
+MiB Swap:      0.0 total,      0.0 free,      0.0 used.   4505.6 avail Mem
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+   4252 guest     20   0    7779   3337   2336 R   0.0   0.0   0:00.00 top
+      1 root      20   0  167812  11904   8333 S   0.0   0.1   0:00.00 init
+   4242 guest     20   0    8916   5248   3674 S   0.0   0.1   0:00.00 vesh
+top - 20:03:00 up 3 min,  1 user,  load average: 0.25, 0.17, 0.10
+Tasks:   3 total,   1 running,   2 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  4.4 us,  1.6 sy,  0.0 ni, 93.8 id,  0.0 wa,  0.0 hi,  0.3 si,  0.0 st
+MiB Mem :   8192.0 total,   2703.4 free,   3686.4 used,   1622.0 buff/cache
+MiB Swap:      0.0 total,      0.0 free,      0.0 used.   4505.6 avail Mem
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+   4253 guest     20   0    7779   3337   2336 R   0.0   0.0   0:00.00 top
+      1 root      20   0  167812  11904   8333 S   0.0   0.1   0:00.00 init
+   4242 guest     20   0    8916   5248   3674 S   0.0   0.1   0:00.00 vesh
+? 0
+$ kill -l; kill -l 9 KILL 143; kill -s NOPE 1; kill 1; kill 99999; kill %1; kill abc; kill -0 $$; kill
+ 1) SIGHUP	 2) SIGINT	 3) SIGQUIT	 4) SIGILL	 5) SIGTRAP
+ 6) SIGABRT	 7) SIGBUS	 8) SIGFPE	 9) SIGKILL	10) SIGUSR1
+11) SIGSEGV	12) SIGUSR2	13) SIGPIPE	14) SIGALRM	15) SIGTERM
+16) SIGSTKFLT	17) SIGCHLD	18) SIGCONT	19) SIGSTOP	20) SIGTSTP
+21) SIGTTIN	22) SIGTTOU	23) SIGURG	24) SIGXCPU	25) SIGXFSZ
+26) SIGVTALRM	27) SIGPROF	28) SIGWINCH	29) SIGIO	30) SIGPWR
+31) SIGSYS
+KILL
+9
+TERM
+! vesen: kill: NOPE: invalid signal specification
+! vesen: kill: (1) - Operation not permitted
+! vesen: kill: (99999) - No such process
+! vesen: kill: %1: no such job
+! vesen: kill: abc: arguments must be process or job IDs
+! vesen: kill: usage: kill [-s sigspec | -n signum | -sigspec] pid | jobspec ... or kill -l [sigspec]
+? 2
+$ pgrep vesh; pgrep -l -x init; pgrep -c nope; pgrep -a .; pgrep "(a+)+"; pgrep
+4242
+1 init
+0
+1 /sbin/init
+4242 -vesh
+! pgrep: a repeated group with a repetition inside it, as in (a+)+, can take forever to match
+! pgrep: no matching criteria specified
+! Try 'pgrep --help' for more information.
+? 2
+$ pkill -0 -e vesh; pkill init; pkill nope
+vesh killed (pid 4242)
+! pkill: killing pid 1 failed: Operation not permitted
+? 1
+$ jobs; fg; bg; wait; wait 42
+[terminal]
+No jobs: vesen has no job control, so every line runs in the foreground.
+! vesen: fg: no job control
+! vesen: bg: no job control
+! vesen: wait: pid 42 is not a child of this shell
+? 127
+[pipe]
+! vesen: fg: no job control
+! vesen: bg: no job control
+! vesen: wait: pid 42 is not a child of this shell
+? 127
+$ read A B <<< 'one two three'; echo "[$A] [$B]"; read <<< '  kept  '; echo "[$REPLY]"; read 1x
+[one] [two three]
+[  kept  ]
+! vesen: read: `1x': not a valid identifier
+? 1
+$ time true; time -p true; TIMEFORMAT=%R time true
+[terminal]
+
+real	0m0.000s
+user	0m0.000s
+sys	0m0.000s
+real 0.00
+user 0.00
+sys 0.00
+0.000
+? 0
+[pipe]
+!
+! real	0m0.000s
+! user	0m0.000s
+! sys	0m0.000s
+! real 0.00
+! user 0.00
+! sys 0.00
+! 0.000
+? 0
+$ timeout 0.2 sleep 3; echo $?; timeout 5 echo fast; timeout x true; timeout
+124
+fast
+! timeout: invalid time interval 'x'
+! Try 'timeout --help' for more information.
+! timeout: missing operand
+! Try 'timeout --help' for more information.
+? 125
+$ nohup echo hi
+[terminal]
+nohup: ignoring input; the output stays on the screen, as vesen never hangs up
+hi
+? 0
+[pipe]
+hi
+? 0

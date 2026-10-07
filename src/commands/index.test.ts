@@ -20,13 +20,15 @@ describe('the command catalogue', () => {
     // Each wave adds to it.
     const catalogue = await loadCatalogue();
     expect(catalogue.map((found) => found.name).sort()).toEqual([
-      'base64', 'basename', 'bc', 'chgrp', 'chmod', 'chown', 'column', 'cut', 'df', 'diff', 'dirname', 'du', 'expr', 'file', 'find',
-      'fold', 'grep', 'head', 'md5sum', 'mktemp', 'nl', 'readlink', 'realpath', 'rev', 'sed', 'seq', 'sha1sum', 'sha256sum',
-      'sha512sum', 'sort', 'sync', 'tail', 'tee', 'tr', 'tree', 'truncate', 'uniq', 'wc', 'xargs', 'yes',
+      'arch', 'base64', 'basename', 'bc', 'bg', 'cal', 'chgrp', 'chmod', 'chown', 'column', 'cut', 'df', 'diff', 'dirname', 'dmesg',
+      'du', 'expr', 'fg', 'file', 'find', 'finger', 'fold', 'free', 'grep', 'groups', 'head', 'hostname', 'id', 'jobs', 'kill',
+      'locale', 'lsb_release', 'lscpu', 'md5sum', 'mktemp', 'nl', 'nohup', 'nproc', 'pgrep', 'pkill', 'ps', 'read', 'readlink',
+      'realpath', 'rev', 'sed', 'seq', 'sha1sum', 'sha256sum', 'sha512sum', 'sort', 'sync', 'tail', 'tee', 'time', 'timeout', 'top',
+      'tr', 'tree', 'truncate', 'tty', 'uname', 'uniq', 'uptime', 'w', 'wait', 'watch', 'wc', 'who', 'xargs', 'yes',
     ]);
     const core = new Set(specFiles().map((found) => found.name));
     for (const found of catalogue) expect(core.has(found.name), found.name).toBe(false);
-    for (const found of catalogue) expect(['text', 'files', 'system', 'network', 'fun', 'editor'], found.name).toContain(found.category);
+    for (const found of catalogue) expect(['text', 'files', 'shell', 'system', 'network', 'fun', 'editor'], found.name).toContain(found.category);
   });
 
   it('registers the catalogue beside the kernel with no clash, and passes the registry lint', async () => {
@@ -45,7 +47,8 @@ describe('the command catalogue', () => {
     expect(registry.get('rev')?.summary).toBe('stand-in');
     await registry.whenComplete();
     expect(registry.get('rev')?.summary).toBe('reverse the characters of each line');
-    const catalogue = (await loadCatalogue()).map((found) => found.name);
+    // The extra and the spec file, then the catalogue's names once each: rev's stand-in is gone.
+    const catalogue = (await loadCatalogue()).filter((found) => found.hidden !== true).flatMap((found) => [found.name, ...(found.aliases ?? [])]);
     expect(registry.names()).toEqual(['cat', 'ls', ...catalogue].sort((a, b) => a.localeCompare(b)));
   });
 

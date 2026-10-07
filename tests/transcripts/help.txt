@@ -22,8 +22,8 @@ whoami    meet the developer; in a
 
 Files: ls cd cat cp find tree +21 more
 Text: echo grep sed sort head +22 more
-Shell: help man history clear +23 more
-System: date debug fastfetch +6 more
+Shell: help man history clear +33 more
+System: fastfetch uname ps top +26 more
 Network: curl fetch speedtest +2 more
 
 help --all lists every command with what it does.
@@ -44,8 +44,8 @@ whoami    meet the developer; in a
 
 Files: ls cd cat basename chgrp chmod chown cp df dirname du file find ln mkdir mktemp mv pwd readlink realpath rm rmdir stat sync touch tree truncate
 Text: echo grep sed sort head tail wc cut tr uniq diff xargs printf base64 bc column expr fold md5sum nl rev seq sha1sum sha256sum sha512sum tee yes
-Shell: help man history clear alias apropos command env exit export fail false hang late printenv reset set sleep source sudo test true type unalias +3 more
-System: date debug fastfetch keys open poweroff privacy reboot shutdown
+Shell: help man history clear alias apropos command env exit export fail false hang late printenv reset set sleep source sudo test true type unalias +13 more
+System: fastfetch uname ps top date arch cal debug dmesg finger free groups hostname id keys locale open poweroff privacy reboot shutdown +9 more
 Network: curl fetch speedtest stock weather
 
 help --all lists every command with what it does.
@@ -63,8 +63,8 @@ repo      open this terminal's source   theme     change the colour theme       
 
 Files: ls cd cat basename chgrp chmod chown cp df dirname du file find ln mkdir mktemp mv pwd readlink realpath rm rmdir stat sync touch tree truncate
 Text: echo grep sed sort head tail wc cut tr uniq diff xargs printf base64 bc column expr fold md5sum nl rev seq sha1sum sha256sum sha512sum tee yes
-Shell: help man history clear alias apropos command env exit export fail false hang late printenv reset set sleep source sudo test true type unalias unset whatis which
-System: date debug fastfetch keys open poweroff privacy reboot shutdown
+Shell: help man history clear alias apropos bg command env exit export fail false fg hang jobs kill late nohup printenv read reset set sleep source sudo test time timeout true type unalias unset wait watch whatis which
+System: fastfetch uname ps top date arch cal debug dmesg finger free groups hostname id keys locale lsb_release lscpu nproc open pgrep pkill poweroff privacy reboot shutdown tty uptime w who
 Network: curl fetch speedtest stock weather
 
 help --all lists every command with what it does.
@@ -85,8 +85,8 @@ whoami    meet the developer; in a pipe, your user name
 
 Files: ls cd cat basename chgrp chmod chown cp df dirname du file find ln mkdir mktemp mv pwd readlink realpath rm rmdir stat sync touch tree truncate
 Text: echo grep sed sort head tail wc cut tr uniq diff xargs printf base64 bc column expr fold md5sum nl rev seq sha1sum sha256sum sha512sum tee yes
-Shell: help man history clear alias apropos command env exit export fail false hang late printenv reset set sleep source sudo test true type unalias unset whatis which
-System: date debug fastfetch keys open poweroff privacy reboot shutdown
+Shell: help man history clear alias apropos bg command env exit export fail false fg hang jobs kill late nohup printenv read reset set sleep source sudo test time timeout true type unalias unset wait watch whatis which
+System: fastfetch uname ps top date arch cal debug dmesg finger free groups hostname id keys locale lsb_release lscpu nproc open pgrep pkill poweroff privacy reboot shutdown tty uptime w who
 Network: curl fetch speedtest stock weather
 
 help --all lists every command with what it does.

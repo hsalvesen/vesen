@@ -5,7 +5,8 @@
 //
 //   - caps the pattern's length (MAX_PATTERN);
 //   - refuses what is plainly catastrophic: a repeated group with a repetition inside it,
-//     (a+)+ or (\w*\s?)*, and a repeated choice whose branches can match the same text, (a|aa)*;
+//     (a+)+ or (\w*\s?)*, unless every count is small and bounded, as in ([0-9]{1,3}\.){3}, and
+//     a repeated choice whose branches can match the same text, (a|aa)*;
 //   - caps how long a line it may be run against (SafeRegex.limit), from how many open-ended
 //     repetitions it has: n characters and d of them can cost about n^(d+1)/(d+1)! steps, held
 //     under STEP_BUDGET, and never more than MAX_SUBJECT characters (the input cap).
@@ -27,6 +28,12 @@ const MIN_LIMIT = 32;
 
 /** A repetition with no upper bound, or one above this, counts as open-ended. */
 const OPEN_REPEAT = 16;
+
+/**
+ * The most ways a bounded repetition of a group with counts inside it may split its text, as in
+ * ([0-9]{1,3}\.){3} (27 ways); more, as in (a{1,9}){9}, is refused like (a+)+.
+ */
+const NESTED_WAYS = 10_000;
 
 /** A pattern that is not valid; the message is GNU's, such as "Unmatched ( or \\(". */
 export class RegexSyntaxError extends Error {
@@ -87,6 +94,8 @@ interface Info {
   readonly branches?: readonly Info[];
   /** A group (as opposed to one character, a class or an escape). */
   readonly group?: boolean;
+  /** How many ways its counts can divide a text between them: 1 with none, Infinity when open-ended. */
+  readonly ways: number;
 }
 
 interface Scan {
@@ -127,8 +136,8 @@ function prefixFree(words: readonly string[]): boolean {
 const NESTED = 'a repeated group with a repetition inside it, as in (a+)+, can take forever to match';
 const AMBIGUOUS = 'a repeated choice whose branches can match the same text, as in (a|aa)*, can take forever to match';
 
-const OPAQUE: Info = { quantified: false, nullable: false, first: ANY, literal: null };
-const EMPTY: Info = { quantified: false, nullable: true, first: NONE, literal: '' };
+const OPAQUE: Info = { quantified: false, nullable: false, first: ANY, literal: null, ways: 1 };
+const EMPTY: Info = { quantified: false, nullable: true, first: NONE, literal: '', ways: 1 };
 
 /** Reads `\…` at s.i (the backslash). */
 function readEscape(s: Scan): Info {
@@ -149,7 +158,7 @@ function readEscape(s: Scan): Info {
     return OPAQUE;
   }
   // An escaped punctuation character stands for itself.
-  return { quantified: false, nullable: false, first: charFirst(c, s.fold), literal: c };
+  return { quantified: false, nullable: false, first: charFirst(c, s.fold), literal: c, ways: 1 };
 }
 
 /** Skips a character class at s.i (the `[`). */
@@ -198,12 +207,19 @@ function readAlternatives(s: Scan): Info {
     first: branches.reduce<First>((all, b) => union(all, b.first), NONE),
     literal: null,
     branches,
+    ways: branches.reduce((sum, b) => sum + b.ways, 0),
   };
 }
 
+/** How many ways `atom` repeated between `min` and `max` times can divide a text, at most. */
+function repeatWays(atom: Info, quant: { readonly min: number; readonly max: number }): number {
+  if (quant.max > OPEN_REPEAT) return Infinity;
+  return (quant.max - quant.min + 1) * atom.ways ** quant.max;
+}
+
 /** Refuses a repetition (max > 1) of `atom` that could backtrack for ever. */
-function checkRepeat(s: Scan, atom: Info): void {
-  if (atom.quantified) throw new RegexRefused(NESTED);
+function checkRepeat(s: Scan, atom: Info, quant: { readonly min: number; readonly max: number }): void {
+  if (atom.quantified && !(repeatWays(atom, quant) <= NESTED_WAYS)) throw new RegexRefused(NESTED);
   const branches = atom.branches;
   if (branches !== undefined) {
     if (branches.some((b) => b.nullable)) throw new RegexRefused(AMBIGUOUS);
@@ -229,6 +245,7 @@ function readSequence(s: Scan): Info {
   let nullable = true;
   let first: First = NONE;
   let text: string | null = '';
+  let ways = 1;
   while (s.i < s.src.length) {
     const c = s.src.charAt(s.i);
     if (c === '|' || c === ')') break;
@@ -243,7 +260,7 @@ function readSequence(s: Scan): Info {
       }
       const inner = readAlternatives(s);
       s.i += 1;
-      atom = lookaround ? { ...EMPTY, quantified: inner.quantified, literal: null } : { ...inner, group: true };
+      atom = lookaround ? { ...EMPTY, quantified: inner.quantified, literal: null, ways: inner.ways } : { ...inner, group: true };
     } else if (c === '[') {
       skipClass(s);
       atom = OPAQUE;
@@ -258,23 +275,24 @@ function readSequence(s: Scan): Info {
     } else {
       const ch = String.fromCodePoint(s.src.codePointAt(s.i) ?? 0);
       s.i += ch.length;
-      atom = { quantified: false, nullable: false, first: charFirst(ch, s.fold), literal: ch };
+      atom = { quantified: false, nullable: false, first: charFirst(ch, s.fold), literal: ch, ways: 1 };
     }
     const quant = readQuantifier(s);
     if (quant !== null) {
       if (quant.max > 1) {
-        checkRepeat(s, atom);
+        checkRepeat(s, atom, quant);
         if (quant.max > OPEN_REPEAT) s.open += 1;
       }
-      atom = { quantified: true, nullable: atom.nullable || quant.min === 0, first: atom.first, literal: null };
+      atom = { quantified: true, nullable: atom.nullable || quant.min === 0, first: atom.first, literal: null, ways: repeatWays(atom, quant) };
     }
     // The sequence starts with what its leading nullable parts and first solid part start with.
     if (nullable) first = union(first, atom.first);
     nullable = nullable && atom.nullable;
     quantified = quantified || atom.quantified;
     text = text !== null && atom.literal !== null ? text + atom.literal : null;
+    ways *= atom.ways;
   }
-  return { quantified, nullable, first, literal: text };
+  return { quantified, nullable, first, literal: text, ways };
 }
 
 function factorial(n: number): number {
