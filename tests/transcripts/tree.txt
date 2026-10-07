@@ -1,0 +1,144 @@
+# tree: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ tree projects
+projects
+├── learning
+│   └── javascript-basics.js
+├── portfolio
+│   └── index.html
+└── vesen
+    └── info.txt
+
+3 directories, 3 files
+? 0
+$ tree -L 1 /
+/
+├── bin -> usr/bin
+├── boot
+├── dev
+├── etc
+├── home
+├── lib
+├── media
+├── mnt
+├── opt
+├── proc
+├── root
+├── sys
+├── tmp
+├── usr
+└── var
+
+15 directories, 0 files
+? 0
+$ tree -a -I .ssh ~
+/home/guest
+├── .bash_history
+├── .bashrc
+├── .gitconfig
+├── .local
+│   └── share
+│       └── applications
+├── .profile
+├── .vimrc
+├── bin
+│   ├── deploy
+│   └── my-script
+├── config
+│   └── app.conf
+├── desktop
+│   └── shortcuts.txt
+├── documents
+│   └── linux.txt
+├── downloads
+│   ├── README-download.txt
+│   └── software.tar.gz
+├── history.txt
+├── music
+│   └── playlist.m3u
+├── pictures
+│   └── vacation.jpg
+├── projects
+│   ├── learning
+│   │   └── javascript-basics.js
+│   ├── portfolio
+│   │   └── index.html
+│   └── vesen
+│       └── info.txt
+├── public
+│   └── shared-file.txt
+├── README.md
+├── scripts
+│   ├── backup.sh
+│   └── setup.py
+├── src
+│   └── main.c
+├── templates
+│   └── document-template.txt
+└── videos
+    └── tutorial.mp4
+
+19 directories, 25 files
+? 0
+$ tree -df projects
+projects
+├── projects/learning
+├── projects/portfolio
+└── projects/vesen
+
+3 directories
+? 0
+$ tree --dirsfirst --noreport /home
+/home
+├── guest
+│   ├── bin
+│   │   ├── deploy
+│   │   └── my-script
+│   ├── config
+│   │   └── app.conf
+│   ├── desktop
+│   │   └── shortcuts.txt
+│   ├── documents
+│   │   └── linux.txt
+│   ├── downloads
+│   │   ├── README-download.txt
+│   │   └── software.tar.gz
+│   ├── music
+│   │   └── playlist.m3u
+│   ├── pictures
+│   │   └── vacation.jpg
+│   ├── projects
+│   │   ├── learning
+│   │   │   └── javascript-basics.js
+│   │   ├── portfolio
+│   │   │   └── index.html
+│   │   └── vesen
+│   │       └── info.txt
+│   ├── public
+│   │   └── shared-file.txt
+│   ├── scripts
+│   │   ├── backup.sh
+│   │   └── setup.py
+│   ├── src
+│   │   └── main.c
+│   ├── templates
+│   │   └── document-template.txt
+│   ├── videos
+│   │   └── tutorial.mp4
+│   ├── history.txt
+│   └── README.md
+├── has
+│   ├── about.md
+│   └── projects.md
+└── user -> guest
+? 0
+$ tree nope
+nope  [error opening dir]
+
+0 directories, 0 files
+? 2
+$ tree -L 0
+! tree: Invalid level, must be greater than 0.
+? 1

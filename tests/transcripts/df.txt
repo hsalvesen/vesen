@@ -1,0 +1,20 @@
+# df: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ df
+Filesystem     1K-blocks  Used Available Use% Mounted on
+vesenfs              512    12       501   3% /
+? 0
+$ df -h
+Filesystem      Size  Used Avail Use% Mounted on
+vesenfs         512K   12K  501K   3% /
+? 0
+$ df -hT ~
+Filesystem     Type     Size  Used Avail Use% Mounted on
+vesenfs        vesenfs  512K   12K  501K   3% /
+? 0
+$ df nope
+! df: nope: No such file or directory
+! df: no file systems processed
+? 1

@@ -1,0 +1,15 @@
+# dirname: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ dirname /usr/bin/ls documents/linux.txt README.md / a/
+/usr/bin
+documents
+.
+/
+.
+? 0
+$ dirname
+! dirname: missing operand
+! Try 'dirname --help' for more information.
+? 1

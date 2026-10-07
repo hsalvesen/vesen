@@ -1,0 +1,48 @@
+# find: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ find . -name '*.txt'
+./history.txt
+./documents/linux.txt
+./projects/vesen/info.txt
+./desktop/shortcuts.txt
+./downloads/README-download.txt
+./public/shared-file.txt
+./templates/document-template.txt
+? 0
+$ find projects -maxdepth 1 -type d
+projects
+projects/vesen
+projects/portfolio
+projects/learning
+? 0
+$ find . -name .ssh -prune -o -name 'c*' -print
+./config
+? 0
+$ find scripts -type f -exec echo found: {} \;
+found: scripts/backup.sh
+found: scripts/setup.py
+? 0
+$ find src bin -type f -exec ls -l {} +
+-rwxr-xr-x 1 guest guest 43 Oct  6 11:00 bin/deploy
+-rwxr-xr-x 1 guest guest 43 Oct  6 11:00 bin/my-script
+-rw-r--r-- 1 guest guest 79 Oct  6 11:00 src/main.c
+? 0
+$ find src/main.c -ls
+  6019630      4 -rw-r--r--   1 guest    guest          79 Oct  6 11:00 src/main.c
+? 0
+$ find downloads -type f -delete; ls downloads
+? 0
+$ find nope /root
+! find: 'nope': No such file or directory
+/root
+! find: '/root': Permission denied
+? 1
+$ find . -name a b
+! find: paths must precede expression: `b'
+! find: possible unquoted pattern after predicate `-name'?
+? 1
+$ find . \( -name a
+! find: invalid expression; I was expecting to find a ')' somewhere but did not see one.
+? 1

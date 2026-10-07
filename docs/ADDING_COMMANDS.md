@@ -86,6 +86,7 @@ The file's default export is the spec, made with `defineCommand`, which insists 
 | `examples` | Lines that show the command at work; see below. |
 | `seeAlso` | Related commands, for `man`. |
 | `hidden` | Left out of `help`, Tab and the chips; it still runs when typed. |
+| `featured` | Named in `help`'s short index even when its category's row is too long to name every catalogue command; the others there are counted in `+N more`, and `help --all` lists them all. |
 | `builtin` | Changes the session (`cd`, `export`): runs in the shell itself, and a usage error exits 2. |
 | `network` | Fails fast offline, and gets a 15 s budget for the whole command (`budgetMs` to change it) on top of the 8 s per request. |
 | `loadingLabel` | The status line while it runs, such as `fetching forecast for Oslo`. |
@@ -152,7 +153,13 @@ Inside `run`:
   shared guard in `src/commands/lib`, which caps the pattern and the input and refuses patterns that
   could run for ever, such as `(a+)+`. A JavaScript regular expression cannot be interrupted, so
   one bad pattern would freeze the page. The first command that takes a pattern adds the guard
-  there; every later one uses it.
+  there; every later one uses it. A wildcard (`find -name`, `tree -I`) is not a regular expression:
+  match it with `fnmatch` in `src/commands/lib/fnmatch.ts`, which never backtracks past the last
+  star and so needs no guard.
+- **Options that are not getopt's.** A command whose words may start with a dash without being
+  options (`chmod -w file`, `find . -name x`) sets `rawArgs` on its spec and reads its own words;
+  `readOptions` in `src/commands/lib/raw-options.ts` reads the options among them as getopt would,
+  with getopt's error messages.
 - **Original content.** Cows, fortunes, fonts and art are written for vesen, not copied, and
   credit no other project.
 - **Honest network commands.** A browser cannot send ICMP or raw DNS: say what is done instead

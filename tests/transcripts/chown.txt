@@ -1,0 +1,23 @@
+# chown: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ chown guest:guest README.md
+? 0
+$ chown -v guest README.md
+ownership of 'README.md' retained as guest
+? 0
+$ chown has README.md
+! chown: changing ownership of 'README.md': Operation not permitted
+? 1
+$ chown -v :has history.txt
+! chown: changing group of 'history.txt': Operation not permitted
+failed to change group of 'history.txt' from guest to has
+? 1
+$ chown bob README.md
+! chown: invalid user: 'bob'
+? 1
+$ chown guest
+! chown: missing operand after 'guest'
+! Try 'chown --help' for more information.
+? 1

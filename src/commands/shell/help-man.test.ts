@@ -5,6 +5,7 @@ import { runLine, session } from '../../../tests/harness';
 import { isTrustedAction, type Block } from '../../output/model';
 import { plain } from '../../output/plain';
 import { withDoc } from '../../shell/help';
+import { fromCatalogue } from '../../shell/registry';
 import { allSpecFiles } from '../index';
 
 const text = (blocks: readonly Block[]): string => blocks.map(plain).join('');
@@ -20,8 +21,16 @@ describe('help', () => {
     for (const spec of s.app.shell.registry.list({ category: 'portfolio' })) {
       expect(listed, spec.name).toMatch(new RegExp(`^${literal(spec.name)} +${literal(spec.summary)}$`, 'm'));
     }
-    const files = s.app.shell.registry.list({ category: 'files' }).map((spec) => spec.name);
-    expect(listed).toContain(`Files: ${files.join(' ')}`);
+    // A long row names the kernel's commands and the catalogue's featured ones, and counts the rest.
+    const files = s.app.shell.registry.list({ category: 'files' });
+    const named = files.filter((spec) => spec.featured === true || !fromCatalogue(spec)).map((spec) => spec.name);
+    expect(named).toEqual(expect.arrayContaining(['ls', 'cd', 'cat', 'find', 'tree']));
+    expect(named).not.toContain('chmod');
+    expect(listed).toContain(`Files: ${named.join(' ')} +${files.length - named.length} more`);
+    const count = result.blocks.flatMap((block) => (block.type === 'lines' ? block.lines.flat() : [])).find((span) => span.text.endsWith(' more'));
+    expect(count?.action).toMatchObject({ kind: 'run', line: 'help --all' });
+    // A short row names every command, the catalogue's too.
+    expect(listed).toMatch(/^Text: .*\brev\b/m);
     expect(listed).not.toContain('list directory contents');
     expect(listed).toContain('help --all lists every command with what it does.');
     // It fits a phone's screen: the portfolio is never scrolled out of sight by the rest.
@@ -56,7 +65,7 @@ describe('help', () => {
 
   it('is plain text in a pipe', async () => {
     expect((await runLine('help -a', { tty: false })).stdoutPlain).toMatch(/^ls +list directory contents$/m);
-    expect((await runLine('help', { tty: false })).stdoutPlain).toMatch(/^Files: cat cd /m);
+    expect((await runLine('help', { tty: false })).stdoutPlain).toMatch(/^Files: (?:\S+ )*cat cd /m);
   });
 
   it("shows a command's panels for help NAME, and says so for a topic it does not know", async () => {

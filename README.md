@@ -118,8 +118,9 @@ src/
 │                                 # stock with its card's words in stock/); lib/ is what they share: the
 │                                 # banner, the link cards, weather's way to its service, and qr's options
 │                                 # and payloads; more/ is the catalogue, the commands that load after the
-│                                 # kernel in a chunk of their own (text/rev so far; see
-│                                 # docs/ADDING_COMMANDS.md)
+│                                 # kernel in a chunk of their own (so far text/rev, and files/: chmod,
+│                                 # chown, chgrp, tree, find, du, df, basename, dirname, realpath,
+│                                 # readlink, mktemp, file, truncate, sync; see docs/ADDING_COMMANDS.md)
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette
 │                                 # where themes.json does not set them, and the contrast each must meet);

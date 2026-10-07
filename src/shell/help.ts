@@ -16,7 +16,7 @@ import { parseMarkup } from '../output/markup';
 import { out, textWidth, type Block, type Line, type Span, type SpanStyle } from '../output/model';
 import { flagKey } from './flags';
 import { KEY_BINDINGS, TOUCH_BINDINGS, type KeyBinding } from './keys';
-import { CATEGORY_ORDER } from './registry';
+import { CATEGORY_ORDER, fromCatalogue } from './registry';
 import type { ArgSpec, Category, CommandDoc, CommandSpec, FlagSpec, Registry } from './types';
 
 export const CATEGORY_TITLES: Readonly<Record<Category, string>> = {
@@ -40,13 +40,28 @@ const SUMMARY_CH = 26;
 
 // ── The index ──────────────────────────────────────────────────────────────────────────────
 
-/** A category's commands as one row: its title, then each name, tappable. */
+/** The most characters of names a row of the help index shows in full: two lines on a phone. */
+const ROW_CH = 64;
+
+/**
+ * A category's commands as one row: its title, then each name, tappable. When they would take
+ * more than ROW_CH, the catalogue's commands are named only when featured, and the rest are
+ * counted in a `+N more` that runs help --all, so the index keeps fitting a phone's screen as the
+ * catalogue grows.
+ */
 function namesRow(category: Category, specs: readonly CommandSpec[]): Span[] {
   const row: Span[] = [out.span(CATEGORY_TITLES[category], HEADING), out.span(': ', HEADING)];
-  specs.forEach((spec, i) => {
+  const fits = specs.map((spec) => spec.name).join(' ').length <= ROW_CH;
+  const named = fits ? specs : specs.filter((spec) => spec.featured === true || !fromCatalogue(spec));
+  named.forEach((spec, i) => {
     if (i > 0) row.push(out.span(' '));
     row.push(out.insert(spec.name, `${spec.name} `, STRONG));
   });
+  const more = specs.length - named.length;
+  if (more > 0) {
+    if (named.length > 0) row.push(out.span(' '));
+    row.push(out.run(`+${more} more`, 'help --all', MUTED));
+  }
   return row;
 }
 
@@ -70,8 +85,8 @@ const MORE_HELP: Line = [
 /**
  * The help index. By default it is short enough to read on a phone without scrolling: the
  * portfolio commands, the reason the site exists, each with its summary, then one row of names
- * for every other category. With `all`, every category gets the table. A name inserts itself
- * at the prompt when tapped; in a pipe the index is plain text.
+ * for every other category (see namesRow). With `all`, every category gets the table. A name
+ * inserts itself at the prompt when tapped; in a pipe the index is plain text.
  */
 export function helpIndex(registry: Registry, options: { readonly all?: boolean } = {}): Block[] {
   const blocks: Block[] = [];

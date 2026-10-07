@@ -1,0 +1,38 @@
+# file: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ file *
+bin:         directory
+config:      directory
+desktop:     directory
+documents:   directory
+downloads:   directory
+history.txt: Unicode text, UTF-8 text
+music:       directory
+pictures:    directory
+projects:    directory
+public:      directory
+README.md:   Markdown document, ASCII text
+scripts:     directory
+src:         directory
+templates:   directory
+videos:      directory
+? 0
+$ file .ssh/* /bin /dev/null /proc/cpuinfo /etc/shadow nope
+.ssh/config:      ASCII text
+.ssh/known_hosts: ASCII text
+/bin:             symbolic link to usr/bin
+/dev/null:        character special (1/3)
+/proc/cpuinfo:    empty
+/etc/shadow:      regular file, no read permission
+nope:             cannot open `nope' (No such file or directory)
+? 0
+$ file -i README.md src/main.c
+README.md:  text/markdown; charset=us-ascii
+src/main.c: text/x-c; charset=us-ascii
+? 0
+$ file
+! Usage: file [-bhiL] [--mime-type] FILE...
+! Try 'file --help' for more information.
+? 1

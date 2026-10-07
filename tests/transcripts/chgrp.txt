@@ -1,0 +1,15 @@
+# chgrp: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ chgrp -v guest README.md
+group of 'README.md' retained as guest
+? 0
+$ chgrp -R guest projects
+? 0
+$ chgrp has README.md
+! chgrp: changing group of 'README.md': Operation not permitted
+? 1
+$ chgrp bob README.md
+! chgrp: invalid group: 'bob'
+? 1

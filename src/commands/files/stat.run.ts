@@ -6,7 +6,7 @@ import { basename } from '../../vfs/path';
 import type { Stat } from '../../vfs/types';
 import { unescape } from '../lib/escapes';
 import { reason } from '../lib/files';
-import { DEVICE_NUMBERS, fileType, kibBlocks, modeString, octalMode, statDate } from '../lib/listing';
+import { DEVICE_NUMBERS, fileType, inodeOf, kibBlocks, modeString, octalMode, statDate } from '../lib/listing';
 
 /** What --help, help and man say about stat, besides its spec (stat.ts). */
 export const doc: CommandDoc = {
@@ -20,16 +20,6 @@ export const doc: CommandDoc = {
     { heading: 'EXIT STATUS', body: '0 when every FILE was found, 1 otherwise.' },
   ],
 };
-
-/** A stable inode number for a path, so stat says the same thing twice. */
-function inode(path: string): number {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < path.length; i += 1) {
-    hash ^= path.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return 1_000_000 + (hash % 9_000_000);
-}
 
 /** The device every file is on: one root file system. */
 const DEVICE = { major: 8, minor: 1 };
@@ -71,7 +61,7 @@ function directive(letter: string, facts: Facts): string | null {
     case 'h':
       return String(stat.nlink);
     case 'i':
-      return String(inode(stat.path));
+      return String(inodeOf(stat.path));
     case 'n':
       return facts.typed;
     case 'N':
@@ -121,7 +111,7 @@ function describe(facts: Facts): string {
   return [
     `  File: ${name}`,
     `  Size: ${String(stat.size).padEnd(10)}\tBlocks: ${String(kibBlocks(stat) * 2).padEnd(10)} IO Block: ${String(IO_BLOCK).padEnd(6)} ${fileType(stat)}`,
-    `Device: ${DEVICE.major},${DEVICE.minor}\tInode: ${String(inode(stat.path)).padEnd(11)} ${device}`,
+    `Device: ${DEVICE.major},${DEVICE.minor}\tInode: ${String(inodeOf(stat.path)).padEnd(11)} ${device}`,
     `Access: (${octalMode(stat.mode).padStart(4, '0')}/${modeString(stat)})  Uid: (${String(stat.uid).padStart(5)}/${stat.owner.padStart(8)})   Gid: (${String(stat.gid).padStart(5)}/${stat.group.padStart(8)})`,
     `Access: ${date}`,
     `Modify: ${date}`,
