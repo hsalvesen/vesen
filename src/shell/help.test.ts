@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isTrustedAction, lineText, type Block } from '../output/model';
+import { isTrustedAction, lineText, type Block, type Line } from '../output/model';
 import { plain } from '../output/plain';
 import {
   apropos,
@@ -8,7 +8,6 @@ import {
   flagLabel,
   helpIndex,
   keysHelp,
-  ROW_BUDGET,
   manPage,
   usageLines,
   vesenPage,
@@ -69,25 +68,39 @@ describe('the help index', () => {
     expect(isTrustedAction(files?.[2]?.action)).toBe(true);
   });
 
-  it('keeps a long row to what fits on a phone, the ranked commands first, and says how many more', () => {
+  it('cuts a long row to fit the terminal, ranked and featured names kept, with +N more for help --all', () => {
     const many: CommandSpec[] = Array.from({ length: 30 }, (_, i) => ({
       name: `cmd${String(i).padStart(2, '0')}`,
       category: 'text',
       summary: 'a command',
       run: () => 0,
     }));
-    const ranked: CommandSpec[] = [
+    const kept: CommandSpec[] = [
       { name: 'zeta', category: 'text', summary: 'ranked second', helpRank: 2, run: () => 0 },
       { name: 'yak', category: 'text', summary: 'ranked first', helpRank: 1, run: () => 0 },
+      { name: 'xylo', category: 'text', summary: 'featured', featured: true, run: () => 0 },
     ];
-    const rows = helpIndex(new CommandRegistry([...many, ...ranked])).flatMap((block) => (block.type === 'lines' ? block.lines : []));
-    const row = rows.find((line) => line[0]?.text === 'Text');
-    const names = (row ?? []).filter((span) => span.action !== undefined).map((span) => span.text);
-    expect(names.slice(0, 3)).toEqual(['yak', 'zeta', 'cmd00']);
-    expect(names.join(' ').length).toBeLessThanOrEqual(ROW_BUDGET);
-    expect(lineText(row ?? []).endsWith(` +${32 - names.length} more`)).toBe(true);
+    const big = new CommandRegistry([...many, ...kept]);
+    const rowAt = (columns?: number): Line =>
+      helpIndex(big, columns === undefined ? {} : { columns })
+        .flatMap((block) => (block.type === 'lines' ? block.lines : []))
+        .find((row) => row[0]?.text === 'Text') ?? [];
+    // One line on a phone: the ranked names, then the featured one, then the rest by priority,
+    // shown ranked first and then by name.
+    const phone = rowAt(40);
+    expect(lineText(phone)).toBe('Text: yak zeta cmd00 cmd01 xylo +28 more');
+    expect(phone[phone.length - 1]).toMatchObject({ text: '+28 more', action: { kind: 'run', line: 'help --all' } });
+    expect(isTrustedAction(phone[phone.length - 1]?.action)).toBe(true);
+    // Two lines elsewhere, wrapped as words.
+    const desk = lineText(rowAt(80));
+    expect(desk).toMatch(/^Text: yak zeta cmd00 .* xylo \+\d+ more$/);
+    expect(desk.length).toBeGreaterThan(80);
+    expect(desk.length).toBeLessThanOrEqual(160);
+    expect(lineText(rowAt(120))).toMatch(/ cmd29 xylo$/);
+    // In a pipe, every name.
+    expect(lineText(rowAt())).toMatch(/^Text: yak zeta cmd00 .* cmd29 xylo$/);
     // A short row is whole, with no count.
-    expect(text(helpIndex(registry))).toContain('Files: ls\n');
+    expect(text(helpIndex(registry, { columns: 40 }))).toContain('Files: ls\n');
   });
 
   it('groups every visible command by category with --all, the portfolio first, each with its summary', () => {

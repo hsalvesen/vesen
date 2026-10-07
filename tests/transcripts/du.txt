@@ -1,0 +1,38 @@
+# du: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ du projects
+8	projects/vesen
+8	projects/portfolio
+8	projects/learning
+28	projects
+? 0
+$ du -ach projects
+4.0K	projects/vesen/info.txt
+8.0K	projects/vesen
+4.0K	projects/portfolio/index.html
+8.0K	projects/portfolio
+4.0K	projects/learning/javascript-basics.js
+8.0K	projects/learning
+28K	projects
+28K	total
+? 0
+$ du -sh ~ /usr
+188K	/home/guest
+876K	/usr
+? 0
+$ du -h -d 1 /home/guest/projects
+8.0K	/home/guest/projects/vesen
+8.0K	/home/guest/projects/portfolio
+8.0K	/home/guest/projects/learning
+28K	/home/guest/projects
+? 0
+$ du /root
+! du: cannot read directory '/root': Permission denied
+4	/root
+? 1
+$ du -sa
+! du: cannot both summarize and show all entries
+! Try 'du --help' for more information.
+? 1

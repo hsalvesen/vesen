@@ -30,6 +30,7 @@ export default defineCommand({
   name: 'cd',
   category: 'files',
   summary: 'change the working directory',
+  helpRank: 2,
   synopsis: ['cd [-L|-P] [DIR]', 'cd -'],
   description:
     "Changes the shell's working directory to DIR, or to $HOME when there is none. 'cd -' returns to the previous directory ($OLDPWD) and prints it. The prompt shows where you are.",

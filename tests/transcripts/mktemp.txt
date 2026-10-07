@@ -1,0 +1,26 @@
+# mktemp: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ mktemp
+/tmp/tmp.ffffffffff
+? 0
+$ mktemp -d
+/tmp/tmp.ghijklmnop
+? 0
+$ mktemp notes.XXXXXX
+notes.ffffff
+? 0
+$ ls -la /tmp
+total 12
+drwxrwxrwt  3 root  root  4096 Oct  6 20:02 .
+drwxr-xr-x 16 root  root  4096 Oct  6 11:00 ..
+-rw-------  1 guest guest    0 Oct  6 20:01 tmp.ffffffffff
+drwx------  2 guest guest 4096 Oct  6 20:02 tmp.ghijklmnop
+? 0
+$ mktemp fooXX
+! mktemp: too few X's in template 'fooXX'
+? 1
+$ mktemp /etc/xXXXX
+! mktemp: failed to create file via template '/etc/xXXXX': Permission denied
+? 1

@@ -85,8 +85,9 @@ The file's default export is the spec, made with `defineCommand`, which insists 
 | `subcommands` | `theme ls`, `theme set`: each with its own summary, flags and arguments. |
 | `examples` | Lines that show the command at work; see below. |
 | `seeAlso` | Related commands, for `man`. |
-| `helpRank` | Its place in its category's row of the short `help` index, lowest first. A row holds about two phone lines of names and says how many more there are, so in a long category rank the few a visitor reaches for first; the rest follow by name. |
+| `helpRank` | Its place in its category's row of the short `help` index, lowest first. A row keeps to one line on a phone and two elsewhere, then says how many more there are, so in a long category rank the few a visitor reaches for first; the rest follow by name. |
 | `hidden` | Left out of `help`, Tab and the chips; it still runs when typed. |
+| `featured` | Kept in `help`'s short index, after the ranked commands, when its category's row is too long to name everything; the kernel's commands come next and the catalogue's last, and the rest are counted in `+N more` (`help --all` lists them all). |
 | `builtin` | Changes the session (`cd`, `export`): runs in the shell itself, and a usage error exits 2. |
 | `network` | Fails fast offline, and gets a 15 s budget for the whole command (`budgetMs` to change it) on top of the 8 s per request. |
 | `loadingLabel` | The status line while it runs, such as `fetching forecast for Oslo`. |
@@ -150,7 +151,7 @@ Inside `run`:
   `npm run check:boundaries` enforces it. Avoid `AbortSignal.any` and `AbortSignal.timeout`,
   `Array.prototype.at`, `Object.hasOwn`, `Object.groupBy` and `Promise.withResolvers`: Instagram's
   browser on older iPhones lacks them.
-- **Regular expressions from the visitor** (grep, sed, expr, nl -bp, and later find -regex) go
+- **Regular expressions from the visitor** (grep, sed, expr, nl -bp and the like) go
   through the one shared guard, `src/commands/lib/regex.ts`, never straight into `new RegExp`.
   A JavaScript regular expression cannot be interrupted, so one bad pattern would freeze the page.
   `compilePatterns(patterns, { syntax })` translates basic or extended regular expressions (or takes fixed
@@ -166,6 +167,13 @@ Inside `run`:
   `yes | tool | head` ends at once), a last line without a newline kept that way, UTF-8 byte
   counts, coreutils' size suffixes (`2K`) and `pacer(ctx)`, which lets the page paint and ^C
   arrive during a long loop.
+- **Wildcards are not regular expressions.** A shell pattern (`find -name`, `tree -I`) is matched
+  with `fnmatch` in `src/commands/lib/fnmatch.ts`, which never backtracks past the last star and so
+  needs no guard.
+- **Options that are not getopt's.** A command whose words may start with a dash without being
+  options (`chmod -w file`, `find . -name x`) sets `rawArgs` on its spec and reads its own words;
+  `readOptions` in `src/commands/lib/raw-options.ts` reads the options among them as getopt would,
+  with getopt's error messages.
 - **Original content.** Cows, fortunes, fonts and art are written for vesen, not copied, and
   credit no other project.
 - **Honest network commands.** A browser cannot send ICMP or raw DNS: say what is done instead

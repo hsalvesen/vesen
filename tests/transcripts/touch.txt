@@ -19,3 +19,13 @@ $ touch
 ! touch: missing file operand
 ! Try 'touch --help' for more information.
 ? 1
+$ touch -d '2026-01-02 03:04' a.txt; touch -r a.txt b.txt; touch -t 202501020304.05 c.txt
+? 0
+$ ls -l a.txt b.txt c.txt
+-rw-r--r-- 1 guest guest 0 Jan  2  2026 a.txt
+-rw-r--r-- 1 guest guest 0 Jan  2  2026 b.txt
+-rw-r--r-- 1 guest guest 0 Jan  2  2025 c.txt
+? 0
+$ touch -d nonsense x
+! touch: invalid date format 'nonsense'
+? 1

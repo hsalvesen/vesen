@@ -1,0 +1,20 @@
+# truncate: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ truncate -s 0 history.txt
+? 0
+$ truncate -s 1K blank; truncate -s -24 blank; ls -l history.txt blank
+-rw-r--r-- 1 guest guest 1000 Oct  6 20:02 blank
+-rw-r--r-- 1 guest guest    0 Oct  6 20:01 history.txt
+? 0
+$ file blank
+blank: data
+? 0
+$ truncate -s 1G big
+! truncate: failed to truncate 'big' at 1073741824 bytes: No space left on device
+? 1
+$ truncate x
+! truncate: you must specify either '--size' or '--reference'
+! Try 'truncate --help' for more information.
+? 1

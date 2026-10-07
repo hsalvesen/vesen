@@ -110,6 +110,17 @@ export async function settleCommands(
   return registry.complete;
 }
 
+/** The specs that came with the catalogue, rather than the kernel. */
+const FROM_CATALOGUE = new WeakSet<CommandSpec>();
+
+/**
+ * True for a command that came with the catalogue (src/commands/more): help's short index names
+ * it only when it is `featured`, and counts the rest, so the index still fits a phone's screen.
+ */
+export function fromCatalogue(spec: CommandSpec): boolean {
+  return FROM_CATALOGUE.has(spec);
+}
+
 /** What a lookup says, once, when the catalogue could not be loaded. */
 export function catalogueFailure(reason: string): string {
   return `Some of vesen's commands could not be loaded (${reason}). The next command will try again.`;
@@ -239,7 +250,10 @@ export class CommandRegistry implements Registry {
       this.standIns.delete(spec.name);
       for (const name of [spec.name, ...(spec.aliases ?? [])]) if (this.lookup.get(name) === spec) this.lookup.delete(name);
     }
-    for (const spec of specs) this.register(spec);
+    for (const spec of specs) {
+      this.register(spec);
+      FROM_CATALOGUE.add(spec);
+    }
   }
 
   get(nameOrAlias: string): CommandSpec | undefined {

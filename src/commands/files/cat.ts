@@ -81,6 +81,7 @@ export default defineCommand({
   name: 'cat',
   category: 'files',
   summary: 'concatenate files and print them',
+  helpRank: 3,
   synopsis: ['cat [OPTION]... [FILE]...'],
   description:
     'Prints each FILE in turn. With no FILE, or when FILE is -, it reads standard input, so it can end a pipe. The options number lines and make tabs, line ends and control characters visible.',

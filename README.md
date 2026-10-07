@@ -117,11 +117,14 @@ src/
 │                                 # privacy, debug, fastfetch), network/ (weather, curl, speedtest, and
 │                                 # stock with its card's words in stock/); lib/ is what they share: the
 │                                 # banner, the link cards, weather's way to its service, qr's options
-│                                 # and payloads, the text tools' input helpers and the one guard every
-│                                 # visitor's regular expression passes (regex.ts); more/ is the catalogue,
-│                                 # the commands that load after the kernel in a chunk of their own (text/:
-│                                 # grep, sed, sort, uniq, cut, tr, head, tail, wc, diff, xargs, bc, the
-│                                 # checksums and the rest; see docs/ADDING_COMMANDS.md)
+│                                 # and payloads, the text tools' input helpers, the one guard every
+│                                 # visitor's regular expression passes (regex.ts), wildcards
+│                                 # (fnmatch.ts) and chmod's modes; more/ is the catalogue, the commands
+│                                 # that load after the kernel in a chunk of their own (text/: grep,
+│                                 # sed, sort, uniq, cut, tr, head, tail, wc, diff, xargs, bc, the
+│                                 # checksums and the rest; files/: chmod, chown, chgrp, tree, find,
+│                                 # du, df, basename, dirname, realpath, readlink, mktemp, file,
+│                                 # truncate, sync; see docs/ADDING_COMMANDS.md)
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette
 │                                 # where themes.json does not set them, and the contrast each must meet);

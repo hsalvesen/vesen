@@ -20,8 +20,9 @@ describe('the command catalogue', () => {
     // Each wave adds to it.
     const catalogue = await loadCatalogue();
     expect(catalogue.map((found) => found.name).sort()).toEqual([
-      'base64', 'bc', 'column', 'cut', 'diff', 'expr', 'fold', 'grep', 'head', 'md5sum', 'nl', 'rev', 'sed', 'seq', 'sha1sum',
-      'sha256sum', 'sha512sum', 'sort', 'tail', 'tee', 'tr', 'uniq', 'wc', 'xargs', 'yes',
+      'base64', 'basename', 'bc', 'chgrp', 'chmod', 'chown', 'column', 'cut', 'df', 'diff', 'dirname', 'du', 'expr', 'file', 'find',
+      'fold', 'grep', 'head', 'md5sum', 'mktemp', 'nl', 'readlink', 'realpath', 'rev', 'sed', 'seq', 'sha1sum', 'sha256sum',
+      'sha512sum', 'sort', 'sync', 'tail', 'tee', 'tr', 'tree', 'truncate', 'uniq', 'wc', 'xargs', 'yes',
     ]);
     const core = new Set(specFiles().map((found) => found.name));
     for (const found of catalogue) expect(core.has(found.name), found.name).toBe(false);

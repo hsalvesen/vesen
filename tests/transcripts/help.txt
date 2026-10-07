@@ -20,11 +20,11 @@ theme     change the colour theme
 whoami    meet the developer; in a
           pipe, your user name
 
-Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
-Text: echo grep sed sort head tail wc cut tr uniq diff xargs printf +14 more
-Shell: alias apropos clear command env exit export fail false hang help +16 more
-System: date debug fastfetch keys open poweroff privacy reboot shutdown
-Network: curl fetch speedtest stock weather
+Files: ls cd cat cp find tree +21 more
+Text: echo grep sed sort head +22 more
+Shell: help man history clear +23 more
+System: date debug fastfetch +6 more
+Network: curl fetch speedtest +2 more
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
@@ -42,9 +42,9 @@ repo      open this terminal's source   theme     change the colour theme
 whoami    meet the developer; in a
           pipe, your user name
 
-Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
-Text: echo grep sed sort head tail wc cut tr uniq diff xargs printf +14 more
-Shell: alias apropos clear command env exit export fail false hang help +16 more
+Files: ls cd cat basename chgrp chmod chown cp df dirname du file find ln mkdir mktemp mv pwd readlink realpath rm rmdir stat sync touch tree truncate
+Text: echo grep sed sort head tail wc cut tr uniq diff xargs printf base64 bc column expr fold md5sum nl rev seq sha1sum sha256sum sha512sum tee yes
+Shell: help man history clear alias apropos command env exit export fail false hang late printenv reset set sleep source sudo test true type unalias +3 more
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
 Network: curl fetch speedtest stock weather
 
@@ -61,9 +61,9 @@ contact   email the developer           linkedin  open the developer's          
 repo      open this terminal's source   theme     change the colour theme       whoami    meet the developer; in a
           code                                                                            pipe, your user name
 
-Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
-Text: echo grep sed sort head tail wc cut tr uniq diff xargs printf +14 more
-Shell: alias apropos clear command env exit export fail false hang help +16 more
+Files: ls cd cat basename chgrp chmod chown cp df dirname du file find ln mkdir mktemp mv pwd readlink realpath rm rmdir stat sync touch tree truncate
+Text: echo grep sed sort head tail wc cut tr uniq diff xargs printf base64 bc column expr fold md5sum nl rev seq sha1sum sha256sum sha512sum tee yes
+Shell: help man history clear alias apropos command env exit export fail false hang late printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
 Network: curl fetch speedtest stock weather
 
@@ -83,9 +83,9 @@ repo      open this terminal's source code
 theme     change the colour theme
 whoami    meet the developer; in a pipe, your user name
 
-Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
-Text: echo grep sed sort head tail wc cut tr uniq diff xargs printf +14 more
-Shell: alias apropos clear command env exit export fail false hang help +16 more
+Files: ls cd cat basename chgrp chmod chown cp df dirname du file find ln mkdir mktemp mv pwd readlink realpath rm rmdir stat sync touch tree truncate
+Text: echo grep sed sort head tail wc cut tr uniq diff xargs printf base64 bc column expr fold md5sum nl rev seq sha1sum sha256sum sha512sum tee yes
+Shell: help man history clear alias apropos command env exit export fail false hang late printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
 Network: curl fetch speedtest stock weather
 

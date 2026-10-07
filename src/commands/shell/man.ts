@@ -45,6 +45,7 @@ export default defineCommand({
   name: 'man',
   category: 'shell',
   summary: 'show the manual page of a command',
+  helpRank: 2,
   synopsis: ['man [SECTION] PAGE...', 'man -k KEYWORD...', 'man -f PAGE...'],
   description:
     "Shows the manual page of each PAGE: what the command does, how to call it, its options, examples to run and related commands. 'man vesen' is about this terminal.",

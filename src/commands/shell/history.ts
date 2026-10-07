@@ -14,6 +14,7 @@ export default defineCommand({
   name: 'history',
   category: 'shell',
   summary: 'display or manipulate the command history',
+  helpRank: 3,
   synopsis: ['history [N]', 'history -c', 'history -d OFFSET'],
   description:
     'Lists the lines typed so far, numbered, oldest first; with N, only the last N. !N runs line N again and !! the last one. History is kept across reloads, up to 500 lines; a line typed with a space in front is not kept.',

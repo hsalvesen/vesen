@@ -1,0 +1,32 @@
+# chmod: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ chmod 755 README.md
+? 0
+$ chmod -v u-x,go-w README.md bin/deploy
+mode of 'README.md' changed from 0755 (rwxr-xr-x) to 0655 (rw-r-xr-x)
+mode of 'bin/deploy' changed from 0755 (rwxr-xr-x) to 0655 (rw-r-xr-x)
+? 0
+$ chmod -c a+r documents/linux.txt
+? 0
+$ chmod -R go-rwx projects; ls -l projects
+total 12
+drwx------ 2 guest guest 4096 Oct  6 11:00 learning
+drwx------ 2 guest guest 4096 Oct  6 11:00 portfolio
+drwx------ 2 guest guest 4096 Oct  6 11:00 vesen
+? 0
+$ chmod 666 history.txt; chmod -w history.txt
+! chmod: history.txt: new permissions are r--rw-rw-, not r--r--r--
+? 1
+$ chmod 777 /etc/passwd
+! chmod: changing permissions of '/etc/passwd': Operation not permitted
+? 1
+$ chmod xyz README.md
+! chmod: invalid mode: 'xyz'
+! Try 'chmod --help' for more information.
+? 1
+$ chmod
+! chmod: missing operand
+! Try 'chmod --help' for more information.
+? 1

@@ -65,6 +65,16 @@ export function kibBlocks(stat: Pick<Stat, 'type' | 'size'>): number {
   return 0;
 }
 
+/** A stable inode number for a path, so stat's %i and find's -ls say the same thing each time. */
+export function inodeOf(path: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < path.length; i += 1) {
+    hash ^= path.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return 1_000_000 + (hash % 9_000_000);
+}
+
 const UNITS = ['K', 'M', 'G', 'T', 'P', 'E'] as const;
 
 /**
