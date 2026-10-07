@@ -177,6 +177,16 @@ describe('dig', () => {
     expect(net.requests).toHaveLength(1);
   });
 
+  it("keeps Google's answer when Cloudflare failed, so the next ask waits on neither", async () => {
+    const net = serveNet((url) => (url.host === 'cloudflare-dns.com' ? new Response('busy', { status: 503 }) : undefined));
+    const s = await session();
+    await s.run('dig example.com');
+    const again = await s.run('dig +short example.com');
+    s.stop();
+    expect(again).toMatchObject({ status: 0, stdoutPlain: '172.66.147.243\n104.20.23.154', stderrPlain: '' });
+    expect(net.hosts()).toEqual(['cloudflare-dns.com', 'dns.google']);
+  });
+
   it('never lets an answer write escape sequences to the terminal', async () => {
     serveNet((url) =>
       url.host === 'cloudflare-dns.com'

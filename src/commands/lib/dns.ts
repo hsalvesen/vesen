@@ -423,15 +423,18 @@ export async function ask(deps: DnsDeps, name: string, type: number, options: As
   if (isLocalhost(name)) return { answer: localAnswer(name, type), resolver: null, ms: 0, cached: false, failures: [] };
   const order = options.server ? [options.server] : DEFAULT_ORDER.map((key) => RESOLVERS[key]);
   const cache = cacheFor(deps.net);
+  const keyOf = (resolver: Resolver): string => `${resolver.name} ${bare(name).toLowerCase()} ${type}`;
+  // An answer kept from any of them first, so a resolver that is down is not waited on again.
+  const now = deps.clock.now();
+  for (const resolver of order) {
+    const kept = cache.get(keyOf(resolver));
+    if (kept === undefined || now >= kept.until) continue;
+    const elapsed = Math.floor((now - kept.at) / 1000);
+    return { ...kept.lookup, answer: aged(kept.lookup.answer, elapsed), ms: 0, cached: true };
+  }
   const failures: ResolverFailure[] = [];
   for (const resolver of order) {
-    const key = `${resolver.name} ${bare(name).toLowerCase()} ${type}`;
-    const now = deps.clock.now();
-    const kept = cache.get(key);
-    if (kept !== undefined && now < kept.until) {
-      const elapsed = Math.floor((now - kept.at) / 1000);
-      return { ...kept.lookup, answer: aged(kept.lookup.answer, elapsed), ms: 0, cached: true, failures };
-    }
+    const key = keyOf(resolver);
     const started = deps.clock.now();
     try {
       const answer = await deps.net.json(questionUrl(resolver, name, type), {
