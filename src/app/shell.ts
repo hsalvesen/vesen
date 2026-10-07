@@ -3,6 +3,7 @@
 // (bootstrap.ts) passes in the browser services; tests pass in fakes.
 
 import { buildRegistry } from '../commands/index';
+import { forgetWeather, provideWeather, type WeatherLoader } from '../commands/lib/weather';
 import type { CommandOutput } from '../interfaces/command';
 import type { Block, Line } from '../output/model';
 import { createAppearance } from '../services/appearance';
@@ -69,6 +70,11 @@ export interface AppShellOptions {
   readonly yieldToHost?: () => Promise<void>;
   /** When a running line's output is drawn; the next animation frame by default. */
   readonly frame?: FrameScheduler;
+  /**
+   * Builds the page's weather service the first time weather runs (bootstrap gives the browser's;
+   * tests give one over fixtures). Without it, weather says there is none.
+   */
+  readonly weather?: WeatherLoader;
 }
 
 export interface AppShell {
@@ -94,6 +100,7 @@ function noticeBlocks(message: string): Block[] {
 
 export function createAppShell(options: AppShellOptions): AppShell {
   const registry = buildRegistry(options.specs ?? []);
+  provideWeather(options.weather ?? null);
   const clock = options.clock ?? createClock();
   const sys = options.sys ?? createSysInfoStub(options.sysHost ?? null, options.errors ? { errors: options.errors } : {});
   const screen = options.screen ?? appScreen;
@@ -146,6 +153,7 @@ export function createAppShell(options: AppShellOptions): AppShell {
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.bell ? { bell: options.bell } : {}),
     ...(options.yieldToHost ? { yieldToHost: options.yieldToHost } : {}),
+    onReset: forgetWeather,
   });
   const built = shell;
   const unbind = options.bind?.({ vfs, shell: built }) ?? (() => {});

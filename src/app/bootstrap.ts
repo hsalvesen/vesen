@@ -173,6 +173,12 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
         ...(parts ? { root: parts.root, bind: parts.bind } : {}),
         sysHost: win,
         errors: () => errors.recent(),
+        // The weather service, its sources and the device's location load when weather first runs.
+        weather: () =>
+          Promise.all([import('../services/weather/service'), import('../platform/geolocation')]).then(
+            ([{ createWeatherService }, { createGeolocator }]) =>
+              createWeatherService({ kv: storage.local, geolocation: createGeolocator(win) }),
+          ),
       });
       // A page put away or closed saves what is waiting to be saved.
       const flush = (): void => app.persistence.flush();
@@ -192,6 +198,8 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
       idle(win, () => {
         void app.prefetch();
         if (parts !== null) loadLegacyShim().catch(() => {});
+        // The weather card too, so the first card draws at once rather than after its plain text.
+        void import('../ui/components/registry').then(({ loadComponent }) => loadComponent('weather-card')).catch(() => {});
       });
       return app.shell;
     },

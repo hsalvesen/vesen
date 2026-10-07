@@ -107,8 +107,9 @@ src/
 │                                 # apropos, history, clear, reset, alias, unalias, export, unset, env,
 │                                 # printenv, set, source, type, which, command, true, false, test, exit,
 │                                 # login, sleep, sudo), system/ (date, keys, poweroff, reboot, shutdown,
-│                                 # privacy, debug); lib/ is what they share, the banner and the link cards
-│                                 # included; legacy.ts wraps the commands not yet ported
+│                                 # privacy, debug), network/ (weather); lib/ is what they share, the banner,
+│                                 # the link cards and weather's way to its service included; legacy.ts wraps
+│                                 # the commands not yet ported
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette
 │                                 # where themes.json does not set them, and the contrast each must meet);
@@ -121,7 +122,8 @@ src/
 │                                 # role colours), perf.ts (the CRT tier: full, lite or off, and why),
 │                                 # crt.ts (CRT classes), measure.ts (--input-scale for the 16px touch
 │                                 # input), viewport.ts (--app-h, --app-top and --kb-h from visualViewport,
-│                                 # and the dock's layout for the visible height)
+│                                 # and the dock's layout for the visible height), geolocation.ts (the
+│                                 # device's location for weather --here, on its own timer, rounded to ~1 km)
 ├── services/
 │   ├── net.ts                    # fetch with timeouts, cancelling, byte caps and typed network errors
 │   ├── storage.ts                # localStorage and sessionStorage with a memory fallback; one-time migrations
@@ -133,7 +135,8 @@ src/
 │   │                             # rebuilds it, loaded only after Back
 │   ├── storage-keys.ts           # Every browser storage key, in one registry
 │   ├── weather/                  # Weather's sources (forecast, geocoding, IP location), place resolution,
-│   │                             # units and WMO codes, and the view model a weather card draws
+│   │                             # units and WMO codes, the view model a weather card draws, and the
+│   │                             # service the weather command reaches them through (loaded on first use)
 │   └── market/contract.ts        # The stock Worker's wire format, shared by the Worker and the app
 ├── stores/                       # Svelte stores, pure state: screen (the transcript), term, theme, cathode,
 │                                 # prefs (the key bar setting), viewport (the visible height)
@@ -159,7 +162,8 @@ src/
 │   ├── actions/                  # stickToBottom (the one scroll owner, with the new-output pill) and
 │   │                             # focusPolicy (when a click, tap or key puts the caret in the prompt)
 │   └── components/               # LinkCard.svelte (the card block: the link, Copy, the in-app escape);
-│                                 # registry.ts, the rich cards a component block may name (none yet)
+│                                 # registry.ts, the rich cards a component block may name, each loaded on
+│                                 # first use: WeatherCard.svelte (compact and wide layouts by its own width)
 ├── testing/                      # Test setup
 └── utils/
     ├── commands.ts               # The legacy command table; the network commands load on first use

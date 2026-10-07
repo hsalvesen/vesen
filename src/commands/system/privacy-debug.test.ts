@@ -32,14 +32,19 @@ describe('privacy', () => {
   });
 
   it('adds what a legacy command still uses, while it is legacy', async () => {
-    const weather = legacy('weather', () => '', { category: 'network', summary: 'x' });
-    const app = createAppShell({ banner: () => '', specs: [weather], screen: createScreen(), version: 'test' });
+    const stock = legacy('stock', () => '', { category: 'network', summary: 'x' });
+    const app = createAppShell({ banner: () => '', specs: [stock], screen: createScreen(), version: 'test' });
     await app.boot();
     const result = await app.shell.run('privacy');
-    expect(tableRows(result.blocks)).toContain('wttr.in');
-    expect(tableRows(result.blocks)).not.toContain('allorigins.win, then Yahoo Finance');
+    expect(tableRows(result.blocks)).toContain('allorigins.win, then Yahoo Finance');
     app.stop();
-    expect(THIRD_PARTIES.filter((row) => row.legacy === true).map((row) => row.commands)).toEqual([['weather'], ['stock']]);
+    const without = createAppShell({ banner: () => '', specs: [], screen: createScreen(), version: 'test' });
+    await without.boot();
+    expect(tableRows((await without.shell.run('privacy')).blocks)).not.toContain('allorigins.win, then Yahoo Finance');
+    without.stop();
+    // weather is ported: its old source is gone from the table.
+    expect(THIRD_PARTIES.filter((row) => row.legacy === true).map((row) => row.commands)).toEqual([['stock']]);
+    expect(THIRD_PARTIES.map((row) => row.service).join(' ')).not.toMatch(/wttr/);
     expect(buildRegistry([]).get('privacy')).toBeDefined();
   });
 

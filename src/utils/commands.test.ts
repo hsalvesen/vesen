@@ -25,9 +25,9 @@ describe('the lazily loaded network commands', () => {
     });
     const { commands } = await import('./commands');
 
-    const output = await commands.weather?.(['Oslo']);
+    const output = await commands.stock?.(['AAPL']);
 
-    expect(output).toContain('weather: could not load the command. Check the connection and try again.');
+    expect(output).toContain('stock: could not load the command. Check the connection and try again.');
     expect(beep).toHaveBeenCalledTimes(1);
     vi.doUnmock('./beep');
   });

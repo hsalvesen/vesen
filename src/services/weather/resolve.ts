@@ -11,7 +11,7 @@
 import { isNetError } from '../net';
 import { countryCodeFor, lookupCurated, matchesQualifier, normaliseQuery, suggestNames } from './places';
 import { NOMINATIM_ENABLED, pointId, type GeoHit, type WeatherSources } from './sources';
-import { WeatherError, type Note, type Place } from './types';
+import { WeatherError, type Note, type Place, type Resolved } from './types';
 import { round } from './units';
 
 /** Longer input is refused rather than sent to a geocoder. */
@@ -32,11 +32,7 @@ export interface ResolveOptions {
   readonly recent?: readonly string[];
 }
 
-export interface Resolved {
-  readonly place: Place;
-  /** A country-level point, or same-named alternatives. */
-  readonly notes: readonly Note[];
-}
+export type { Resolved };
 
 /** Strips control characters, repeated spaces and wrapping quotes. */
 export function cleanQuery(query: string): string {

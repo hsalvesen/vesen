@@ -246,6 +246,18 @@ describe('notes and credits', () => {
     expect(noteText({ kind: 'stale', ageMs: 2 * 3_600_000, cause: 'upstream' })).toBe('Showing the forecast from 2 h ago (Open-Meteo had a problem).');
     expect(noteText({ kind: 'country-point' })).toBe('Country-level point. Try a city for local weather.');
     expect(noteText({ kind: 'approximate' })).toBe('Approximate location from your network.');
+    expect(noteText({ kind: 'approximate', label: '≈ Sydney, New South Wales, AU' })).toBe(
+      '≈ Sydney, New South Wales, AU (approximate, from your network)',
+    );
+    expect(noteText({ kind: 'device-fallback', reason: 'denied' })).toBe(
+      'Location permission was denied, so this uses an approximate network location.',
+    );
+    expect(noteText({ kind: 'device-fallback', reason: 'timeout', app: 'Instagram' })).toBe(
+      "Instagram didn't share your location, so this uses an approximate network location. Open vesen.app in Safari or Chrome for a precise fix.",
+    );
+    expect(noteText({ kind: 'device-fallback', reason: 'insecure', app: 'Instagram' })).toBe(
+      'The location needs a secure (https) page, so this uses an approximate network location.',
+    );
     expect(noteText({ kind: 'last-place' })).toBe('Last place you looked up · weather --forget to clear');
     expect(noteText({ kind: 'alternatives', places: springfields.slice(1, 3) })).toBe(
       'Also: Springfield, Illinois, US · Springfield, Massachusetts, US',
@@ -255,14 +267,20 @@ describe('notes and credits', () => {
   it('adds the country-level and approximate notes from the place itself, once', () => {
     const country: Place = { ...osloPlace, kind: 'country', approximate: true };
     const view = buildView(oslo, country, UNIT_PRESETS.metric, NOW, { notes: [{ kind: 'country-point' }] });
-    expect(view.notes).toEqual(['Approximate location from your network.', 'Country-level point. Try a city for local weather.']);
+    expect(view.notes).toEqual([
+      '≈ Oslo, NO (approximate, from your network)',
+      'Country-level point. Try a city for local weather.',
+    ]);
   });
 
   it('always credits Open-Meteo, and OpenStreetMap when it found the place', () => {
     const plain = buildView(sydney, gadigal, UNIT_PRESETS.metric, NOW);
     expect(plain.attribution).toEqual({ openMeteo: 'Weather data by Open-Meteo.com (CC BY 4.0)', osm: null, updated: '14:15 GMT+11' });
     expect(renderPlain(plain)).toContain('Updated 14:15 GMT+11 · Weather data by Open-Meteo.com (CC BY 4.0)');
-    expect(renderPlain(plain, 'compact')).toContain('Open-Meteo.com · 14:15 GMT+11');
+    expect(renderPlain(plain, 'compact').split('\n').slice(-2)).toEqual([
+      'Weather data by Open-Meteo.com',
+      '(CC BY 4.0) · Updated 14:15 GMT+11',
+    ]);
 
     const osm = buildView(sydney, { ...gadigal, credit: 'osm' }, UNIT_PRESETS.metric, NOW);
     expect(renderPlain(osm)).toContain('Place search © OpenStreetMap contributors');

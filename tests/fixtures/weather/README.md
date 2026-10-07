@@ -1,6 +1,6 @@
 # Recorded weather fixtures
 
-Response bodies for the tests of `src/services/weather`, served by the fetch in `tests/support/weather.ts` so no test touches the network. Captured on 2026-10-06 at about 14:15 Sydney time (03:15 UTC) with curl, sending the User-Agent `vesen-fixture-recorder/1.0 (+https://www.vesen.app)` and, for Nominatim, the Referer `https://www.vesen.app/`, with Nominatim requests more than a second apart.
+Response bodies for the tests of `src/services/weather` and the weather command, served by the fetch in `tests/support/weather.ts` so no test touches the network; the golden `weather Oslo` (`tests/support/net.ts`) and the end-to-end tests (`e2e/weather.spec.ts`, through `page.route`) answer from them too. Captured on 2026-10-06 at about 14:15 Sydney time (03:15 UTC) with curl, sending the User-Agent `vesen-fixture-recorder/1.0 (+https://www.vesen.app)` and, for Nominatim, the Referer `https://www.vesen.app/`, with Nominatim requests more than a second apart.
 
 The forecast query is the one `forecastUrl` builds:
 `current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset,uv_index_max&timezone=auto&forecast_days=7`.

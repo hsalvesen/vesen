@@ -1,11 +1,10 @@
 import { commandHelp } from '../helpTexts';
 import { playBeep } from '../beep';
-import { fetchJson, fetchText, fetchTextCapped, fetchWithTimeout, isNetError } from '../../services/net';
+import { fetchJson, fetchTextCapped, fetchWithTimeout, isNetError } from '../../services/net';
 import { escapeHtml } from '../../output/escape';
 import { cancelledNotice, errorLine } from '../notice';
 
 // Per-request deadlines (docs/plan/02-architecture-and-contracts.md, section 4).
-const WEATHER_TIMEOUT_MS = 8000;
 const CURL_TIMEOUT_MS = 10000;
 const STOCK_TIMEOUT_MS = 8000;
 const SPEEDTEST_TIMEOUT_MS = 15000;
@@ -22,41 +21,6 @@ const inSeconds = (ms: number) => `${ms / 1000} s`;
 
 const wasCancelled = (error: unknown, signal?: AbortSignal) =>
   Boolean(signal?.aborted) || (isNetError(error) && error.kind === 'abort');
-
-/** wttr.in's report in the theme's colours: temperatures, wind, rain, distances and conditions. */
-function colourWeather(report: string): string {
-  return report
-    .replace(/(\d+°[CF]?)/g, `<span style="color: var(--theme-bright-red); font-weight: bold;">$1</span>`)
-    .replace(/(\d+\s*(?:km\/h|mph|m\/s|kts))/g, `<span style="color: var(--theme-bright-blue); font-weight: bold;">$1</span>`)
-    .replace(/(\d+%)/g, `<span style="color: var(--theme-cyan);">$1</span>`)
-    .replace(/(\d+(?:\.\d+)?\s*mm)/g, `<span style="color: var(--theme-bright-cyan);">$1</span>`)
-    .replace(/(\d+(?:\.\d+)?\s*km)/g, `<span style="color: var(--theme-green);">$1</span>`)
-    .replace(/\b(sunny|clear|cloudy|overcast|rainy|snowy|foggy|misty|thunderstorm|drizzle|partly cloudy|mostly cloudy)\b/gi,
-      `<span style="color: var(--theme-yellow); font-weight: bold;">$1</span>`)
-    .replace(/\b([NSEW]{1,3})\b/g, `<span style="color: var(--theme-purple);">$1</span>`)
-    .replace(/([☀☁⛅⛈🌧🌦🌩❄⛄🌫])/g, `<span style="color: var(--theme-bright-yellow);">$1</span>`)
-    // The terminal's font has no diagonal arrows. The fallback font's glyph is held to one cell,
-    // so the forecast table's columns after a wind direction stay in line.
-    .replace(/([↖↗↘↙])/g, `<span class="art-cell">$1</span>`);
-}
-
-function weatherFailure(error: unknown): string {
-  if (!isNetError(error)) return 'weather: the forecast could not be read. Try again in a moment.';
-  switch (error.kind) {
-    case 'timeout':
-      return `weather: wttr.in did not respond within ${inSeconds(WEATHER_TIMEOUT_MS)}. Try again in a moment.`;
-    case 'offline':
-      return 'weather: you appear to be offline.';
-    case 'http':
-      return `weather: wttr.in returned HTTP ${error.status}. Try again later.`;
-    default:
-      return 'weather: could not reach wttr.in. Check your connection and try again.';
-  }
-}
-
-function unknownLocation(place: string): string {
-  return errorLine(`weather: no weather data for "${place}"`, 'Check the place name and try again, for example: weather Oslo');
-}
 
 function curlFailure(error: unknown, host: string): string {
   if (isNetError(error)) {
@@ -329,79 +293,6 @@ function renderQuote(quote: Quote, ticker: string): string {
 }
 
 export const networkCommands = {
-  weather: async (args: string[], signal?: AbortSignal) => {
-    let city = args.join('+');
-
-    if (!city) {
-      return commandHelp.weather;
-    }
-
-    // Location mapping for better accuracy and accessibility
-    const locationMappings: Record<string, string> = {
-      'palestine': 'occupied+palestinian+territories',
-      'gaza': 'gaza+palestine',
-      'west+bank': 'west+bank+palestine',
-      'westbank': 'west+bank+palestine',
-      'ramallah': 'ramallah+palestine',
-      'bethlehem': 'bethlehem+palestine',
-      'hebron': 'hebron+palestine',
-      'nablus': 'nablus+palestine',
-      'jenin': 'jenin+palestine',
-      'tulkarm': 'tulkarm+palestine',
-      'qalqilya': 'qalqilya+palestine',
-      'jericho': 'jericho+palestine',
-      'khan+younis': 'khan+younis+gaza+palestine',
-      'rafah': 'rafah+gaza+palestine'
-    };
-
-    // Check if the query matches any location mapping
-    const normalisedCity = city.toLowerCase();
-    if (locationMappings[normalisedCity]) {
-      city = locationMappings[normalisedCity];
-    }
-    const place = city.replace(/\+/g, ' ');
-
-    let result: string;
-    try {
-      result = escapeHtml(await fetchText(`https://wttr.in/${city}?ATm`, { signal, timeoutMs: WEATHER_TIMEOUT_MS }));
-    } catch (error) {
-      if (wasCancelled(error, signal)) return cancelledNotice('weather');
-      playBeep();
-      if (isNetError(error) && error.kind === 'http' && error.status === 404) return unknownLocation(place);
-      return errorLine(weatherFailure(error));
-    }
-
-    // Check if the response indicates an unknown location
-    if (result.includes('404 UNKNOWN LOCATION') || result.includes('ERROR') || result.includes('Unknown location')) {
-      playBeep();
-      return unknownLocation(place);
-    }
-
-    // Remove the attribution line (last line with @igor_chubin)
-    const lines = result.split('\n');
-    const filteredLines = lines.filter(line =>
-      !line.includes('Follow @igor_chubin') &&
-      !line.includes('wttr.in updates')
-    );
-
-    // The report opens with the current conditions (seven lines), then the forecast tables, which
-    // are about 125 columns wide, then the location. The tables are art: they keep their rows,
-    // shrink a little to the output's width (.out-wide), and below that scroll sideways inside
-    // themselves on a narrow screen, rather than wrapping into a jumble.
-    const locationAt = filteredLines.findIndex(line =>
-      line.includes('Location:') && line.includes('[') && line.includes(']')
-    );
-    const tableEnd = locationAt === -1 ? filteredLines.length : locationAt;
-    const current = filteredLines.slice(0, 7).join('\n');
-    const forecast = filteredLines.slice(7, tableEnd).join('\n');
-    const rest = filteredLines.slice(tableEnd).join('\n');
-
-    // The report's title, its first line, is the one in bold green.
-    return colourWeather(current).replace(/^(.+)$/m, `<span style="color: var(--theme-bright-green); font-weight: bold;">$1</span>`) +
-      (forecast.trim() ? `<div class="art out-wide">${colourWeather(forecast)}</div>` : '\n') +
-      colourWeather(rest);
-  },
-
   // A direct fetch: the browser allows it only when the site sends CORS headers, and curl says so
   // when it does not. An owned proxy is planned (docs/plan/07-stock-and-proxy.md).
   curl: async (args: string[], signal?: AbortSignal) => {

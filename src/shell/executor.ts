@@ -133,6 +133,8 @@ export interface ExecutorDeps {
   readonly bell?: Bell | undefined;
   /** Lets the browser run between commands of a long job; tests pass a resolved promise. */
   readonly yieldToHost?: (() => Promise<void>) | undefined;
+  /** What else `reset` forgets, outside the session: weather's saved places. */
+  readonly onReset?: (() => void) | undefined;
 }
 
 /** A URL a command opened inside the Enter gesture, before its job started. */
@@ -937,6 +939,7 @@ export class Executor {
     session.history.clear();
     if (options.files !== false) fs.restore?.();
     appearance.resetDefaults();
+    this.deps.onReset?.();
     job?.sink.reset();
   }
 

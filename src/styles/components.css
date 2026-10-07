@@ -86,8 +86,7 @@
 }
 
 /* --- Layouts that follow the output's width ----------------------------------
-   For the legacy commands until they are ported (fastfetch, and stock and weather until their
-   rewrites): each output is a size container (ui/OutputView.svelte), so these lay themselves out
+   For the legacy commands until they are ported (fastfetch, and stock until its rewrite): each output is a size container (ui/OutputView.svelte), so these lay themselves out
    by its width, never the window's, and a rotated phone or a resized window reflows them with
    nothing run again (F016). Nothing here measures anything. */
 
@@ -148,14 +147,6 @@
 
   .out-kv-value {
     display: inline;
-  }
-}
-
-/* Wide art that is better a little smaller than scrolled: wttr.in's forecast, 126 cells wide,
-   shrinks to the output's width down to 0.6em, then scrolls inside itself as any art does. */
-@supports (width: 1cqi) {
-  .art.out-wide {
-    font-size: max(0.6em, min(1em, calc(100cqi / 126 / var(--ch-ratio, 0.6))));
   }
 }
 

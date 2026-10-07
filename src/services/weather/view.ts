@@ -6,7 +6,7 @@
 import { charWidth, textWidth, type Colour } from '../../output/model';
 import { countryLabel, placeLabel } from './places';
 import type {
-  ArtRow, BarSegment, CurrentView, Daily, DayView, Forecast, Line, Note, Place, RangeBar, Segment,
+  ArtRow, BarSegment, CurrentView, Daily, DayView, Forecast, GeoFailure, Line, Note, Place, RangeBar, Segment,
   TextSegment, Units, WeatherRole, WeatherView,
 } from './types';
 import { formatPrecip, precipitation, round, temperature, windSpeed } from './units';
@@ -182,11 +182,24 @@ function alternativeLabel(place: Place): string {
   return [place.name, place.region, country].filter((part, i, all) => part && all.indexOf(part) === i).join(', ');
 }
 
+const FALLBACK_REASON: Readonly<Record<GeoFailure, string>> = {
+  denied: 'Location permission was denied',
+  timeout: 'No location arrived in time',
+  unavailable: "The device couldn't find its location",
+  unsupported: "This browser can't share a location",
+  insecure: 'The location needs a secure (https) page',
+};
+
 /** A note as a sentence. */
 export function noteText(note: Note): string {
   switch (note.kind) {
     case 'approximate':
-      return 'Approximate location from your network.';
+      return note.label ? `${note.label} (approximate, from your network)` : 'Approximate location from your network.';
+    case 'device-fallback':
+      if (note.app && note.reason !== 'unsupported' && note.reason !== 'insecure') {
+        return `${note.app} didn't share your location, so this uses an approximate network location. Open vesen.app in Safari or Chrome for a precise fix.`;
+      }
+      return `${FALLBACK_REASON[note.reason]}, so this uses an approximate network location.`;
     case 'last-place':
       return 'Last place you looked up · weather --forget to clear';
     case 'country-point':
@@ -201,6 +214,13 @@ export function noteText(note: Note): string {
   }
 }
 
+/** '≈ Sydney, New South Wales, AU': the place as the network located it. */
+function approximateLabel(place: Place): string {
+  const country = place.countryCode === 'PS' ? countryLabel('PS') : place.countryCode ?? place.country;
+  const parts = [place.name, place.region, country].filter((part, i, all): part is string => Boolean(part) && all.indexOf(part) === i);
+  return `≈ ${parts.join(', ')}`;
+}
+
 function collectNotes(place: Place, given: readonly Note[]): Note[] {
   const notes: Note[] = [];
   const kinds = new Set<Note['kind']>();
@@ -210,7 +230,7 @@ function collectNotes(place: Place, given: readonly Note[]): Note[] {
     kinds.add(note.kind);
     notes.push(note);
   };
-  if (place.approximate) add({ kind: 'approximate' });
+  if (place.approximate) add({ kind: 'approximate', label: approximateLabel(place) });
   if (place.kind === 'country') add({ kind: 'country-point' });
   for (const note of given) add(note);
   return notes;
@@ -335,7 +355,15 @@ function compactLines(view: Omit<WeatherView, 'compact' | 'wide' | 'summary'>, n
     ['text', ' '],
     ['cond', d.cond.short],
   ]);
-  const footer: Line[] = wrap(`Open-Meteo.com · ${view.attribution.updated}`, W).map((text): Line => [['dim', text]]);
+  // The full credit, broken where it reads well: 'Weather data by Open-Meteo.com', then
+  // '(CC BY 4.0) · Updated 14:15 GMT+11'.
+  const credit = view.attribution.openMeteo;
+  const cut = credit.lastIndexOf(' (');
+  const footer: Line[] = [
+    ...(cut > 0 ? [credit.slice(0, cut), `${credit.slice(cut + 1)} · Updated ${view.attribution.updated}`] : [credit]).flatMap((text) =>
+      wrap(text, W).map((piece): Line => [['dim', piece]]),
+    ),
+  ];
   if (view.attribution.osm) footer.push([['dim', '© OpenStreetMap contributors']]);
 
   const lines: Line[] = [

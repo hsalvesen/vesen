@@ -209,6 +209,8 @@ export interface ShellDeps {
   readonly user?: User;
   /** Lets the browser run between large writes to the screen; tests pass a resolved promise. */
   readonly yieldToHost?: () => Promise<void>;
+  /** What else `reset` forgets, outside the session: weather's saved places. */
+  readonly onReset?: () => void;
 }
 
 /** How long a file sourced at boot may run before it is interrupted. */
@@ -286,6 +288,7 @@ export function createShell(deps: ShellDeps): Shell {
     clipboard: deps.clipboard,
     bell: deps.bell,
     yieldToHost: deps.yieldToHost,
+    onReset: deps.onReset,
   });
   const renderPrompt = (): Line =>
     promptLine({ cwd: session.currentDir, status: session.status, columns: terminal.size().cols, home: session.user.home });

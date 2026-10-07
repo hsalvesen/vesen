@@ -2,6 +2,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { forecastUrl, geocodeUrl } from '../../src/services/weather/sources';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const FIXTURES = join(ROOT, 'tests', 'fixtures', 'net');
@@ -14,7 +15,9 @@ interface Upstream {
 
 /** Recorded bodies keyed by normalised URL. See tests/fixtures/net/README.md for provenance. */
 const UPSTREAM: Record<string, Upstream> = {
-  'https://wttr.in/Oslo?ATm': { file: 'wttr-oslo.txt', contentType: 'text/plain; charset=utf-8' },
+  // weather Oslo: the place search, then the forecast at the place it found.
+  [geocodeUrl('Oslo')]: { file: '../weather/geocode-oslo.json', contentType: 'application/json; charset=utf-8' },
+  [forecastUrl(59.91273, 10.74609)]: { file: '../weather/forecast-oslo.json', contentType: 'application/json; charset=utf-8' },
   'https://query1.finance.yahoo.com/v8/finance/chart/AAPL': {
     file: 'yahoo-chart-aapl.json',
     contentType: 'application/json;charset=utf-8',

@@ -89,7 +89,7 @@ describe('fetchWithTimeout', () => {
   it(`times out after ${DEFAULT_TIMEOUT_MS} ms by default, even when fetch ignores the signal`, async () => {
     vi.stubGlobal('fetch', vi.fn(hangingFetch));
     let settled = false;
-    const failure = rejectionOf(fetchWithTimeout('https://wttr.in/Oslo')).finally(() => {
+    const failure = rejectionOf(fetchWithTimeout('https://example.com/slow')).finally(() => {
       settled = true;
     });
 
@@ -99,7 +99,7 @@ describe('fetchWithTimeout', () => {
 
     const error = await failure;
     expect(error).toBeInstanceOf(NetError);
-    expect(error).toMatchObject({ kind: 'timeout', host: 'wttr.in', timeoutMs: DEFAULT_TIMEOUT_MS });
+    expect(error).toMatchObject({ kind: 'timeout', host: 'example.com', timeoutMs: DEFAULT_TIMEOUT_MS });
   });
 
   it('honours a custom timeout', async () => {
@@ -221,11 +221,11 @@ describe('fetchText and fetchJson', () => {
         return new Response(body);
       }),
     );
-    const failure = rejectionOf(fetchText('https://wttr.in/Oslo', { timeoutMs: 8000 }));
+    const failure = rejectionOf(fetchText('https://example.com/slow', { timeoutMs: 8000 }));
 
     await vi.advanceTimersByTimeAsync(8000);
 
-    expect(await failure).toMatchObject({ kind: 'timeout', host: 'wttr.in' });
+    expect(await failure).toMatchObject({ kind: 'timeout', host: 'example.com' });
   });
 
   it('return the text or the parsed JSON', async () => {
