@@ -40,13 +40,28 @@ const SUMMARY_CH = 26;
 
 // ── The index ──────────────────────────────────────────────────────────────────────────────
 
-/** A category's commands as one row: its title, then each name, tappable. */
-function namesRow(category: Category, specs: readonly CommandSpec[]): Span[] {
+/**
+ * A category's commands as one row: its title, then each name, tappable. Given the terminal's
+ * width, the row stops at about two lines on a phone and three elsewhere, with `+N more` to tap
+ * for `help --all`, so the index still fits the screen as commands are added.
+ */
+function namesRow(category: Category, specs: readonly CommandSpec[], width?: number): Span[] {
+  const title = `${CATEGORY_TITLES[category]}: `;
   const row: Span[] = [out.span(CATEGORY_TITLES[category], HEADING), out.span(': ', HEADING)];
-  specs.forEach((spec, i) => {
+  // Words wrap whole, so a line may end up to a long name short of the width.
+  const budget = width === undefined ? Infinity : (width < 60 ? 2 : 3) * width - 12;
+  let used = title.length;
+  for (const [i, spec] of specs.entries()) {
+    const left = specs.length - i;
+    const more = left > 1 ? ` +${left - 1} more`.length : 0;
+    if (used + 1 + spec.name.length + more > budget) {
+      row.push(out.span(' '), out.run(`+${left} more`, 'help --all', MUTED));
+      break;
+    }
     if (i > 0) row.push(out.span(' '));
     row.push(out.insert(spec.name, `${spec.name} `, STRONG));
-  });
+    used += 1 + spec.name.length;
+  }
   return row;
 }
 
@@ -70,10 +85,11 @@ const MORE_HELP: Line = [
 /**
  * The help index. By default it is short enough to read on a phone without scrolling: the
  * portfolio commands, the reason the site exists, each with its summary, then one row of names
- * for every other category. With `all`, every category gets the table. A name inserts itself
- * at the prompt when tapped; in a pipe the index is plain text.
+ * for every other category, cut to fit the terminal's `width` when given. With `all`, every
+ * category gets the table. A name inserts itself at the prompt when tapped; in a pipe the index
+ * is plain text, with every name.
  */
-export function helpIndex(registry: Registry, options: { readonly all?: boolean } = {}): Block[] {
+export function helpIndex(registry: Registry, options: { readonly all?: boolean; readonly width?: number } = {}): Block[] {
   const blocks: Block[] = [];
   const widest = Math.max(1, ...registry.list().map((spec) => textWidth(spec.name)));
   // One column on a phone, two at 80 columns, three at 120.
@@ -83,7 +99,7 @@ export function helpIndex(registry: Registry, options: { readonly all?: boolean 
     const specs = registry.list({ category });
     if (specs.length === 0) continue;
     if (options.all === true || category === 'portfolio') blocks.push(...categoryTable(category, specs, minCh));
-    else rows.push(namesRow(category, specs));
+    else rows.push(namesRow(category, specs, options.width));
   }
   if (rows.length > 0) blocks.push(out.lines([[], ...rows]));
   const more: Line[] = [[]];

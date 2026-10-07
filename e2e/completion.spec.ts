@@ -31,33 +31,33 @@ test.describe('Tab completion', { tag: '@smoke' }, () => {
 
   test('a double Tab lists the choices, the next Tab cycles them, and Escape restores the line', async ({ page }) => {
     await open(page);
-    await page.keyboard.type('ca');
+    await page.keyboard.type('prin');
     await page.keyboard.press('Tab');
-    await expect(prompt(page)).toHaveValue('cat');
+    await expect(prompt(page)).toHaveValue('print');
 
     // The second Tab lists, and changes nothing on the line.
     await page.keyboard.press('Tab');
     const list = page.getByRole('listbox', { name: 'Completions' });
     await expect(list).toBeVisible();
     await expect(list.getByRole('option')).toHaveCount(2);
-    await expect(prompt(page)).toHaveValue('cat');
+    await expect(prompt(page)).toHaveValue('print');
 
     // Then Tab steps through them, wrapping, and Shift+Tab steps back.
     await page.keyboard.press('Tab');
-    await expect(prompt(page)).toHaveValue('cat');
+    await expect(prompt(page)).toHaveValue('printenv');
     await expect(list.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
     await page.keyboard.press('Tab');
-    await expect(prompt(page)).toHaveValue('cathode');
+    await expect(prompt(page)).toHaveValue('printf');
     await expect(list.getByRole('option').nth(1)).toHaveAttribute('aria-selected', 'true');
     await expect(prompt(page)).toHaveAttribute('aria-activedescendant', 'completion-list-1');
     await page.keyboard.press('Tab');
-    await expect(prompt(page)).toHaveValue('cat');
+    await expect(prompt(page)).toHaveValue('printenv');
     await page.keyboard.press('Shift+Tab');
-    await expect(prompt(page)).toHaveValue('cathode');
+    await expect(prompt(page)).toHaveValue('printf');
 
     // Escape puts back what was typed before the menu, and closes the list.
     await page.keyboard.press('Escape');
-    await expect(prompt(page)).toHaveValue('cat');
+    await expect(prompt(page)).toHaveValue('print');
     await expect(list).toHaveCount(0);
     await expect(prompt(page)).toBeFocused();
   });

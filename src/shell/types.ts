@@ -431,9 +431,9 @@ export interface Tty {
    * into the output, as a terminal does, except a secret answer, which is masked as it is typed
    * and never echoed or stored. `hint` is a dim line above the prompt; `opens` is a URL opened
    * inside the key press that answers, as `opens()` is inside the Enter that runs a line, for
-   * tty.open to report.
+   * tty.open to report. `signal` ends the read early with null, as ^C does: `read -t`.
    */
-  readLine(options: { prompt: string; secret?: boolean; hint?: string; opens?: string }): Promise<string | null>;
+  readLine(options: { prompt: string; secret?: boolean; hint?: string; opens?: string; signal?: AbortSignal }): Promise<string | null>;
   /** Asks yes or no at the prompt; null on ^C. */
   confirm(message: string, options?: { defaultAnswer?: boolean }): Promise<boolean | null>;
   /**
@@ -496,6 +496,21 @@ export interface ShellOptionFlags {
   noglob: boolean;
 }
 
+/**
+ * A command running in a line, as ps, kill and pgrep see it. Builtins run in the shell itself
+ * and have none; src/commands/lib/procs.ts adds init and the shell.
+ */
+export interface ProcessInfo {
+  readonly pid: number;
+  /** The process that ran it: the shell, or the command that ran it (time, timeout, watch). */
+  readonly ppid: number;
+  /** The name it was run by. */
+  readonly name: string;
+  readonly argv: readonly string[];
+  /** When it started, in `clock` time (ms). */
+  readonly startedAt: number;
+}
+
 /** What builtins and commands that run other lines may do to the session. */
 export interface ShellApi {
   cwd(): string;
@@ -507,8 +522,24 @@ export interface ShellApi {
   readonly registry: Registry;
   /** The session's options; a change applies from the next command. */
   readonly options: ShellOptionFlags;
-  /** Runs a line in this session, without alias expansion: command, env, xargs. */
-  exec(line: string, io?: Partial<Pick<CommandContext, 'stdin' | 'stdout' | 'stderr'>>): Promise<ExitCode>;
+  /**
+   * Runs a line in this session, without alias expansion: command, env, xargs. When `signal`
+   * aborts, the line stops as ^C would stop it, and exec gives 130 (timeout), while the line
+   * that called it carries on.
+   */
+  exec(
+    line: string,
+    io?: Partial<Pick<CommandContext, 'stdin' | 'stdout' | 'stderr'>> & { readonly signal?: AbortSignal },
+  ): Promise<ExitCode>;
+  /** The process id the command runs as: its own, or the shell's ($$) for a builtin. */
+  pid(): number;
+  /** The commands running now, each with its pid, in the order they started. */
+  processes(): readonly ProcessInfo[];
+  /**
+   * Ends the line that process `pid` is part of, as ^C ends it (kill, pkill). False when no
+   * running command has that pid.
+   */
+  kill(pid: number): boolean;
   /**
    * `source` and `.`: runs a file's lines in this session, with `args` as $1, $2 and so on. A
    * missing or unreadable file is reported and is status 1.

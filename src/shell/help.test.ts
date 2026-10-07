@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isTrustedAction, lineText, type Block } from '../output/model';
+import { isTrustedAction, lineText, type Block, type Line } from '../output/model';
 import { plain } from '../output/plain';
 import {
   apropos,
@@ -66,6 +66,23 @@ describe('the help index', () => {
     const files = rows.find((row) => row[0]?.text === 'Files');
     expect(files?.[2]).toMatchObject({ text: 'ls', action: { kind: 'insert', text: 'ls ' } });
     expect(isTrustedAction(files?.[2]?.action)).toBe(true);
+  });
+
+  it('cuts a long row of names to fit the terminal, with +N more for help --all', () => {
+    const many = new CommandRegistry(
+      Array.from({ length: 30 }, (_, i) => ({ name: `cmd${String(i).padStart(2, '0')}`, category: 'system' as const, summary: 'a command', run: () => 0 })),
+    );
+    const rowAt = (width?: number): Line | undefined =>
+      helpIndex(many, width === undefined ? {} : { width })
+        .flatMap((block) => (block.type === 'lines' ? block.lines : []))
+        .find((row) => row[0]?.text === 'System');
+    // Two lines at 40 columns, less a long name's worth for the wrapping.
+    const phone = rowAt(40);
+    expect(lineText(phone ?? [])).toBe('System: cmd00 cmd01 cmd02 cmd03 cmd04 cmd05 cmd06 cmd07 +22 more');
+    expect(phone?.[phone.length - 1]).toMatchObject({ text: '+22 more', action: { kind: 'run', line: 'help --all' } });
+    expect(lineText(rowAt(120) ?? [])).toMatch(/cmd29$/);
+    // In a pipe, every name.
+    expect(lineText(rowAt() ?? [])).toMatch(/cmd29$/);
   });
 
   it('groups every visible command by category with --all, the portfolio first, each with its summary', () => {

@@ -55,6 +55,7 @@ import {
   type InAppBrowser,
   type InStream,
   type OutStream,
+  type ProcessInfo,
   type Registry,
   type RunFn,
   type ShellApi,
@@ -82,6 +83,10 @@ const BUDGET_GRACE_MS = 250;
 
 /** `$$`: vesen is one process, always the same one. */
 export const SHELL_PID = 4242;
+
+/** Process ids go up to Linux's default pid_max, then start again above the system's. */
+const PID_MAX = 32_768;
+const PID_WRAP = 300;
 
 const ERROR: SpanStyle = { fg: 'error' };
 const MUTED: SpanStyle = { fg: 'muted' };
@@ -184,6 +189,8 @@ export interface Frame {
    * sources and its $( ). False in a script, as in non-interactive bash.
    */
   readonly aliasing?: boolean;
+  /** The process the frame's commands are children of (time, timeout, watch); the shell when absent. */
+  readonly parent?: number;
 }
 
 export const TOP_FRAME: Frame = { argv0: 'vesen', args: [], depth: 0, interactive: true, aliasing: true };
@@ -242,9 +249,18 @@ function curlMessage(error: NetError): string {
   }
 }
 
+/** A running command in the process table, with the line it is part of. */
+interface Running {
+  readonly info: ProcessInfo;
+  readonly job: Job;
+}
+
 export class Executor {
   private lastYield = Date.now();
   private sinceYield = 0;
+  /** The commands running now, by pid (ps, kill, pgrep); builtins run in the shell and are not here. */
+  private readonly running = new Map<number, Running>();
+  private lastPid = SHELL_PID;
 
   constructor(private readonly deps: ExecutorDeps) {}
 
@@ -696,7 +712,9 @@ export class Executor {
     const budget = budgetMs === undefined ? null : deadline(budgetMs);
     const deadlineAt = budgetMs === undefined ? undefined : this.deps.clock.now() + budgetMs;
     const signal = budget === null ? job.signal : combineSignals(job.signal, budget.signal);
-    const ctx = this.context({ spec, name, argv, args, opts: parsed.opts, sub, io, env, signal, deadlineAt, job, frame });
+    // A builtin runs in the shell itself; anything else is a process of its own while it runs.
+    const pid = spec.builtin === true ? undefined : this.spawn(name, argv, job, frame);
+    const ctx = this.context({ spec, name, argv, args, opts: parsed.opts, sub, io, env, signal, deadlineAt, job, frame, pid });
 
     try {
       let run: RunFn;
@@ -718,7 +736,38 @@ export class Executor {
       return await this.commandError(error, spec, name, io, job, budget?.signal);
     } finally {
       budget?.cancel();
+      if (pid !== undefined) this.running.delete(pid);
     }
+  }
+
+  /** Gives a command that is starting the next free pid, as the kernel would. */
+  private spawn(name: string, argv: readonly string[], job: Job, frame: Frame): number {
+    let pid = this.lastPid;
+    do {
+      pid = pid >= PID_MAX ? PID_WRAP : pid + 1;
+    } while (pid === SHELL_PID || this.running.has(pid));
+    this.lastPid = pid;
+    const info: ProcessInfo = { pid, ppid: frame.parent ?? SHELL_PID, name, argv: [...argv], startedAt: this.deps.clock.now() };
+    this.running.set(pid, { info, job });
+    return pid;
+  }
+
+  /** The commands running now: those of a line ^C has ended, or that has finished, are gone. */
+  private processes(): ProcessInfo[] {
+    const found: ProcessInfo[] = [];
+    for (const [pid, entry] of this.running) {
+      if (entry.job.signal.aborted || entry.job.sink.ended) this.running.delete(pid);
+      else found.push(entry.info);
+    }
+    return found;
+  }
+
+  /** Ends the line that process `pid` is part of, as ^C would; false when there is no such process. */
+  private killProcess(pid: number): boolean {
+    if (!this.processes().some((info) => info.pid === pid)) return false;
+    const entry = this.running.get(pid);
+    if (entry !== undefined && this.session.jobs.store.get()?.id === entry.job.id) this.session.jobs.abort();
+    return true;
   }
 
   private async load(spec: CommandSpec): Promise<RunFn> {
@@ -799,6 +848,8 @@ export class Executor {
     deadlineAt: number | undefined;
     job: Job;
     frame: Frame;
+    /** Its process id; none for a builtin, which runs in the shell. */
+    pid: number | undefined;
   }): CommandContext {
     const { deps } = this;
     const scope = this.scope(o.frame);
@@ -825,7 +876,7 @@ export class Executor {
       sys: deps.sys,
       clock: deps.clock,
       appearance: deps.appearance,
-      shell: this.shellApi(o.job, io, o.frame),
+      shell: this.shellApi(o.job, io, o.frame, o.pid),
       spec: o.spec,
       resolve: (path) => this.resolve(path, scope),
       fail: async (message, status = EXIT.error) => {
@@ -884,15 +935,18 @@ export class Executor {
    * Reads a line at the prompt for a running command, then echoes it into the job's output as a
    * terminal does: the hint, the prompt and what was typed, or for a secret the prompt alone.
    */
-  private async readLine(job: Job, options: { prompt: string; secret?: boolean; hint?: string; opens?: string }): Promise<string | null> {
+  private async readLine(
+    job: Job,
+    options: { prompt: string; secret?: boolean; hint?: string; opens?: string; signal?: AbortSignal },
+  ): Promise<string | null> {
     const read = this.deps.terminal.readLine;
-    if (read === undefined || job.signal.aborted || job.sink.ended) return null;
+    if (read === undefined || job.signal.aborted || job.sink.ended || options.signal?.aborted === true) return null;
     const url = options.opens;
     const answer = await read({
       prompt: options.prompt,
       ...(options.secret === true ? { secret: true } : {}),
       ...(options.hint === undefined ? {} : { hint: options.hint }),
-      signal: job.signal,
+      signal: options.signal === undefined ? job.signal : combineSignals(job.signal, options.signal),
       ...(url === undefined
         ? {}
         : {
@@ -910,10 +964,13 @@ export class Executor {
     return answer;
   }
 
-  private shellApi(job: Job, io: Io, frame: Frame): ShellApi {
+  private shellApi(job: Job, io: Io, frame: Frame, pid?: number): ShellApi {
     const scope = this.scope(frame);
     const registry = this.deps.registry;
     return {
+      pid: () => pid ?? SHELL_PID,
+      processes: () => this.processes(),
+      kill: (target) => this.killProcess(target),
       cwd: () => scope.currentDir,
       chdir: (path) => this.chdir(path, scope),
       lastStatus: () => scope.status,
@@ -932,7 +989,18 @@ export class Executor {
           await say(target.stderr, [span(`vesen: ${failureMessage(line, parsed)}`, ERROR)]);
           return EXIT.usage;
         }
-        return this.runList(parsed.ast, job, target, { ...frame, interactive: false });
+        // What it runs are the caller's children; with a signal of its own (timeout), it stops
+        // when that aborts, as on ^C, and the caller carries on.
+        const child: Frame = { ...frame, interactive: false, ...(pid === undefined ? {} : { parent: pid }) };
+        const extra = streams.signal;
+        if (extra === undefined) return this.runList(parsed.ast, job, target, child);
+        const stoppable: Job = { ...job, signal: combineSignals(job.signal, extra) };
+        try {
+          return await this.runList(parsed.ast, stoppable, target, child);
+        } catch (error) {
+          if (error instanceof Interrupted && extra.aborted && !job.signal.aborted) return EXIT.interrupted;
+          throw error;
+        }
       },
       source: (path, args) => this.source(path, job, io, args === undefined ? frame : { ...frame, args }),
       // In a subshell, reset and login start its copy again and leave the session alone.

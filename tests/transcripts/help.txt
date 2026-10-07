@@ -22,8 +22,8 @@ whoami    meet the developer; in a
 
 Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
 Text: echo head printf rev wc yes
-Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
-System: date debug fastfetch keys open poweroff privacy reboot shutdown
+Shell: alias apropos bg clear command env exit export fail +28 more
+System: arch cal date debug dmesg fastfetch finger free +22 more
 Network: curl fetch speedtest stock weather
 
 help --all lists every command with what it does.
@@ -44,8 +44,8 @@ whoami    meet the developer; in a
 
 Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
 Text: echo head printf rev wc yes
-Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
-System: date debug fastfetch keys open poweroff privacy reboot shutdown
+Shell: alias apropos bg clear command env exit export fail false fg hang help history jobs kill late man nohup printenv read reset set sleep source sudo test time timeout true type unalias unset wait watch whatis which
+System: arch cal date debug dmesg fastfetch finger free groups hostname id keys locale lsb_release lscpu nproc open pgrep pkill poweroff privacy ps reboot shutdown top tty uname uptime w who
 Network: curl fetch speedtest stock weather
 
 help --all lists every command with what it does.
@@ -63,8 +63,8 @@ repo      open this terminal's source   theme     change the colour theme       
 
 Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
 Text: echo head printf rev wc yes
-Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
-System: date debug fastfetch keys open poweroff privacy reboot shutdown
+Shell: alias apropos bg clear command env exit export fail false fg hang help history jobs kill late man nohup printenv read reset set sleep source sudo test time timeout true type unalias unset wait watch whatis which
+System: arch cal date debug dmesg fastfetch finger free groups hostname id keys locale lsb_release lscpu nproc open pgrep pkill poweroff privacy ps reboot shutdown top tty uname uptime w who
 Network: curl fetch speedtest stock weather
 
 help --all lists every command with what it does.
@@ -85,8 +85,8 @@ whoami    meet the developer; in a pipe, your user name
 
 Files: cat cd cp ln ls mkdir mv pwd rm rmdir stat touch
 Text: echo head printf rev wc yes
-Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
-System: date debug fastfetch keys open poweroff privacy reboot shutdown
+Shell: alias apropos bg clear command env exit export fail false fg hang help history jobs kill late man nohup printenv read reset set sleep source sudo test time timeout true type unalias unset wait watch whatis which
+System: arch cal date debug dmesg fastfetch finger free groups hostname id keys locale lsb_release lscpu nproc open pgrep pkill poweroff privacy ps reboot shutdown top tty uname uptime w who
 Network: curl fetch speedtest stock weather
 
 help --all lists every command with what it does.
