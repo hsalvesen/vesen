@@ -9,9 +9,9 @@ describe('storage key registry', () => {
     expect(new Set(specs.map((s) => s.key)).size).toBe(specs.length);
   });
 
-  it('keeps the Back-navigation snapshot, the chunk reload marker and the boot marker in sessionStorage only', () => {
+  it("keeps the Back-navigation snapshot, the chunk reload marker, the boot marker and git's commits in sessionStorage only", () => {
     const session = specs.filter((s) => s.area === 'session').map((s) => s.key);
-    expect(session.sort()).toEqual(['vesen:boot:v1', 'vesen:chunk-reload:v1', 'vesen:session:v1']);
+    expect(session.sort()).toEqual(['vesen:boot:v1', 'vesen:chunk-reload:v1', 'vesen:github:v1', 'vesen:session:v1']);
   });
 
   it('accounts for every legacy key exactly once: migrated or dropped', () => {

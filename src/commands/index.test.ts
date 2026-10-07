@@ -20,11 +20,12 @@ describe('the command catalogue', () => {
     // Each wave adds to it.
     const catalogue = await loadCatalogue();
     expect(catalogue.map((found) => found.name).sort()).toEqual([
-      'arch', 'base64', 'basename', 'bc', 'bg', 'cal', 'chgrp', 'chmod', 'chown', 'column', 'cut', 'df', 'diff', 'dirname', 'dmesg',
-      'du', 'expr', 'fg', 'file', 'find', 'finger', 'fold', 'free', 'grep', 'groups', 'head', 'hostname', 'id', 'jobs', 'kill',
-      'locale', 'lsb_release', 'lscpu', 'md5sum', 'mktemp', 'nl', 'nohup', 'nproc', 'pgrep', 'pkill', 'ps', 'read', 'readlink',
-      'realpath', 'rev', 'sed', 'seq', 'sha1sum', 'sha256sum', 'sha512sum', 'sort', 'sync', 'tail', 'tee', 'time', 'timeout', 'top',
-      'tr', 'tree', 'truncate', 'tty', 'uname', 'uniq', 'uptime', 'w', 'wait', 'watch', 'wc', 'who', 'xargs', 'yes',
+      'arch', 'base64', 'basename', 'bc', 'bg', 'cal', 'chgrp', 'chmod', 'chown', 'column', 'cut', 'df', 'diff', 'dig', 'dirname',
+      'dmesg', 'du', 'expr', 'fg', 'file', 'find', 'finger', 'fold', 'free', 'ftp', 'git', 'grep', 'groups', 'head', 'host',
+      'hostname', 'id', 'ifconfig', 'ip', 'jobs', 'kill', 'locale', 'lsb_release', 'lscpu', 'md5sum', 'mktemp', 'nc', 'nl', 'nohup',
+      'nproc', 'nslookup', 'pgrep', 'ping', 'pkill', 'ps', 'read', 'readlink', 'realpath', 'rev', 'sed', 'seq', 'sha1sum',
+      'sha256sum', 'sha512sum', 'sort', 'ssh', 'sync', 'tail', 'tee', 'telnet', 'time', 'timeout', 'top', 'tr', 'traceroute', 'tree',
+      'truncate', 'tty', 'uname', 'uniq', 'uptime', 'w', 'wait', 'watch', 'wc', 'wget', 'who', 'whois', 'xargs', 'yes',
     ]);
     const core = new Set(specFiles().map((found) => found.name));
     for (const found of catalogue) expect(core.has(found.name), found.name).toBe(false);

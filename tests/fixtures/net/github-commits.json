@@ -1,0 +1,222 @@
+[
+ {
+  "sha": "23758b9f5d781b22ecee3fc85603c2bf10501d34",
+  "commit": {
+   "author": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-07-15T07:31:00Z"
+   },
+   "committer": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-07-15T07:31:00Z"
+   },
+   "message": "New feature: cathode scanlines set as the default on load"
+  },
+  "html_url": "https://github.com/hsalvesen/vesen/commit/23758b9f5d781b22ecee3fc85603c2bf10501d34",
+  "parents": [
+   {
+    "sha": "2c1a34e4c1656a4a6ba0865e27e8bd85875aebe5"
+   }
+  ]
+ },
+ {
+  "sha": "2c1a34e4c1656a4a6ba0865e27e8bd85875aebe5",
+  "commit": {
+   "author": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-07-15T07:30:46Z"
+   },
+   "committer": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-07-15T07:30:46Z"
+   },
+   "message": "New feature: cathode suggestions and help text added for discoverability"
+  },
+  "html_url": "https://github.com/hsalvesen/vesen/commit/2c1a34e4c1656a4a6ba0865e27e8bd85875aebe5",
+  "parents": [
+   {
+    "sha": "8d35dbe0ac5f3a800a21d8dd960beae80b4adeba"
+   }
+  ]
+ },
+ {
+  "sha": "8d35dbe0ac5f3a800a21d8dd960beae80b4adeba",
+  "commit": {
+   "author": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-07-15T07:30:46Z"
+   },
+   "committer": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-07-15T07:30:46Z"
+   },
+   "message": "New feature: cathode command added to switch between CRT variations"
+  },
+  "html_url": "https://github.com/hsalvesen/vesen/commit/8d35dbe0ac5f3a800a21d8dd960beae80b4adeba",
+  "parents": [
+   {
+    "sha": "def86049e35b9ad370f833167c83b53025e4d256"
+   }
+  ]
+ },
+ {
+  "sha": "def86049e35b9ad370f833167c83b53025e4d256",
+  "commit": {
+   "author": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-07-15T07:30:46Z"
+   },
+   "committer": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-07-15T07:30:46Z"
+   },
+   "message": "New feature: cathode screening effect added for immersion"
+  },
+  "html_url": "https://github.com/hsalvesen/vesen/commit/def86049e35b9ad370f833167c83b53025e4d256",
+  "parents": [
+   {
+    "sha": "3766fbdf242b64bebe55fb2b10090aec61597554"
+   }
+  ]
+ },
+ {
+  "sha": "3766fbdf242b64bebe55fb2b10090aec61597554",
+  "commit": {
+   "author": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-07-15T07:30:41Z"
+   },
+   "committer": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-07-15T07:30:41Z"
+   },
+   "message": "New feature: cathode display store added to track the CRT mode"
+  },
+  "html_url": "https://github.com/hsalvesen/vesen/commit/3766fbdf242b64bebe55fb2b10090aec61597554",
+  "parents": [
+   {
+    "sha": "3a1fcacafcf585b3589d52dc05476337ecca5924"
+   }
+  ]
+ },
+ {
+  "sha": "3a1fcacafcf585b3589d52dc05476337ecca5924",
+  "commit": {
+   "author": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-02-21T23:59:46Z"
+   },
+   "committer": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-02-21T23:59:46Z"
+   },
+   "message": "Feature: QR Code command, various colour schemes fixed across themes"
+  },
+  "html_url": "https://github.com/hsalvesen/vesen/commit/3a1fcacafcf585b3589d52dc05476337ecca5924",
+  "parents": [
+   {
+    "sha": "d029fe808f72eb6a27a1feecd0d3b953808dcf38"
+   }
+  ]
+ },
+ {
+  "sha": "d029fe808f72eb6a27a1feecd0d3b953808dcf38",
+  "commit": {
+   "author": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-02-14T07:26:50Z"
+   },
+   "committer": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-02-14T07:26:50Z"
+   },
+   "message": "Speedtest API swapped"
+  },
+  "html_url": "https://github.com/hsalvesen/vesen/commit/d029fe808f72eb6a27a1feecd0d3b953808dcf38",
+  "parents": [
+   {
+    "sha": "bc945c42c8af25846a1ec51af807f63f53812d96"
+   }
+  ]
+ },
+ {
+  "sha": "bc945c42c8af25846a1ec51af807f63f53812d96",
+  "commit": {
+   "author": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-01-25T07:57:09Z"
+   },
+   "committer": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-01-25T07:57:09Z"
+   },
+   "message": "UX: added suggestions to cat and rm"
+  },
+  "html_url": "https://github.com/hsalvesen/vesen/commit/bc945c42c8af25846a1ec51af807f63f53812d96",
+  "parents": [
+   {
+    "sha": "7ddd0e35ae2dd830233fa52bd1158221e9409fa0"
+   }
+  ]
+ },
+ {
+  "sha": "7ddd0e35ae2dd830233fa52bd1158221e9409fa0",
+  "commit": {
+   "author": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-01-25T02:45:29Z"
+   },
+   "committer": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-01-25T02:45:29Z"
+   },
+   "message": "UX: Updated banner with prompt, updated version"
+  },
+  "html_url": "https://github.com/hsalvesen/vesen/commit/7ddd0e35ae2dd830233fa52bd1158221e9409fa0",
+  "parents": [
+   {
+    "sha": "39955d6e8c12f5cedf8bb430404c3243d46b74de"
+   }
+  ]
+ },
+ {
+  "sha": "39955d6e8c12f5cedf8bb430404c3243d46b74de",
+  "commit": {
+   "author": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-01-25T02:37:18Z"
+   },
+   "committer": {
+    "name": "Has",
+    "email": "owner@example.com",
+    "date": "2026-01-25T02:37:18Z"
+   },
+   "message": "UX: added suggestions for weather"
+  },
+  "html_url": "https://github.com/hsalvesen/vesen/commit/39955d6e8c12f5cedf8bb430404c3243d46b74de",
+  "parents": [
+   {
+    "sha": "991565e805408c9d57f712182bc67402306725b7"
+   }
+  ]
+ }
+]

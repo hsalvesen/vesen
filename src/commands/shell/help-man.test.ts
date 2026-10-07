@@ -38,6 +38,9 @@ describe('help', () => {
     for (const line of listed.split('\n').filter((line) => /^(Files|Text|Shell|System|Network|Editor): /.test(line))) {
       expect(line.length, line).toBeLessThanOrEqual(40);
     }
+    // Featured commands are kept in a row cut short: weather and stock among the network's.
+    const network = listed.split('\n').find((line) => line.startsWith('Network: ')) ?? '';
+    expect(network.split(' ')).toEqual(expect.arrayContaining(['stock', 'weather']));
     expect(listed).not.toContain('list directory contents');
     expect(listed).toContain('help --all lists every command with what it does.');
     // It fits a phone's screen: the portfolio is never scrolled out of sight by the rest.

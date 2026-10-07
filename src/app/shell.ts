@@ -3,6 +3,7 @@
 // (bootstrap.ts) passes in the browser services; tests pass in fakes.
 
 import { buildRegistry } from '../commands/index';
+import { provideSessionStore } from '../commands/lib/session-store';
 import { forgetWeather, provideWeather, type WeatherLoader } from '../commands/lib/weather';
 import type { Block, Line } from '../output/model';
 import { createAppearance } from '../services/appearance';
@@ -104,6 +105,7 @@ function noticeBlocks(message: string): Block[] {
 export function createAppShell(options: AppShellOptions): AppShell {
   const registry = buildRegistry(options.specs ?? []);
   provideWeather(options.weather ?? null);
+  provideSessionStore(options.sessionStorage ?? null);
   const clock = options.clock ?? createClock();
   const sys = options.sys ?? createSysInfo(options.sysHost ?? null, options.errors ? { errors: options.errors } : {});
   const screen = options.screen ?? appScreen;

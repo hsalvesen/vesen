@@ -42,6 +42,7 @@ export default defineCommand({
   name: 'stock',
   category: 'network',
   summary: 'show the price of a stock',
+  helpRank: 2,
   synopsis: ['stock [-r RANGE] [-f] [--plain | --json] SYMBOL...', 'stock -s QUERY...'],
   flags: [
     {
@@ -75,6 +76,7 @@ export default defineCommand({
     { line: 'stock -s commonwealth bank', note: 'find a ticker by name' },
   ],
   seeAlso: ['privacy'],
+  featured: true,
   network: true,
   // The client keeps half a second of this for drawing a saved copy (MARKET_LIMITS.budgetMs).
   budgetMs: 10_000,

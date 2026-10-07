@@ -1,0 +1,867 @@
+{
+ "cloudflare-dns.com example.com A": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": true,
+  "CD": false,
+  "Question": [
+   {
+    "name": "example.com",
+    "type": 1
+   }
+  ],
+  "Answer": [
+   {
+    "name": "example.com",
+    "type": 1,
+    "TTL": 234,
+    "data": "172.66.147.243"
+   },
+   {
+    "name": "example.com",
+    "type": 1,
+    "TTL": 234,
+    "data": "104.20.23.154"
+   }
+  ]
+ },
+ "cloudflare-dns.com example.com AAAA": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": true,
+  "CD": false,
+  "Question": [
+   {
+    "name": "example.com",
+    "type": 28
+   }
+  ],
+  "Answer": [
+   {
+    "name": "example.com",
+    "type": 28,
+    "TTL": 181,
+    "data": "2606:4700:10::6814:179a"
+   },
+   {
+    "name": "example.com",
+    "type": 28,
+    "TTL": 181,
+    "data": "2606:4700:10::ac42:93f3"
+   }
+  ]
+ },
+ "cloudflare-dns.com example.com MX": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": true,
+  "CD": false,
+  "Question": [
+   {
+    "name": "example.com",
+    "type": 15
+   }
+  ],
+  "Answer": [
+   {
+    "name": "example.com",
+    "type": 15,
+    "TTL": 178,
+    "data": "0 ."
+   }
+  ]
+ },
+ "cloudflare-dns.com example.com NS": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": true,
+  "CD": false,
+  "Question": [
+   {
+    "name": "example.com",
+    "type": 2
+   }
+  ],
+  "Answer": [
+   {
+    "name": "example.com",
+    "type": 2,
+    "TTL": 69176,
+    "data": "hera.ns.cloudflare.com."
+   },
+   {
+    "name": "example.com",
+    "type": 2,
+    "TTL": 69176,
+    "data": "elliott.ns.cloudflare.com."
+   }
+  ]
+ },
+ "cloudflare-dns.com example.com TXT": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": true,
+  "CD": false,
+  "Question": [
+   {
+    "name": "example.com",
+    "type": 16
+   }
+  ],
+  "Answer": [
+   {
+    "name": "example.com",
+    "type": 16,
+    "TTL": 43,
+    "data": "\"v=spf1 -all\""
+   },
+   {
+    "name": "example.com",
+    "type": 16,
+    "TTL": 43,
+    "data": "\"_k2n1y4vw3qtb4skdx9e7dxt97qrmmq9\""
+   }
+  ]
+ },
+ "cloudflare-dns.com example.com SOA": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": true,
+  "CD": false,
+  "Question": [
+   {
+    "name": "example.com",
+    "type": 6
+   }
+  ],
+  "Answer": [
+   {
+    "name": "example.com",
+    "type": 6,
+    "TTL": 1800,
+    "data": "elliott.ns.cloudflare.com. dns.cloudflare.com. 2416374680 10000 2400 604800 1800"
+   }
+  ]
+ },
+ "cloudflare-dns.com www.github.com A": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [
+   {
+    "name": "www.github.com",
+    "type": 1
+   }
+  ],
+  "Answer": [
+   {
+    "name": "www.github.com",
+    "type": 5,
+    "TTL": 2220,
+    "data": "github.com."
+   },
+   {
+    "name": "github.com",
+    "type": 1,
+    "TTL": 22,
+    "data": "4.237.22.38"
+   }
+  ]
+ },
+ "cloudflare-dns.com www.github.com AAAA": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [
+   {
+    "name": "www.github.com",
+    "type": 28
+   }
+  ],
+  "Answer": [
+   {
+    "name": "www.github.com",
+    "type": 5,
+    "TTL": 3248,
+    "data": "github.com."
+   }
+  ],
+  "Authority": [
+   {
+    "name": "github.com",
+    "type": 6,
+    "TTL": 548,
+    "data": "ns-1707.awsdns-21.co.uk. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400"
+   }
+  ]
+ },
+ "cloudflare-dns.com www.github.com MX": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [
+   {
+    "name": "www.github.com",
+    "type": 15
+   }
+  ],
+  "Answer": [
+   {
+    "name": "www.github.com",
+    "type": 5,
+    "TTL": 3600,
+    "data": "github.com."
+   },
+   {
+    "name": "github.com",
+    "type": 15,
+    "TTL": 300,
+    "data": "0 github-com.mail.protection.outlook.com."
+   }
+  ]
+ },
+ "cloudflare-dns.com letsencrypt.org CAA": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [
+   {
+    "name": "letsencrypt.org",
+    "type": 257
+   }
+  ],
+  "Answer": [
+   {
+    "name": "letsencrypt.org",
+    "type": 257,
+    "TTL": 300,
+    "data": "0 issue \"amazon.com\""
+   },
+   {
+    "name": "letsencrypt.org",
+    "type": 257,
+    "TTL": 300,
+    "data": "0 issue \"letsencrypt.org\""
+   },
+   {
+    "name": "letsencrypt.org",
+    "type": 257,
+    "TTL": 300,
+    "data": "0 issue \"pki.goog\""
+   },
+   {
+    "name": "letsencrypt.org",
+    "type": 257,
+    "TTL": 300,
+    "data": "0 issue \"sectigo.com\""
+   },
+   {
+    "name": "letsencrypt.org",
+    "type": 257,
+    "TTL": 300,
+    "data": "0 issue \"ssl.com\""
+   },
+   {
+    "name": "letsencrypt.org",
+    "type": 257,
+    "TTL": 300,
+    "data": "0 issue \"www.digicert.com\""
+   },
+   {
+    "name": "letsencrypt.org",
+    "type": 257,
+    "TTL": 300,
+    "data": "0 issuewild \"amazon.com\""
+   },
+   {
+    "name": "letsencrypt.org",
+    "type": 257,
+    "TTL": 300,
+    "data": "0 issuewild \"letsencrypt.org\""
+   },
+   {
+    "name": "letsencrypt.org",
+    "type": 257,
+    "TTL": 300,
+    "data": "0 issuewild \"pki.goog\""
+   },
+   {
+    "name": "letsencrypt.org",
+    "type": 257,
+    "TTL": 300,
+    "data": "0 issuewild \"sectigo.com\""
+   },
+   {
+    "name": "letsencrypt.org",
+    "type": 257,
+    "TTL": 300,
+    "data": "0 issuewild \"ssl.com\""
+   },
+   {
+    "name": "letsencrypt.org",
+    "type": 257,
+    "TTL": 300,
+    "data": "0 issuewild \"www.digicert.com\""
+   }
+  ]
+ },
+ "cloudflare-dns.com example.com CAA": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": true,
+  "CD": false,
+  "Question": [
+   {
+    "name": "example.com",
+    "type": 257
+   }
+  ],
+  "Authority": [
+   {
+    "name": "example.com",
+    "type": 6,
+    "TTL": 1800,
+    "data": "elliott.ns.cloudflare.com. dns.cloudflare.com. 2416374680 10000 2400 604800 1800"
+   }
+  ]
+ },
+ "cloudflare-dns.com nosuchname-vesen-test.com A": {
+  "Status": 3,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [
+   {
+    "name": "nosuchname-vesen-test.com",
+    "type": 1
+   }
+  ],
+  "Authority": [
+   {
+    "name": "com",
+    "type": 6,
+    "TTL": 900,
+    "data": "a.gtld-servers.net. nstld.verisign-grs.com. 1791370184 1800 900 604800 900"
+   }
+  ]
+ },
+ "cloudflare-dns.com nosuchname-vesen-test.com AAAA": {
+  "Status": 3,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [
+   {
+    "name": "nosuchname-vesen-test.com",
+    "type": 28
+   }
+  ],
+  "Authority": [
+   {
+    "name": "com",
+    "type": 6,
+    "TTL": 900,
+    "data": "a.gtld-servers.net. nstld.verisign-grs.com. 1791370184 1800 900 604800 900"
+   }
+  ]
+ },
+ "cloudflare-dns.com 1.1.1.1.in-addr.arpa PTR": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [
+   {
+    "name": "1.1.1.1.in-addr.arpa",
+    "type": 12
+   }
+  ],
+  "Answer": [
+   {
+    "name": "1.1.1.1.in-addr.arpa",
+    "type": 12,
+    "TTL": 898,
+    "data": "one.one.one.one."
+   }
+  ]
+ },
+ "cloudflare-dns.com vesen.app A": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [
+   {
+    "name": "vesen.app",
+    "type": 1
+   }
+  ],
+  "Answer": [
+   {
+    "name": "vesen.app",
+    "type": 1,
+    "TTL": 300,
+    "data": "199.36.158.100"
+   }
+  ]
+ },
+ "cloudflare-dns.com vesen.app AAAA": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [
+   {
+    "name": "vesen.app",
+    "type": 28
+   }
+  ],
+  "Authority": [
+   {
+    "name": "vesen.app",
+    "type": 6,
+    "TTL": 300,
+    "data": "ns-cloud-c1.googledomains.com. cloud-dns-hostmaster.google.com. 1 21600 3600 259200 300"
+   }
+  ]
+ },
+ "cloudflare-dns.com vesen.app MX": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [
+   {
+    "name": "vesen.app",
+    "type": 15
+   }
+  ],
+  "Answer": [
+   {
+    "name": "vesen.app",
+    "type": 15,
+    "TTL": 14400,
+    "data": "10 mxb.mailgun.org."
+   },
+   {
+    "name": "vesen.app",
+    "type": 15,
+    "TTL": 14400,
+    "data": "10 mxa.mailgun.org."
+   }
+  ]
+ },
+ "cloudflare-dns.com dnssec-failed.org A": {
+  "Status": 2,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [
+   {
+    "name": "dnssec-failed.org",
+    "type": 1
+   }
+  ],
+  "Comment": [
+   "EDE(9): DNSKEY Missing no SEP matching the DS found for dnssec-failed.org."
+  ]
+ },
+ "cloudflare-dns.com . NS": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": true,
+  "CD": false,
+  "Question": [
+   {
+    "name": "",
+    "type": 2
+   }
+  ],
+  "Answer": [
+   {
+    "name": "",
+    "type": 2,
+    "TTL": 514755,
+    "data": "a.root-servers.net."
+   },
+   {
+    "name": "",
+    "type": 2,
+    "TTL": 514755,
+    "data": "b.root-servers.net."
+   },
+   {
+    "name": "",
+    "type": 2,
+    "TTL": 514755,
+    "data": "c.root-servers.net."
+   },
+   {
+    "name": "",
+    "type": 2,
+    "TTL": 514755,
+    "data": "d.root-servers.net."
+   },
+   {
+    "name": "",
+    "type": 2,
+    "TTL": 514755,
+    "data": "e.root-servers.net."
+   },
+   {
+    "name": "",
+    "type": 2,
+    "TTL": 514755,
+    "data": "f.root-servers.net."
+   },
+   {
+    "name": "",
+    "type": 2,
+    "TTL": 514755,
+    "data": "g.root-servers.net."
+   },
+   {
+    "name": "",
+    "type": 2,
+    "TTL": 514755,
+    "data": "h.root-servers.net."
+   },
+   {
+    "name": "",
+    "type": 2,
+    "TTL": 514755,
+    "data": "i.root-servers.net."
+   },
+   {
+    "name": "",
+    "type": 2,
+    "TTL": 514755,
+    "data": "j.root-servers.net."
+   },
+   {
+    "name": "",
+    "type": 2,
+    "TTL": 514755,
+    "data": "k.root-servers.net."
+   },
+   {
+    "name": "",
+    "type": 2,
+    "TTL": 514755,
+    "data": "l.root-servers.net."
+   },
+   {
+    "name": "",
+    "type": 2,
+    "TTL": 514755,
+    "data": "m.root-servers.net."
+   }
+  ]
+ },
+ "cloudflare-dns.com localhost A": {
+  "Status": 3,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": true,
+  "CD": false,
+  "Question": [
+   {
+    "name": "localhost",
+    "type": 1
+   }
+  ],
+  "Authority": [
+   {
+    "name": "",
+    "type": 6,
+    "TTL": 86096,
+    "data": "a.root-servers.net. nstld.verisign-grs.com. 2026100700 1800 900 604800 86400"
+   }
+  ]
+ },
+ "dns.google example.com A": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": true,
+  "CD": false,
+  "Question": [
+   {
+    "name": "example.com.",
+    "type": 1
+   }
+  ],
+  "Answer": [
+   {
+    "name": "example.com.",
+    "type": 1,
+    "TTL": 300,
+    "data": "172.66.147.243"
+   },
+   {
+    "name": "example.com.",
+    "type": 1,
+    "TTL": 300,
+    "data": "104.20.23.154"
+   }
+  ],
+  "Comment": "Response from 172.64.35.228."
+ },
+ "dns.google example.com AAAA": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": true,
+  "CD": false,
+  "Question": [
+   {
+    "name": "example.com.",
+    "type": 28
+   }
+  ],
+  "Answer": [
+   {
+    "name": "example.com.",
+    "type": 28,
+    "TTL": 300,
+    "data": "2606:4700:10::6814:179a"
+   },
+   {
+    "name": "example.com.",
+    "type": 28,
+    "TTL": 300,
+    "data": "2606:4700:10::ac42:93f3"
+   }
+  ],
+  "Comment": "Response from 108.162.195.228."
+ },
+ "dns.google example.com MX": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": true,
+  "CD": false,
+  "Question": [
+   {
+    "name": "example.com.",
+    "type": 15
+   }
+  ],
+  "Answer": [
+   {
+    "name": "example.com.",
+    "type": 15,
+    "TTL": 300,
+    "data": "0 ."
+   }
+  ],
+  "Comment": "Response from 172.64.32.162."
+ },
+ "dns.google example.com TXT": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": true,
+  "CD": false,
+  "Question": [
+   {
+    "name": "example.com.",
+    "type": 16
+   }
+  ],
+  "Answer": [
+   {
+    "name": "example.com.",
+    "type": 16,
+    "TTL": 45,
+    "data": "_k2n1y4vw3qtb4skdx9e7dxt97qrmmq9"
+   },
+   {
+    "name": "example.com.",
+    "type": 16,
+    "TTL": 45,
+    "data": "v=spf1 -all"
+   }
+  ]
+ },
+ "dns.google letsencrypt.org CAA": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [
+   {
+    "name": "letsencrypt.org.",
+    "type": 257
+   }
+  ],
+  "Answer": [
+   {
+    "name": "letsencrypt.org.",
+    "type": 257,
+    "TTL": 44,
+    "data": "0 issuewild \"pki.goog\""
+   },
+   {
+    "name": "letsencrypt.org.",
+    "type": 257,
+    "TTL": 44,
+    "data": "0 issuewild \"sectigo.com\""
+   },
+   {
+    "name": "letsencrypt.org.",
+    "type": 257,
+    "TTL": 44,
+    "data": "0 issuewild \"ssl.com\""
+   },
+   {
+    "name": "letsencrypt.org.",
+    "type": 257,
+    "TTL": 44,
+    "data": "0 issue \"amazon.com\""
+   },
+   {
+    "name": "letsencrypt.org.",
+    "type": 257,
+    "TTL": 44,
+    "data": "0 issuewild \"amazon.com\""
+   },
+   {
+    "name": "letsencrypt.org.",
+    "type": 257,
+    "TTL": 44,
+    "data": "0 issue \"letsencrypt.org\""
+   },
+   {
+    "name": "letsencrypt.org.",
+    "type": 257,
+    "TTL": 44,
+    "data": "0 issue \"ssl.com\""
+   },
+   {
+    "name": "letsencrypt.org.",
+    "type": 257,
+    "TTL": 44,
+    "data": "0 issuewild \"letsencrypt.org\""
+   },
+   {
+    "name": "letsencrypt.org.",
+    "type": 257,
+    "TTL": 44,
+    "data": "0 issue \"sectigo.com\""
+   },
+   {
+    "name": "letsencrypt.org.",
+    "type": 257,
+    "TTL": 44,
+    "data": "0 issue \"pki.goog\""
+   },
+   {
+    "name": "letsencrypt.org.",
+    "type": 257,
+    "TTL": 44,
+    "data": "0 issue \"www.digicert.com\""
+   },
+   {
+    "name": "letsencrypt.org.",
+    "type": 257,
+    "TTL": 44,
+    "data": "0 issuewild \"www.digicert.com\""
+   }
+  ]
+ },
+ "dns.google nosuchname-vesen-test.com A": {
+  "Status": 3,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [
+   {
+    "name": "nosuchname-vesen-test.com.",
+    "type": 1
+   }
+  ],
+  "Authority": [
+   {
+    "name": "com.",
+    "type": 6,
+    "TTL": 900,
+    "data": "a.gtld-servers.net. nstld.verisign-grs.com. 1791370184 1800 900 604800 900"
+   }
+  ],
+  "Comment": "Response from 2001:503:231d::2:30."
+ },
+ "dns.google localhost A": {
+  "Status": 3,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": true,
+  "CD": false,
+  "Question": [
+   {
+    "name": "localhost.",
+    "type": 1
+   }
+  ],
+  "Authority": [
+   {
+    "name": ".",
+    "type": 6,
+    "TTL": 86391,
+    "data": "a.root-servers.net. nstld.verisign-grs.com. 2026100700 1800 900 604800 86400"
+   }
+  ]
+ }
+}

@@ -66,6 +66,8 @@ export interface StreamInit extends NetInit {
   redirect?: 'follow' | 'manual';
   /** 'no-store' skips the HTTP cache, so a measurement measures the network. */
   cache?: 'default' | 'no-store';
+  /** 'no-cors' (ping) gets an opaque answer from any site: its status and body stay hidden, its timing does not. */
+  mode?: 'cors' | 'no-cors';
 }
 
 /**

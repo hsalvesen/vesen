@@ -165,6 +165,7 @@ export interface CommandSpec {
   readonly subcommands?: Readonly<Record<string, SubcommandSpec>>;
   readonly examples?: readonly Example[];
   readonly seeAlso?: readonly string[];
+  /** Named first in its row of the short help index, which keeps to one line on a phone. */
   readonly featured?: boolean;
   /**
    * Its place in its category's row of the short help index, lowest first; unranked commands

@@ -43,11 +43,13 @@ const spec: CommandSpec & RawArgsSpec & RunnerChoice = {
   name: 'weather',
   category: 'network',
   summary: 'show the weather forecast for a place',
+  helpRank: 1,
   synopsis: [
     'weather [place | "place, qualifier" | lat,lon] [-u|-m|--units metric|imperial|uk] [-d N] [--json|--oneline]',
     'weather --here | weather - | weather --forget',
   ],
   rawArgs: true,
+  featured: true,
   network: true,
   // It may wait on a location prompt.
   budgetMs: 25_000,
