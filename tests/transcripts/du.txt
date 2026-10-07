@@ -20,7 +20,7 @@ $ du -ach projects
 ? 0
 $ du -sh ~ /usr
 188K	/home/guest
-1.3M	/usr
+1.4M	/usr
 ? 0
 $ du -h -d 1 /home/guest/projects
 8.0K	/home/guest/projects/vesen

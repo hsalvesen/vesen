@@ -104,8 +104,11 @@ function knownZone(zone: string): boolean {
   }
 }
 
-/** The zone times are shown in: $TZ when it names one (glibc reads one it does not know as UTC), else the visitor's. */
-export function zoneOf(ctx: SysContext): string {
+/**
+ * The zone times are shown in, as date picks it: $TZ when it names one (glibc reads one it does
+ * not know as UTC), else the visitor's. The network commands stamp their output with it too.
+ */
+export function zoneOf(ctx: Pick<CommandContext, 'env' | 'clock'>): string {
   const tz = ctx.env.get('TZ');
   if (tz === undefined || tz === '') return ctx.clock.timeZone();
   return knownZone(tz) ? tz : 'UTC';

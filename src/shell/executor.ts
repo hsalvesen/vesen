@@ -187,6 +187,12 @@ export interface Frame {
   /** How many scripts and sourced files deep this runs. */
   readonly depth: number;
   readonly interactive: boolean;
+  /**
+   * A stage of a pipeline typed at the prompt: a subshell, not the interactive shell, but still
+   * on the terminal, so the stage whose output goes to the screen may show a full-screen app, as
+   * `man ls | less` shows the pager.
+   */
+  readonly foreground?: boolean;
   /** Where variables, aliases, options, the folder and $? live; the session when absent. */
   readonly scope?: Scope;
   /**
@@ -335,7 +341,7 @@ export class Executor {
         try {
           // Each stage of a pipeline is a subshell, which is not the interactive shell: what it
           // changes (the folder, variables, aliases, options, history) stays in its own copy.
-          return await this.runCommand(cmd, job, stageIo, { ...frame, interactive: false, scope: this.scope(frame).fork() });
+          return await this.runCommand(cmd, job, stageIo, { ...frame, interactive: false, foreground: frame.interactive, scope: this.scope(frame).fork() });
         } catch (error) {
           // `exit` there ends only the stage, and so does an expansion error.
           if (error instanceof ExitRequest) return error.status;
@@ -931,7 +937,7 @@ export class Executor {
       clear: () => job.sink.clear(),
       fullscreen: <T>(view: FullscreenView, props: unknown): Promise<T> => {
         const show = terminal.fullscreen;
-        if (show === undefined || !frame.interactive) return Promise.reject(new Error('full-screen apps need the terminal'));
+        if (show === undefined || !(frame.interactive || frame.foreground === true)) return Promise.reject(new Error('full-screen apps need the terminal'));
         return show(view, props, job.signal) as Promise<T>;
       },
     };

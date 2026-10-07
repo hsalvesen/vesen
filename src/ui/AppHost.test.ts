@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { POWER_ON, type ShutdownView } from '../shell/shutdown';
+import type { FullscreenView } from '../shell/types';
 import AppHost from './AppHost.svelte';
 
 const view = (extra: Partial<ShutdownView> = {}): ShutdownView => ({
@@ -85,7 +86,7 @@ describe('AppHost and the Shutdown app', () => {
 
   it('lets the command go on when there is no such app', async () => {
     const onclose = vi.fn();
-    render(AppHost, { props: { request: { id: 3, view: 'pager', props: {} }, onclose } });
+    render(AppHost, { props: { request: { id: 3, view: 'no-such-app' as FullscreenView, props: {} }, onclose } });
     await vi.waitFor(() => expect(screen.getByText(/could not load/)).toBeInTheDocument());
     await fireEvent.click(screen.getByRole('button', { name: 'Back to the terminal' }));
     expect(onclose).toHaveBeenCalledWith(3, undefined);

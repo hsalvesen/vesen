@@ -26,6 +26,7 @@ Shell: help man history clear +33 more
 System: fastfetch uname ps top +26 more
 Network: weather stock curl +11 more
 Fun: cowsay fortune sl figlet +4 more
+Editor: less more nano
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
@@ -49,6 +50,7 @@ Shell: help man history clear alias apropos command env exit export fail false h
 System: fastfetch uname ps top date arch cal debug dmesg finger free groups hostname id keys locale open poweroff privacy reboot shutdown +9 more
 Network: weather stock curl dig fetch git host ifconfig ip nslookup ping speedtest wget whois
 Fun: cowsay fortune sl figlet cmatrix cowthink factor lolcat
+Editor: less more nano
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
@@ -69,6 +71,7 @@ Shell: help man history clear alias apropos bg command env exit export fail fals
 System: fastfetch uname ps top date arch cal debug dmesg finger free groups hostname id keys locale lsb_release lscpu nproc open pgrep pkill poweroff privacy reboot shutdown tty uptime w who
 Network: weather stock curl dig fetch git host ifconfig ip nslookup ping speedtest wget whois
 Fun: cowsay fortune sl figlet cmatrix cowthink factor lolcat
+Editor: less more nano
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
@@ -92,6 +95,7 @@ Shell: help man history clear alias apropos bg command env exit export fail fals
 System: fastfetch uname ps top date arch cal debug dmesg finger free groups hostname id keys locale lsb_release lscpu nproc open pgrep pkill poweroff privacy reboot shutdown tty uptime w who
 Network: weather stock curl dig fetch git host ifconfig ip nslookup ping speedtest wget whois
 Fun: cowsay fortune sl figlet cmatrix cowthink factor lolcat
+Editor: less more nano
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.

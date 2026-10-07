@@ -22,11 +22,11 @@ describe('the command catalogue', () => {
     expect(catalogue.map((found) => found.name).sort()).toEqual([
       'arch', 'base64', 'basename', 'bc', 'bg', 'cal', 'chgrp', 'chmod', 'chown', 'cmatrix', 'column', 'cowsay', 'cowthink', 'cut',
       'df', 'diff', 'dig', 'dirname', 'dmesg', 'du', 'expr', 'factor', 'fg', 'figlet', 'file', 'find', 'finger', 'fold', 'fortune',
-      'free', 'ftp', 'git', 'grep', 'groups', 'head', 'host', 'hostname', 'id', 'ifconfig', 'ip', 'jobs', 'kill', 'locale', 'lolcat',
-      'lsb_release', 'lscpu', 'md5sum', 'mktemp', 'nc', 'nl', 'nohup', 'nproc', 'nslookup', 'pgrep', 'ping', 'pkill', 'ps', 'read',
-      'readlink', 'realpath', 'rev', 'sed', 'seq', 'sha1sum', 'sha256sum', 'sha512sum', 'sl', 'sort', 'ssh', 'sync', 'tail', 'tee',
-      'telnet', 'time', 'timeout', 'top', 'tr', 'traceroute', 'tree', 'truncate', 'tty', 'uname', 'uniq', 'uptime', 'w', 'wait', 'watch',
-      'wc', 'wget', 'who', 'whois', 'xargs', 'yes',
+      'free', 'ftp', 'git', 'grep', 'groups', 'head', 'host', 'hostname', 'id', 'ifconfig', 'ip', 'jobs', 'kill', 'less', 'locale',
+      'lolcat', 'lsb_release', 'lscpu', 'md5sum', 'mktemp', 'more', 'nano', 'nc', 'nl', 'nohup', 'nproc', 'nslookup', 'pgrep', 'ping',
+      'pkill', 'ps', 'read', 'readlink', 'realpath', 'rev', 'sed', 'seq', 'sha1sum', 'sha256sum', 'sha512sum', 'sl', 'sort', 'ssh',
+      'sync', 'tail', 'tee', 'telnet', 'time', 'timeout', 'top', 'tr', 'traceroute', 'tree', 'truncate', 'tty', 'uname', 'uniq',
+      'uptime', 'vi', 'w', 'wait', 'watch', 'wc', 'wget', 'who', 'whois', 'xargs', 'yes',
     ]);
     const core = new Set(specFiles().map((found) => found.name));
     for (const found of catalogue) expect(core.has(found.name), found.name).toBe(false);

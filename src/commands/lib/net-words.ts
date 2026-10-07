@@ -4,23 +4,7 @@
 import type { NetError } from '../../services/types';
 import type { CommandContext } from '../../shell/types';
 import { formatDate } from '../system/date.run';
-
-/** True when the platform knows the zone. */
-function knownZone(zone: string): boolean {
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone: zone });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** The zone times are shown in, as date picks it: $TZ when it names a zone, else the device's. */
-export function zoneOf(ctx: Pick<CommandContext, 'env' | 'clock'>): string {
-  const tz = ctx.env.get('TZ');
-  if (tz !== undefined && tz !== '') return knownZone(tz) ? tz : 'UTC';
-  return ctx.clock.timeZone();
-}
+import { zoneOf } from './sysread';
 
 /** `ms` (now by default) in date's +FORMAT, in the zone date would use. */
 export function stamp(ctx: Pick<CommandContext, 'env' | 'clock'>, format: string, ms: number = ctx.clock.now()): string {

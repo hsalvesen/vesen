@@ -1,9 +1,9 @@
 // man: a command's manual, generated from its spec: NAME, SYNOPSIS, DESCRIPTION, OPTIONS,
 // EXAMPLES and SEE ALSO, laid out to the terminal's width (at most 80 columns), as man-db lays a
-// page out. It prints inline; the pager comes with wave F. `man vesen` is the about page, and -k
-// and -f are apropos and whatis.
+// page out. On the terminal it opens in the pager, as man does; in a pipe, or where the pager
+// cannot open, it prints. `man vesen` is the about page, and -k and -f are apropos and whatis.
 
-import { out } from '../../output/model';
+import { out, type Block } from '../../output/model';
 import { defineCommand, type CommandContext, type ExitCode } from '../../shell/types';
 import { allCommands } from '../lib/catalogue';
 
@@ -79,7 +79,7 @@ export default defineCommand({
     const [help, registry] = await Promise.all([import('../../shell/help'), allCommands(ctx)]);
     const layout = { columns: ctx.stdout.columns, version: __APP_VERSION__ };
     let status = 0;
-    let first = true;
+    const shown: { title: string; blocks: Block[] }[] = [];
     for (const name of pages) {
       const spec = name === 'vesen' ? undefined : registry.get(name);
       const inSection = name === 'vesen' ? section === null || section === '7' : section === null || section === '1';
@@ -89,10 +89,17 @@ export default defineCommand({
         status = NOT_FOUND;
         continue;
       }
-      if (!first) await ctx.stdout.write('\n');
-      first = false;
       const blocks = spec === undefined ? help.vesenPage(registry, layout) : help.manPage(await help.withDoc(spec), layout);
-      for (const block of blocks) await ctx.stdout.block(block);
+      shown.push({ title: `Manual page ${name}(${spec === undefined ? 7 : 1})`, blocks });
+    }
+    const title = shown[0]?.title;
+    if (title !== undefined && ctx.stdout.isTTY) {
+      const pager = await import('../lib/pager');
+      if (await pager.pageBlocks(ctx, title, shown.map((page) => page.blocks))) return status;
+    }
+    for (const [i, page] of shown.entries()) {
+      if (i > 0) await ctx.stdout.write('\n');
+      for (const block of page.blocks) await ctx.stdout.block(block);
     }
     return status;
   },

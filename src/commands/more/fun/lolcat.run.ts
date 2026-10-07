@@ -5,8 +5,8 @@ import { out } from '../../../output/model';
 import { stripSgr } from '../../../output/sgr';
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
 import { expandTabs } from '../../lib/cows';
-import { reason } from '../../lib/files';
 import { DEFAULT_FREQ, DEFAULT_SPREAD, rainbowLine, RAINBOW, type RainbowOptions } from '../../lib/rainbow';
+import { readOperand } from '../../lib/text-input';
 
 /** What --help, help and man say about lolcat, besides its spec (lolcat.ts). */
 export const doc: CommandDoc = {
@@ -20,16 +20,6 @@ function number(value: unknown, fallback: number, positive: boolean): number | n
   const n = typeof value === 'number' ? value : Number(String(value).trim());
   if (String(value).trim() === '' || !Number.isFinite(n) || (positive && n <= 0)) return null;
   return n;
-}
-
-/** The text of FILE, or null after saying why it could not be read. */
-async function readFile(ctx: CommandContext, file: string): Promise<string | null> {
-  try {
-    return ctx.fs.readFile(ctx.resolve(file));
-  } catch (error) {
-    await ctx.fail(`${file}: ${reason(error)}`);
-    return null;
-  }
 }
 
 export async function run(ctx: CommandContext): Promise<ExitCode> {
@@ -49,7 +39,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
         for await (const chunk of ctx.stdin.chunks()) await ctx.stdout.write(chunk);
         continue;
       }
-      const text = await readFile(ctx, file);
+      const text = await readOperand(ctx, file);
       if (text === null) status = 1;
       else await ctx.stdout.write(text);
     }
@@ -69,7 +59,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
       for await (const line of ctx.stdin.lines()) await paint(line);
       continue;
     }
-    const text = await readFile(ctx, file);
+    const text = await readOperand(ctx, file);
     if (text === null) {
       status = 1;
       continue;
