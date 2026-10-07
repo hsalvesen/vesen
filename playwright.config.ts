@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 4173;
+// PW_PORT lets parallel checkouts run e2e suites side by side.
+const PORT = Number(process.env.PW_PORT ?? 4173);
 const CI = Boolean(process.env.CI);
 
 // Instagram's in-app browser on iOS: WKWebView with the app's token appended to the UA,
