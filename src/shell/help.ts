@@ -93,6 +93,10 @@ export function helpIndex(registry: Registry, options: { readonly all?: boolean 
     more.push([out.run('help --all', 'help --all', STRONG), out.span(' lists every command with what it does.', MUTED)]);
   }
   more.push(MORE_HELP);
+  // What vesen sends where, one tap away (docs/plan/10-tooling-hosting-docs.md, 0.10).
+  if (registry.get('privacy') !== undefined) {
+    more.push([out.run('privacy', 'privacy', STRONG), out.span(' says what vesen sends, and where.', MUTED)]);
+  }
   blocks.push(out.lines(more));
   return blocks;
 }

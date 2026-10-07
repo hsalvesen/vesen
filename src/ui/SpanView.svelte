@@ -9,9 +9,13 @@
   import { hexColour, isTrustedAction, safeHref, type Action, type HexColour, type Span } from '../output/model';
   import { theme } from '../stores/theme';
   import { cathode } from '../stores/cathode';
+  import { linkPolicy } from './links';
   import { spanClasses, spanCss } from './span-style';
 
   let { span, onaction }: { span: Span; onaction?: (action: Action) => void } = $props();
+
+  // A new tab in a browser; the same view in an in-app browser, so Back returns here.
+  const links = linkPolicy();
 
   /** For a highlight binding, whether this span names the current theme or CRT mode. */
   const current = $derived.by(() => {
@@ -57,7 +61,7 @@
 {:else if marker !== null}
   <span class={classes} style={css} aria-hidden="true">{text}</span>
 {:else if href !== null}
-  <a class={classes} style={css} {href} target="_blank" rel="noopener noreferrer">{text}</a>
+  <a class={classes} style={css} {href} target={/^mailto:/i.test(href) ? undefined : links.target} rel="noopener noreferrer">{text}</a>
 {:else}
   <span class={classes} style={css} aria-current={current ? 'true' : undefined}>{text}</span>
 {/if}

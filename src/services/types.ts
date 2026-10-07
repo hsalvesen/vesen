@@ -113,23 +113,61 @@ export interface Bell {
 // ── Opener ─────────────────────────────────────────────────────────────────────────────────
 
 /**
- * Opens links under the in-app browser policy. On a desktop browser a command's `opens()` URL
- * opens synchronously inside the Enter or tap gesture; inside Instagram, Facebook or TikTok
- * nothing navigates without a tap. Every opener also prints a link card, which is not this
- * service's job.
+ * How a URL opens (docs/plan/02-architecture-and-contracts.md, section 7):
+ * - `window`: a desktop browser outside an in-app browser. The command's opens() URL opens in a
+ *   new tab synchronously inside the Enter or tap gesture, and the card is printed too.
+ * - `self`: an in-app browser (Instagram, Facebook, TikTok). Nothing navigates without a tap, and
+ *   a tapped link opens in the same view, so Back comes back to the terminal.
+ * - `card-only`: a phone or tablet browser, or a mailto link anywhere. Only the card is printed;
+ *   a tapped link opens in a new tab.
+ */
+export type OpenMode = 'window' | 'self' | 'card-only';
+
+export interface OpenPlan {
+  readonly mode: OpenMode;
+  /** Where a tapped link opens: '_self' inside an in-app browser, '_blank' everywhere else. */
+  readonly target: '_blank' | '_self';
+}
+
+/** The in-app browser the page is in, as the link cards word it. */
+export interface InAppInfo {
+  /** 'Instagram'. */
+  readonly label: string;
+  /** The real browser an escape opens: 'Safari' on iOS, 'Chrome' on Android, else 'your browser'. */
+  readonly browser: string;
+  /** The manual instruction, always shown beside an escape: '••• → Open in browser'. */
+  readonly menuHint: string;
+}
+
+/**
+ * Opens links under the in-app browser policy. Every opener also prints a link card, which is
+ * not this service's job.
  */
 export interface Opener {
-  /** True on a desktop browser outside an in-app browser. */
+  /** True on a desktop browser outside an in-app browser: plan(url).mode is 'window' for web links. */
   readonly autoOpen: boolean;
+  /** The in-app browser, or null in a real browser. */
+  readonly inApp: InAppInfo | null;
+  /** How `url` opens here. */
+  plan(url: string): OpenPlan;
   /**
-   * Must be called synchronously inside the user gesture. Opens `url` in a new tab when
-   * `autoOpen` allows it; `skipped` when the policy says to wait for a tap.
+   * Must be called synchronously inside the user gesture. Opens `url` in a new tab with
+   * `noopener,noreferrer` when the plan's mode is `window`, and `skipped` otherwise. A blocked or
+   * failed window.open is `blocked`; null, which is what noopener returns, counts as opened.
    */
   preflight(url: string): 'opened' | 'blocked' | 'skipped';
-  /** Opens `url` after a tap on a link or card; in an in-app browser it navigates in place. */
+  /** Opens `url` after a tap on a link or card: a new tab, or the same view in an in-app browser. */
   open(url: string): 'opened' | 'blocked';
-  /** An `instagram://extbrowser/` or `intent://` link to offer behind a tap, or null. */
+  /**
+   * The link that opens `url` in the real browser from an in-app browser: `instagram://extbrowser/`
+   * on iOS Instagram, `intent://` on Android; null where there is none.
+   */
   escapeHref(url: string): string | null;
+  /**
+   * Leaves the in-app browser for the real one, through escapeHref(url). Only ever from a tap,
+   * and only beside the manual instruction. False when there is no escape here.
+   */
+  openExternal(url: string): boolean;
   /** The manual "••• → Open in browser" instruction for the current in-app browser, or null. */
   menuHint(): string | null;
   /** True when the system share sheet is available. */
@@ -183,8 +221,21 @@ export interface SysSnapshot {
   readonly timeZone: string;
 }
 
+/** What `debug report` adds to the snapshot: the page as it is now, and what went wrong. */
+export interface Diagnostics {
+  /** The layout viewport, and the part of it the visitor sees where the browser says. */
+  readonly viewport: { readonly width: number; readonly height: number; readonly visibleHeight: number | null; readonly scale: number | null };
+  readonly online: boolean;
+  /** Launched from the home screen. */
+  readonly standalone: boolean;
+  /** The newest uncaught errors and rejected promises, oldest first, one line each. */
+  readonly errors: readonly string[];
+}
+
 /** The one source of system facts for fastfetch, uname, /proc, free, lscpu and locale. */
 export interface SysInfo {
+  /** For `debug report`; never sent anywhere, only copied when the visitor asks. */
+  diagnostics(): Diagnostics;
   snapshot(): SysSnapshot;
   /** The WebGL renderer string, probed lazily; null when unavailable. */
   gpu(): string | null;

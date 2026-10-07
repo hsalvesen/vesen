@@ -16,7 +16,7 @@ import historyMarkup from '../content/history.vt?raw';
 import linuxMarkup from '../content/linux.vt?raw';
 import readmeMarkup from '../content/README.vt?raw';
 import { parseMarkup } from '../output/markup';
-import { ACCOUNTS, GROUPS, GUEST, HOST, LEGACY_HOME, LOGIN_SHELL, OWNER } from './identity';
+import { ACCOUNTS, GROUPS, GUEST, HOST, LEGACY_HOME, LOGIN_SHELL, OWNER, OWNER_LINKS } from './identity';
 import { binStubs, devTree, KERNEL_RELEASE, manPages, procTree, type CommandInfo } from './special';
 import type { VirtualFile } from './types';
 
@@ -167,9 +167,9 @@ const ABOUT = `# ${OWNER.fullName}
 
 I built vesen, the terminal you are typing in.
 
-- LinkedIn: https://www.linkedin.com/in/harrysalvesen/
-- GitHub:   https://github.com/hsalvesen
-- Email:    mailto:has@salvesen.app
+- LinkedIn: ${OWNER_LINKS.linkedin}
+- GitHub:   ${OWNER_LINKS.github}
+- Email:    mailto:${OWNER_LINKS.email}
 - Website:  https://www.vesen.app
 
 Try \`whoami\`, \`email\` or \`repo\` to reach me from here.

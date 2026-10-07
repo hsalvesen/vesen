@@ -41,7 +41,9 @@ npm run preview
 ```
 
 ### Getting started
-Type `help` in the terminal to see every command by category, `man <command>` for one command's manual (`man vesen` is about the terminal itself), and `help keys` for the keys. Explore the file system with `ls` and `cd`; `exit` ends the session and offers a new one.
+Type `help` in the terminal to see every command by category, `man <command>` for one command's manual (`man vesen` is about the terminal itself), and `help keys` for the keys. Explore the file system with `ls` and `cd`; `exit` ends the session and offers a new one, and `poweroff` shows a Power on button that starts one with your files kept.
+
+`whoami`, `about` and `contact` say who made vesen, with link cards that have Copy. A desktop browser also opens LinkedIn or the source for `whoami` and `repo`; on phones a link opens only when tapped, and inside Instagram's browser it opens in the same view, so Back brings the terminal back as it was. `privacy` lists every service a command talks to and what it is sent, and `debug report` copies the details a bug report needs.
 
 At the prompt, Tab completes, ↑ and ↓ step through the history lines that start with what is typed, Ctrl+R searches the history, and grey text offers the rest of a past line (→ takes it). While the prompt has focus, the readline keys edit the line: Ctrl+A, E, U, K, Y, L and D everywhere, Ctrl+W, P, N, F, B and T on a Mac, and Alt+B, F, D, Y, . and Backspace. Ctrl+C copies selected text, and otherwise stops the running command. Escape then Tab leaves the terminal for the rest of the page.
 
@@ -99,18 +101,22 @@ src/
 ├── content/                      # The owner's styled documents (README, history, linux notes) in {colour}
 │                                 # markup, converted once from HTML by scripts/convert-content.mjs
 ├── commands/                     # One CommandSpec per file, DOM-free, by category: portfolio/ (theme,
-│                                 # cathode, banner), files/ (ls, cat, cp, mv, rm, rmdir, mkdir, touch, ln,
+│                                 # cathode, banner, whoami, linkedin, about, contact and email, repo, open
+│                                 # and xdg-open), files/ (ls, cat, cp, mv, rm, rmdir, mkdir, touch, ln,
 │                                 # stat, cd, pwd), text/ (echo, printf), shell/ (help, man, whatis,
 │                                 # apropos, history, clear, reset, alias, unalias, export, unset, env,
 │                                 # printenv, set, source, type, which, command, true, false, test, exit,
-│                                 # login, sleep), system/ (date, keys); lib/ is what they share, the banner
+│                                 # login, sleep, sudo), system/ (date, keys, poweroff, reboot, shutdown,
+│                                 # privacy, debug); lib/ is what they share, the banner and the link cards
 │                                 # included; legacy.ts wraps the commands not yet ported
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette
 │                                 # where themes.json does not set them, and the contrast each must meet);
 │                                 # qr/ (the QR encoder: segments, error correction, masks, and text, SVG
 │                                 # and raster renderers)
-├── platform/                     # Browser-facing helpers: canonical host redirect, stale-chunk reload,
+├── platform/                     # Browser-facing helpers: env.ts (touch, the in-app browser and the
+│                                 # system), errors.ts (recent errors for debug report), canonical host
+│                                 # redirect, stale-chunk reload,
 │                                 # head.ts (palette colours, theme-color, favicon), theme-apply.ts (the
 │                                 # role colours), perf.ts (the CRT tier: full, lite or off, and why),
 │                                 # crt.ts (CRT classes), measure.ts (--input-scale for the 16px touch
@@ -120,6 +126,11 @@ src/
 │   ├── net.ts                    # fetch with timeouts, cancelling, byte caps and typed network errors
 │   ├── storage.ts                # localStorage and sessionStorage with a memory fallback; one-time migrations
 │   ├── types.ts                  # Service interfaces: net, storage, bell, opener, clipboard, clock, system info
+│   ├── opener.ts                 # The in-app link policy: planOpen, the new tab inside the gesture, and the
+│   │                             # escape to the real browser behind a tap
+│   ├── clipboard.ts              # Copy: the Clipboard API, then execCommand
+│   ├── session-snapshot.ts       # The screen saved for Back (vesen:session:v1); session-restore.ts
+│   │                             # rebuilds it, loaded only after Back
 │   ├── storage-keys.ts           # Every browser storage key, in one registry
 │   ├── weather/                  # Weather's sources (forecast, geocoding, IP location), place resolution,
 │   │                             # units and WMO codes, and the view model a weather card draws
@@ -136,6 +147,8 @@ src/
 │   │                             # (keys.ts says what each key does), HistorySheet.svelte, press.ts (tap,
 │   │                             # hold, long press and repeat, never taking focus from the prompt)
 │   ├── Transcript.svelte         # Each entry: the prompt it was typed at, the line, its output
+│   ├── AppHost.svelte            # A command's full-screen app over the terminal; apps/Shutdown.svelte
+│   ├── links.ts                  # Where links open and how Copy copies, for the cards and spans
 │   ├── Prompt.svelte             # guest@vesen:~/documents$, live under the transcript and as each entry's snapshot
 │   ├── OutputView.svelte         # Draws output blocks with text interpolation only
 │   ├── SpanView.svelte           # One styled span: link, trusted action button, live theme or CRT marker,
@@ -145,13 +158,13 @@ src/
 │   ├── legacy-highlights.ts      # Renames the theme in earlier legacy fastfetch output
 │   ├── actions/                  # stickToBottom (the one scroll owner, with the new-output pill) and
 │   │                             # focusPolicy (when a click, tap or key puts the caret in the prompt)
-│   └── components/registry.ts    # Rich cards a component block may name (none yet)
+│   └── components/               # LinkCard.svelte (the card block: the link, Copy, the in-app escape);
+│                                 # registry.ts, the rich cards a component block may name (none yet)
 ├── testing/                      # Test setup
 └── utils/
-    ├── commands.ts               # The legacy command table (repo, email); the network commands
-    │                             # load on first use
-    ├── commands/                 # Legacy commands not yet ported: network, system, QR, poweroff;
-    │                             # fastfetch and the network commands load on first use
+    ├── commands.ts               # The legacy command table; the network commands load on first use
+    ├── commands/                 # Legacy commands not yet ported: network, fastfetch, QR; fastfetch
+    │                             # and the network commands load on first use
     ├── virtualFileSystem.ts      # A shim over the VFS for the legacy commands not yet ported
     ├── helpTexts.ts              # Help for each legacy command not yet ported
     ├── notice.ts                 # The one notice panel and the one error style (cmd: message, then a hint)

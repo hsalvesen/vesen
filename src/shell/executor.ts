@@ -49,6 +49,7 @@ import {
   type CommandContext,
   type CommandSpec,
   type ExitCode,
+  type FullscreenView,
   type InAppBrowser,
   type InStream,
   type OutStream,
@@ -109,6 +110,12 @@ export interface TerminalInfo {
    * it from the prompt (src/shell/reader.ts); without it, every read gets null: no answer.
    */
   readLine?(options: ReadOptions): Promise<string | null>;
+  /**
+   * Shows a full-screen app over the terminal until it closes, and resolves with its result;
+   * rejects when `signal` aborts. The shell runs them through its app store (src/shell/apps.ts);
+   * without it, a command asking for one fails.
+   */
+  fullscreen?(view: FullscreenView, props: unknown, signal: AbortSignal): Promise<unknown>;
 }
 
 export interface ExecutorDeps {
@@ -838,7 +845,11 @@ export class Executor {
       copy: (text) => clipboard?.copy(text) ?? Promise.resolve(false),
       bell: () => job.bell(),
       clear: () => job.sink.clear(),
-      fullscreen: () => Promise.reject(new Error('full-screen apps are not available yet')),
+      fullscreen: <T>(view: FullscreenView, props: unknown): Promise<T> => {
+        const show = terminal.fullscreen;
+        if (show === undefined || !frame.interactive) return Promise.reject(new Error('full-screen apps need the terminal'));
+        return show(view, props, job.signal) as Promise<T>;
+      },
     };
   }
 

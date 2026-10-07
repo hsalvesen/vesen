@@ -408,8 +408,10 @@ export interface Tty {
   /** Asks yes or no at the prompt; null on ^C. */
   confirm(message: string, options?: { defaultAnswer?: boolean }): Promise<boolean | null>;
   /**
-   * Prints a link card with Copy, and reports whether the preflight already opened the URL
-   * ('opened'), the browser blocked it ('blocked') or only the card was shown ('card').
+   * Whether `url` opened in a new tab inside the gesture that ran the line (a desktop browser,
+   * through the spec's opens()): 'opened', 'blocked' by the browser, or 'card' where only the
+   * link card shows (phones, in-app browsers, mail). It prints nothing: every opener prints its
+   * own link card with Copy (commands/lib/cards.ts).
    */
   open(url: string, label: string): Promise<'opened' | 'blocked' | 'card'>;
   copy(text: string): Promise<boolean>;

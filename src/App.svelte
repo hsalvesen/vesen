@@ -5,25 +5,49 @@
   the visible viewport by styles/shell.css and platform/viewport.ts, so the dock rides on top of
   the soft keyboard. The dock loads in its own chunk, so a desktop never downloads it; until it
   arrives its room is kept, so nothing jumps, and if it never does the chips stay under the prompt.
+
+  A command's full-screen app (the Shutdown screen) is drawn by AppHost over all of it. Links and
+  cards follow the opener's in-app policy, and when the page is put away the screen goes to the
+  session snapshot, which boot restores after Back.
 -->
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import Cathode from './components/Cathode.svelte';
   import type { Action } from './output/model';
   import { coarsePointer, dockWanted, keyPlatform } from './platform/env';
-  import type { ShellPort } from './shell/index';
+  import { createClipboard } from './services/clipboard';
+  import { saveSnapshot, SNAPSHOT_KEY, type SessionSnapshot } from './services/session-snapshot';
+  import type { AppRequest, ShellPort } from './shell/index';
   import { screen as transcript } from './stores/screen';
   import CompletionRow from './ui/CompletionRow.svelte';
+  import { provideLinkPolicy } from './ui/links';
+  import type { AppPlatform } from './ui/platform';
   import PromptLine from './ui/prompt/PromptLine.svelte';
   import { PromptController } from './ui/prompt/promptController.svelte';
   import Transcript from './ui/Transcript.svelte';
   import { focusPolicy } from './ui/actions/focusPolicy';
-  import { scrollToEnd, stickToBottom } from './ui/actions/stickToBottom';
+  import { distanceFromBottom, PIN_THRESHOLD_PX, scrollToEnd, stickToBottom } from './ui/actions/stickToBottom';
 
-  let { shell }: { shell: ShellPort } = $props();
+  let { shell, platform }: { shell: ShellPort; platform?: AppPlatform } = $props();
 
   const win = typeof window === 'undefined' ? undefined : window;
   const dock = dockWanted(win);
+  // svelte-ignore state_referenced_locally
+  const { opener = null, clipboard: givenClipboard = null, session = null, restored = null } = platform ?? {};
+  const clipboard = givenClipboard ?? createClipboard(win ?? {});
+
+  // Links and cards: a new tab in a browser, the same view inside an in-app browser.
+  provideLinkPolicy({
+    target: opener?.inApp ? '_self' : '_blank',
+    inApp: opener?.inApp ?? null,
+    touch: coarsePointer(win),
+    copy: (text) => clipboard.copy(text),
+    escapeHref: (url) => opener?.escapeHref(url) ?? null,
+    openExternal: (url) => {
+      beforeLeaving();
+      void opener?.openExternal(url);
+    },
+  });
   // The prompt: the line being typed, its keys, the running line and everything Tab offers.
   // svelte-ignore state_referenced_locally
   const prompt = new PromptController({ shell, screen: transcript, platform: keyPlatform(win?.navigator), touch: coarsePointer(win), dock });
@@ -45,6 +69,93 @@
   let screen: HTMLElement | undefined = $state();
   let newOutput = $state(false);
 
+  // A full-screen app over the terminal (the Shutdown screen); the shell under it is inert. The
+  // host loads with the first app, so pages that never show one never download it.
+  let app: AppRequest | null = $state(null);
+  let AppHost: typeof import('./ui/AppHost.svelte').default | null = $state(null);
+  // svelte-ignore state_referenced_locally
+  const stopApps = shell.apps.subscribe((request) => {
+    const closed = app !== null && request === null;
+    app = request;
+    if (request !== null && AppHost === null) {
+      import('./ui/AppHost.svelte').then(
+        (module) => (AppHost = module.default),
+        // Its chunk never came: the command gets no result, and the prompt comes back.
+        () => shell.closeApp(request.id),
+      );
+    }
+    // Back at the prompt: on a desktop the caret goes back into it.
+    if (closed) void tick().then(() => prompt.focus());
+  });
+  onDestroy(stopApps);
+
+  /** The screen as it is, for the session snapshot. */
+  function snapshotSource() {
+    return {
+      entries: transcript.entries(),
+      line: prompt.snapshotLine(),
+      cwd: shell.cwd.get(),
+      scroll: { top: screen?.scrollTop ?? 0, atBottom: screen === undefined || distanceFromBottom(screen) <= PIN_THRESHOLD_PX },
+    };
+  }
+
+  /** Saves the snapshot before a tap leaves the page in this view (an in-app browser's links). */
+  let beforeLeaving: () => void = () => {};
+
+  /** Puts back the line and where the screen was scrolled to, after Back. */
+  function restoreView(snapshot: SessionSnapshot): void {
+    // Unless something has been typed since.
+    if (snapshot.line !== '' && prompt.text === '') prompt.restoreLine(snapshot.line);
+    const place = (): void => {
+      if (!screen) return;
+      screen.scrollTop = snapshot.scroll.atBottom ? screen.scrollHeight : snapshot.scroll.top;
+    };
+    // Once the entries are drawn, and again once the layout blocks' chunk has drawn them.
+    void tick().then(() => win?.requestAnimationFrame(place));
+    win?.setTimeout(place, 300);
+  }
+
+  onMount(() => {
+    void restored?.then((snapshot) => snapshot !== null && restoreView(snapshot));
+    if (win === undefined || session === null) return;
+    // Put away (a link opened in the same view, the app switched): the screen goes to the
+    // snapshot, for Back. A page kept whole in the back/forward cache needs none of it, unless it
+    // came back without its state. WebKit loses what pagehide writes when the next page is on
+    // another site, so a tap on a link that opens in this view saves first, as hiding the page does.
+    const save = (): void => void saveSnapshot(session, snapshotSource(), Date.now());
+    const onPageHide = save;
+    const onLinkTap = (event: MouseEvent): void => {
+      const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+      // An in-app browser may open even a new-tab link in this view.
+      if (link !== null && (opener?.inApp != null || link.getAttribute('target') !== '_blank')) save();
+    };
+    const onVisibility = (): void => {
+      if (win.document.visibilityState === 'hidden') save();
+    };
+    beforeLeaving = save;
+    const onPageShow = (event: PageTransitionEvent): void => {
+      if (!event.persisted || transcript.entries().length > 0) return;
+      void import('./services/session-restore').then(({ reviveSnapshot }) => {
+        const snapshot = reviveSnapshot(session.get(SNAPSHOT_KEY), Date.now());
+        if (snapshot === null || snapshot.entries.length === 0 || transcript.entries().length > 0) return;
+        transcript.replace(snapshot.entries.map((entry) => ({ ...entry, origin: 'boot' as const })));
+        if (snapshot.cwd !== '') shell.restoreCwd(snapshot.cwd);
+        restoreView(snapshot);
+      });
+    };
+    win.addEventListener('pagehide', onPageHide);
+    win.addEventListener('pageshow', onPageShow);
+    win.document.addEventListener('click', onLinkTap, true);
+    win.document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      beforeLeaving = () => {};
+      win.removeEventListener('pagehide', onPageHide);
+      win.removeEventListener('pageshow', onPageShow);
+      win.document.removeEventListener('click', onLinkTap, true);
+      win.document.removeEventListener('visibilitychange', onVisibility);
+    };
+  });
+
   /** A tap on a trusted action in the output: a did-you-mean, a chip, a link card. */
   function onaction(action: Action): void {
     switch (action.kind) {
@@ -60,19 +171,26 @@
         if (screen) scrollToEnd(screen);
         break;
       case 'open':
-        window.open(action.href, '_blank', 'noopener');
+        // A new tab, or the same view inside an in-app browser.
+        if (opener) {
+          if (opener.plan(action.href).target === '_self') beforeLeaving();
+          opener.open(action.href);
+        } else window.open(action.href, '_blank', 'noopener,noreferrer');
         break;
       case 'copy':
-        void navigator.clipboard?.writeText(action.text).catch(() => {});
+        void clipboard.copy(action.text).then((copied) => {
+          if (!copied) prompt.ringBell();
+        });
         break;
       case 'share':
-        void navigator.share?.({ url: action.url, ...(action.title ? { title: action.title } : {}) }).catch(() => {});
+        if (opener) void opener.share({ url: action.url, ...(action.title ? { title: action.title } : {}) });
+        else void navigator.share?.({ url: action.url, ...(action.title ? { title: action.title } : {}) }).catch(() => {});
         break;
     }
   }
 </script>
 
-<div class="shell" class:has-dock={dock && !dockFailed} use:focusPolicy={{ input: () => prompt.element }}>
+<div class="shell" class:has-dock={dock && !dockFailed} inert={app !== null} use:focusPolicy={{ input: () => prompt.element }}>
   <div class="screen-frame">
     <main
       bind:this={screen}
@@ -124,6 +242,11 @@
     {#if Dock}<Dock controller={prompt} />{/if}
   </div>
 </div>
+
+<!-- Outside <main>, whose vintage CRT filter would capture it, and over the dock too. -->
+{#if app && AppHost}
+  <AppHost request={app} onclose={(id, result) => shell.closeApp(id, result)} />
+{/if}
 
 <style>
   /* The dock's room, kept while its chunk loads: the chip row over the closed bar. */

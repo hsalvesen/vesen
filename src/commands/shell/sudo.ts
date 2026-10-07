@@ -47,8 +47,10 @@ export default defineCommand({
     }
 
     await ctx.stderr.line(`${ctx.user.name} is not in the sudoers file. This incident will be reported.`);
-    await ctx.tty.open(SUDO_VIDEO, 'sudo');
+    // The card everywhere; on a desktop browser the answer's key press has opened it already.
+    const opened = await ctx.tty.open(SUDO_VIDEO, 'sudo');
     await ctx.stdout.block(out.card({ title: 'Your incident report', href: SUDO_VIDEO }));
+    if (opened === 'opened') await ctx.stdout.line(out.span('(opened in a new tab)', { fg: 'muted' }));
     return 1;
   },
 });

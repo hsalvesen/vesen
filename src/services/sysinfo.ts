@@ -5,9 +5,23 @@
 import type { DeviceClass, SysInfo, SysSnapshot } from './types';
 
 export interface SysHost {
-  readonly navigator: Pick<Navigator, 'userAgent' | 'languages' | 'hardwareConcurrency'> & { readonly deviceMemory?: number };
+  readonly navigator: Pick<Navigator, 'userAgent' | 'languages' | 'hardwareConcurrency'> & {
+    readonly deviceMemory?: number;
+    readonly onLine?: boolean;
+    /** iOS: launched from the home screen. */
+    readonly standalone?: boolean;
+  };
   readonly screen: Pick<Screen, 'width' | 'height' | 'colorDepth'>;
   readonly devicePixelRatio: number;
+  readonly innerWidth?: number;
+  readonly innerHeight?: number;
+  readonly visualViewport?: { readonly height: number; readonly scale: number } | null;
+  readonly matchMedia?: (query: string) => { readonly matches: boolean };
+}
+
+export interface SysInfoOptions {
+  /** The page's recent errors (platform/errors.ts), for debug report. */
+  readonly errors?: () => readonly string[];
 }
 
 function deviceClass(userAgent: string): DeviceClass {
@@ -16,7 +30,16 @@ function deviceClass(userAgent: string): DeviceClass {
   return 'desktop';
 }
 
-export function createSysInfoStub(host: SysHost | null): SysInfo {
+function standalone(host: SysHost): boolean {
+  if (host.navigator.standalone === true) return true;
+  try {
+    return host.matchMedia?.('(display-mode: standalone)').matches === true;
+  } catch {
+    return false;
+  }
+}
+
+export function createSysInfoStub(host: SysHost | null, options: SysInfoOptions = {}): SysInfo {
   const snapshot = (): SysSnapshot => {
     const userAgent = host?.navigator.userAgent ?? '';
     return {
@@ -38,6 +61,17 @@ export function createSysInfoStub(host: SysHost | null): SysInfo {
   };
   return {
     snapshot,
+    diagnostics: () => ({
+      viewport: {
+        width: host?.innerWidth ?? 0,
+        height: host?.innerHeight ?? 0,
+        visibleHeight: host?.visualViewport?.height ?? null,
+        scale: host?.visualViewport?.scale ?? null,
+      },
+      online: host?.navigator.onLine !== false,
+      standalone: host === null ? false : standalone(host),
+      errors: options.errors?.() ?? [],
+    }),
     gpu: () => null,
     battery: () => Promise.resolve(null),
     storage: () => Promise.resolve(null),

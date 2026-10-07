@@ -3,7 +3,7 @@ import { flushSync, tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import themes from '../../themes.json';
 import { activeContent } from '../../tests/support/xss';
-import { isTrustedAction, out, type Action, type Block, type SafeHref, type Span } from '../output/model';
+import { out, type Action, type Block, type SafeHref, type Span } from '../output/model';
 import { cathode } from '../stores/cathode';
 import { theme } from '../stores/theme';
 import OutputView from './OutputView.svelte';
@@ -120,14 +120,15 @@ describe('OutputView: links and actions', () => {
     expect(root.textContent).toContain('evil');
   });
 
-  it('draws a card as a link with a Copy button that copies the URL', async () => {
-    const onaction = vi.fn();
-    const root = await view([out.card({ title: 'LinkedIn', href: 'https://www.linkedin.com/in/example', detail: 'profile' })], onaction);
-    expect(root.querySelector('a.card-title')?.getAttribute('rel')).toBe('noopener noreferrer');
-    await fireEvent.click(root.querySelector('button') as HTMLButtonElement);
-    const action = onaction.mock.calls[0]?.[0] as Action;
-    expect(isTrustedAction(action)).toBe(true);
-    expect(action).toMatchObject({ kind: 'copy', text: 'https://www.linkedin.com/in/example' });
+  it('draws a card as a real link in a new tab, with Copy (ui/components/LinkCard.test.ts has the rest)', async () => {
+    const root = await view([out.card({ title: 'LinkedIn', href: 'https://www.linkedin.com/in/example', detail: 'profile' })], vi.fn());
+    const link = root.querySelector('a.card-url');
+    expect(link?.getAttribute('href')).toBe('https://www.linkedin.com/in/example');
+    expect(link?.getAttribute('target')).toBe('_blank');
+    expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(link?.textContent).toBe('↗ linkedin.com/in/example');
+    expect(root.querySelector('.card-detail')?.textContent).toBe('profile');
+    expect(root.querySelector('button.card-copy')?.textContent?.trim()).toBe('⧉ Copy');
   });
 });
 

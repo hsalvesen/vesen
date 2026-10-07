@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { plain, type Block } from '../../output/model';
 import type { KV, Opener } from '../../services/types';
 import type { Shell } from '../../shell/index';
+import { fakeOpener as openerFake } from '../../testing/opener';
 import { harness } from '../../testing/shell-harness';
 import rm from '../files/rm';
 import sudo, { SUDO_HINT, SUDO_VIDEO } from './sudo';
@@ -9,15 +10,8 @@ import sudo, { SUDO_HINT, SUDO_VIDEO } from './sudo';
 const SECRET = 'hunter2-correct-horse';
 
 function fakeOpener(result: 'opened' | 'blocked' | 'skipped' = 'opened'): Opener & { preflight: ReturnType<typeof vi.fn> } {
-  return {
-    autoOpen: result !== 'skipped',
-    preflight: vi.fn(() => result),
-    open: () => 'opened',
-    escapeHref: () => null,
-    menuHint: () => null,
-    canShare: () => false,
-    share: () => Promise.resolve('unavailable'),
-  };
+  const preflight = vi.fn(() => result);
+  return { ...openerFake({ autoOpen: result !== 'skipped' }), preflight };
 }
 
 /** Storage that keeps everything written, to look for the secret in. */

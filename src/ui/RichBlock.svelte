@@ -7,17 +7,9 @@
   containers preserve whitespace, so any space Svelte kept there would show.
 -->
 <script lang="ts">
-  import {
-    isTrustedAction,
-    lineText,
-    out,
-    safeHref,
-    textWidth,
-    type Action,
-    type Block,
-    type GridBlock,
-  } from '../output/model';
+  import { isTrustedAction, lineText, textWidth, type Action, type Block, type GridBlock } from '../output/model';
   import LineView from './LineView.svelte';
+  import LinkCard from './components/LinkCard.svelte';
   import OutputView from './OutputView.svelte';
   import { lookupComponent } from './components/registry';
   import { hangingIndent } from './hang';
@@ -110,21 +102,7 @@
     {/each}
   </div>
 {:else if block.type === 'card'}
-  {@const href = safeHref(block.href)}
-  <div class="card">
-    {#if href !== null}
-      <a class="card-title" {href} target="_blank" rel="noopener noreferrer">{block.title}</a>
-    {:else}
-      <span class="card-title">{block.title}</span>
-    {/if}
-    {#if block.detail !== undefined}
-      <div class="text">{block.detail}</div>
-    {/if}
-    <div class="text card-url">{block.href}</div>
-    {#if onaction}
-      <button type="button" class="chip" onclick={() => onaction?.(out.action.copy(block.copy ?? block.href, 'Copy'))}>Copy</button>
-    {/if}
-  </div>
+  <LinkCard card={block} />
 {:else if block.type === 'columns'}
   <div class="columns" style="--stack-at: {block.stackBelowCols}ch">
     <div class="column"><OutputView blocks={block.left} {onaction} /></div>
@@ -270,23 +248,6 @@
 
   button.chip {
     cursor: pointer;
-  }
-
-  .card {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-    margin: 4px 0;
-  }
-
-  .card-title {
-    color: var(--role-link, var(--theme-bright-blue));
-    font-weight: bold;
-  }
-
-  .card-url {
-    color: var(--role-muted, var(--theme-bright-black));
   }
 
   /* Side by side until the row is narrower than --stack-at, then stacked, without a query. */

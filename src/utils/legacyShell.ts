@@ -6,13 +6,11 @@
 
 import { createAppShell, type AppShell, type AppShellOptions } from '../app/shell';
 import { LEGACY_NAMES, legacySpecs, type LegacyFn, type LegacyName, type LegacySource } from '../commands/legacy';
-import { REPO_URL } from '../constants';
 import type { Shell } from '../shell/index';
 import type { CommandSpec } from '../shell/types';
 import type { VirtualFile } from '../vfs/types';
 import type { Vfs } from '../vfs/vfs';
-import { commands, emailHref, legacyHelpHtml } from './commands';
-import { LINKEDIN_URL } from './commands/system';
+import { commands, legacyHelpHtml } from './commands';
 import { bindLegacyVfs, mirrorCwd, virtualFileSystem } from './virtualFileSystem';
 
 export interface LegacyBindings {
@@ -35,11 +33,6 @@ export function legacySource(): LegacySource {
   return {
     commands: fns,
     help: (name) => legacyHelpHtml(name),
-    opens: {
-      whoami: () => LINKEDIN_URL,
-      repo: () => REPO_URL,
-      email: () => emailHref(),
-    },
   };
 }
 

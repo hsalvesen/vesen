@@ -132,8 +132,11 @@ export interface ChipItem {
   readonly action: Action;
 }
 
-/** The trusted Svelte components a `component` block may name, registered by the UI. */
-export const COMPONENT_NAMES = ['weather-card', 'quote-card', 'quote-table', 'qr-card', 'link-card'] as const;
+/**
+ * The trusted Svelte components a `component` block may name, registered by the UI. A link card
+ * is the `card` block, not a component (docs/adr/0001-architecture.md, amendments).
+ */
+export const COMPONENT_NAMES = ['weather-card', 'quote-card', 'quote-table', 'qr-card'] as const;
 export type ComponentName = (typeof COMPONENT_NAMES)[number];
 
 export interface LinesBlock {
@@ -197,14 +200,31 @@ export interface ChipsBlock {
   readonly items: readonly ChipItem[];
 }
 
-/** A link card with Copy, printed by every opener. */
+/**
+ * A link card, printed by every opener (02, section 7): the title, the link as a real anchor, and
+ * Copy. In an in-app browser the anchor opens in the same view, so Back returns to the terminal.
+ */
 export interface CardBlock {
   readonly type: 'card';
   readonly title: string;
   readonly href: SafeHref;
+  /** The link's text: the URL as people read it (`linkedin.com/in/…`) unless given. */
+  readonly label?: string;
   readonly detail?: string;
   /** What Copy puts on the clipboard; defaults to the href. */
   readonly copy?: string;
+  /** Copy's label: 'Copy' unless given, such as 'Copy address'. */
+  readonly copyLabel?: string;
+  /**
+   * The link as a button-like anchor with this label, such as '✉ Open mail app', and the label
+   * shown as text beside it; without it the label itself is the anchor.
+   */
+  readonly openLabel?: string;
+  /**
+   * Inside an in-app browser: a dim `hint`, then the manual '••• → Open in browser' and a tap
+   * that opens `url` in the real browser where the device has a way to. Ignored elsewhere.
+   */
+  readonly escape?: { readonly url: SafeHref; readonly hint?: string };
 }
 
 /** Two stacks side by side, stacked vertically on narrow terminals: fastfetch, stock. */
@@ -219,7 +239,7 @@ export interface ColumnsBlock {
 export interface ComponentBlock {
   readonly type: 'component';
   readonly name: ComponentName;
-  /** The component's view model: WeatherView, QuoteEnvelope, QrView or LinkView. */
+  /** The component's view model: WeatherView, QuoteEnvelope or QrView. */
   readonly props: unknown;
   /** What a pipe or a file receives. */
   readonly plain: string;
@@ -267,6 +287,19 @@ export function safeHref(url: string): SafeHref | null {
     return null;
   }
   return HREF_SCHEMES.has(parsed.protocol) ? (parsed.href as SafeHref) : null;
+}
+
+/** A URL as people read it: `linkedin.com/in/harrysalvesen`, `has@salvesen.app`. */
+export function readableUrl(url: string): string {
+  if (/^mailto:/i.test(url)) {
+    const address = url.slice('mailto:'.length).split('?', 1)[0] ?? url;
+    try {
+      return decodeURIComponent(address);
+    } catch {
+      return address;
+    }
+  }
+  return url.replace(/^https?:\/\/(?:www\.)?/i, '').replace(/\/$/, '');
 }
 
 // Controls, line breaks and bidirectional overrides: a line to run or insert must read exactly
@@ -415,11 +448,22 @@ export const out = {
     return label === undefined ? { type: 'chips', items } : { type: 'chips', label, items };
   },
 
-  card: (card: { title: string; href: string; detail?: string; copy?: string }): CardBlock => ({
-    type: 'card',
-    ...card,
-    href: requireHref('card', card.href),
-  }),
+  card: (card: {
+    title: string;
+    href: string;
+    label?: string;
+    detail?: string;
+    copy?: string;
+    copyLabel?: string;
+    openLabel?: string;
+    escape?: { url: string; hint?: string };
+  }): CardBlock => {
+    const { escape, ...rest } = card;
+    const block: CardBlock = { type: 'card', ...rest, href: requireHref('card', card.href) };
+    if (escape === undefined) return block;
+    const url = requireHref('card', escape.url);
+    return { ...block, escape: escape.hint === undefined ? { url } : { url, hint: escape.hint } };
+  },
 
   columns: (left: readonly Block[], right: readonly Block[], stackBelowCols: number): ColumnsBlock => ({
     type: 'columns',
@@ -540,7 +584,8 @@ export function plain(block: Block): string {
     case 'chips':
       return '';
     case 'card':
-      return asLines([block.title, block.href, ...(block.detail === undefined ? [] : [block.detail])]);
+      // The link as it would be pasted: the address for mail, the whole URL for the web.
+      return asLines([block.title, block.copy ?? block.href, ...(block.detail === undefined ? [] : [block.detail])]);
     case 'columns':
       return [...block.left, ...block.right].map(plain).join('');
     case 'component':

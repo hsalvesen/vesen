@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Completion, JobResult, ReadRequest, ScreenCommit, ShellPort } from '../shell/index';
+import type { AppRequest, Completion, JobResult, ReadRequest, ScreenCommit, ShellPort } from '../shell/index';
 import { writable, type Writable } from '../shell/observable';
 import type { JobInfo } from '../shell/types';
 import { lazyShell } from './lazy-shell';
@@ -10,6 +10,8 @@ function fakeShell() {
   const started: string[] = [];
   const aborted: string[] = [];
   const remembered: string[] = [];
+  const closed: [number, unknown][] = [];
+  const restored: string[] = [];
   const result: JobResult = { status: 0, interrupted: false, blocks: [], screen: 'keep' };
   const shell: ShellPort = {
     cwd: writable('/home/guest'),
@@ -38,8 +40,11 @@ function fakeShell() {
     incomplete: () => null,
     completion: writable<Completion | null>(null),
     renderPrompt: () => [{ text: 'from the shell' }],
+    apps: writable<AppRequest | null>(null),
+    closeApp: (id, result) => closed.push([id, result]),
+    restoreCwd: (path) => restored.push(path),
   };
-  return { shell, started, aborted, remembered };
+  return { shell, started, aborted, remembered, closed, restored };
 }
 
 function deferred<T>() {
@@ -174,5 +179,28 @@ describe('lazyShell', () => {
     (fake.shell.job as ReturnType<typeof writable<JobInfo | null>>).set({ name: 'x', label: 'busy', startedAt: 1 });
     expect(lazy.job.get()).toEqual({ name: 'x', label: 'busy', startedAt: 1 });
     expect(lazy.start('pwd').id).toBe(1);
+  });
+  it('moves to the folder a snapshot kept once the kernel arrives, showing it at once', async () => {
+    const fake = fakeShell();
+    const loading = deferred<ShellPort>();
+    const lazy = lazyShell(() => loading.promise);
+    lazy.restoreCwd('/home/guest/projects');
+    expect(lazy.cwd.get()).toBe('/home/guest/projects');
+    expect(fake.restored).toEqual([]);
+    loading.resolve(fake.shell);
+    await lazy.ready;
+    expect(fake.restored).toEqual(['/home/guest/projects']);
+    lazy.restoreCwd('/tmp');
+    expect(fake.restored).toEqual(['/home/guest/projects', '/tmp']);
+  });
+
+  it('forwards the apps a command shows, and their close', async () => {
+    const fake = fakeShell();
+    const lazy = lazyShell(() => Promise.resolve(fake.shell));
+    await lazy.ready;
+    (fake.shell.apps as Writable<AppRequest | null>).set({ id: 3, view: 'shutdown', props: {} });
+    expect(lazy.apps.get()?.id).toBe(3);
+    lazy.closeApp(3, 'power-on');
+    expect(fake.closed).toEqual([[3, 'power-on']]);
   });
 });

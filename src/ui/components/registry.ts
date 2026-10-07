@@ -6,7 +6,7 @@ import type { Action, ComponentName } from '../../output/model';
 
 /** What OutputView passes to a registered component. */
 export interface ComponentBlockProps {
-  /** The block's view model (WeatherView, QuoteEnvelope, QrView, LinkView); each card narrows it. */
+  /** The block's view model (WeatherView, QuoteEnvelope, QrView); each card narrows it. */
   view: unknown;
   /** The screen-reader summary of the card. */
   alt: string;

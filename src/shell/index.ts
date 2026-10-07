@@ -7,6 +7,7 @@ import { whenAborted } from '../lib/signals';
 import type { Block, Line } from '../output/model';
 import type { Appearance, Bell, Clipboard, Clock, KV, Net, Opener, SysInfo } from '../services/types';
 import { expandAliases } from './alias';
+import { createAppRunner, type AppRequest } from './apps';
 import { createCompletionEnv } from './complete/env';
 import type { Completion, CompletionEnv } from './complete/types';
 import {
@@ -31,6 +32,7 @@ import { Session, type HistoryStore, type JobState } from './session';
 import { JobDetached, NullOut, StringIn, TtyIn, TtyOut, TtySink, vfsWriteTarget, type ScreenAction, type WriteTarget } from './streams';
 import { EXIT, ExitRequest, type CommandSpec, type Env, type ExitCode, type JobInfo, type Registry, type User } from './types';
 
+export type { AppRequest } from './apps';
 export type { Completion, CompletionEnv } from './complete/types';
 export type { ShellFs, TerminalInfo } from './executor';
 export type { ReadRequest } from './reader';
@@ -125,6 +127,15 @@ export interface ShellPort {
    * engine's chunk has loaded, which the first subscriber starts.
    */
   readonly completion: Readable<Completion | null>;
+  /** The full-screen app a running command shows over the terminal (the Shutdown screen), or null. */
+  readonly apps: Readable<AppRequest | null>;
+  /** The UI closes app `id`, handing the command the app's result. */
+  closeApp(id: number, result?: unknown): void;
+  /**
+   * Moves to `path` without running a line or touching history: the folder the session snapshot
+   * kept, after Back. Ignored when it is not a folder the visitor may enter. Never throws.
+   */
+  restoreCwd(path: string): void;
 }
 
 export interface Shell extends ShellPort {
@@ -210,6 +221,7 @@ export function createShell(deps: ShellDeps): Shell {
   const session = new Session({ storage: deps.storage ?? null, ...(deps.user ? { user: deps.user } : {}), size: () => terminal.size() });
   // A command reading a line waits on the prompt, unless the terminal answers reads itself.
   const reader = createLineReader((url) => deps.opener?.preflight(url) ?? 'skipped');
+  const apps = createAppRunner();
   const tty: TerminalInfo = {
     size: () => terminal.size(),
     get touch() {
@@ -219,6 +231,7 @@ export function createShell(deps: ShellDeps): Shell {
       return terminal.inApp;
     },
     readLine: terminal.readLine ?? ((options) => reader.read(options)),
+    fullscreen: terminal.fullscreen ?? ((view, props, signal) => apps.open(view, props, signal)),
   };
   const historyLines: Readable<readonly string[]> = {
     subscribe: (run) => session.history.subscribe((entries) => run(entries.map((entry) => entry.line))),
@@ -437,6 +450,15 @@ export function createShell(deps: ShellDeps): Shell {
     historyLines,
     reads: reader.request,
     answerRead: (id, text) => reader.answer(id, text),
+    apps: apps.request,
+    closeApp: (id, result) => apps.close(id, result),
+    restoreCwd: (path) => {
+      try {
+        executor.chdir(path);
+      } catch {
+        // Gone, or no longer a folder: the session starts where it is.
+      }
+    },
     incomplete: (line) => {
       try {
         const parsed = parse(line);

@@ -6,7 +6,6 @@
 // This module stays DOM-free: the legacy functions, their help and their descriptions live in
 // src/utils, which touches the page, so the app layer (src/app/legacy-commands.ts) hands them in.
 
-import { out } from '../output/model';
 import type { RawArgsSpec } from '../shell/flags';
 import { writeLegacyHtml } from '../shell/streams';
 import type { CommandContext, CommandSpec, Example, ExitCode } from '../shell/types';
@@ -37,17 +36,10 @@ export interface LegacyMeta
   readonly summary: string;
   /** The legacy help, already laid out as panels; shown for --help and -h. */
   readonly help?: string;
-  /** A URL the command opens: opened inside the Enter gesture on a desktop, and linked otherwise. */
-  readonly opens?: (argv: readonly string[]) => string | null;
   /** Runs first; a status ends the command there, without the legacy function. */
   readonly prelude?: (ctx: CommandContext) => ExitCode | undefined | Promise<ExitCode | undefined>;
   /** The words the legacy function gets, when they differ from the operands. */
   readonly argsFor?: (ctx: CommandContext) => readonly string[];
-  /**
-   * What the link is called when the URL could not open in the gesture (a phone, an in-app
-   * browser): `LinkedIn: linkedin.com/in/…` replaces the legacy `Opening…` line.
-   */
-  readonly linkLabel?: string;
 }
 
 /**
@@ -65,35 +57,25 @@ export function legacyStatus(html: string): ExitCode {
   return 0;
 }
 
-/** A URL as people read it: `linkedin.com/in/harrysalvesen`, `has@salvesen.app`. */
-export function readableUrl(url: string): string {
-  if (url.startsWith('mailto:')) return url.slice('mailto:'.length).split('?', 1)[0] ?? url;
-  return url.replace(/^https?:\/\/(?:www\.)?/, '').replace(/\/$/, '');
+/** The specs `legacy` made, so privacy can tell which backend a command still uses. */
+const LEGACY_SPECS = new WeakSet<CommandSpec>();
+
+/** True for a spec the legacy adapter wrapped, until that command is ported. */
+export function isLegacySpec(spec: CommandSpec): boolean {
+  return LEGACY_SPECS.has(spec);
 }
 
 /** Wraps one legacy function as a command spec. */
 export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpec {
-  const { help, opens, prelude, argsFor, linkLabel, ...shown } = meta;
+  const { help, prelude, argsFor, ...shown } = meta;
   const spec: CommandSpec & RawArgsSpec = {
     name,
     ...shown,
     rawArgs: true,
     ...(help === undefined ? {} : { legacyHelp: help }),
-    ...(opens === undefined ? {} : { opens }),
     async run(ctx) {
       const early = await prelude?.(ctx);
       if (early !== undefined) return early;
-
-      // The opener runs before the output, as the legacy command did; off the screen it does not.
-      const url = ctx.stdout.isTTY ? (opens?.(ctx.argv) ?? null) : null;
-      const opened = url === null ? null : await ctx.tty.open(url, name);
-      if (url !== null && opened !== 'opened') {
-        // Nothing opened (a phone, an in-app browser, a blocked pop-up), so the legacy
-        // `Opening…` line would be untrue: one readable link instead.
-        const label = linkLabel === undefined ? [] : [`${linkLabel}: `];
-        await ctx.stdout.line(...label, out.link(readableUrl(url), url));
-        return 0;
-      }
 
       // The legacy function gets its own controller, linked to the job's ^C and budget.
       const controller = new AbortController();
@@ -115,15 +97,14 @@ export function legacy(name: string, fn: LegacyFn, meta: LegacyMeta): CommandSpe
       return status;
     },
   };
+  LEGACY_SPECS.add(spec);
   return spec;
 }
 
 // ── The table ──────────────────────────────────────────────────────────────────────────────
 
 /** The legacy command names, in the order help lists them today. */
-export const LEGACY_NAMES = [
-  'curl', 'email', 'fastfetch', 'poweroff', 'qr', 'repo', 'speedtest', 'stock', 'weather', 'whoami',
-] as const;
+export const LEGACY_NAMES = ['curl', 'fastfetch', 'qr', 'speedtest', 'stock', 'weather'] as const;
 export type LegacyName = (typeof LEGACY_NAMES)[number];
 
 /** What the app layer supplies from src/utils. */
@@ -131,14 +112,12 @@ export interface LegacySource {
   readonly commands: Readonly<Record<LegacyName, LegacyFn>>;
   /** The legacy help panels for a command, as `<cmd> --help` showed them. */
   help(name: LegacyName): string | undefined;
-  /** URLs the openers open: whoami, repo and email. */
-  readonly opens?: Readonly<Partial<Record<LegacyName, (argv: readonly string[]) => string | null>>>;
 }
 
 const examples = (...lines: string[]): Example[] => lines.map((line) => ({ line }));
 const offline = (...lines: string[]): Example[] => lines.map((line) => ({ line, offline: true }));
 
-type StaticMeta = Omit<LegacyMeta, 'help' | 'opens'>;
+type StaticMeta = Omit<LegacyMeta, 'help'>;
 
 /** Each legacy command's spec fields, until it is ported. */
 const TABLE: Readonly<Record<LegacyName, StaticMeta>> = {
@@ -150,7 +129,6 @@ const TABLE: Readonly<Record<LegacyName, StaticMeta>> = {
     args: [{ name: 'URL', source: { kind: 'url' } }],
     examples: examples('curl https://httpbin.org/get', 'curl explainshell.com'),
   },
-  email: { category: 'portfolio', summary: 'write an email to the developer', examples: examples('email'), linkLabel: 'Email' },
   fastfetch: {
     category: 'system',
     summary: 'show information about this system',
@@ -158,15 +136,12 @@ const TABLE: Readonly<Record<LegacyName, StaticMeta>> = {
     loadingLabel: () => 'gathering system information…',
     examples: [{ line: 'fastfetch', note: 'this system, at a glance', starter: 3 }],
   },
-  // It takes over the whole page, so only a line typed at the prompt may run it: never ~/.bashrc.
-  poweroff: { category: 'system', summary: 'shut down the terminal', examples: examples('poweroff'), interactiveOnly: true },
   qr: {
     category: 'portfolio',
     summary: 'draw a QR code for a URL or text',
     args: [{ name: 'TEXT', source: { kind: 'examples' }, variadic: true }],
     examples: offline('qr https://tldr.sh', 'qr explainshell.com', 'qr https://shellcheck.net'),
   },
-  repo: { category: 'portfolio', summary: "open this terminal's source code", examples: examples('repo'), linkLabel: 'Source' },
   speedtest: {
     category: 'network',
     summary: 'measure the speed of the connection',
@@ -195,30 +170,12 @@ const TABLE: Readonly<Record<LegacyName, StaticMeta>> = {
     args: [{ name: 'PLACE', source: { kind: 'examples', caseInsensitive: true, fromHistory: true }, optional: true, variadic: true }],
     examples: examples('weather Gadigal', 'weather Oslo', 'weather Aotearoa'),
   },
-  whoami: {
-    category: 'portfolio',
-    summary: 'meet the developer; in a pipe, your user name',
-    featured: true,
-    examples: examples('whoami'),
-    linkLabel: 'LinkedIn',
-    // In a pipe whoami is the Linux command again.
-    prelude: async (ctx) => {
-      if (ctx.stdout.isTTY) return undefined;
-      await ctx.stdout.write(`${ctx.user.name}\n`);
-      return 0;
-    },
-  },
 };
 
 /** Every legacy command as a spec. */
 export function legacySpecs(source: LegacySource): CommandSpec[] {
   return LEGACY_NAMES.map((name) => {
     const help = source.help(name);
-    const opens = source.opens?.[name];
-    return legacy(name, source.commands[name], {
-      ...TABLE[name],
-      ...(help === undefined ? {} : { help }),
-      ...(opens === undefined ? {} : { opens }),
-    });
+    return legacy(name, source.commands[name], { ...TABLE[name], ...(help === undefined ? {} : { help }) });
   });
 }

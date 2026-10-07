@@ -3,7 +3,7 @@ import { lineText, type Block } from '../output/model';
 import { harness } from '../testing/shell-harness';
 import { CommandRegistry } from '../shell/registry';
 import { takesRawArgs } from '../shell/flags';
-import { LEGACY_NAMES, legacy, legacySpecs, legacyStatus, type LegacyFn, type LegacyName, type LegacySource } from './legacy';
+import { isLegacySpec, LEGACY_NAMES, legacy, legacySpecs, legacyStatus, type LegacyFn, type LegacyName, type LegacySource } from './legacy';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -115,35 +115,6 @@ describe('the adapter', () => {
     expect((await run('poweroff')).status).toBe(0);
     expect(fn).toHaveBeenCalledTimes(1);
   });
-
-  it('prints a link when its opener did not open, and nothing more when it did', async () => {
-    const spec = legacy('whoami', () => 'Opening...', { category: 'portfolio', summary: 'x', opens: () => 'https://www.linkedin.com/in/harrysalvesen/' });
-    const opened: string[] = [];
-    const opener = {
-      autoOpen: true,
-      preflight: (url: string) => {
-        opened.push(url);
-        return 'opened' as const;
-      },
-      open: () => 'opened' as const,
-      escapeHref: () => null,
-      menuHint: () => null,
-      canShare: () => false,
-      share: async () => 'unavailable' as const,
-    };
-    const desktop = harness({ specs: [spec], opener });
-    desktop.shell.preflight('whoami');
-    expect(texts((await desktop.shell.run('whoami')).blocks)).toEqual(['<html>Opening...']);
-    expect(opened).toHaveLength(1);
-
-    const inApp = harness({ specs: [spec], opener: { ...opener, autoOpen: false, preflight: () => 'skipped' as const } });
-    inApp.shell.preflight('whoami');
-    const result = await inApp.shell.run('whoami');
-    // Nothing opened, so it does not say 'Opening...': one readable link instead.
-    expect(texts(result.blocks)).toEqual(['linkedin.com/in/harrysalvesen']);
-    const link = result.blocks[0]?.type === 'lines' ? result.blocks[0].lines[0]?.[0] : undefined;
-    expect(link?.href).toBe('https://www.linkedin.com/in/harrysalvesen/');
-  });
 });
 
 /** Every legacy command, each printing its own name and words. */
@@ -159,30 +130,29 @@ function fakeSource(): LegacySource & { calls: string[] } {
     calls,
     commands,
     help: (name) => (name === 'stock' ? '<div>stock help</div>' : undefined),
-    opens: { repo: () => 'https://github.com/hsalvesen/vesen' },
   };
 }
 
 describe('the legacy table', () => {
-  it('wraps the 10 commands not yet ported, each once, with a category and a summary', () => {
+  it('wraps the 6 commands not yet ported, each once, with a category and a summary', () => {
     const specs = legacySpecs(fakeSource());
-    expect(specs).toHaveLength(10);
-    expect(new Set(specs.map((spec) => spec.name)).size).toBe(10);
+    expect(specs).toHaveLength(6);
+    expect(new Set(specs.map((spec) => spec.name)).size).toBe(6);
+    expect(specs.every(isLegacySpec)).toBe(true);
     // Ported to src/commands: the file and text core, history, clear, cd, pwd, reset, help, theme,
-    // cathode, banner and sudo.
-    for (const ported of ['cd', 'ls', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'history', 'clear', 'help', 'theme', 'cathode', 'banner', 'sudo']) {
-      expect(specs.map((spec) => spec.name)).not.toContain(ported);
+    // cathode, banner, sudo, the openers and the power commands.
+    const ported = ['cd', 'ls', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'history', 'clear', 'help', 'theme', 'cathode', 'banner', 'sudo'];
+    for (const name of [...ported, 'whoami', 'email', 'repo', 'poweroff']) {
+      expect(specs.map((spec) => spec.name)).not.toContain(name);
     }
     const registry = new CommandRegistry(specs);
     expect(registry.validate()).toEqual([]);
     expect(specs.every((spec) => takesRawArgs(spec))).toBe(true);
     expect(registry.get('stock')).toMatchObject({ category: 'network', summary: 'show the price of a stock', legacyHelp: '<div>stock help</div>' });
-    expect(registry.get('whoami')?.category).toBe('portfolio');
     expect(registry.get('weather')).toMatchObject({ network: true, budgetMs: 25_000 });
     expect(registry.get('stock')).toMatchObject({ network: true, budgetMs: 10_000 });
     expect(registry.get('curl')?.network).toBe(true);
-    expect(registry.get('repo')?.opens?.(['repo'])).toBe('https://github.com/hsalvesen/vesen');
-    expect(registry.get('poweroff')?.summary).toBe('shut down the terminal');
+    expect(registry.get('fastfetch')?.category).toBe('system');
   });
 
   it('gives every command a lower-case summary of 50 characters or fewer, as the specs have', () => {
@@ -202,12 +172,5 @@ describe('the legacy table', () => {
     const { run } = harness({ specs: legacySpecs(source) });
     await run('stock -x AAPL');
     expect(source.calls).toEqual(['stock -x AAPL']);
-  });
-
-  it('prints guest for whoami in a pipe, as the Linux command does', async () => {
-    const source = fakeSource();
-    const { run } = harness({ specs: legacySpecs(source) });
-    expect((await run('whoami | cat')).stdout).toBe('guest');
-    expect(source.calls).toEqual([]);
   });
 });

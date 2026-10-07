@@ -1,31 +1,8 @@
 import { systemCommands } from './commands/system';
-import { fileSystemCommands } from './commands/fileSystem';
 import type { networkCommands as NetworkCommands } from './commands/network';
 import { commandHelp } from './helpTexts';
 import { playBeep } from './beep';
 import { errorLine } from './notice';
-
-const projectCommands = {
-  // The shell opens the repository (spec.opens, inside the Enter gesture); this is what it prints.
-  repo: () => `<span class="out-accent">Opening Vesen repository...</span>`,
-
-  // The shell opens emailHref() (spec.opens, inside the Enter gesture); this is what it prints.
-  email: () => 'Opening email client...',
-};
-
-/** The developer's address, with the time in the subject so threads stay apart. */
-export function emailHref(now: Date = new Date()): string {
-  const timestamp = now.toLocaleString('en-US', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
-  return `mailto:has@salvesen.app?subject=${encodeURIComponent(`Terminal Contact - ${timestamp}`)}`;
-}
 
 // Re-export virtualFileSystem and currentPath from the dedicated module
 export { virtualFileSystem, currentPath } from './virtualFileSystem';
@@ -154,8 +131,6 @@ const qrCommands = {
 // Combine all commands
 export const commands: Record<string, (args: string[], signal?: AbortSignal, status?: (text: string | null) => void) => Promise<string> | string> = {
   ...systemCommands,
-  ...fileSystemCommands,
   ...networkCommands,
-  ...projectCommands,
   ...qrCommands
 };

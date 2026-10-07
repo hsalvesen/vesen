@@ -23,8 +23,8 @@ export const UPDATE_NOTICE = 'vesen was updated, reloading…';
  * only swap the terminal for the browser's offline page, so none happens. When no reload
  * happens, the error reaches the importer as usual.
  *
- * The transcript is not restored after the reload yet; that arrives with the session snapshot
- * (`vesen:session:v1`) in Phase 3.
+ * The transcript is not restored after the reload: the session snapshot (`vesen:session:v1`)
+ * comes back only after Back or Forward, so a reload starts fresh.
  *
  * @param session the tab's sessionStorage, through the storage service.
  * @param build identifies the running build; the entry chunk's URL changes with every deploy.

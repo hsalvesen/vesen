@@ -10,7 +10,8 @@ import { createClock } from '../src/services/clock';
 import { expandAliases } from '../src/shell/alias';
 import { wrapText } from '../src/shell/help';
 import { CaptureOut } from '../src/shell/streams';
-import { defineCommand, type CommandSpec } from '../src/shell/types';
+import type { Clipboard, Opener } from '../src/services/types';
+import { defineCommand, type CommandSpec, type FullscreenView, type InAppBrowser } from '../src/shell/types';
 import { createScreen } from '../src/stores/screen';
 import { screenText, stubCommands } from '../src/testing/shell-harness';
 
@@ -25,6 +26,16 @@ export interface RunOptions {
   readonly tty?: boolean;
   /** Answers tty.readLine, as a visitor typing at a prompt; null is ^D. */
   readonly answer?: (prompt: string) => string | null;
+  /** The in-app browser the terminal is in; none by default. */
+  readonly inApp?: InAppBrowser | null;
+  /** A touch screen; false by default. */
+  readonly touch?: boolean;
+  /** Links under a policy; without one nothing opens and tty.open says 'card'. */
+  readonly opener?: Opener;
+  /** The clipboard tty.copy writes to; without one every copy fails. */
+  readonly clipboard?: Clipboard;
+  /** Shows a full-screen app, as AppHost would, and closes it with a result. */
+  readonly fullscreen?: (view: FullscreenView, props: unknown) => Promise<unknown>;
 }
 
 export interface LineResult {
@@ -105,13 +116,16 @@ export async function session(options: RunOptions = {}): Promise<Session> {
     clock: createClock({ now: () => now, random: () => 0.5, timeZone: TIME_ZONE }),
     terminal: {
       size: () => ({ cols, rows: 24 }),
-      touch: false,
-      inApp: null,
+      touch: options.touch ?? false,
+      inApp: options.inApp ?? null,
       readLine: ({ prompt }) => {
         prompts.push(prompt);
         return Promise.resolve(options.answer?.(prompt) ?? null);
       },
+      ...(options.fullscreen === undefined ? {} : { fullscreen: options.fullscreen }),
     },
+    ...(options.opener === undefined ? {} : { opener: options.opener }),
+    ...(options.clipboard === undefined ? {} : { clipboard: options.clipboard }),
     yieldToHost: () => Promise.resolve(),
   });
   await app.boot();

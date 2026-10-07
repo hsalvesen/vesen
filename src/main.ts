@@ -20,7 +20,13 @@ try {
   });
   if (booted) {
     if (!target) throw new Error('#app is missing from the page');
-    mount(App, { target, props: { shell: booted.shell } });
+    mount(App, {
+      target,
+      props: {
+        shell: booted.shell,
+        platform: { opener: booted.opener, clipboard: booted.clipboard, session: booted.storage.session, restored: booted.restored },
+      },
+    });
   }
 } catch (error) {
   console.error(error);

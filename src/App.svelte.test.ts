@@ -7,6 +7,10 @@ import type { Shell } from './shell/index';
 import { screen as transcript } from './stores/screen';
 import { bannerBlocks } from './commands/lib/banner';
 import { legacyAppShell } from './utils/legacyShell';
+import { SNAPSHOT_KEY } from './services/session-snapshot';
+import type { KV } from './services/types';
+import type { AppPlatform } from './ui/platform';
+import { fakeOpener } from './testing/opener';
 
 async function settle(): Promise<void> {
   for (let i = 0; i < 20; i += 1) await Promise.resolve();
@@ -289,5 +293,104 @@ describe('Tab completion and the completion row', () => {
     await fireEvent.click(screen.getByRole('option', { name: 'Run: ls' }));
     await vi.waitFor(() => expect(transcript.entries().map((e) => e.line)).toEqual(['ls']));
     expect(document.activeElement).not.toBe(promptBox());
+  });
+});
+
+describe('the session snapshot and the alternate screen', () => {
+  /** Session storage that keeps what is written, to read back. */
+  function sessionStore(): KV<'session'> & { items: Map<string, string> } {
+    const items = new Map<string, string>();
+    return {
+      items,
+      persistent: true,
+      get: (key) => items.get(key) ?? null,
+      set: (key, value) => {
+        items.set(key, value);
+        return true;
+      },
+      remove: (key) => void items.delete(key),
+      getJson: () => undefined,
+      setJson: () => true,
+    };
+  }
+
+  const platform = (session: KV<'session'> | null, restored: AppPlatform['restored'] = null): AppPlatform => ({
+    opener: null,
+    clipboard: null,
+    session,
+    restored,
+  });
+
+  async function type(line: string): Promise<void> {
+    const prompt = screen.getByRole('combobox', { name: 'Terminal command' });
+    await fireEvent.input(prompt, { target: { value: line } });
+    await fireEvent.keyDown(prompt, { key: 'Enter' });
+    await settle();
+  }
+
+  it('saves the screen, the line, the folder and the scroll on pagehide, and never a secret', async () => {
+    const session = sessionStore();
+    render(App, { props: { shell, platform: platform(session) } });
+    await type('cd documents');
+    await type('echo kept');
+    await fireEvent.input(screen.getByRole('combobox', { name: 'Terminal command' }), { target: { value: 'ls -l' } });
+    window.dispatchEvent(new Event('pagehide'));
+    const saved = JSON.parse(session.items.get(SNAPSHOT_KEY) ?? '{}');
+    expect(saved.entries.map((entry: { line: string }) => entry.line)).toEqual(['cd documents', 'echo kept']);
+    expect(saved).toMatchObject({ v: 1, line: 'ls -l', cwd: '/home/guest/documents' });
+
+    // sudo's password, half typed when the page is put away, goes nowhere.
+    await type('sudo ls');
+    const input = document.querySelector('input.command-input') as HTMLInputElement;
+    await vi.waitFor(() => expect(document.querySelector('.read-prompt')?.textContent).toBe('[sudo] password for guest: '));
+    await fireEvent.input(input, { target: { value: 'hunter2' } });
+    window.dispatchEvent(new Event('pagehide'));
+    const during = session.items.get(SNAPSHOT_KEY) ?? '';
+    expect(during).not.toContain('hunter2');
+    expect(JSON.parse(during).line).toBe('');
+    // ^C, and its entry lands before the next test starts from an empty screen.
+    shell.abort();
+    await vi.waitFor(() => expect(transcript.entries().map((entry) => entry.line)).toContain('sudo ls'));
+  });
+
+  it('inside an in-app browser, saves before a tapped link leaves in the same view', async () => {
+    const session = sessionStore();
+    const inApp = fakeOpener({ inApp: { label: 'Instagram', browser: 'Safari', menuHint: '••• → Open in browser' }, plan: () => ({ mode: 'self', target: '_self' }) });
+    const { container } = render(App, { props: { shell, platform: { ...platform(session), opener: inApp } } });
+    await type('repo');
+    const link = await vi.waitFor(() => {
+      const found = container.querySelector<HTMLAnchorElement>('.card a.card-url');
+      expect(found).not.toBeNull();
+      return found as HTMLAnchorElement;
+    });
+    expect(link.getAttribute('target')).toBe('_self');
+    expect(session.items.size).toBe(0);
+    link.addEventListener('click', (event) => event.preventDefault());
+    await fireEvent.click(link);
+    expect(JSON.parse(session.items.get(SNAPSHOT_KEY) ?? '{}').entries.map((entry: { line: string }) => entry.line)).toEqual(['repo']);
+  });
+
+  it('puts back the line after Back', async () => {
+    const snapshot = { v: 1 as const, savedAt: 0, entries: [], line: 'cat README.md', cwd: '/home/guest', scroll: { top: 0, atBottom: true } };
+    render(App, { props: { shell, platform: platform(null, Promise.resolve(snapshot)) } });
+    await settle();
+    expect(screen.getByRole('combobox', { name: 'Terminal command' })).toHaveValue('cat README.md');
+  });
+
+  it('draws a full-screen app over the shell, which is inert until Power on brings the prompt back', async () => {
+    const { container } = render(App, { props: { shell, platform: platform(null) } });
+    await type('echo before');
+    await type('poweroff');
+    await vi.waitFor(() => expect(container.querySelector('.app-host')).not.toBeNull());
+    expect(container.querySelector('.shell')?.hasAttribute('inert')).toBe(true);
+    // The host sits outside <main>, whose CRT filter would capture it.
+    expect(container.querySelector('main .app-host')).toBeNull();
+    const power = await vi.waitFor(() => screen.getByRole('button', { name: /Power on/ }), { timeout: 4000 });
+    await fireEvent.click(power);
+    await vi.waitFor(() => expect(container.querySelector('.app-host')).toBeNull());
+    expect(container.querySelector('.shell')?.hasAttribute('inert')).toBe(false);
+    // A new session: the screen starts again from the banner.
+    await vi.waitFor(() => expect(screen.getByRole('log').textContent).toContain('to see all available commands.'));
+    expect(screen.getByRole('log').textContent).not.toContain('echo before');
   });
 });

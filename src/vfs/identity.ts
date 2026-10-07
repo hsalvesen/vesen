@@ -32,6 +32,15 @@ export const OWNER = {
   fullName: 'Has Salvesen',
 } as const;
 
+/** Where to find the owner: the portfolio commands' cards and /home/has/about.md. */
+export const OWNER_LINKS = {
+  linkedin: 'https://www.linkedin.com/in/harrysalvesen/',
+  github: 'https://github.com/hsalvesen',
+  email: 'has@salvesen.app',
+  repo: 'https://github.com/hsalvesen/vesen',
+  site: 'https://www.vesen.app/',
+} as const;
+
 /** One line of /etc/passwd. */
 export interface Account {
   readonly name: string;

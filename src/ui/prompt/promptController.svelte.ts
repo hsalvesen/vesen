@@ -35,7 +35,7 @@ import { NAV_IDLE, searchLabel, searchResult, startSearch, stepHistory, stepSear
 import { chordOf, isModifierKey, resolveKey, type Action, type KeyChord, type KeyCtx, type KeyPlatform } from '../../shell/editor/keymap';
 import { normalizePaste, normalizeTyped } from '../../shell/editor/normalize';
 import { EMPTY_RING, applyOp, replaceRange, settleRing, yankLastArg, type EditOp, type KillRing, type LastArgState } from '../../shell/editor/readline';
-import type { JobOrigin, ReadRequest, ShellPort } from '../../shell/index';
+import type { AppRequest, JobOrigin, ReadRequest, ShellPort } from '../../shell/index';
 import type { ExitCode, JobInfo } from '../../shell/types';
 import type { ScreenStore } from '../../stores/screen';
 import { writeInput } from './inputDom';
@@ -157,6 +157,8 @@ export class PromptController {
   job = $state.raw<JobInfo | null>(null);
   read = $state.raw<ActiveRead | null>(null);
   completion = $state.raw<Completion | null>(null);
+  /** A full-screen app is over the terminal (the Shutdown screen): it has the keys. */
+  app = $state.raw<AppRequest | null>(null);
   history = $state.raw<readonly string[]>([]);
   lastStatus = $state<ExitCode>(0);
   /** The line that ran last at this prompt, for the chips that follow it. */
@@ -207,6 +209,7 @@ export class PromptController {
         if (value === null) this.running = null;
       }),
       deps.shell.reads.subscribe((request) => this.onShellRead(request)),
+      deps.shell.apps.subscribe((request) => (this.app = request)),
     );
   }
 
@@ -490,7 +493,7 @@ export class PromptController {
 
   /** ^C or Escape while a command runs, with focus somewhere else on the page. */
   private onWindowKey(event: KeyboardEvent): void {
-    if (event.target === this.input || event.defaultPrevented) return;
+    if (event.target === this.input || event.defaultPrevented || this.app !== null) return;
     if (this.running === null && this.read === null) return;
     const ctrlC = chordOf(event) === 'C-c';
     if (event.key === 'Escape' || (ctrlC && !this.hasSelection())) {
@@ -816,6 +819,21 @@ export class PromptController {
     } else {
       this.interrupt();
     }
+  }
+
+  /**
+   * The line at the prompt, for the session snapshot: what is typed (or typed ahead), and null
+   * while it holds a secret or answers a command's question, which are never kept.
+   */
+  snapshotLine(): string | null {
+    if (this.read !== null || this.mode === 'secret') return null;
+    return this.text;
+  }
+
+  /** Puts a line back at the prompt without running it or scrolling: after Back. */
+  restoreLine(text: string): void {
+    if (this.read !== null || /[\r\n]/.test(text)) return;
+    this.write({ text, cursor: text.length }, { replace: true, force: true });
   }
 
   /** Puts text at the prompt, for a tapped name that inserts rather than runs. */

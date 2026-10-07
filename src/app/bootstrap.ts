@@ -6,19 +6,23 @@ import { outputBlocks, type CommandOutput } from '../interfaces/command';
 import { applyCathode } from '../platform/crt';
 import { installChunkReload } from '../platform/chunkReload';
 import { applyTheme } from '../platform/head';
-import { decideTier, inAppBrowser, NO_SIGNALS, startPerf, type PerfSignals } from '../platform/perf';
+import { coarsePointer, readLinkEnv } from '../platform/env';
+import { installErrorBuffer } from '../platform/errors';
+import { decideTier, NO_SIGNALS, startPerf, type PerfSignals } from '../platform/perf';
 import { applyRoles } from '../platform/theme-apply';
 import { canonicalRedirect } from '../platform/hosts';
 import { startMeasuring, transcriptColumns } from '../platform/measure';
 import { startViewport } from '../platform/viewport';
 import { createBell } from '../services/bell';
+import { createClipboard } from '../services/clipboard';
 import { createOpener } from '../services/opener';
+import { pendingSnapshot, type SessionSnapshot } from '../services/session-snapshot';
 import { createStorage, runMigrations } from '../services/storage';
 import { createSysInfoStub } from '../services/sysinfo';
-import type { StorageService } from '../services/types';
+import type { Clipboard, Opener, StorageService } from '../services/types';
 import type { Shell, ShellPort, TerminalInfo } from '../shell/index';
 import { promptLine } from '../shell/prompt';
-import type { CommandSpec, InAppBrowser } from '../shell/types';
+import type { CommandSpec } from '../shell/types';
 import { cathode, cathodeModes, cathodeQuality, crtTier, DEFAULT_CATHODE_MODE, persistCathode } from '../stores/cathode';
 import { screen } from '../stores/screen';
 import { columns } from '../stores/term';
@@ -60,6 +64,15 @@ export interface Booted {
   readonly storage: StorageService;
   /** The shell the terminal runs lines through; its kernel loads just after the first paint. */
   readonly shell: ShellPort;
+  /** Links under the in-app browser policy, for taps on cards and links. */
+  readonly opener: Opener;
+  readonly clipboard: Clipboard;
+  /**
+   * After Back, the snapshot the screen is being restored from: its entries and folder come back
+   * here, and the UI puts back the line and the scroll position. Null for a fresh start, and the
+   * promise gives null when there was nothing usable to restore.
+   */
+  readonly restored: Promise<SessionSnapshot | null> | null;
   /** Disconnects the stores from storage and the page, and the chunk reload listener. */
   stop(): void;
 }
@@ -87,6 +100,11 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
 
   const doc = win.document;
   const root = doc.documentElement;
+  // What went wrong recently, for debug report; first, so it hears about everything after.
+  const errors = installErrorBuffer(win);
+  const env = readLinkEnv(win);
+  const opener = createOpener(win, env);
+  const clipboard = createClipboard(win);
 
   // The CRT tier follows the quality setting and the device's own settings, which can change
   // while the page is open (reduced motion switched on, say).
@@ -98,6 +116,7 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
   };
 
   const stops = [
+    () => errors.stop(),
     installChunkReload(win, storage.session, build, (message) => {
       screen.push({ prompt: shell.renderPrompt(), line: '', blocks: outputBlocks(notice(message)) });
     }),
@@ -131,9 +150,10 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
     storage: storage.local,
     sessionStorage: storage.session,
     bell: createBell({ play: playBeep }),
-    opener: createOpener(win, { inApp: inAppBrowser(win.navigator.userAgent), touch: coarsePointer(win) }),
-    terminal: terminalInfo(win),
-    sys: createSysInfoStub(win),
+    opener,
+    clipboard,
+    terminal: terminalInfo(win, env.inApp),
+    sys: createSysInfoStub(win, { errors: () => errors.recent() }),
   };
   let stopped = false;
   const shell = lazyShell(
@@ -180,18 +200,43 @@ export function bootstrap({ window: win, build, banner, legacy }: BootOptions): 
     },
   );
 
+  // Back from a link opened in the same view (an in-app browser) brings the screen back as it
+  // was, through a chunk loaded only then; anything else starts with the banner.
+  const showBanner = (): void => {
+    screen.push({
+      prompt: promptLine({ cwd: GUEST.home, status: 0, columns: get(columns) }),
+      line: 'banner',
+      blocks: outputBlocks(banner()),
+      origin: 'boot',
+      status: 0,
+    });
+  };
   screen.clear();
-  screen.push({
-    prompt: promptLine({ cwd: GUEST.home, status: 0, columns: get(columns) }),
-    line: 'banner',
-    blocks: outputBlocks(banner()),
-    origin: 'boot',
-    status: 0,
-  });
+  const pending = pendingSnapshot(win, storage.session);
+  let restored: Promise<SessionSnapshot | null> | null = null;
+  if (pending === null) showBanner();
+  else {
+    restored = import('../services/session-restore')
+      .then(({ reviveSnapshot }) => reviveSnapshot(pending, Date.now()))
+      .catch(() => null)
+      .then((snapshot) => {
+        if (snapshot === null || snapshot.entries.length === 0) {
+          showBanner();
+          return null;
+        }
+        // Anything typed while the chunk loaded stays, after what comes back.
+        screen.replace([...snapshot.entries.map((entry) => ({ ...entry, origin: 'boot' as const })), ...screen.entries()]);
+        if (snapshot.cwd !== '') shell.restoreCwd(snapshot.cwd);
+        return snapshot;
+      });
+  }
 
   return {
     storage,
     shell,
+    opener,
+    clipboard,
+    restored,
     stop: () => {
       stopped = true;
       for (const stop of stops) stop();
@@ -226,22 +271,15 @@ function trackColumns(win: Window): () => void {
   };
 }
 
-function coarsePointer(win: Window): boolean {
-  return win.matchMedia?.('(pointer: coarse)').matches ?? false;
-}
-
-const IN_APP: Readonly<Record<string, InAppBrowser>> = { Instagram: 'instagram', Facebook: 'facebook', TikTok: 'tiktok' };
-
 /** The terminal as the shell sees it: its size in cells, touch, and the in-app browser. */
-function terminalInfo(win: Window): TerminalInfo {
-  const app = inAppBrowser(win.navigator.userAgent);
+function terminalInfo(win: Window, inApp: TerminalInfo['inApp']): TerminalInfo {
   return {
     size: () => ({
       cols: transcriptColumns(win),
       rows: Math.max(10, Math.floor((win.visualViewport?.height ?? win.innerHeight) / 20)),
     }),
     touch: coarsePointer(win),
-    inApp: app === null ? null : (IN_APP[app] ?? null),
+    inApp,
   };
 }
 

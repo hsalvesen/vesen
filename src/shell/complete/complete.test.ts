@@ -44,7 +44,7 @@ function tab(line: string, environment: CompletionEnv = env): string | string[] 
 describe('command names', () => {
   it.each([
     ['ca', 'cat'],
-    ['c', ['cat', 'cathode', 'cd', 'clear', 'command', 'cp', 'curl']],
+    ['c', ['cat', 'cathode', 'cd', 'clear', 'command', 'contact', 'cp', 'curl']],
     ['he', 'help '],
     ['the', 'theme '],
     ['theme', 'theme '],

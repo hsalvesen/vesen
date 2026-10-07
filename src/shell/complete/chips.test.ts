@@ -29,7 +29,7 @@ describe('chipsFor', () => {
     const { chips, more } = chipsFor(input('c', { max: 3 }));
     expect(chips.map((c) => c.label)).toEqual(['cat', 'cathode', 'cd']);
     expect(chips.map((c) => c.matchLen)).toEqual([1, 1, 1]);
-    expect(more).toBe(4);
+    expect(more).toBe(5);
     expect(chips.every((c) => c.action.kind === 'apply')).toBe(true);
   });
 
@@ -52,11 +52,11 @@ describe('chipsFor', () => {
     const state = at('c');
     const listed = pressTab(TAB_IDLE, state, env);
     const all = chipsFor(input('c', { tab: listed.tab, max: 2 }));
-    expect(all.chips).toHaveLength(7);
+    expect(all.chips).toHaveLength(8);
     expect(all.more).toBe(0);
     const menu = pressTab(listed.tab, state, env);
     const marked = chipsFor(input('cat', { tab: menu.tab }));
-    expect(marked.chips.map((c) => c.selected === true)).toEqual([true, false, false, false, false, false, false]);
+    expect(marked.chips.map((c) => c.selected === true)).toEqual([true, false, false, false, false, false, false, false]);
   });
 
   it('offers the starters, in the owner order, on an empty line on a touch screen only', () => {

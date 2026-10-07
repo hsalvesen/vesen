@@ -5,7 +5,7 @@
 // status 130, and it never runs.
 
 import type { Line } from '../output/model';
-import type { Completion, JobHandle, JobOrigin, JobResult, PreflightResult, ReadRequest, ScreenSink, ShellPort } from '../shell/index';
+import type { AppRequest, Completion, JobHandle, JobOrigin, JobResult, PreflightResult, ReadRequest, ScreenSink, ShellPort } from '../shell/index';
 import { readonly, writable, type Readable } from '../shell/observable';
 import { promptLine } from '../shell/prompt';
 import { GUEST, type ExitCode, type JobInfo } from '../shell/types';
@@ -46,7 +46,10 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
   const completion = writable<Completion | null>(null);
   const historyLines = writable<readonly string[]>([]);
   const reads = writable<ReadRequest | null>(null);
+  const apps = writable<AppRequest | null>(null);
   let shell: ShellPort | null = null;
+  /** The folder to start in once the shell is here: the session snapshot's, after Back. */
+  let cwdToRestore: string | null = null;
   /** Lines to remember once the shell is here. */
   const remembered: string[] = [];
   /** Lines typed while the chunk loads, oldest first. */
@@ -72,6 +75,8 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
   const ready = load().then(
     (loaded) => {
       shell = loaded;
+      if (cwdToRestore !== null) loaded.restoreCwd(cwdToRestore);
+      cwdToRestore = null;
       for (const line of remembered.splice(0)) loaded.remember(line);
       // The waiting lines start before the stores are forwarded, so the job never reads as idle
       // in between. Each one interrupts the one before, as lines typed at a busy shell do.
@@ -81,6 +86,7 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
       forward(loaded.job, job);
       forward(loaded.historyLines, historyLines);
       forward(loaded.reads, reads);
+      forward(loaded.apps, apps);
       // Subscribing starts the engine's chunk loading, now the kernel is here.
       forward(loaded.completion, completion);
       return loaded;
@@ -172,6 +178,16 @@ export function lazyShell(load: () => Promise<ShellPort>, options: LazyShellOpti
     historyLines: readonly(historyLines),
     reads: readonly(reads),
     answerRead: (id, text) => shell?.answerRead(id, text),
+    apps: readonly(apps),
+    closeApp: (id, result) => shell?.closeApp(id, result),
+    restoreCwd: (path) => {
+      if (shell !== null) shell.restoreCwd(path);
+      else {
+        cwdToRestore = path;
+        // The prompt shows it at once; the shell moves there when it arrives.
+        cwd.set(path);
+      }
+    },
     // Before the kernel is here nothing can tell: the line runs, and the kernel says what is wrong.
     incomplete: (line) => shell?.incomplete(line) ?? null,
     renderPrompt,

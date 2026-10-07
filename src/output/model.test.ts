@@ -11,6 +11,7 @@ import {
   lineText,
   out,
   plain,
+  readableUrl,
   safeHref,
   textWidth,
   charWidth,
@@ -211,10 +212,23 @@ describe('block builders', () => {
       href: 'https://www.vesen.app/',
     });
     expect(() => out.card({ title: 'x', href: 'javascript:alert(1)' })).toThrow(TypeError);
+    // The way out of an in-app browser is checked the same way.
+    expect(out.card({ title: 'x', href: 'https://a.example', escape: { url: 'https://b.example', hint: 'h' } }).escape).toEqual({
+      url: 'https://b.example/',
+      hint: 'h',
+    });
+    expect(() => out.card({ title: 'x', href: 'https://a.example', escape: { url: 'instagram://extbrowser/' } })).toThrow(TypeError);
   });
 
-  it('lists only the component names the contract allows', () => {
-    expect(COMPONENT_NAMES).toEqual(['weather-card', 'quote-card', 'quote-table', 'qr-card', 'link-card']);
+  it('lists only the component names the contract allows: a link card is the card block', () => {
+    expect(COMPONENT_NAMES).toEqual(['weather-card', 'quote-card', 'quote-table', 'qr-card']);
+  });
+
+  it('reads a URL as people do', () => {
+    expect(readableUrl('https://www.linkedin.com/in/harrysalvesen/')).toBe('linkedin.com/in/harrysalvesen');
+    expect(readableUrl('mailto:has@salvesen.app?subject=Hi')).toBe('has@salvesen.app');
+    expect(readableUrl('http://example.com/a')).toBe('example.com/a');
+    expect(readableUrl('mailto:a%E0@b.example')).toBe('a%E0@b.example');
   });
 });
 
@@ -302,11 +316,9 @@ describe('plain', () => {
     expect(plain(samples.chips)).toBe('');
   });
 
-  it('card prints its title, URL and detail', () => {
+  it('card prints its title, the link as it would be pasted, and detail', () => {
     expect(plain(samples.card)).toBe('LinkedIn\nhttps://www.linkedin.com/in/example\nOpens in a new tab\n');
-    expect(plain(out.card({ title: 'Email', href: 'mailto:has@salvesen.app', copy: 'has@salvesen.app' }))).toBe(
-      'Email\nmailto:has@salvesen.app\n',
-    );
+    expect(plain(out.card({ title: 'Email', href: 'mailto:has@salvesen.app', copy: 'has@salvesen.app' }))).toBe('Email\nhas@salvesen.app\n');
   });
 
   it('columns stack the left side above the right, recursively', () => {
@@ -321,7 +333,7 @@ describe('plain', () => {
     expect(text).not.toContain('Weather for Oslo');
     expect(text).not.toContain('place');
     expect(plain(out.component('qr-card', {}, 'line 1\nline 2\n', 'qr'))).toBe('line 1\nline 2\n');
-    expect(plain(out.component('link-card', {}, '', 'nothing'))).toBe('');
+    expect(plain(out.component('quote-card', {}, '', 'nothing'))).toBe('');
   });
 
   it('legacy HTML is read as text', () => {

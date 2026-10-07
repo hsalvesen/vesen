@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isTrustedAction, lineText, type Block, type Span } from '../output/model';
 import type { Opener } from '../services/types';
+import { fakeOpener } from '../testing/opener';
 import { harness, sampleTree } from '../testing/shell-harness';
 import type { VirtualFile } from '../vfs/types';
 import { MAX_SCRIPT_DEPTH } from './executor';
@@ -490,8 +491,8 @@ describe('preflight', () => {
   function recordingOpener(autoOpen = true): Opener & { opened: string[] } {
     const opened: string[] = [];
     return {
+      ...fakeOpener({ autoOpen }),
       opened,
-      autoOpen,
       preflight: (url) => {
         if (!autoOpen) return 'skipped';
         opened.push(url);
@@ -501,10 +502,6 @@ describe('preflight', () => {
         opened.push(url);
         return 'opened';
       },
-      escapeHref: () => null,
-      menuHint: () => null,
-      canShare: () => false,
-      share: async () => 'unavailable',
     };
   }
 

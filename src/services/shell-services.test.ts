@@ -4,7 +4,6 @@ import { createAppearance } from './appearance';
 import { createBell } from './bell';
 import { createClock } from './clock';
 import { createNet, NetError } from './net';
-import { createOpener } from './opener';
 import { createSysInfoStub } from './sysinfo';
 
 afterEach(() => {
@@ -52,44 +51,6 @@ describe('bell', () => {
     bell.ring();
     expect(play).toHaveBeenCalledTimes(1);
     expect(flashes).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('opener', () => {
-  const host = (tab: object | null) => {
-    const open = vi.fn((_url: string, _target: string) => tab as Window | null);
-    return { open };
-  };
-
-  it('opens inside the gesture on a desktop browser, cutting the new tab off from the page', () => {
-    const tab = { opener: {} as unknown };
-    const browser = host(tab);
-    const opener = createOpener(browser, { inApp: null, touch: false });
-    expect(opener.autoOpen).toBe(true);
-    expect(opener.preflight('https://www.linkedin.com/')).toBe('opened');
-    expect(browser.open).toHaveBeenCalledWith('https://www.linkedin.com/', '_blank');
-    expect(tab.opener).toBeNull();
-    expect(createOpener(host(null), { inApp: null, touch: false }).preflight('https://x.example/')).toBe('blocked');
-  });
-
-  it('waits for a tap inside an in-app browser and on touch', () => {
-    const browser = host({});
-    for (const options of [{ inApp: 'Instagram', touch: true }, { inApp: null, touch: true }]) {
-      const opener = createOpener(browser, options);
-      expect(opener.autoOpen).toBe(false);
-      expect(opener.preflight('https://x.example/')).toBe('skipped');
-    }
-    expect(browser.open).not.toHaveBeenCalled();
-    expect(createOpener(browser, { inApp: 'Instagram', touch: true }).menuHint()).toContain('Open in browser');
-    expect(createOpener(browser, { inApp: 'Instagram', touch: true }).open('https://x.example/')).toBe('opened');
-  });
-
-  it('shares through the system sheet when there is one', async () => {
-    const share = vi.fn(async () => {});
-    const opener = createOpener({ open: () => null, navigator: { share } }, { inApp: null, touch: true });
-    expect(opener.canShare()).toBe(true);
-    expect(await opener.share({ url: 'https://www.vesen.app/' })).toBe('shared');
-    expect(await createOpener({ open: () => null }, { inApp: null, touch: true }).share({ url: 'https://x.example/' })).toBe('unavailable');
   });
 });
 

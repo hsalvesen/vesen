@@ -7,6 +7,7 @@
 //   full  everything else, a desktop with a fine pointer
 // `cathode quality` overrides the choice. decideTier is pure; startPerf watches the settings.
 import type { CrtQuality, CrtTier, TierDecision } from '../stores/cathode';
+import { detectInApp, IN_APP_LABELS } from './env';
 
 export interface PerfSignals {
   readonly reducedMotion: boolean;
@@ -33,16 +34,10 @@ export const NO_SIGNALS: PerfSignals = {
   deviceMemory: null,
 };
 
-/** In-app browsers by the token their apps add to the user agent. */
-const IN_APP_BROWSERS: readonly (readonly [RegExp, string])[] = [
-  [/\bInstagram\b/, 'Instagram'],
-  [/\bFBA[NV]\//, 'Facebook'],
-  [/musical_ly/, 'TikTok'],
-];
-
+/** The in-app browser's name, as `cathode ls` words it ('Instagram'), or null in a real browser. */
 export function inAppBrowser(userAgent: string): string | null {
-  for (const [token, app] of IN_APP_BROWSERS) if (token.test(userAgent)) return app;
-  return null;
+  const app = detectInApp(userAgent);
+  return app === null ? null : IN_APP_LABELS[app];
 }
 
 /** Devices at or under this much memory get the lite tier. */
