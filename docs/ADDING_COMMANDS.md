@@ -85,6 +85,7 @@ The file's default export is the spec, made with `defineCommand`, which insists 
 | `subcommands` | `theme ls`, `theme set`: each with its own summary, flags and arguments. |
 | `examples` | Lines that show the command at work; see below. |
 | `seeAlso` | Related commands, for `man`. |
+| `helpRank` | Its place in its category's row of the short `help` index, lowest first. A row holds about two phone lines of names and says how many more there are, so in a long category rank the few a visitor reaches for first; the rest follow by name. |
 | `hidden` | Left out of `help`, Tab and the chips; it still runs when typed. |
 | `builtin` | Changes the session (`cd`, `export`): runs in the shell itself, and a usage error exits 2. |
 | `network` | Fails fast offline, and gets a 15 s budget for the whole command (`budgetMs` to change it) on top of the 8 s per request. |
@@ -144,15 +145,27 @@ Inside `run`:
 - **Linux behaviour.** Use Linux's wording and exit codes. Coreutils are silent when they work,
   with `-v` to say what they did.
 - **DOM-free.** `src/commands` never touches `window`, `document`, `navigator`, browser storage or
-  Svelte; services reach the browser for it (`ctx.net`, `ctx.sys`, `ctx.clock`, `ctx.tty`).
+  Svelte; services reach the browser for it (`ctx.net`, `ctx.sys`, `ctx.clock`, `ctx.tty`, and
+  `ctx.digest` for WebCrypto's hashes).
   `npm run check:boundaries` enforces it. Avoid `AbortSignal.any` and `AbortSignal.timeout`,
   `Array.prototype.at`, `Object.hasOwn`, `Object.groupBy` and `Promise.withResolvers`: Instagram's
   browser on older iPhones lacks them.
-- **Regular expressions from the visitor** (grep, sed, find -regex and the like) go through the one
-  shared guard in `src/commands/lib`, which caps the pattern and the input and refuses patterns that
-  could run for ever, such as `(a+)+`. A JavaScript regular expression cannot be interrupted, so
-  one bad pattern would freeze the page. The first command that takes a pattern adds the guard
-  there; every later one uses it.
+- **Regular expressions from the visitor** (grep, sed, expr, nl -bp, and later find -regex) go
+  through the one shared guard, `src/commands/lib/regex.ts`, never straight into `new RegExp`.
+  A JavaScript regular expression cannot be interrupted, so one bad pattern would freeze the page.
+  `compilePatterns(patterns, { syntax })` translates basic or extended regular expressions (or takes fixed
+  strings, or JavaScript's own for `grep -P`) and calls `guardRegex`, which caps the pattern at
+  8192 characters, refuses what could run for ever (a repeated group with a repetition inside it,
+  such as `(a+)+`, or a repeated choice whose branches overlap, such as `(a|aa)*`), and sets the
+  longest line the pattern may be run against from how many open-ended repetitions it has, never
+  more than a million characters. Call `check(line)` on the result before each match: it throws
+  `SubjectTooLong`, which the command reports and moves on from. `patternMessage(error)` gives
+  the words for any of the guard's refusals.
+- **Text tools share their input handling.** `src/commands/lib/text-input.ts` has the FILE operands
+  (none, or `-`, is standard input), standard input a line at a time as it arrives (so
+  `yes | tool | head` ends at once), a last line without a newline kept that way, UTF-8 byte
+  counts, coreutils' size suffixes (`2K`) and `pacer(ctx)`, which lets the page paint and ^C
+  arrive during a long loop.
 - **Original content.** Cows, fortunes, fonts and art are written for vesen, not copied, and
   credit no other project.
 - **Honest network commands.** A browser cannot send ICMP or raw DNS: say what is done instead

@@ -77,7 +77,8 @@ describe('the catalogue in the app', () => {
 
   it.each([
     ['help --all', /^rev +reverse the characters of each line$/m],
-    ['help', /^Text: .*\brev\b/m],
+    // The short index's row is capped, so it shows the catalogue's grep and sed rather than rev.
+    ['help', /^Text: echo grep sed\b.* \+\d+ more$/m],
     ['help rev', /^rev - reverse the characters of each line$/m],
     ['man rev', /^REV\(1\) +User Commands +REV\(1\)$/m],
     ['whatis rev', /^rev \(1\) +- reverse the characters of each line$/m],

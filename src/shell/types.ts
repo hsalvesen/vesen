@@ -3,7 +3,7 @@
 // completion and the phone chips. Everything here is DOM-free.
 
 import type { Block, Colour, Span } from '../output/model';
-import type { Appearance, Clock, Net, SysInfo } from '../services/types';
+import type { Appearance, Clock, Digest, Net, SysInfo } from '../services/types';
 import { GUEST as IDENTITY_GUEST, HOST, OWNER } from '../vfs/identity';
 import type { BoundVfs } from '../vfs/types';
 
@@ -166,6 +166,12 @@ export interface CommandSpec {
   readonly examples?: readonly Example[];
   readonly seeAlso?: readonly string[];
   readonly featured?: boolean;
+  /**
+   * Its place in its category's row of the short help index, lowest first; unranked commands
+   * follow by name. A row holds only so many names (`help --all` lists them all), so the commands
+   * a visitor reaches for first in a long category get one.
+   */
+  readonly helpRank?: number;
   readonly hidden?: boolean;
 
   /** May change session state: cd, export, alias. */
@@ -555,6 +561,8 @@ export interface CommandContext {
   readonly net: Net;
   readonly sys: SysInfo;
   readonly clock: Clock;
+  /** Hashes through the browser's WebCrypto: sha256sum and the other checksums. */
+  readonly digest: Digest;
   readonly appearance: Appearance;
   readonly shell: ShellApi;
   readonly spec: CommandSpec;

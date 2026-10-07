@@ -10,6 +10,7 @@ export default defineCommand({
   name: 'printf',
   category: 'text',
   summary: 'format and print data',
+  helpRank: 13,
   synopsis: ['printf [-v VAR] FORMAT [ARGUMENT]...'],
   // A shell builtin, as in bash: -v sets a variable in the shell.
   builtin: true,

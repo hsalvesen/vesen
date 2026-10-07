@@ -1,0 +1,21 @@
+# wc: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ wc README.md
+ 21 131 850 README.md
+? 0
+$ wc -l .bashrc .profile
+ 11 .bashrc
+  6 .profile
+ 17 total
+? 0
+$ echo one two | wc
+      1       2       8
+? 0
+$ wc documents nope
+! wc: documents: Is a directory
+      0       0       0 documents
+! wc: nope: No such file or directory
+      0       0       0 total
+? 1

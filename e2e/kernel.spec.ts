@@ -59,7 +59,9 @@ test.describe('the shell kernel', { tag: '@smoke' }, () => {
     await run(page, 'which rev');
     await expect(lastEntry(page).locator('.command-output')).toHaveText('/usr/bin/rev');
     await run(page, 'help | cat');
-    await expect(lastEntry(page)).toContainText('Text: echo printf rev');
+    await expect(lastEntry(page)).toContainText('Text: echo grep sed sort');
+    await run(page, 'help --all | grep rev');
+    await expect(lastEntry(page).locator('.command-output')).toHaveText(/^rev\s+reverse the characters of each line$/);
   });
 
   test('redirection, && and || and $? work for every command', async ({ page }) => {

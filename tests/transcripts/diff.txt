@@ -1,0 +1,30 @@
+# diff: one session, with stdout on the terminal and into a pipe, at 40, 80 and 120 columns.
+# Rows starting with "! " went to stderr, and "? N" is the exit status. Where the variants
+# differ, each output is under the variants it belongs to. See README.md.
+
+$ printf 'a\nb\nc\n' > old; printf 'a\nB\nc\nd\n' > new
+? 0
+$ diff old new
+2c2
+< b
+---
+> B
+3a4
+> d
+? 1
+$ diff -u old new
+--- old	2026-10-06 20:01:00.000000000 +1100
++++ new	2026-10-06 20:01:00.000000000 +1100
+@@ -1,3 +1,4 @@
+ a
+-b
++B
+ c
++d
+? 1
+$ diff -q old new
+Files old and new differ
+? 1
+$ diff old nope
+! diff: nope: No such file or directory
+? 2

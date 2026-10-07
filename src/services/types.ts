@@ -303,6 +303,16 @@ export interface ConnectionInfo {
   readonly cellular: boolean;
 }
 
+// ── Digest ─────────────────────────────────────────────────────────────────────────────────
+
+/** The hashes the browser's WebCrypto computes, for sha1sum, sha256sum and sha512sum. */
+export type DigestAlgorithm = 'SHA-1' | 'SHA-256' | 'SHA-384' | 'SHA-512';
+
+export interface Digest {
+  /** The hash of `data`. Rejects where the page has no WebCrypto: an http page that is not localhost. */
+  hash(algorithm: DigestAlgorithm, data: Uint8Array): Promise<Uint8Array>;
+}
+
 // ── Appearance ─────────────────────────────────────────────────────────────────────────────
 
 /** The palette slots `theme ls` previews, in terminal order, one swatch each. */

@@ -417,7 +417,7 @@ test.describe('focus', { tag: '@smoke' }, () => {
     await expect(page.locator('[data-completion="ready"]')).toHaveCount(1);
 
     // Tab alone completes, and keeps focus in the prompt.
-    await page.keyboard.type('he');
+    await page.keyboard.type('hel');
     await page.keyboard.press('Tab');
     await expect(prompt(page)).toHaveValue('help ');
     await expect(prompt(page)).toBeFocused();

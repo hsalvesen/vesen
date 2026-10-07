@@ -13,6 +13,7 @@ const spec: CommandSpec & RawArgsSpec & RunnerChoice = {
   name: 'echo',
   category: 'text',
   summary: 'display a line of text',
+  helpRank: 1,
   synopsis: ['echo [-neE] [STRING]...'],
   description:
     "Writes each STRING, separated by single spaces, then a newline. Quote a STRING to keep its spaces or to print > and | as text. With -e, backslash escapes such as \\n and \\t are read; \\e[31m starts red text on the terminal.",

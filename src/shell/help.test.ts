@@ -8,6 +8,7 @@ import {
   flagLabel,
   helpIndex,
   keysHelp,
+  ROW_BUDGET,
   manPage,
   usageLines,
   vesenPage,
@@ -66,6 +67,27 @@ describe('the help index', () => {
     const files = rows.find((row) => row[0]?.text === 'Files');
     expect(files?.[2]).toMatchObject({ text: 'ls', action: { kind: 'insert', text: 'ls ' } });
     expect(isTrustedAction(files?.[2]?.action)).toBe(true);
+  });
+
+  it('keeps a long row to what fits on a phone, the ranked commands first, and says how many more', () => {
+    const many: CommandSpec[] = Array.from({ length: 30 }, (_, i) => ({
+      name: `cmd${String(i).padStart(2, '0')}`,
+      category: 'text',
+      summary: 'a command',
+      run: () => 0,
+    }));
+    const ranked: CommandSpec[] = [
+      { name: 'zeta', category: 'text', summary: 'ranked second', helpRank: 2, run: () => 0 },
+      { name: 'yak', category: 'text', summary: 'ranked first', helpRank: 1, run: () => 0 },
+    ];
+    const rows = helpIndex(new CommandRegistry([...many, ...ranked])).flatMap((block) => (block.type === 'lines' ? block.lines : []));
+    const row = rows.find((line) => line[0]?.text === 'Text');
+    const names = (row ?? []).filter((span) => span.action !== undefined).map((span) => span.text);
+    expect(names.slice(0, 3)).toEqual(['yak', 'zeta', 'cmd00']);
+    expect(names.join(' ').length).toBeLessThanOrEqual(ROW_BUDGET);
+    expect(lineText(row ?? []).endsWith(` +${32 - names.length} more`)).toBe(true);
+    // A short row is whole, with no count.
+    expect(text(helpIndex(registry))).toContain('Files: ls\n');
   });
 
   it('groups every visible command by category with --all, the portfolio first, each with its summary', () => {

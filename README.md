@@ -116,16 +116,19 @@ src/
 │                                 # login, sleep, sudo), system/ (date, keys, poweroff, reboot, shutdown,
 │                                 # privacy, debug, fastfetch), network/ (weather, curl, speedtest, and
 │                                 # stock with its card's words in stock/); lib/ is what they share: the
-│                                 # banner, the link cards, weather's way to its service, and qr's options
-│                                 # and payloads; more/ is the catalogue, the commands that load after the
-│                                 # kernel in a chunk of their own (text/rev so far; see
-│                                 # docs/ADDING_COMMANDS.md)
+│                                 # banner, the link cards, weather's way to its service, qr's options
+│                                 # and payloads, the text tools' input helpers and the one guard every
+│                                 # visitor's regular expression passes (regex.ts); more/ is the catalogue,
+│                                 # the commands that load after the kernel in a chunk of their own (text/:
+│                                 # grep, sed, sort, uniq, cut, tr, head, tail, wc, diff, xargs, bc, the
+│                                 # checksums and the rest; see docs/ADDING_COMMANDS.md)
 ├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
 │                                 # and roles.ts (each theme's --role-* colours, computed from its palette
 │                                 # where themes.json does not set them, and the contrast each must meet);
 │                                 # qr/ (the QR encoder: segments, error correction, masks, and text, SVG,
 │                                 # raster and PNG renderers, and the view a QR card draws); sysfacts.ts and
-│                                 # sysnames.ts (reading and naming what a browser says about its system)
+│                                 # sysnames.ts (reading and naming what a browser says about its system);
+│                                 # md5.ts (MD5 for md5sum, which WebCrypto lacks)
 ├── platform/                     # Browser-facing helpers: env.ts (touch, the in-app browser and the
 │                                 # system), errors.ts (recent errors for debug report), canonical host
 │                                 # redirect, stale-chunk reload,
@@ -139,12 +142,14 @@ src/
 │   ├── net.ts                    # fetch with timeouts, cancelling, byte caps and typed network errors
 │   ├── bell.ts                   # The terminal bell: a short tone through one AudioContext, or a flash
 │   ├── storage.ts                # localStorage and sessionStorage with a memory fallback; one-time migrations
-│   ├── types.ts                  # Service interfaces: net, storage, bell, opener, clipboard, clock, system info
+│   ├── types.ts                  # Service interfaces: net, storage, bell, opener, clipboard, clock, system
+│   │                             # info, digest
 │   ├── sysinfo.ts                # System facts for fastfetch, /proc and debug report: the user agent, the GPU,
 │   │                             # client hints, battery, storage, and the public IP only when asked
 │   ├── opener.ts                 # The in-app link policy: planOpen, the new tab inside the gesture, and the
 │   │                             # escape to the real browser behind a tap
 │   ├── clipboard.ts              # Copy: the Clipboard API, then execCommand
+│   ├── digest.ts                 # SHA hashes through WebCrypto, for sha1sum, sha256sum and sha512sum
 │   ├── session-snapshot.ts       # The screen saved for Back (vesen:session:v1); session-restore.ts
 │   │                             # rebuilds it, loaded only after Back
 │   ├── storage-keys.ts           # Every browser storage key, in one registry
