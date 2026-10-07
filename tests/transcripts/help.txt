@@ -25,6 +25,7 @@ Text: echo head printf rev wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
 Network: curl fetch speedtest stock weather
+Editor: less more nano
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
@@ -47,6 +48,7 @@ Text: echo head printf rev wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
 Network: curl fetch speedtest stock weather
+Editor: less more nano
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
@@ -66,6 +68,7 @@ Text: echo head printf rev wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
 Network: curl fetch speedtest stock weather
+Editor: less more nano
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
@@ -88,6 +91,7 @@ Text: echo head printf rev wc yes
 Shell: alias apropos clear command env exit export fail false hang help history late man printenv reset set sleep source sudo test true type unalias unset whatis which
 System: date debug fastfetch keys open poweroff privacy reboot shutdown
 Network: curl fetch speedtest stock weather
+Editor: less more nano
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.

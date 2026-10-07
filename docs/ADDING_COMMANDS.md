@@ -137,6 +137,13 @@ Inside `run`:
   `rev: cannot open nope: No such file or directory` and returns 1;
 - report bad options or operands with `ctx.usage(message)`, which adds the `Try 'rev --help'` line
   and returns the right status;
+- take over the screen, as `less` and `nano` do, with `ctx.tty.fullscreen(view, props)`: the app
+  (a Svelte component in `src/ui/apps`, registered in `src/ui/apps/registry.ts`, with its view
+  model in a DOM-free module such as `src/lib/pager.ts`) shows until it closes and hands back its
+  result. It rejects in a script, `$( )` or anywhere else not at the prompt, and an app whose chunk
+  did not load closes with no result, so always have a fallback: `less` and `man` print the text
+  (`src/commands/lib/pager.ts`). The last stage of a pipeline typed at the prompt may show one
+  (`man ls | less`), when its output is the terminal;
 - return the exit status, or nothing for 0.
 
 ## House rules
@@ -186,6 +193,10 @@ expect((await runLine('rev nope', { tty: false })).stderrPlain).toBe('rev: canno
 `runLine` gives each line a fresh session; `session()` keeps one for several lines. `tty: false`
 runs the line into a pipe, as `line | cat` would see it, and `cols` sets the width. The catalogue
 is loaded before the first line unless you pass `catalogue: 'lazy'`.
+
+`runLine` has no screen for full-screen apps: `ctx.tty.fullscreen` fails, as on a terminal without
+them, unless the test passes `fullscreen`, which stands in for the app and returns its result
+(`src/commands/more/editor/nano.test.ts`).
 
 Tests never touch the network: record the responses once under `tests/fixtures/` and serve them
 through a fake `fetch`, as `src/commands/network/weather.test.ts` does, with the timeout,

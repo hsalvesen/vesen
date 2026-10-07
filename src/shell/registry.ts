@@ -280,10 +280,17 @@ export class CommandRegistry implements Registry {
       const spec = this.lookup.get(candidate);
       return spec !== undefined && guessable(spec) && /^[a-z]/i.test(candidate);
     });
+    // Between names as near, the one that shares more of the start: a typo is rarely the first
+    // letters, so lss means ls rather than less.
+    const shared = (candidate: string): number => {
+      let n = 0;
+      while (n < lower.length && candidate.charAt(n) === lower.charAt(n)) n += 1;
+      return n;
+    };
     const scored = fuzzy
-      .map((candidate) => ({ candidate, distance: editDistance(lower, candidate.toLowerCase()) }))
+      .map((candidate) => ({ candidate, distance: editDistance(lower, candidate.toLowerCase()), prefix: shared(candidate.toLowerCase()) }))
       .filter(({ candidate, distance }) => distance <= 1 || (distance === 2 && length >= 5 && candidate.toLowerCase().charAt(0) === lower.charAt(0)))
-      .sort((a, b) => a.distance - b.distance || a.candidate.localeCompare(b.candidate));
+      .sort((a, b) => a.distance - b.distance || b.prefix - a.prefix || a.candidate.localeCompare(b.candidate));
     const near = scored.map(({ candidate }) => candidate);
     if (near.length === 0 && length >= 2) {
       for (const candidate of fuzzy) if (candidate.toLowerCase().startsWith(lower)) near.push(candidate);

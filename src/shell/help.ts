@@ -6,7 +6,8 @@
 // - the `<cmd> --help` panels as callouts (what it does, Usage, Options, Examples as run chips,
 //   See also);
 // - man pages: NAME, SYNOPSIS, DESCRIPTION, OPTIONS, EXAMPLES and SEE ALSO, laid out to the width
-//   as man lays them out, inline (the pager comes later), and `man vesen`, the about page;
+//   as man lays them out (on a terminal, man shows them in the pager), and `man vesen`, the about
+//   page;
 // - whatis and apropos lines; `help keys`.
 //
 // Commands and the executor load this module the first time help is asked for. A command whose

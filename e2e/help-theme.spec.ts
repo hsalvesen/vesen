@@ -48,11 +48,22 @@ test.describe('help and theme', { tag: '@smoke' }, () => {
     await expect(prompt(page)).toHaveValue('theme ');
   });
 
-  test('help fits the screen, with the portfolio heading in view, and a tapped name brings the prompt into view', async ({ page, hasTouch }) => {
+  test('help shows the portfolio heading, and a tapped name brings the prompt into view', async ({ page, hasTouch }) => {
     await page.goto('/');
-    await run(page, 'help');
+    if (hasTouch) {
+      // As a visitor on a phone runs it: a tap on help in the banner, with the keyboard down. The
+      // index is taller than a phone's screen now that the catalogue has arrived, and a long
+      // output is shown from its start there (ui/actions/stickToBottom.ts).
+      const echoes = page.locator('[role="log"] .command-input-display');
+      const help = page.locator('[role="log"]').getByRole('button', { name: 'help', exact: true }).first();
+      await expect(help).toBeVisible();
+      const before = await echoes.count();
+      await help.tap();
+      await expect(echoes).toHaveCount(before + 1);
+      await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
+    } else await run(page, 'help');
     const output = lastEntry(page).locator('.command-output');
-    // The portfolio comes first, and the short index keeps it on screen rather than scrolled off.
+    // The portfolio comes first, and stays on screen rather than scrolled off.
     const heading = output.getByText('Portfolio', { exact: true });
     await expect(heading).toBeInViewport();
     await expect(output.getByRole('button', { name: 'help --all', exact: true })).toBeVisible();

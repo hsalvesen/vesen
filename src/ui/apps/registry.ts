@@ -1,5 +1,5 @@
 // The full-screen apps a command can show (ctx.tty.fullscreen), each in its own chunk, loaded the
-// first time it is shown. The pager, the editor and the QR presenter register here as they land.
+// first time it is shown. Each app registers here as it lands.
 
 import type { Component } from 'svelte';
 import type { FullscreenView } from '../../shell/types';
@@ -17,6 +17,8 @@ type Loader = () => Promise<{ default: Component<AppProps> }>;
 const APPS: Partial<Record<FullscreenView, Loader>> = {
   shutdown: () => import('./Shutdown.svelte'),
   'qr-present': () => import('./QrPresenter.svelte'),
+  pager: () => import('./Pager.svelte'),
+  editor: () => import('./Editor.svelte'),
 };
 
 /** The loader for a view, or undefined when no app of that name exists yet. */

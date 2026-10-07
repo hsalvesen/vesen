@@ -35,7 +35,10 @@ export interface RunOptions {
   readonly opener?: Opener;
   /** The clipboard tty.copy writes to; without one every copy fails. */
   readonly clipboard?: Clipboard;
-  /** Shows a full-screen app, as AppHost would, and closes it with a result. */
+  /**
+   * Shows a full-screen app, as AppHost would, and closes it with a result. Without one there is
+   * no screen to show apps on: a request fails, so the pager's commands print instead.
+   */
   readonly fullscreen?: (view: FullscreenView, props: unknown) => Promise<unknown>;
   /** The system facts; none by default, as with no page to read them from. */
   readonly sys?: SysInfo;
@@ -133,7 +136,7 @@ export async function session(options: RunOptions = {}): Promise<Session> {
         prompts.push(prompt);
         return Promise.resolve(options.answer?.(prompt) ?? null);
       },
-      ...(options.fullscreen === undefined ? {} : { fullscreen: options.fullscreen }),
+      fullscreen: options.fullscreen ?? (() => Promise.reject(new Error('full-screen apps need the terminal'))),
     },
     ...(options.opener === undefined ? {} : { opener: options.opener }),
     ...(options.clipboard === undefined ? {} : { clipboard: options.clipboard }),

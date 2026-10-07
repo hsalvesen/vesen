@@ -177,7 +177,8 @@ describe('help', () => {
     expect(help.stdout).toContain('weather Gadigal');
     expect(help.stdout).toContain('Units follow your browser');
     expect(help.stdout).not.toContain('--legend');
-    const man = await r.run('man weather');
+    // Into a pipe: on the terminal, man opens the pager.
+    const man = await r.run('man weather | cat');
     expect(man.stdout).toContain('PLACES');
     expect(man.stdout).toContain('Gadigal, Naarm');
     expect(man.stdout).toContain('Open-Meteo.com (CC BY 4.0)');
