@@ -11,7 +11,9 @@ import {
   bare,
   communicationsError,
   ipVersion,
+  isZoneTransfer,
   parseType,
+  zoneTransferReason,
   rcodeName,
   recordData,
   resolverFor,
@@ -47,7 +49,8 @@ function readPlan(words: readonly string[]): Plan | { problem: string; status: E
     if (option !== null) {
       const found = parseType(option[1] ?? '');
       if (found === null) return { problem: `unknown query type: ${option[1] ?? ''}`, status: 1 };
-      type = RR_TYPES[found];
+      if (isZoneTransfer(found)) return { problem: zoneTransferReason(found), status: 1 };
+      type = found;
     } else if (word.startsWith('-') && word !== '-') {
       // -debug, -port=53 and the rest change nothing that a question over HTTPS has.
       if (!/^-(?:no)?(?:debug|d2|recurse|search|vc|fail|port=\d+|timeout=\d+|retry=\d+)$/i.test(word)) return { problem: `invalid option: ${word}`, status: 1 };

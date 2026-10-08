@@ -29,6 +29,19 @@ export interface PagerView {
   readonly ignoreCase?: boolean;
   /** Said on the status line when the pager opens, such as that the input was cut short. */
   readonly note?: string;
+  /** Where it opens, from less +G, +NUMBER or +/pattern: the end, a line (from 1), or a search. */
+  readonly start?: PagerStart;
+}
+
+export type PagerStart = { readonly end: true } | { readonly line: number } | { readonly search: string };
+
+/** The +CMD word less and more take before the files, as where the pager opens; null for one it does not know. */
+export function pagerStart(word: string): PagerStart | null {
+  const command = word.slice(1);
+  if (command === 'G' || command === 'F') return { end: true };
+  if (/^\d+$/.test(command)) return { line: Math.max(1, Number(command)) };
+  if (command.startsWith('/') && command.length > 1) return { search: command.slice(1, TEXT_LIMIT + 1) };
+  return null;
 }
 
 const TEXT_LIMIT = 200;
@@ -56,6 +69,15 @@ export function asPagerView(value: unknown): PagerView {
     }
   }
   const note = typeof raw.note === 'string' && raw.note !== '' ? { note: raw.note.slice(0, TEXT_LIMIT) } : {};
+  const asked = (typeof raw.start === 'object' && raw.start !== null ? raw.start : {}) as Partial<Record<'end' | 'line' | 'search', unknown>>;
+  const start: { start?: PagerStart } =
+    asked.end === true
+      ? { start: { end: true } }
+      : typeof asked.line === 'number' && Number.isFinite(asked.line) && asked.line >= 1
+        ? { start: { line: Math.floor(asked.line) } }
+        : typeof asked.search === 'string' && asked.search !== ''
+          ? { start: { search: asked.search.slice(0, TEXT_LIMIT) } }
+          : {};
   return {
     title: text(raw.title, '(standard input)'),
     lines,
@@ -66,6 +88,7 @@ export function asPagerView(value: unknown): PagerView {
     numbers: raw.numbers === true,
     ignoreCase: raw.ignoreCase === true,
     ...note,
+    ...start,
   };
 }
 

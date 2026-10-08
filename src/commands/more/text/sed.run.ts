@@ -751,12 +751,19 @@ function writeFile(run: Run, name: string, text: string): void {
   }
 }
 
+/**
+ * How many commands a cycle may run between pauses. A branch back to an earlier command pauses
+ * too, so `:a;ba`, which loops for ever as it does in GNU sed, still lets ^C and timeout end it.
+ */
+const COMMANDS_BETWEEN_PAUSES = 4096;
+
 /** Runs the script over the whole input. */
 async function execute(run: Run): Promise<void> {
   const { script, input, ctx } = run;
   const { cmds } = script;
   const breathe = pacer(ctx);
   let carry: string | null = null;
+  let ran = 0;
   for (;;) {
     let space: string;
     if (carry !== null) {
@@ -773,6 +780,11 @@ async function execute(run: Run): Promise<void> {
     let restart = false;
     let pc = 0;
     cycle: while (pc < cmds.length) {
+      ran += 1;
+      if (ran >= COMMANDS_BETWEEN_PAUSES) {
+        ran = 0;
+        await breathe();
+      }
       const cmd = cmds[pc] as Cmd;
       if (cmd.name === ':' || cmd.name === '}') {
         pc += 1;
@@ -876,18 +888,19 @@ async function execute(run: Run): Promise<void> {
           space = Array.from(space, (ch) => cmd.map?.get(ch) ?? ch).join('');
           break;
         case 'b':
-          pc = cmd.jump ?? cmds.length;
-          break;
         case 't':
-          if (flag) {
-            flag = false;
-            pc = cmd.jump ?? cmds.length;
+        case 'T': {
+          // t jumps when a substitution was made since the last line or t, T when none was.
+          const taken = cmd.name === 'b' || (cmd.name === 't' ? flag : !flag);
+          if (cmd.name !== 'b') flag = false;
+          if (taken) {
+            const to = cmd.jump ?? cmds.length;
+            // A jump back is a loop: let the page breathe, and hear ^C.
+            if (to < pc) await breathe();
+            pc = to;
           }
           break;
-        case 'T':
-          if (!flag) pc = cmd.jump ?? cmds.length;
-          else flag = false;
-          break;
+        }
         case 'z':
           space = '';
           break;

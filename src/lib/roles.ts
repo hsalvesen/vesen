@@ -50,6 +50,13 @@ export const TEXT_ROLE_SOURCES = {
   rain: 'blue',
   cold: 'cyan',
   hot: 'red',
+  // lolcat's bands: each hue of the palette, made to read like any other text.
+  'rainbow-red': 'red',
+  'rainbow-yellow': 'yellow',
+  'rainbow-green': 'green',
+  'rainbow-cyan': 'cyan',
+  'rainbow-blue': 'blue',
+  'rainbow-purple': 'purple',
 } as const satisfies Partial<Record<Role, PaletteSlot>>;
 
 export type TextRole = keyof typeof TEXT_ROLE_SOURCES;
@@ -61,6 +68,7 @@ export const ROLE_NAMES = [
   'chip-bg', 'chip-fg', 'ghost', 'selection', 'cursor',
   'prompt-user', 'prompt-host', 'prompt-path',
   'sun', 'rain', 'cold', 'hot', 'qr-ink', 'qr-paper',
+  'rainbow-red', 'rainbow-yellow', 'rainbow-green', 'rainbow-cyan', 'rainbow-blue', 'rainbow-purple',
 ] as const satisfies readonly Role[];
 
 /** A theme's own value for a role, as a hex colour; `nudge` when it named a palette slot. */

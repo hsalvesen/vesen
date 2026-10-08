@@ -19,6 +19,10 @@ export const doc: CommandDoc = {
     "Looks DOMAIN up in its registry and prints who it is registered through, when it was registered, last changed and expires, its status codes, its name servers and whether it is signed (DNSSEC). A browser cannot reach whois's own port 43, so whois asks RDAP, the web service registries run for the same records, through rdap.org, which passes the question on to the right registry. Personal details are not shown: registries mostly withhold them anyway.",
   man: [
     {
+      heading: 'SERVERS',
+      body: '-h HOST names the whois server to ask. It is accepted and set aside: the question goes over RDAP, which finds the registry itself, and the answer says where it came from.',
+    },
+    {
       heading: 'EXIT STATUS',
       body: '0 when the registry answered. 1 when the domain is not registered, no RDAP service covers its TLD (whois: no RDAP service for .tld), or the registry could not be reached.',
     },
@@ -157,6 +161,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   const muted = { fg: 'muted' } as const;
   await ctx.stdout.line(out.span("% Asked over RDAP: whois's own port 43 is out of a browser's reach.", muted));
   await ctx.stdout.line(out.span(`% From ${registry}${registry === 'rdap.org' ? '' : ', found through rdap.org'}`, muted));
+  if (typeof ctx.opts.host === 'string') await ctx.stdout.line(out.span(`% Not ${ctx.opts.host}: RDAP finds the registry itself.`, muted));
   await ctx.stdout.write(`\n${registrationLines(registration).join('\n')}\n`);
   return 0;
 }

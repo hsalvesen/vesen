@@ -12,12 +12,14 @@ import {
   communicationsError,
   unreachableLines,
   fqdn,
+  isZoneTransfer,
   parseType,
   rcodeName,
   recordData,
   resolverFor,
   reverseName,
   typeName,
+  zoneTransferReason,
   viaLine,
   RR_TYPES,
   type DnsRecord,
@@ -29,7 +31,7 @@ import { stamp } from '../../lib/net-words';
 /** What --help, help and man say about dig, besides its spec (dig.ts). */
 export const doc: CommandDoc = {
   description:
-    "Asks the DNS about NAME and prints the answer in dig's sections. A browser cannot send DNS packets, so the question goes over HTTPS, as JSON, to Cloudflare's resolver (cloudflare-dns.com), or to Google's (dns.google) when Cloudflare cannot be reached; the output names which one answered. With no NAME, dig asks for the root's name servers. TYPE is A unless given: A, AAAA, CNAME, MX, NS, TXT, SOA, CAA, PTR, SRV, DS, DNSKEY or HTTPS. Query options: +short (only the answers), +noall (nothing), then +answer, +question, +authority, +additional, +comments, +stats or +cmd to bring a part back; +noX leaves part X out.",
+    "Asks the DNS about NAME and prints the answer in dig's sections. A browser cannot send DNS packets, so the question goes over HTTPS, as JSON, to Cloudflare's resolver (cloudflare-dns.com), or to Google's (dns.google) when Cloudflare cannot be reached; the output names which one answered. With no NAME, dig asks for the root's name servers. TYPE is A unless given: A, AAAA, CNAME, MX, NS, TXT, SOA, CAA, PTR, SRV, DS, DNSKEY, HTTPS or any other type's name or TYPEn, and ANY, which most resolvers now answer with a stand-in HINFO record (RFC 8482), or not at all (Cloudflare says NOTIMP). AXFR and IXFR are zone transfers, which need a connection a browser cannot make. Query options: +short (only the answers), +noall (nothing), then +answer, +question, +authority, +additional, +comments, +stats or +cmd to bring a part back; +noX leaves part X out.",
   man: [
     {
       heading: 'SERVERS',
@@ -98,7 +100,8 @@ function readPlan(ctx: CommandContext): Plan | string {
   if (typeof t === 'string') {
     const type = parseType(t);
     if (type === null) return `invalid type: ${t}`;
-    plan.type = RR_TYPES[type];
+    if (isZoneTransfer(type)) return zoneTransferReason(type);
+    plan.type = type;
     plan.typed = true;
   }
   const x = ctx.opts.x;
@@ -122,7 +125,10 @@ function readPlan(ctx: CommandContext): Plan | string {
     } else if (word.toUpperCase() === 'IN') {
       // The only class there is.
     } else if (parseType(word) !== null && !(plan.typed && plan.names.length === 0)) {
-      plan.type = RR_TYPES[parseType(word) ?? 'A'];
+      // Every type's mnemonic is a type, ANY and NAPTR as much as MX, never a host's name.
+      const type = parseType(word) ?? RR_TYPES.A;
+      if (isZoneTransfer(type)) return zoneTransferReason(type);
+      plan.type = type;
       plan.typed = true;
     } else {
       plan.names.push(word);

@@ -2,6 +2,7 @@
 
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
 import { memInfo } from '../../lib/sysread';
+import { writeTable } from '../../lib/table-out';
 
 /** What --help, help and man say about free, besides its spec (free.ts). */
 export const doc: CommandDoc = {
@@ -53,6 +54,6 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
     row('Swap:', [swapTotal, swapTotal - swapFree, swapFree]),
   ];
   if (ctx.opts.total === true) lines.push(row('Total:', [total + swapTotal, used + swapTotal - swapFree, kb('MemFree') + swapFree]));
-  await ctx.stdout.write(`${lines.join('\n')}\n`);
+  await writeTable(ctx, `${lines.join('\n')}\n`);
   return 0;
 }

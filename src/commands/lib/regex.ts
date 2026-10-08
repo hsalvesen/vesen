@@ -8,8 +8,11 @@
 //     (a+)+ or (\w*\s?)*, unless every count is small and bounded, as in ([0-9]{1,3}\.){3}, and
 //     a repeated choice whose branches can match the same text, (a|aa)*;
 //   - caps how long a line it may be run against (SafeRegex.limit), from how many open-ended
-//     repetitions it has: n characters and d of them can cost about n^(d+1)/(d+1)! steps, held
-//     under STEP_BUDGET, and never more than MAX_SUBJECT characters (the input cap).
+//     repetitions follow one another on its worst path (d) and how many ways its bounded choices
+//     multiply (W: ? counts 2, {0,9} 10, an unrepeated choice whose branches overlap one per
+//     branch): n characters can cost about W * n^(d+1)/(d+1)! steps, held under STEP_BUDGET, and
+//     never more than MAX_SUBJECT characters (the input cap). A pattern that leaves too short a
+//     line, such as .?.?.? ... or .{0,9}.{0,9} ... or (a|a)(a|a) ..., is refused.
 //
 // translatePosix turns GNU basic and extended regular expressions (grep, grep -E, sed, sed -E,
 // expr) into JavaScript's syntax, with GNU's error messages for the mistakes it can see.
@@ -96,14 +99,25 @@ interface Info {
   readonly group?: boolean;
   /** How many ways its counts can divide a text between them: 1 with none, Infinity when open-ended. */
   readonly ways: number;
+  /**
+   * The most open-ended repetitions one path through it meets: added up along a sequence, the
+   * largest of a choice's branches (one branch is tried after another, not inside it).
+   */
+  readonly degree: number;
+  /**
+   * How many ways its bounded choices can multiply, at most: ? counts 2, {0,9} 10, and a choice
+   * whose branches could both start at the same place adds its branches up (otherwise only one
+   * of them gets past its first character, and it counts as its largest).
+   */
+  readonly weight: number;
 }
 
 interface Scan {
   readonly src: string;
   i: number;
   readonly fold: boolean;
-  /** Open-ended repetitions seen. */
-  open: number;
+  /** The places a match must choose at: bounded counts such as ? and {0,9}, and overlapping choices. */
+  choices: number;
 }
 
 function union(a: First, b: First): First {
@@ -136,8 +150,8 @@ function prefixFree(words: readonly string[]): boolean {
 const NESTED = 'a repeated group with a repetition inside it, as in (a+)+, can take forever to match';
 const AMBIGUOUS = 'a repeated choice whose branches can match the same text, as in (a|aa)*, can take forever to match';
 
-const OPAQUE: Info = { quantified: false, nullable: false, first: ANY, literal: null, ways: 1 };
-const EMPTY: Info = { quantified: false, nullable: true, first: NONE, literal: '', ways: 1 };
+const OPAQUE: Info = { quantified: false, nullable: false, first: ANY, literal: null, ways: 1, degree: 0, weight: 1 };
+const EMPTY: Info = { quantified: false, nullable: true, first: NONE, literal: '', ways: 1, degree: 0, weight: 1 };
 
 /** Reads `\…` at s.i (the backslash). */
 function readEscape(s: Scan): Info {
@@ -158,7 +172,7 @@ function readEscape(s: Scan): Info {
     return OPAQUE;
   }
   // An escaped punctuation character stands for itself.
-  return { quantified: false, nullable: false, first: charFirst(c, s.fold), literal: c, ways: 1 };
+  return { ...OPAQUE, first: charFirst(c, s.fold), literal: c };
 }
 
 /** Skips a character class at s.i (the `[`). */
@@ -193,6 +207,23 @@ function readQuantifier(s: Scan): { min: number; max: number } | null {
   return bounds;
 }
 
+/**
+ * True when two branches of a choice could both match at the same place, so a failure later on
+ * tries each: one can match nothing, or two can start with the same character (plain words that
+ * do not begin one another excepted, as in (foo|far)).
+ */
+function overlapping(s: Scan, branches: readonly Info[]): boolean {
+  if (branches.some((b) => b.nullable)) return true;
+  const words = branches.map((b) => b.literal);
+  if (words.every((w): w is string => w !== null)) return !prefixFree(s.fold ? words.map((w) => w.toLowerCase()) : words);
+  for (let a = 0; a < branches.length; a += 1) {
+    for (let b = a + 1; b < branches.length; b += 1) {
+      if (overlaps((branches[a] as Info).first, (branches[b] as Info).first)) return true;
+    }
+  }
+  return false;
+}
+
 /** Reads alternatives until `)` or the end; s.i is left on the `)`. */
 function readAlternatives(s: Scan): Info {
   const branches: Info[] = [readSequence(s)];
@@ -201,6 +232,9 @@ function readAlternatives(s: Scan): Info {
     branches.push(readSequence(s));
   }
   if (branches.length === 1) return branches[0] as Info;
+  const weights = branches.map((b) => b.weight);
+  const ambiguous = overlapping(s, branches);
+  if (ambiguous) s.choices += 1;
   return {
     quantified: branches.some((b) => b.quantified),
     nullable: branches.some((b) => b.nullable),
@@ -208,6 +242,8 @@ function readAlternatives(s: Scan): Info {
     literal: null,
     branches,
     ways: branches.reduce((sum, b) => sum + b.ways, 0),
+    degree: Math.max(...branches.map((b) => b.degree)),
+    weight: ambiguous ? weights.reduce((sum, w) => sum + w, 0) : Math.max(...weights),
   };
 }
 
@@ -222,17 +258,7 @@ function checkRepeat(s: Scan, atom: Info, quant: { readonly min: number; readonl
   if (atom.quantified && !(repeatWays(atom, quant) <= NESTED_WAYS)) throw new RegexRefused(NESTED);
   const branches = atom.branches;
   if (branches !== undefined) {
-    if (branches.some((b) => b.nullable)) throw new RegexRefused(AMBIGUOUS);
-    const words = branches.map((b) => b.literal);
-    if (words.every((w): w is string => w !== null)) {
-      if (!prefixFree(s.fold ? words.map((w) => w.toLowerCase()) : words)) throw new RegexRefused(AMBIGUOUS);
-      return;
-    }
-    for (let a = 0; a < branches.length; a += 1) {
-      for (let b = a + 1; b < branches.length; b += 1) {
-        if (overlaps((branches[a] as Info).first, (branches[b] as Info).first)) throw new RegexRefused(AMBIGUOUS);
-      }
-    }
+    if (overlapping(s, branches)) throw new RegexRefused(AMBIGUOUS);
     return;
   }
   // A repeated group that can match nothing but is not simply empty, such as (\b.?)*.
@@ -246,6 +272,8 @@ function readSequence(s: Scan): Info {
   let first: First = NONE;
   let text: string | null = '';
   let ways = 1;
+  let degree = 0;
+  let weight = 1;
   while (s.i < s.src.length) {
     const c = s.src.charAt(s.i);
     if (c === '|' || c === ')') break;
@@ -260,7 +288,9 @@ function readSequence(s: Scan): Info {
       }
       const inner = readAlternatives(s);
       s.i += 1;
-      atom = lookaround ? { ...EMPTY, quantified: inner.quantified, literal: null, ways: inner.ways } : { ...inner, group: true };
+      atom = lookaround
+        ? { ...EMPTY, quantified: inner.quantified, literal: null, ways: inner.ways, degree: inner.degree, weight: inner.weight }
+        : { ...inner, group: true };
     } else if (c === '[') {
       skipClass(s);
       atom = OPAQUE;
@@ -275,15 +305,23 @@ function readSequence(s: Scan): Info {
     } else {
       const ch = String.fromCodePoint(s.src.codePointAt(s.i) ?? 0);
       s.i += ch.length;
-      atom = { quantified: false, nullable: false, first: charFirst(ch, s.fold), literal: ch, ways: 1 };
+      atom = { ...OPAQUE, first: charFirst(ch, s.fold), literal: ch };
     }
     const quant = readQuantifier(s);
     if (quant !== null) {
-      if (quant.max > 1) {
-        checkRepeat(s, atom, quant);
-        if (quant.max > OPEN_REPEAT) s.open += 1;
-      }
-      atom = { quantified: true, nullable: atom.nullable || quant.min === 0, first: atom.first, literal: null, ways: repeatWays(atom, quant) };
+      if (quant.max > 1) checkRepeat(s, atom, quant);
+      // An exact count, such as [0-9]{20}, leaves nothing to choose however large it is.
+      const open = quant.max > OPEN_REPEAT && quant.min !== quant.max;
+      if (!open && quant.max > quant.min) s.choices += 1;
+      atom = {
+        quantified: true,
+        nullable: atom.nullable || quant.min === 0,
+        first: atom.first,
+        literal: null,
+        ways: repeatWays(atom, quant),
+        degree: open ? atom.degree + 1 : atom.degree,
+        weight: open ? atom.weight : (quant.max - quant.min + 1) * atom.weight ** quant.max,
+      };
     }
     // The sequence starts with what its leading nullable parts and first solid part start with.
     if (nullable) first = union(first, atom.first);
@@ -291,8 +329,10 @@ function readSequence(s: Scan): Info {
     quantified = quantified || atom.quantified;
     text = text !== null && atom.literal !== null ? text + atom.literal : null;
     ways *= atom.ways;
+    degree += atom.degree;
+    weight *= atom.weight;
   }
-  return { quantified, nullable, first, literal: text, ways };
+  return { quantified, nullable, first, literal: text, ways, degree, weight };
 }
 
 function factorial(n: number): number {
@@ -301,10 +341,13 @@ function factorial(n: number): number {
   return f;
 }
 
-/** The longest subject a pattern with `open` open-ended repetitions may be run against. */
-export function subjectLimit(open: number): number {
-  if (open === 0) return MAX_SUBJECT;
-  const n = Math.floor((STEP_BUDGET * factorial(open + 1)) ** (1 / (open + 1)));
+/**
+ * The longest subject a pattern may be run against, with `open` open-ended repetitions on its
+ * worst path and bounded choices that cost `weight` steps at each place: the n with
+ * W * n^(d+1)/(d+1)! steps within STEP_BUDGET.
+ */
+export function subjectLimit(open: number, weight = 1): number {
+  const n = Math.floor(((STEP_BUDGET * factorial(open + 1)) / weight) ** (1 / (open + 1)));
   return Math.min(MAX_SUBJECT, n);
 }
 
@@ -314,15 +357,25 @@ export function subjectLimit(open: number): number {
  */
 export function guardRegex(source: string, flags = ''): SafeRegex {
   if (source.length > MAX_PATTERN) throw new RegexRefused(`pattern too long (${source.length} characters, at most ${MAX_PATTERN})`);
-  const scan: Scan = { src: source, i: 0, fold: flags.includes('i'), open: 0 };
-  readAlternatives(scan);
+  const scan: Scan = { src: source, i: 0, fold: flags.includes('i'), choices: 0 };
+  const info = readAlternatives(scan);
+  let { degree, weight } = info;
   while (scan.i < source.length) {
     // A stray `)`: carry on so the rest is checked too; RegExp reports it below.
     scan.i += 1;
-    readAlternatives(scan);
+    const more = readAlternatives(scan);
+    degree += more.degree;
+    weight *= more.weight;
   }
-  const limit = subjectLimit(scan.open);
-  if (limit < MIN_LIMIT) throw new RegexRefused('too many open-ended repetitions such as * and +; simplify the pattern');
+  // Each way through the choices is walked choice by choice, so the ways cost that many steps.
+  const limit = subjectLimit(degree, weight * Math.max(1, scan.choices));
+  if (limit < MIN_LIMIT) {
+    throw new RegexRefused(
+      subjectLimit(degree) < MIN_LIMIT
+        ? 'too many open-ended repetitions such as * and +; simplify the pattern'
+        : 'too many optional parts, counts such as {0,9} or overlapping choices; simplify the pattern',
+    );
+  }
   let regex: RegExp;
   try {
     regex = new RegExp(source, flags);

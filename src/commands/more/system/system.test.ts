@@ -162,7 +162,7 @@ describe('ps and the process table', () => {
     expect((await runLine('ps -u root', { tty: false })).stdoutPlain.split('\n')).toHaveLength(2);
     expect((await runLine('ps a', { tty: false })).stdoutPlain).not.toContain('init');
     expect((await runLine('ps ax', { tty: false })).stdoutPlain).toContain('init');
-    expect(await runLine('ps q', { tty: false })).toMatchObject({ status: 1, stderrPlain: "ps: error: unsupported option (BSD syntax)\nTry 'ps --help' for more information." });
+    expect(await runLine('ps q', { tty: false })).toMatchObject({ status: 1, stderrPlain: "error: unsupported option (BSD syntax)\nTry 'ps --help' for more information." });
   });
 
   it('pkill ends the line its process is part of, as ^C would', async () => {

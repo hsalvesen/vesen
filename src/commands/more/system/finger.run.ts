@@ -5,6 +5,7 @@ import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types'
 import { ACCOUNTS, type Account } from '../../../vfs/identity';
 import { TERMINAL } from '../../lib/procs';
 import { bootTime, clockText, ctimeText, MONTH_NAMES, readText, wallClock } from '../../lib/sysread';
+import { writeTable } from '../../lib/table-out';
 
 /** What --help, help and man say about finger, besides its spec (finger.ts). */
 export const doc: CommandDoc = {
@@ -77,15 +78,15 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
     }
     for (const account of found) if (!accounts.includes(account)) accounts.push(account);
   }
-  let lines: string[];
-  if (ctx.args.length === 0 && ctx.opts.l !== true) {
-    lines = shortRows(ctx, ACCOUNTS.filter((account) => account.name === ctx.user.name));
-  } else if (ctx.opts.s === true) {
-    lines = accounts.length > 0 ? shortRows(ctx, accounts) : [];
-  } else {
-    const chosen = ctx.args.length === 0 ? ACCOUNTS.filter((account) => account.name === ctx.user.name) : accounts;
-    lines = chosen.flatMap((account, i) => (i === 0 ? longLines(ctx, account) : ['', ...longLines(ctx, account)]));
+  const mine = ACCOUNTS.filter((account) => account.name === ctx.user.name);
+  if ((ctx.args.length === 0 && ctx.opts.l !== true) || ctx.opts.s === true) {
+    // The short listing is a table: on a narrow screen it scrolls rather than wrapping.
+    const listed = ctx.args.length === 0 ? mine : accounts;
+    if (listed.length > 0) await writeTable(ctx, `${shortRows(ctx, listed).join('\n')}\n`);
+    return status;
   }
+  const chosen = ctx.args.length === 0 ? mine : accounts;
+  const lines = chosen.flatMap((account, i) => (i === 0 ? longLines(ctx, account) : ['', ...longLines(ctx, account)]));
   if (lines.length === 0) return status;
   if (ctx.stdout.isTTY) await ctx.stdout.block(out.lines(lines.map(linked)));
   else await ctx.stdout.write(`${lines.join('\n')}\n`);

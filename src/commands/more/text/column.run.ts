@@ -1,6 +1,7 @@
 // The body of column; its spec, in column.ts, loads this the first time column runs.
 
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
+import { writeTable } from '../../lib/table-out';
 import { operands, optOn, optString, readOperand, splitRecords } from '../../lib/text-input';
 
 export const doc: CommandDoc = {
@@ -60,7 +61,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
       seps === undefined
         ? lines.map((line) => line.trim().split(/[ \t]+/))
         : lines.map((line) => line.split(new RegExp(`[${Array.from(seps).map((c) => `\\u{${(c.codePointAt(0) ?? 0).toString(16)}}`).join('')}]`, 'u')));
-    await ctx.stdout.write(table(rows, optString(ctx, 'output-separator') ?? '  '));
+    await writeTable(ctx, table(rows, optString(ctx, 'output-separator') ?? '  '));
     return status;
   }
   const total = ctx.opts['output-width'] === undefined ? ctx.stdout.columns : Number(ctx.opts['output-width']);

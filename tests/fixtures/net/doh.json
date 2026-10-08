@@ -863,5 +863,51 @@
     "data": "a.root-servers.net. nstld.verisign-grs.com. 2026100700 1800 900 604800 86400"
    }
   ]
+ },
+ "cloudflare-dns.com example.com ANY": {
+  "Status": 4,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": false,
+  "CD": false,
+  "Question": [
+   {
+    "name": "example.com",
+    "type": 255
+   }
+  ],
+  "Comment": [
+   "EDE(21): Not Supported"
+  ]
+ },
+ "dns.google example.com ANY": {
+  "Status": 0,
+  "TC": false,
+  "RD": true,
+  "RA": true,
+  "AD": true,
+  "CD": false,
+  "Question": [
+   {
+    "name": "example.com.",
+    "type": 255
+   }
+  ],
+  "Answer": [
+   {
+    "name": "example.com.",
+    "type": 13,
+    "TTL": 3600,
+    "data": "RFC8482 "
+   },
+   {
+    "name": "example.com.",
+    "type": 46,
+    "TTL": 3600,
+    "data": "hinfo 13 2 3600 1791502956 1791322956 34505 example.com. 8mO1GoBdywXZoQadXpXffANcA+M44v0Uie9LefRckMCGA02G5l6Lt6oXd8L9MUeWMtscjQpNspubCZ5syZeEgw=="
+   }
+  ],
+  "Comment": "Response from 108.162.195.228."
  }
 }

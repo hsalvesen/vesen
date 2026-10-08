@@ -272,6 +272,13 @@
 
   onMount(() => {
     measure();
+    // less +G, +NUMBER, +/pattern: where it opens.
+    const start = view.start;
+    if (start !== undefined) {
+      if ('end' in start) scrollTo(maxTop(rows.length, page));
+      else if ('line' in start) scrollTo(firstRowOf(rows, Math.min(start.line, text.length) - 1));
+      else search(start.search, 1, 0);
+    }
     if (typeof ResizeObserver !== 'function' || body === undefined) return;
     const observer = new ResizeObserver(() => measure());
     observer.observe(body);

@@ -10,7 +10,9 @@ import {
   bare,
   communicationsError,
   ipVersion,
+  isZoneTransfer,
   parseType,
+  zoneTransferReason,
   rcodeName,
   recordData,
   resolverFor,
@@ -67,7 +69,8 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   if (typeof ctx.opts.t === 'string') {
     const type = parseType(ctx.opts.t);
     if (type === null) return ctx.fail(`invalid type: ${ctx.opts.t}`);
-    asked = RR_TYPES[type];
+    if (isZoneTransfer(type)) return ctx.fail(zoneTransferReason(type));
+    asked = type;
   }
   const reverse = ipVersion(word) === null ? null : reverseName(word);
   const name = reverse ?? word.replace(/\.$/, '');

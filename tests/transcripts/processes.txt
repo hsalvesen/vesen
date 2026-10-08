@@ -18,7 +18,7 @@ guest       4245    4242  0 20:01 pts/0    00:00:00 ps -ef
       1 ?        00:00:00 init
     PID TTY          TIME CMD
 none
-! ps: error: unsupported SysV option
+! error: unsupported SysV option
 ! Try 'ps --help' for more information.
 ? 1
 $ timeout 5 ps -f

@@ -126,4 +126,19 @@ describe('sed', () => {
   it('ends a pipe at once', async () => {
     expect(await runLine('yes | sed s/y/n/ | head -n 2', pipe)).toMatchObject({ status: 0, stdoutPlain: 'n\nn' });
   });
+
+  // A loop that never ends (as in GNU sed) must still give the page a turn, so ^C reaches it.
+  it.each([":a;ba", ':a;s/x/x/;ta', ':a;s/^/x/;ta'])('lets ^C end the loop %s', async (script) => {
+    const shell = await session({ now: () => Date.now() });
+    try {
+      const started = Date.now();
+      const job = shell.app.shell.start(`echo x | sed '${script}'`);
+      setTimeout(() => job.abort(), 100);
+      const result = await job.done;
+      expect(result.status).toBe(130);
+      expect(Date.now() - started).toBeLessThan(1000);
+    } finally {
+      shell.stop();
+    }
+  });
 });

@@ -179,10 +179,21 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
     await ctx.stderr.write(`${USAGE.join('\n')}\n`);
     return 1;
   }
+  if (command === '--version' || command === 'version') {
+    await ctx.stdout.write(`git (vesen) ${__APP_VERSION__}\n`);
+    return 0;
+  }
   if (command.startsWith('-')) return ctx.usage(`unknown option: ${command}`);
   const known = ['log', 'show', 'status', 'remote', 'branch', 'diff'].includes(command);
   if (!known && !READ_ONLY.has(command)) {
     await ctx.stderr.line(out.span(`git: '${command}' is not a git command. See 'git --help'.`, { fg: 'error' }));
+    return 1;
+  }
+  if (command === 'clone' || command === 'init') {
+    // Neither needs a repository, so wherever it is typed the answer is the same.
+    await ctx.stderr.line(
+      out.span(`git: '${command}' is not available here: a browser tab cannot fetch or create repositories (log, show, status, remote, branch and diff work in ~/projects/vesen)`, { fg: 'error' }),
+    );
     return 1;
   }
   if (!inRepository(ctx, dir)) return fatal(ctx, 'not a git repository (or any of the parent directories): .git');

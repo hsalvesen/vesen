@@ -33,6 +33,13 @@ export default defineCommand({
       value: { name: 'WHEN', optional: true, source: { kind: 'enum', values: () => ['never', 'always', 'auto'].map((value) => ({ value })) } },
     },
     { long: 'colour', key: 'color', description: 'the same as --color', value: { name: 'WHEN', optional: true, source: { kind: 'enum', values: () => ['never', 'always', 'auto'].map((value) => ({ value })) } } },
+    { short: 'a', long: 'text', description: 'process a binary file as if it were text' },
+    { short: 'I', key: 'without-match', description: 'treat a binary file as having no matches' },
+    {
+      long: 'binary-files',
+      description: 'what to do with a binary file: binary, text or without-match',
+      value: { name: 'TYPE', source: { kind: 'enum', values: () => ['binary', 'text', 'without-match'].map((value) => ({ value })) } },
+    },
     { short: 'L', long: 'files-without-match', description: 'print only names of FILEs with no selected lines' },
     { short: 'l', long: 'files-with-matches', description: 'print only names of FILEs with selected lines' },
     { short: 'm', long: 'max-count', description: 'stop after NUM selected lines', value: NUM },

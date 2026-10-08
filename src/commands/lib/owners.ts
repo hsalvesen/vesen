@@ -68,6 +68,8 @@ export interface OwnerOptions {
   readonly silent: boolean;
   readonly verbose: boolean;
   readonly recursive: boolean;
+  /** -h: a link named on the line is the link, not what it points to. */
+  readonly noDereference: boolean;
 }
 
 /** `guest:guest`, `guest` or the group alone, as GNU names an ownership. */
@@ -99,7 +101,7 @@ export async function changeOwner(
   if (ctx.signal.aborted) throw ctx.signal.reason;
   let stat: Stat;
   try {
-    stat = top ? ctx.fs.stat(path) : ctx.fs.lstat(path);
+    stat = top && !options.noDereference ? ctx.fs.stat(path) : ctx.fs.lstat(path);
   } catch (error) {
     if (!options.silent) {
       const dangling = top && errorCode(error) === 'ENOENT' && isLink(ctx, path);
@@ -108,7 +110,7 @@ export async function changeOwner(
     return false;
   }
   if (stat.type === 'symlink') {
-    // Inside a folder a link is not followed, and vesen cannot change a link's own owner.
+    // Inside a folder (or with -h) a link is not followed, and vesen cannot change a link's own owner.
     if (options.verbose) await ctx.stdout.write(`neither symbolic link '${typed}' nor referent has been changed\n`);
     return true;
   }
@@ -156,5 +158,6 @@ export function ownerOptions(ctx: CommandContext): OwnerOptions {
     silent: ctx.opts.silent === true,
     verbose: ctx.opts.verbose === true,
     recursive: ctx.opts.recursive === true,
+    noDereference: ctx.opts['no-dereference'] === true,
   };
 }

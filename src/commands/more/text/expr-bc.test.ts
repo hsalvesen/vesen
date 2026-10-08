@@ -124,6 +124,24 @@ describe('bc', () => {
     expect(await runLine('bc nope', pipe)).toMatchObject({ status: 1, stderrPlain: 'bc: File nope is unavailable: No such file or directory' });
   });
 
+  // GNU bc writes runtime warnings to standard error, so a pipe or $( ) gets only the numbers.
+  it('warns of a fractional exponent on standard error', async () => {
+    expect(await runLine("echo '2^1.5' | bc", pipe)).toMatchObject({ status: 0, stdoutPlain: '2', stderrPlain: 'Runtime warning: non-zero scale in exponent' });
+    expect((await runLine("echo '2^0.5' | bc | wc -l", pipe)).stdoutPlain).toBe('1');
+    expect((await runLine('x=$(echo 2^1.5 | bc 2>/dev/null); echo "[$x]"', pipe)).stdoutPlain).toBe('[2]');
+    // In order with what was printed before it.
+    expect((await runLine("echo 'print 1, \"\\n\"; 2^0.5' | bc", pipe)).screen).toEqual(['1', '! Runtime warning: non-zero scale in exponent', '1']);
+  });
+
+  // The library's series cannot be interrupted, so their precision is held where they end quickly.
+  it('refuses a math library scale that would hold the page still', async () => {
+    const started = performance.now();
+    expect(await runLine("bc -l <<< 'scale=100000; l(2)'", pipe)).toMatchObject({ status: 1, stderrPlain: 'Runtime error: scale too large for the math library (at most 5000)' });
+    expect((await runLine("bc -l <<< 'l(10^6000)'", pipe)).stderrPlain).toMatch(/^Runtime error: number too large for the math library/);
+    expect(performance.now() - started).toBeLessThan(1000);
+    expect((await runLine("bc -l <<< 'scale=50; 4*a(1)'", pipe)).stdoutPlain).toBe('3.14159265358979323846264338327950288419716939937508');
+  });
+
   it('refuses a number too long to be useful', async () => {
     const result = await runLine("echo '10^200000' | bc", pipe);
     expect(result.status).toBe(1);

@@ -27,6 +27,7 @@ export const ROLES = [
   'chip-bg', 'chip-fg', 'ghost', 'selection', 'cursor',
   'prompt-user', 'prompt-host', 'prompt-path',
   'sun', 'rain', 'cold', 'hot', 'qr-ink', 'qr-paper',
+  'rainbow-red', 'rainbow-yellow', 'rainbow-green', 'rainbow-cyan', 'rainbow-blue', 'rainbow-purple',
 ] as const;
 export type Role = (typeof ROLES)[number];
 

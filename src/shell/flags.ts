@@ -6,7 +6,8 @@
 // - `--` ends the options; `-` alone is an operand
 // - GNU argument permutation (options may follow operands), unless the spec sets posixArgs
 // - a numeric shortcut: `head -5` is `head -n 5` when the spec names the flag
-// - --help is always help; -h is help only when the spec has no h flag of its own
+// - --help is always help; -h is help only when the spec has no h flag of its own; --version
+//   prints the version, as every GNU tool's does (not for a shell builtin, which has none)
 // - mistakes are worded as coreutils words them, with status 2:
 //     ls: invalid option -- 'z'
 //     Try 'ls --help' for more information.
@@ -28,6 +29,8 @@ export interface ParsedArgs {
   readonly args: readonly string[];
   /** True when --help (or -h, for a spec without an h flag) was given. */
   readonly help: boolean;
+  /** True when --version was given, before any --help. */
+  readonly version?: boolean;
 }
 
 /** The spec fields option parsing reads. */
@@ -133,11 +136,12 @@ function longSpelling(flag: FlagSpec): string {
 export function parseFlags(
   words: readonly string[],
   source: FlagSource,
-  options: { readonly interceptHelp?: boolean } = {},
+  options: { readonly interceptHelp?: boolean; readonly interceptVersion?: boolean } = {},
 ): ParsedArgs {
   const intercept = options.interceptHelp ?? true;
   const reader = new Reader(source);
-  if (intercept && findHelp(words, source, reader.definesH)) return { opts: reader.opts, args: [], help: true };
+  const asked = intercept ? findHelp(words, source, reader.definesH, options.interceptVersion === true) : null;
+  if (asked !== null) return { opts: reader.opts, args: [], help: asked === 'help', version: asked === 'version' };
 
   const shortcut = source.numericShortcut;
   const shortcutFlag = shortcut === undefined ? undefined : source.flags?.find((flag) => flagKey(flag) === shortcut);
@@ -207,8 +211,8 @@ export function parseFlags(
   return { opts: reader.opts, args: reader.args, help: false };
 }
 
-/** True when --help (or a help -h) appears where an option may be. */
-function findHelp(words: readonly string[], source: FlagSource, definesH: boolean): boolean {
+/** Whether --help (or a help -h), or --version, comes first where an option may be. */
+function findHelp(words: readonly string[], source: FlagSource, definesH: boolean, version: boolean): 'help' | 'version' | null {
   const valueFlags = new Set((source.flags ?? []).filter((flag) => flag.value && !flag.value.optional).map((flag) => flag.short));
   let skipNext = false;
   for (const word of words) {
@@ -216,17 +220,17 @@ function findHelp(words: readonly string[], source: FlagSource, definesH: boolea
       skipNext = false;
       continue;
     }
-    if (word === '--') return false;
-    if (word === '--help') return true;
-    if (word === '-h' && !definesH) return true;
+    if (word === '--') return null;
+    if (word === '--help' || (word === '-h' && !definesH)) return 'help';
+    if (word === '--version' && version) return 'version';
     if (!word.startsWith('-') || word === '-') {
-      if (source.posixArgs) return false;
+      if (source.posixArgs) return null;
       continue;
     }
     // `-n --help`: the word after a short option that takes a value is that value.
     if (!word.startsWith('--') && word.length === 2 && valueFlags.has(word.charAt(1))) skipNext = true;
   }
-  return false;
+  return null;
 }
 
 /**

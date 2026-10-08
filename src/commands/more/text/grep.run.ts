@@ -19,12 +19,16 @@ export const doc: CommandDoc = {
       body: 'Basic expressions use \\( \\), \\{ \\}, \\| and \\+ \\? for groups, counts, choices and repeats; with -E they are written ( ) { } | + ?. Both have . [...] [^...] ^ $ * and the classes [[:alpha:]] [[:digit:]] [[:space:]] [[:upper:]] [[:lower:]] [[:alnum:]] [[:punct:]], \\< \\> for the edges of words, and \\1 to \\9 for backreferences.',
     },
     {
+      heading: 'BINARY FILES',
+      body: 'A file with a NUL byte in it is binary: when a line of it is selected, grep says "binary file matches" on standard error instead of printing the line. -a (--text, or --binary-files=text) prints such lines as text; -I (--binary-files=without-match) treats a binary file as having no matches.',
+    },
+    {
       heading: 'LIMITS',
-      body: 'A pattern runs in the browser, which cannot stop it once it starts, so grep refuses patterns that could run for ever: a repeated group with a repetition inside it, as in (a+)+, or a repeated choice whose branches overlap, as in (a|aa)*. The more open-ended repetitions such as .* a pattern has, the shorter the lines it may search; a longer line is reported as an error, and grep goes on to the next file. When two choices could both match at the same place, the first that matches is used rather than the longest.',
+      body: 'A pattern runs in the browser, which cannot stop it once it starts, so grep refuses patterns that could run for ever: a repeated group with a repetition inside it, as in (a+)+, a repeated choice whose branches overlap, as in (a|aa)*, or a long run of optional parts and counts, as in .?.?.?... The more open-ended repetitions such as .* a pattern has, the shorter the lines it may search; a longer line is left out with an error, once a file, and grep goes on to the next line. When two choices could both match at the same place, the first that matches is used rather than the longest.',
     },
     {
       heading: 'EXIT STATUS',
-      body: '0 when a line is selected, 1 when none is, and 2 when an error occurred, unless -q was given and a line was selected.',
+      body: '0 when a line is selected, 1 when none is, and 2 when an error occurred, unless -q was given and a line was selected. -L follows the same rule, as GNU grep 3.5 and later do: 0 when some file had a selected line, whether or not a name was printed.',
     },
   ],
 };
@@ -51,6 +55,8 @@ interface Options {
   readonly after: number;
   readonly color: boolean;
   readonly word: boolean;
+  /** What a file with a NUL byte gets: the binary-file notice, its lines as text, or no matches. */
+  readonly binaryFiles: 'binary' | 'text' | 'without-match';
   /** -H, -h or neither: whether names are printed is then decided by the operands. */
   readonly names: boolean | null;
 }
@@ -63,7 +69,6 @@ interface State {
   printed: boolean;
   /** -q found a line: stop everything. */
   done: boolean;
-  listed: boolean;
 }
 
 /** The width in UTF-16 units of the character at `at`. */
@@ -163,78 +168,86 @@ class Searcher {
 
     const emit = (line: number, at: number, text: string, isSelected: boolean): void => {
       if (contextOn && state.printed && lastPrinted !== line - 1) out.push(`${paint(o.color, SGR.sep, '--')}\n`);
-      const lit = o.color && isSelected !== o.invert ? highlight(safe, text, o.word) : text;
+      // A line too long for the pattern is never run against it, not even to light it up.
+      const lit = o.color && isSelected !== o.invert && text.length <= safe.limit ? highlight(safe, text, o.word) : text;
       out.push(`${this.prefix(shown, line, at, isSelected ? ':' : '-')}${lit}\n`);
       lastPrinted = line;
       state.printed = true;
     };
 
-    try {
-      for await (const record of records) {
-        lineNo += 1;
-        const text = record.text;
-        const at = offset;
-        offset += utf8Length(text) + (record.nl ? 1 : 0);
-        if (selected >= o.max) {
-          // Past -m: only the trailing context is still printed.
-          if (afterLeft > 0 && printLines) {
-            emit(lineNo, at, text, false);
-            afterLeft -= 1;
-            continue;
-          }
-          break;
-        }
-        safe.check(text);
-        if (text.includes('\0')) binary = true;
-        const isSelected = hasMatch(safe, text, o.word) !== o.invert;
-        if (!isSelected) {
-          if (afterLeft > 0 && printLines && !binary) {
-            emit(lineNo, at, text, false);
-            afterLeft -= 1;
-          } else if (o.before > 0) {
-            before.push({ line: lineNo, offset: at, text });
-            if (before.length > o.before) before.shift();
-          }
-          if (out.length > 256) await flush();
-          await breathe();
+    let tooLong = false;
+    for await (const record of records) {
+      lineNo += 1;
+      const text = record.text;
+      const at = offset;
+      offset += utf8Length(text) + (record.nl ? 1 : 0);
+      if (selected >= o.max) {
+        // Past -m: only the trailing context is still printed.
+        if (afterLeft > 0 && printLines) {
+          emit(lineNo, at, text, false);
+          afterLeft -= 1;
           continue;
         }
-        selected += 1;
-        state.matched = true;
-        if (o.quiet) {
-          state.done = true;
-          return true;
+        break;
+      }
+      if (o.binaryFiles !== 'text' && text.includes('\0')) {
+        if (o.binaryFiles === 'without-match') break;
+        binary = true;
+      }
+      let isSelected: boolean;
+      try {
+        safe.check(text);
+        isSelected = hasMatch(safe, text, o.word) !== o.invert;
+      } catch (error) {
+        if (!(error instanceof SubjectTooLong)) throw error;
+        // A line too long for this pattern is left out, with one message a file; the rest is searched.
+        isSelected = false;
+        if (!tooLong) {
+          tooLong = true;
+          state.errors = true;
+          await flush();
+          if (!o.silent) await ctx.fail(`${name}: ${error.message}`, 2);
         }
-        if (o.listMatching) break;
-        if (printLines && !binary) {
-          if (contextOn) for (const held of before) emit(held.line, held.offset, held.text, false);
-          before.length = 0;
-          if (o.only) {
-            for (const [start, end] of o.invert ? [] : matchesIn(safe, text, o.word)) {
-              out.push(`${this.prefix(shown, lineNo, at + utf8Length(text.slice(0, start)), ':')}${paint(o.color, SGR.match, text.slice(start, end))}\n`);
-              state.printed = true;
-            }
-          } else {
-            emit(lineNo, at, text, true);
-          }
-          afterLeft = o.after;
+      }
+      if (!isSelected) {
+        if (afterLeft > 0 && printLines && !binary) {
+          emit(lineNo, at, text, false);
+          afterLeft -= 1;
+        } else if (o.before > 0) {
+          before.push({ line: lineNo, offset: at, text });
+          if (before.length > o.before) before.shift();
         }
         if (out.length > 256) await flush();
         await breathe();
+        continue;
       }
-    } catch (error) {
-      if (!(error instanceof SubjectTooLong)) throw error;
-      await flush();
-      state.errors = true;
-      if (!o.silent) await ctx.fail(`${name}: ${error.message}`, 2);
+      selected += 1;
+      state.matched = true;
+      if (o.quiet) {
+        state.done = true;
+        return true;
+      }
+      if (o.listMatching) break;
+      if (printLines && !binary) {
+        if (contextOn) for (const held of before) emit(held.line, held.offset, held.text, false);
+        before.length = 0;
+        if (o.only) {
+          for (const [start, end] of o.invert ? [] : matchesIn(safe, text, o.word)) {
+            out.push(`${this.prefix(shown, lineNo, at + utf8Length(text.slice(0, start)), ':')}${paint(o.color, SGR.match, text.slice(start, end))}\n`);
+            state.printed = true;
+          }
+        } else {
+          emit(lineNo, at, text, true);
+        }
+        afterLeft = o.after;
+      }
+      if (out.length > 256) await flush();
+      await breathe();
     }
     await flush();
     if (binary && selected > 0 && printLines) await ctx.fail(`${name}: binary file matches`, 0);
     if (o.count) await ctx.stdout.write(`${shown === null ? '' : paint(o.color, SGR.file, shown) + paint(o.color, SGR.sep, ':')}${selected}\n`);
-    if ((o.listMatching && selected > 0) || (o.listMissing && selected === 0)) {
-      await ctx.stdout.write(`${paint(o.color, SGR.file, name)}\n`);
-      state.listed = true;
-    }
+    if ((o.listMatching && selected > 0) || (o.listMissing && selected === 0)) await ctx.stdout.write(`${paint(o.color, SGR.file, name)}\n`);
     return selected > 0;
   }
 }
@@ -319,6 +332,13 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   const before = Number(ctx.opts['before-context'] ?? context);
   const bad = [after, before].find((n) => n < 0);
   if (bad !== undefined) return ctx.fail(`${bad}: invalid context length argument`, 2);
+  const binaryRaw = optString(ctx, 'binary-files');
+  const binaryFiles = optOn(ctx, 'text') ? 'text' : optOn(ctx, 'without-match') ? 'without-match' : (binaryRaw ?? 'binary');
+  if (binaryFiles !== 'binary' && binaryFiles !== 'text' && binaryFiles !== 'without-match') {
+    await ctx.fail(`invalid argument '${binaryFiles}' for '--binary-files'`, 2);
+    await ctx.stderr.write("Valid arguments are:\n  - 'binary'\n  - 'text'\n  - 'without-match'\n");
+    return ctx.usage();
+  }
   const maxRaw = ctx.opts['max-count'];
   const max = maxRaw === undefined || Number(maxRaw) < 0 ? Infinity : Number(maxRaw);
 
@@ -337,6 +357,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
     after,
     color: when === 'always' || (when === 'auto' && ctx.stdout.isTTY),
     word,
+    binaryFiles,
     names: optOn(ctx, 'no-filename') ? false : optOn(ctx, 'with-filename') ? true : null,
   };
   const recurse = optOn(ctx, 'recursive') || optOn(ctx, 'dereference-recursive');
@@ -347,7 +368,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   const implicitDot = recurse && files.length === 0;
   if (files.length === 0) files = recurse ? ['.'] : ['-'];
   const several = files.length > 1;
-  const state: State = { matched: false, errors: false, printed: false, done: false, listed: false };
+  const state: State = { matched: false, errors: false, printed: false, done: false };
   const searcher = new Searcher(ctx, safe, o, state);
   const stdinName = optString(ctx, 'label') ?? '(standard input)';
   const named = (inFolder: boolean): boolean => o.names ?? (several || inFolder);
@@ -438,7 +459,6 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
 
   if (o.quiet && state.matched) return 0;
   if (state.errors) return 2;
-  if (o.listMissing) return state.listed ? 0 : 1;
   return state.matched ? 0 : 1;
 }
 

@@ -31,7 +31,7 @@ describe('colour tokens', () => {
   it('keeps palette and role names disjoint', () => {
     for (const name of PALETTE) expect(isRole(name)).toBe(false);
     for (const name of ROLES) expect(isPalette(name)).toBe(false);
-    expect(ROLES).toHaveLength(22);
+    expect(ROLES).toHaveLength(28);
     expect(PALETTE).toHaveLength(18);
   });
 });

@@ -1,6 +1,9 @@
 // lolcat: the rainbow on a terminal, diagonal bands, and the text untouched in a pipe.
 import { describe, expect, it } from 'vitest';
 import { runLine, session } from '../../../../tests/harness';
+import themes from '../../../../themes.json';
+import { contrastRatio } from '../../../lib/colour';
+import { deriveRoles, TEXT_MIN } from '../../../lib/roles';
 import { lineText, type Block, type Line } from '../../../output/model';
 import { colourAt, rainbowLine, RAINBOW, type RainbowOptions } from '../../lib/rainbow';
 
@@ -17,6 +20,17 @@ describe('the rainbow', () => {
     for (const span of line) expect(RAINBOW).toContain(span.style?.fg);
     // Neighbouring spans differ: runs of one colour share a span.
     for (let i = 1; i < line.length; i += 1) expect(line[i]?.style?.fg).not.toBe(line[i - 1]?.style?.fg);
+  });
+
+  // The raw palette slots fall as low as 1.7:1 in some themes (kookaburra's blue, treefrog's red),
+  // so whole bands of text vanished: the rainbow's colours are roles, lifted to read like text.
+  it('paints only in colours that read clearly in every theme', () => {
+    for (const theme of themes) {
+      const roles = deriveRoles(theme);
+      for (const role of RAINBOW) expect(contrastRatio(roles[role], theme.background), `${theme.name} ${role}`).toBeGreaterThanOrEqual(TEXT_MIN);
+      // Still a rainbow, though a theme may give two hues one colour (cassowary's green and cyan).
+      expect(new Set(RAINBOW.map((role) => roles[role])).size, theme.name).toBeGreaterThanOrEqual(5);
+    }
   });
 
   it('steps along the line, and a line further on starts where SPREAD characters along would', () => {

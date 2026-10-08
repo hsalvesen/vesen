@@ -1,11 +1,15 @@
 /// <reference types="vitest/config" />
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import { configDefaults } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
 import { svelteTesting } from '@testing-library/svelte/vite';
+import { kernelChunk } from './scripts/kernel-chunk.ts';
 import { bootScriptPlugin } from './scripts/vite-plugin-boot.ts';
+
+const ROOT = fileURLToPath(new URL('.', import.meta.url)).replace(/\/$/, '');
 
 // Read the version at build time so package.json itself never ships in the bundle.
 const { version } = JSON.parse(
@@ -27,6 +31,12 @@ export default defineConfig({
   build: {
     // Instagram's in-app browser on older iPhones runs an iOS 15 WebKit.
     target: ['es2020', 'safari15'],
+    rolldownOptions: {
+      output: {
+        // The kernel as one chunk rather than a dozen small ones (scripts/kernel-chunk.ts).
+        codeSplitting: { includeDependenciesRecursively: false, groups: [{ name: kernelChunk(ROOT) }] },
+      },
+    },
   },
   test: {
     projects: [

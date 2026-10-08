@@ -14,6 +14,7 @@ const TYPES: readonly EnumValue[] = [
   { value: 'SOA', summary: 'zone authority' },
   { value: 'CAA', summary: 'who may issue certificates' },
   { value: 'PTR', summary: 'name of an address' },
+  { value: 'ANY', summary: 'whatever the resolver gives' },
 ];
 
 const OPTIONS: readonly EnumValue[] = [

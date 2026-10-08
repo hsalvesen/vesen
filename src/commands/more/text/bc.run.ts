@@ -7,6 +7,9 @@ import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types'
 import { reason } from '../../lib/files';
 import { optList, optOn, pacer } from '../../lib/text-input';
 
+/** The most digits s, c, a, l and e work to: scale=5000; a(1)*4 takes about a third of a second. */
+const MATH_DIGITS = 5000;
+
 export const doc: CommandDoc = {
   description:
     "Reads a program from each FILE and then from standard input (or the -e expressions first), runs each statement as it comes, and prints the value of every expression that is not an assignment. On the terminal with nothing to read it asks for lines until Ctrl+D or quit. Statements are separated by ; or new lines; braces group them, and if/else, while, for, break, continue, print and quit work as in bc. Numbers have as many digits as they need; `scale` sets the digits kept after the point by / and sqrt (0 by default, 20 with -l), and ibase and obase (2 to 16) set the bases numbers are read and printed in.",
@@ -17,7 +20,7 @@ export const doc: CommandDoc = {
     },
     {
       heading: 'MATH LIBRARY',
-      body: '-l sets scale to 20 and adds s(x) sine, c(x) cosine, a(x) arctangent (in radians), l(x) natural logarithm and e(x) exponential. Each is computed to ten more digits than the scale and then cut, so the last digit can differ from other implementations now and then.',
+      body: `-l sets scale to 20 and adds s(x) sine, c(x) cosine, a(x) arctangent (in radians), l(x) natural logarithm and e(x) exponential. Each is computed to ten more digits than the scale and then cut, so the last digit can differ from other implementations now and then. They work to a scale of at most ${MATH_DIGITS}, and to at most ${MATH_DIGITS + 1000} digits in all, counting those before the point: more would hold the page still for minutes, so either is an error.`,
     },
     {
       heading: 'LIMITS',
@@ -284,6 +287,9 @@ function sinCosFixed(x: bigint, w: number, cosine: boolean): bigint {
 /** A library function at the current scale, with ten guard digits. */
 function library(name: string, x: Num, scale: number): Num {
   const magnitude = Math.max(0, digits(rescale(x, 0).v));
+  // The series run without a pause, so their precision is held where they finish in a moment.
+  if (scale > MATH_DIGITS) throw new BcError(`scale too large for the math library (at most ${MATH_DIGITS})`);
+  if (scale + magnitude > MATH_DIGITS + 1000) throw new BcError(`number too large for the math library at this scale (${magnitude} digits before the point)`);
   const w = scale + 10 + magnitude;
   const fixed = rescale(x, w).v;
   let result: bigint;
@@ -706,12 +712,21 @@ class Machine {
   obase = 10;
   last: Num = ZERO;
   out = '';
+  /** What is waiting to be written, in order: stdout's text and stderr's warnings. */
+  readonly pending: { text: string; err: boolean }[] = [];
 
   constructor(
     private readonly mathlib: boolean,
     private readonly breathe: () => Promise<void>,
   ) {
     this.scale = mathlib ? 20 : 0;
+  }
+
+  /** A warning, on standard error, after what was printed before it. */
+  warn(message: string): void {
+    if (this.out !== '') this.pending.push({ text: this.out, err: false });
+    this.out = '';
+    this.pending.push({ text: `${message}\n`, err: true });
   }
 
   get(name: string): Num {
@@ -787,7 +802,7 @@ class Machine {
       case '%':
         return mod(a, b, this.scale);
       case '^':
-        if (b.s > 0 && rescale(b, 0).v * p10(b.s) !== b.v) this.out += 'Runtime warning: non-zero scale in exponent\n';
+        if (b.s > 0 && rescale(b, 0).v * p10(b.s) !== b.v) this.warn('Runtime warning: non-zero scale in exponent');
         return power(a, b, this.scale);
       default: {
         const c = compare(a, b);
@@ -927,10 +942,9 @@ async function runText(ctx: CommandContext, machine: Machine, text: string, sour
 }
 
 async function flush(ctx: CommandContext, machine: Machine): Promise<void> {
-  if (machine.out === '') return;
-  const text = machine.out;
+  if (machine.out !== '') machine.pending.push({ text: machine.out, err: false });
   machine.out = '';
-  await ctx.stdout.write(text);
+  for (const { text, err } of machine.pending.splice(0)) await (err ? ctx.stderr : ctx.stdout).write(text);
 }
 
 export async function run(ctx: CommandContext): Promise<ExitCode> {

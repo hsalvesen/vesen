@@ -8,8 +8,16 @@ export default defineCommand({
   name: 'whois',
   category: 'network',
   summary: 'look up who registered a domain',
-  synopsis: ['whois DOMAIN'],
+  synopsis: ['whois [-h HOST] DOMAIN'],
   network: true,
+  flags: [
+    {
+      short: 'h',
+      long: 'host',
+      description: 'the whois server to ask; ignored, since the question always goes over RDAP',
+      value: { name: 'HOST', source: { kind: 'free', placeholder: 'whois.verisign-grs.com' } },
+    },
+  ],
   args: [{ name: 'DOMAIN', source: { kind: 'examples', caseInsensitive: true, fromHistory: true } }],
   loadingLabel: (argv) => `whois: asking RDAP about ${argv[1] ?? 'the domain'}…`,
   examples: [

@@ -679,11 +679,13 @@ export class Executor {
   ): Promise<ExitCode> {
     const words = argv.slice(1);
     let parsed: ParsedArgs;
+    // Every command but a shell builtin answers --version, as GNU's tools do.
+    const versioned = !spec.handlesHelp && spec.builtin !== true;
     if (takesRawArgs(spec)) {
-      parsed = { opts: {}, args: words, help: !spec.handlesHelp && rawArgsAskForHelp(words) };
+      parsed = { opts: {}, args: words, help: !spec.handlesHelp && rawArgsAskForHelp(words), version: versioned && words[0] === '--version' };
     } else {
       try {
-        parsed = parseFlags(words, spec, { interceptHelp: !spec.handlesHelp });
+        parsed = parseFlags(words, spec, { interceptHelp: !spec.handlesHelp, interceptVersion: versioned });
       } catch (error) {
         if (!(error instanceof FlagError)) throw error;
         await say(io.stderr, [span(`${errorPrefix(spec, name)}: ${error.message}`, ERROR)], [span(tryHelp(name), MUTED)]);
@@ -692,6 +694,10 @@ export class Executor {
     }
     if (parsed.help) {
       await this.printHelp(spec, io.stdout);
+      return EXIT.ok;
+    }
+    if (parsed.version === true) {
+      await say(io.stdout, [span(`${spec.name} (vesen) ${__APP_VERSION__}`)]);
       return EXIT.ok;
     }
     if (spec.interactiveOnly === true && (!frame.interactive || !io.stdout.isTTY)) {

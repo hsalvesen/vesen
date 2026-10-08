@@ -88,6 +88,31 @@ describe('grep', () => {
     expect(result.stderrPlain).toBe('grep: long.txt: line too long for this pattern (20000 characters, at most 14142); try a simpler pattern');
     // -F and plain patterns have no such limit.
     expect((await s.run('grep -c x long.txt')).stdoutPlain).toBe('1');
+    // Only that line is left out: the lines after it are still searched, with one message a file.
+    await s.run("echo 'a then b' > mixed.txt; printf '%20000s\\n' x y >> mixed.txt; echo 'and a or b' >> mixed.txt");
+    expect(await s.run("grep 'a.*b' mixed.txt")).toMatchObject({
+      status: 2,
+      stdoutPlain: 'a then b\nand a or b',
+      stderrPlain: 'grep: mixed.txt: line too long for this pattern (20000 characters, at most 14142); try a simpler pattern',
+    });
+    s.stop();
+  });
+
+  // GNU grep 3.5 and later: -L exits 0 when some line was selected and 1 when none was, as
+  // without -L, whatever names it printed.
+  it('gives -L the usual exit status', async () => {
+    expect(await runLine('grep -L nosuch config/app.conf README.md', pipe)).toMatchObject({ status: 1, stdoutPlain: 'config/app.conf\nREADME.md' });
+    expect(await runLine('grep -L theme config/app.conf README.md', pipe)).toMatchObject({ status: 0, stdoutPlain: '' });
+  });
+
+  it('prints binary lines as text with -a, and skips binary files with -I', async () => {
+    const s = await session(pipe);
+    await s.run("printf 'a\\0b\\n' > bin.dat");
+    expect(await s.run('grep a bin.dat')).toMatchObject({ status: 0, stdoutPlain: '', stderrPlain: 'grep: bin.dat: binary file matches' });
+    expect(await s.run('grep -a a bin.dat')).toMatchObject({ status: 0, stdoutPlain: 'a\0b', stderrPlain: '' });
+    expect(await s.run('grep --binary-files=text a bin.dat')).toMatchObject({ status: 0, stdoutPlain: 'a\0b' });
+    expect(await s.run('grep -I a bin.dat')).toMatchObject({ status: 1, stdoutPlain: '', stderrPlain: '' });
+    expect(await s.run('grep --binary-files=nope a bin.dat')).toMatchObject({ status: 2 });
     s.stop();
   });
 

@@ -1,24 +1,13 @@
-// lolcat's colouring: each character takes a colour from the theme's palette, stepping round the
-// rainbow along the line and a little further on each line, so the bands run diagonally. Pure,
-// so a test can draw a line without a terminal.
+// lolcat's colouring: each character takes a colour of the rainbow, stepping round it along the
+// line and a little further on each line, so the bands run diagonally. The colours are roles
+// (lib/roles.ts): each of the theme's hues, made lighter or darker until it reads as well as any
+// other text, which the raw palette slots do not in every theme. Pure, so a test can draw a line
+// without a terminal.
 
-import { out, type Line, type Palette } from '../../output/model';
+import { out, type Line, type Role } from '../../output/model';
 
-/** The palette colours lolcat steps through, in rainbow order, each hue then its bright twin. */
-export const RAINBOW: readonly Palette[] = [
-  'red',
-  'brightRed',
-  'yellow',
-  'brightYellow',
-  'green',
-  'brightGreen',
-  'cyan',
-  'brightCyan',
-  'blue',
-  'brightBlue',
-  'purple',
-  'brightPurple',
-];
+/** The colours lolcat steps through, in rainbow order. */
+export const RAINBOW: readonly Role[] = ['rainbow-red', 'rainbow-yellow', 'rainbow-green', 'rainbow-cyan', 'rainbow-blue', 'rainbow-purple'];
 
 export interface RainbowOptions {
   /** Characters per step along a line: bigger is wider bands. */
@@ -32,17 +21,17 @@ export interface RainbowOptions {
 export const DEFAULT_SPREAD = 3;
 export const DEFAULT_FREQ = 0.3;
 
-/** The palette colour of the character at `column` on line `row`. */
-export function colourAt(row: number, column: number, options: RainbowOptions): Palette {
+/** The colour of the character at `column` on line `row`. */
+export function colourAt(row: number, column: number, options: RainbowOptions): Role {
   const angle = options.freq * (options.seed + row + column / options.spread);
   const turn = angle / (2 * Math.PI);
   const index = Math.floor((turn - Math.floor(turn)) * RAINBOW.length) % RAINBOW.length;
-  return RAINBOW[index] ?? 'red';
+  return RAINBOW[index] ?? 'rainbow-red';
 }
 
 /** One line of text in colour: runs of characters of one colour share a span. */
 export function rainbowLine(text: string, row: number, options: RainbowOptions): Line {
-  const spans: { text: string; fg: Palette }[] = [];
+  const spans: { text: string; fg: Role }[] = [];
   let column = 0;
   for (const ch of text) {
     const fg = colourAt(row, column, options);

@@ -10,7 +10,7 @@ import { readOperand } from '../../lib/text-input';
 
 /** What --help, help and man say about lolcat, besides its spec (lolcat.ts). */
 export const doc: CommandDoc = {
-  description: `Copies each FILE, or what is piped into it, to the terminal with every character in a colour of the rainbow, taken from the theme's own palette (${RAINBOW.length} colours), so it changes with the theme. The colours step along each line and start a little further on each new line, so the bands run diagonally. Into a pipe or a file the text goes on unchanged, since colour means nothing there. Colours already in the text are dropped first.`,
+  description: `Copies each FILE, or what is piped into it, to the terminal with every character in a colour of the rainbow, taken from the theme's own palette (its ${RAINBOW.length} hues, each made to read as clearly as any text), so it changes with the theme. The colours step along each line and start a little further on each new line, so the bands run diagonally. Into a pipe or a file the text goes on unchanged, since colour means nothing there. Colours already in the text are dropped first.`,
   man: [{ heading: 'EXIT STATUS', body: '0 when every FILE was read; 1 when any could not be, or for a SPREAD or FREQ that is not a number: lolcat carries on with the rest of the files.' }],
 };
 

@@ -14,6 +14,9 @@ export default defineCommand({
     { short: 'a', description: 'show hidden files too' },
     { short: 'd', description: 'list folders only' },
     { short: 'f', description: 'print the full path of each file' },
+    { short: 'p', description: 'print the type and permissions of each file' },
+    { short: 's', description: 'print the size of each file in bytes' },
+    { short: 'h', description: 'print the size of each file in a human-readable way (4.0K)' },
     { short: 'L', description: 'go no deeper than LEVEL folders', value: { name: 'LEVEL', source: { kind: 'free', placeholder: 'LEVEL' } } },
     {
       short: 'I',

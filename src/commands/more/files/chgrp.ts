@@ -14,6 +14,7 @@ export default defineCommand({
     { long: 'quiet', key: 'silent', description: 'the same as -f' },
     { short: 'v', long: 'verbose', description: 'say what is done to every file' },
     { short: 'R', long: 'recursive', description: 'change folders and their contents' },
+    { short: 'h', long: 'no-dereference', description: "change a link named on the line rather than what it points to; vesen keeps no owner for a link itself, so the link is left as it is" },
     { long: 'reference', description: "use RFILE's group", value: { name: 'RFILE', source: { kind: 'path', accept: 'any' } } },
   ],
   args: [

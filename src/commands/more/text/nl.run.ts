@@ -1,8 +1,11 @@
 // The body of nl; its spec, in nl.ts, loads this the first time nl runs.
 
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
-import { compilePatterns, patternMessage, type SafeRegex } from '../../lib/regex';
+import { compilePatterns, patternMessage, SubjectTooLong, type SafeRegex } from '../../lib/regex';
 import { openRecords, operands, optOn, optString, pacer, quoted } from '../../lib/text-input';
+
+/** The widest number column -w takes: wider would only fill the page with spaces. */
+const MAX_WIDTH = 1000;
 
 export const doc: CommandDoc = {
   description:
@@ -10,7 +13,7 @@ export const doc: CommandDoc = {
   man: [
     {
       heading: 'FORMAT',
-      body: 'The number is right-justified in NUMBER (6) columns, then STRING (a tab) follows. ln justifies it to the left; rz pads it with zeros. A line that is not numbered is indented by the same width.',
+      body: `The number is right-justified in NUMBER (6) columns, at most ${MAX_WIDTH}, then STRING (a tab) follows. ln justifies it to the left; rz pads it with zeros. A line that is not numbered is indented by the same width.`,
     },
     { heading: 'EXIT STATUS', body: '0 when every FILE was read, 1 otherwise.' },
   ],
@@ -46,7 +49,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   const format = optString(ctx, 'number-format') ?? 'rn';
   if (format !== 'ln' && format !== 'rn' && format !== 'rz') return ctx.usage(`invalid line numbering format: ${quoted(format)}`);
   const width = Number(ctx.opts['number-width'] ?? 6);
-  if (width <= 0) return ctx.usage(`invalid line number field width: ${quoted(String(width))}: Numerical result out of range`);
+  if (!(width > 0 && width <= MAX_WIDTH)) return ctx.usage(`invalid line number field width: ${quoted(String(width))}: Numerical result out of range`);
   const separator = optString(ctx, 'number-separator') ?? '\t';
   const start = Number(ctx.opts['starting-line-number'] ?? 1);
   const increment = Number(ctx.opts['line-increment'] ?? 1);
@@ -72,6 +75,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
       continue;
     }
     let buffer = '';
+    let tooLong = false;
     for await (const record of records) {
       const text = record.text;
       const delimiter = text === '\\:\\:\\:' ? 0 : text === '\\:\\:' ? 1 : text === '\\:' ? 2 : -1;
@@ -84,14 +88,20 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
       const style = styles[section] as Style;
       let numbered: boolean;
       if (style.kind === 'p') {
-        try {
-          style.re.check(text);
-        } catch (error) {
-          await ctx.stdout.write(buffer);
-          return ctx.fail(patternMessage(error) ?? String(error));
+        if (text.length > style.re.limit) {
+          // Too long for the pattern to be run against: not numbered, with one message a file.
+          numbered = false;
+          if (!tooLong) {
+            tooLong = true;
+            status = 1;
+            await ctx.stdout.write(buffer);
+            buffer = '';
+            await ctx.fail(`${file === '-' ? 'standard input' : file}: ${new SubjectTooLong(text.length, style.re.limit).message}`);
+          }
+        } else {
+          style.re.regex.lastIndex = 0;
+          numbered = style.re.regex.test(text);
         }
-        style.re.regex.lastIndex = 0;
-        numbered = style.re.regex.test(text);
       } else {
         numbered = style.kind === 'a' || (style.kind === 't' && text !== '');
       }

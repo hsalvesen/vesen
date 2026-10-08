@@ -201,7 +201,8 @@ async function fetchOne(ctx: CommandContext, run: Run, word: string): Promise<Ex
   const speed = rate(body.bytes, ctx.clock.now() - started);
   const saved = target === '-' ? 'written to stdout' : `‘${target}’ saved`;
   await log('');
-  await log(`${stamp(ctx, '%Y-%m-%d %H:%M:%S')} (${speed}) - ${saved} [${body.bytes}/${length ?? body.bytes}]`);
+  // Without a Content-Length, wget gives the bytes alone: `saved [1256]`.
+  await log(`${stamp(ctx, '%Y-%m-%d %H:%M:%S')} (${speed}) - ${saved} [${length === null ? body.bytes : `${body.bytes}/${length}`}]`);
   await log('');
   return 0;
 }

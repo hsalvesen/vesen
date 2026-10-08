@@ -6,8 +6,10 @@
 
 import { out } from '../../../output/model';
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
+import type { Stat } from '../../../vfs/types';
 import { childPath } from '../../lib/files';
 import { matchesAny } from '../../lib/fnmatch';
+import { humanSize, modeString } from '../../lib/listing';
 
 /** What --help, help and man say about tree, besides its spec (tree.ts). */
 export const doc: CommandDoc = {
@@ -17,6 +19,10 @@ export const doc: CommandDoc = {
     {
       heading: 'PATTERNS',
       body: "-I takes a shell pattern: * any run of characters, ? any one, [abc] one of a set. Join patterns with | to leave out any of them: tree -I '*.txt|bin'. A dot at the start of a name is an ordinary character.",
+    },
+    {
+      heading: 'FILE DETAILS',
+      body: '-p puts each entry\'s type and permissions in brackets before its name, as ls -l writes them; -s its size in bytes, and -h its size in K, M and G (4.0K). Together they share the brackets: [drwxr-xr-x 4.0K].',
     },
     { heading: 'EXIT STATUS', body: '0 when every DIRECTORY could be read, 2 when one could not.' },
   ],
@@ -29,6 +35,9 @@ interface Options {
   readonly level: number;
   readonly ignore: readonly string[];
   readonly dirsFirst: boolean;
+  /** -p, -s and -h: what goes in the brackets before a name. */
+  readonly perms: boolean;
+  readonly size: 'bytes' | 'human' | null;
 }
 
 interface Tally {
@@ -45,6 +54,17 @@ interface Entry {
   readonly path: string;
   readonly directory: boolean;
   readonly link: string | null;
+  /** The entry itself, not what a link points to. */
+  readonly stat: Stat;
+}
+
+/** `[drwxr-xr-x 4.0K]  `, as tree writes -p, -s and -h before a name; nothing without them. */
+function details(entry: Entry, options: Options): string {
+  const parts: string[] = [];
+  if (options.perms) parts.push(modeString(entry.stat));
+  if (options.size === 'bytes') parts.push(String(entry.stat.size).padStart(11));
+  else if (options.size === 'human') parts.push(humanSize(entry.stat.size).padStart(4));
+  return parts.length === 0 ? '' : `[${parts.join(' ')}]  `;
 }
 
 const collator = new Intl.Collator('en');
@@ -81,7 +101,7 @@ function entries(ctx: CommandContext, path: string, options: Options): Entry[] |
       }
     }
     if (options.dirsOnly && !directory) continue;
-    found.push({ name, path: child, directory, link });
+    found.push({ name, path: child, directory, link, stat });
   }
   found.sort((a, b) => (options.dirsFirst && a.directory !== b.directory ? (a.directory ? -1 : 1) : byName(a, b)));
   return found;
@@ -94,7 +114,7 @@ function draw(ctx: CommandContext, list: readonly Entry[], shown: string, spoken
     const last = i === list.length - 1;
     const childShown = childPath(shown, entry.name);
     const childSpoken = spoken === '' ? entry.name : `${spoken}/${entry.name}`;
-    let label = options.full ? childShown : entry.name;
+    let label = details(entry, options) + (options.full ? childShown : entry.name);
     if (entry.link !== null) label += ` -> ${entry.link}`;
     if (entry.directory) tally.dirs += 1;
     else tally.files += 1;
@@ -124,6 +144,8 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
     level,
     ignore,
     dirsFirst: ctx.opts.dirsfirst === true,
+    perms: ctx.opts.p === true,
+    size: ctx.opts.h === true ? 'human' : ctx.opts.s === true ? 'bytes' : null,
   };
   const roots = ctx.args.length === 0 ? ['.'] : ctx.args;
   const tally: Tally = { dirs: 0, files: 0, lines: [], spoken: [] };

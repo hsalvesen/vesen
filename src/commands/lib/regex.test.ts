@@ -1,4 +1,5 @@
 // The shared regular expression guard and the POSIX translation that grep, sed and expr use.
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
   compilePatterns,
@@ -178,6 +179,71 @@ describe('guardRegex', () => {
     // Nine open repetitions leave too short a line to be useful.
     expect(() => guardRegex('a*'.repeat(9), 'u')).toThrow(RegexRefused);
   });
+
+  // Runs of bounded or optional parts, and unrepeated choices whose branches overlap, backtrack
+  // exponentially without any group being repeated: refused once they multiply past the budget.
+  it.each([
+    ['.{0,9}'.repeat(10) + 'x$', 'BRE .\\{0,9\\} ten times froze the page for 95 s'],
+    ['^' + '.?'.repeat(26) + 'x$', '2^26 ways'],
+    ['(a|a)'.repeat(26) + 'b', 'overlapping choices, 2^26 ways'],
+    ['(?:a|ab)'.repeat(30) + 'c', 'branches that begin one another'],
+  ])('refuses %s (%s)', (source) => {
+    expect(() => guardRegex(source, 'u')).toThrow(/too many optional parts, counts such as \{0,9\} or overlapping choices/);
+  });
+
+  it('refuses the same runs in basic syntax, and in expr', () => {
+    expect(() => compilePatterns([`^${'.\\{0,9\\}'.repeat(10)}x$`], { syntax: 'basic' })).toThrow(RegexRefused);
+    expect(() => compilePatterns([`${'.\\?'.repeat(27)}x`], { syntax: 'basic', start: true })).toThrow(RegexRefused);
+  });
+
+  it('counts a few choices, and plain words or exact counts not at all', () => {
+    expect(guardRegex('colou?r', 'u').limit).toBe(MAX_SUBJECT);
+    expect(guardRegex('^(root|guest|admin):', 'u').limit).toBe(MAX_SUBJECT);
+    expect(guardRegex('[0-9]{20}', 'u').limit).toBe(MAX_SUBJECT);
+    expect(guardRegex('([0-9]{1,3}\\.){3}[0-9]{1,3}', 'u').limit).toBeGreaterThan(100_000);
+    // Each ? doubles the ways: twenty leave short lines, twenty-two none.
+    expect(guardRegex(`^${'.?'.repeat(16)}x$`, 'u').limit).toBeGreaterThanOrEqual(32);
+    expect(() => guardRegex(`^${'.?'.repeat(22)}x$`, 'u')).toThrow(RegexRefused);
+  });
+
+  // Choices are tried one after another, so the open repetitions of grep -e patterns joined into
+  // one do not add up: eight of them leave lines as long as one pattern's, not none.
+  it('takes the most open repetitions of any one choice, not their sum', () => {
+    const one = compilePatterns(['error.*disk'], { syntax: 'basic' });
+    const eight = compilePatterns(['error.*disk', 'warn.*net', 'fail.*io', 'x.*y', 'e.*z', 'w.*q', 'f.*r', 'g.*h'], { syntax: 'basic' });
+    expect(one.limit).toBe(14142);
+    expect(eight.limit).toBeGreaterThan(1000);
+    expect(guardRegex('(?:a.*b)|(?:c.*d.*e)', 'u').limit).toBe(subjectLimit(2));
+  });
+
+  // Whatever the guard lets through must finish quickly on the worst lines it allows: long runs of
+  // the characters the pattern repeats, with no match at the end. A pattern that backtracks
+  // exponentially takes seconds to minutes there; one within the budget, a few hundred ms.
+  it('lets through only patterns that finish quickly at their line limit', () => {
+    const atom = fc.constantFrom('a', 'b', '.', '[ab]', '\\w');
+    const quant = fc.constantFrom('', '', '?', '?', '{0,3}', '{1,4}', '{0,9}', '{2}', '{0,16}', '{1,2}');
+    const piece = fc.tuple(atom, quant).map(([a, q]) => a + q);
+    const sequence = fc.array(piece, { minLength: 1, maxLength: 4 }).map((parts) => parts.join(''));
+    const group = fc.tuple(fc.array(sequence, { minLength: 1, maxLength: 3 }), quant).map(([branches, q]) => `(?:${branches.join('|')})${q}`);
+    // `!` never appears in the lines, so every start position is tried in every way.
+    const pattern = fc.array(fc.oneof(piece, piece, group), { minLength: 1, maxLength: 14 }).map((parts) => `${parts.join('')}!`);
+    fc.assert(
+      fc.property(pattern, (source) => {
+        let safe;
+        try {
+          safe = guardRegex(source, 'u');
+        } catch {
+          return;
+        }
+        for (const line of ['a'.repeat(safe.limit), 'ab'.repeat(Math.floor(safe.limit / 2))]) {
+          const started = performance.now();
+          safe.regex.test(line);
+          expect(performance.now() - started, `${source} on ${line.length} characters`).toBeLessThan(1000);
+        }
+      }),
+      { numRuns: 120 },
+    );
+  }, 60_000);
 
   it('caps the pattern length', () => {
     expect(() => guardRegex('a'.repeat(MAX_PATTERN + 1), 'u')).toThrow(/pattern too long/);

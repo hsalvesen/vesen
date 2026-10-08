@@ -45,6 +45,13 @@ export function initialChunks(html) {
 export const KERNEL_BUDGET_KB = 75;
 
 /**
+ * The most files the kernel may come in. Each is a request before the first command runs; on an
+ * HTTP/1.1 connection, six at a time, a dozen cost a round more (scripts/kernel-chunk.ts groups
+ * them).
+ */
+export const KERNEL_MAX_FILES = 4;
+
+/**
  * The chunks a chunk imports statically, by file name: `import{a}from"./x.js"`.
  * @param {string} code
  * @returns {string[]}
@@ -159,6 +166,10 @@ function main() {
   const kernelVerdict = `kernel ${kb(kernelGzip).trim()} kB gzip in ${[...parts].join(' + ')} (budget ${KERNEL_BUDGET_KB} kB)`;
   if (kernelGzip > KERNEL_BUDGET_KB * 1000) {
     console.error(`check-bundle: over budget: ${kernelVerdict}`);
+    process.exit(1);
+  }
+  if (parts.size > KERNEL_MAX_FILES) {
+    console.error(`check-bundle: the kernel comes in ${parts.size} files, more than ${KERNEL_MAX_FILES}: ${[...parts].join(' + ')}`);
     process.exit(1);
   }
   console.log(`check-bundle: ok: ${kernelVerdict}`);

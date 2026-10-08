@@ -7,7 +7,7 @@ import { MONTH_NAMES, wallClock } from '../../lib/sysread';
 /** What --help, help and man say about cal, besides its spec (cal.ts). */
 export const doc: CommandDoc = {
   description:
-    "Shows this month's calendar, with today picked out in the accent colour. With YEAR, the whole of that year; with MONTH and YEAR, that month (MONTH is a number or a name such as oct); with DAY too, that day is picked out. -3 shows the months either side as well, -y the whole year, and -m starts the weeks on Monday. Today is the date in your time zone, or in $TZ. The calendar is Gregorian all the way back, so September 1752 has all its days.",
+    "Shows this month's calendar, with today picked out in the accent colour. With YEAR, the whole of that year; with MONTH and YEAR, that month (MONTH is a number or a name such as oct); with DAY too, that day is picked out. -3 shows the months either side as well, -y the whole year, and -m starts the weeks on Monday. Months sit three to a row, or as many as fit a narrower screen. Today is the date in your time zone, or in $TZ. The calendar is Gregorian all the way back, so September 1752 has all its days.",
   man: [{ heading: 'EXIT STATUS', body: '0, or 1 for a month or year that does not exist.' }],
 };
 
@@ -65,6 +65,25 @@ export function monthRows(year: number, month: number, options: { monday: boolea
     const length = pieces.reduce((sum, piece) => sum + piece.text.length, 0);
     return length < WIDTH ? [...pieces, { text: ' '.repeat(WIDTH - length) }] : pieces;
   });
+}
+
+/**
+ * How many months fit side by side: three, or on a narrower screen as many as fit it, as
+ * util-linux cal lays out a year for a narrow terminal. Into a pipe, always three.
+ */
+function monthsPerRow(ctx: CommandContext): number {
+  if (!ctx.stdout.isTTY) return 3;
+  return Math.min(3, Math.max(1, Math.floor((ctx.stdout.columns + GAP.length) / (WIDTH + GAP.length))));
+}
+
+/** Months in rows of `perRow`, a blank row between each row of months. */
+function inRows(months: readonly Row[][], perRow: number): Row[] {
+  const rows: Row[] = [];
+  for (let first = 0; first < months.length; first += perRow) {
+    if (first > 0) rows.push([]);
+    rows.push(...sideBySide(months.slice(first, first + perRow)));
+  }
+  return rows;
 }
 
 /** Months side by side, GAP apart, with the shorter ones filled out with blank rows. */
@@ -143,13 +162,11 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
     return y === now.year && m === now.month ? now.day : null;
   };
 
+  const perRow = monthsPerRow(ctx);
   let rows: Row[];
   if (whole) {
-    rows = [[{ text: centred(String(year), WIDTH * 3 + GAP.length * 2) }]];
-    for (let first = 1; first <= 12; first += 3) {
-      const months = [first, first + 1, first + 2].map((m) => monthRows(year, m, { monday, mark: markIn(year, m), withYear: false }));
-      rows.push([], ...sideBySide(months));
-    }
+    const months = Array.from({ length: 12 }, (_, i) => monthRows(year, i + 1, { monday, mark: markIn(year, i + 1), withYear: false }));
+    rows = [[{ text: centred(String(year), WIDTH * perRow + GAP.length * (perRow - 1)) }], [], ...inRows(months, perRow)];
   } else if (ctx.opts.three === true) {
     const around = [-1, 0, 1]
       .map((step) => {
@@ -157,7 +174,10 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
         return { y: Math.floor(index / 12), m: (index % 12) + 1 };
       })
       .filter(({ y }) => y >= 1 && y <= 9999);
-    rows = sideBySide(around.map(({ y, m }) => monthRows(y, m, { monday, mark: markIn(y, m), withYear: true })));
+    rows = inRows(
+      around.map(({ y, m }) => monthRows(y, m, { monday, mark: markIn(y, m), withYear: true })),
+      perRow,
+    );
   } else {
     rows = monthRows(year, month, { monday, mark: markIn(year, month), withYear: true });
   }
