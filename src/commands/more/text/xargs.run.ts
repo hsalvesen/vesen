@@ -5,6 +5,7 @@
 import { StringIn } from '../../../shell/streams';
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
 import { reason } from '../../lib/files';
+import { cannotRun } from '../../lib/runnable';
 import { inputRecords, optOn, optString, pacer, quoted, splitChunks, type Rec } from '../../lib/text-input';
 
 export const doc: CommandDoc = {
@@ -80,18 +81,6 @@ function readDelimiter(text: string): string | null {
   return Array.from(text).length === 1 ? text : null;
 }
 
-/** True when `name` can be run: a command, or a program at a path. */
-async function runnable(ctx: CommandContext, name: string): Promise<boolean> {
-  if (name.includes('/')) {
-    const path = ctx.resolve(name);
-    return ctx.fs.exists(path);
-  }
-  const registry = ctx.shell.registry;
-  if (registry.get(name) !== undefined) return true;
-  await registry.whenComplete();
-  return registry.get(name) !== undefined;
-}
-
 export async function run(ctx: CommandContext): Promise<ExitCode> {
   const command = ctx.args.length > 0 ? [...ctx.args] : ['echo'];
   const name = command[0] ?? 'echo';
@@ -104,7 +93,8 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   const delim = optOn(ctx, 'null') ? '\0' : delimOpt === undefined ? null : readDelimiter(delimOpt);
   if (delimOpt !== undefined && delim === null) return ctx.fail(`invalid input delimiter specification ${delimOpt}: the delimiter must be either a single character or an escape sequence starting with \\.`);
 
-  if (!(await runnable(ctx, name))) return ctx.fail(`${name}: No such file or directory`, 127);
+  const problem = await cannotRun(ctx, name);
+  if (problem !== null) return ctx.fail(`${name}: ${problem.reason}`, problem.status);
 
   // Where the items come from.
   let records: AsyncIterable<Rec>;

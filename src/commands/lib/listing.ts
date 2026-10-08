@@ -54,6 +54,8 @@ export const DEVICE_NUMBERS: Readonly<Record<string, readonly [number, number]>>
   random: [1, 8],
   urandom: [1, 9],
   tty: [5, 0],
+  // /dev/pts/0, the visitor's terminal: the first pseudo-terminal.
+  0: [136, 0],
 };
 
 // ── Sizes ──────────────────────────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 // date: print the date and time, as coreutils' date does: in the visitor's time zone (or $TZ),
-// or UTC with -u, in date's own format or a +FORMAT of the common conversions.
+// or UTC with -u, now or at the time -d describes, in date's own format or a +FORMAT of the
+// common conversions.
 
 import { defineCommand } from '../../shell/types';
 
@@ -11,9 +12,10 @@ export default defineCommand({
   category: 'system',
   summary: 'print the date and time',
   helpRank: 5,
-  synopsis: ['date [-u] [-I[FMT]] [+FORMAT]'],
+  synopsis: ['date [-u] [-d STRING] [-I[FMT] | -R | +FORMAT]'],
   flags: [
     { short: 'u', long: 'utc', description: 'print Coordinated Universal Time (UTC)' },
+    { short: 'd', long: 'date', description: "print the time STRING describes, such as 'tomorrow' or '@1700000000'", value: { name: 'STRING', source: { kind: 'free', placeholder: 'tomorrow' } } },
     { short: 'R', long: 'rfc-email', description: 'print it as email headers do: Tue, 06 Oct 2026 20:00:00 +1100' },
     {
       short: 'I',
@@ -31,6 +33,7 @@ export default defineCommand({
     { line: 'date', offline: true },
     { line: 'date -u', note: 'in UTC', offline: true },
     { line: 'date +%Y-%m-%d', offline: true },
+    { line: "date -d '3 days ago' +%F", note: 'another day', offline: true },
     { line: "date '+%a %e %b, %H:%M'", offline: true },
     { line: 'TZ=Europe/Oslo date', note: 'in another zone', offline: true },
   ],

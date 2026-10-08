@@ -2,8 +2,9 @@
 // a calendar date (2026-10-06, 2026/10/06, 6 Oct 2026, Oct 6), a time of day (14:30, 14:30:15),
 // both at once (2026-10-06T14:30:00Z), a zone (UTC, Z, +11:00), and relative words (now, today,
 // yesterday, tomorrow, 3 days ago, +2 hours, next week, last month). A date with no time is
-// midnight; a time with no date is today. Wall-clock times are in `timeZone` unless the text names
-// a zone. Also `touch -t`'s [[CC]YY]MMDDhhmm[.ss].
+// midnight; a time with no date is today; no text at all is the start of today, as GNU reads it.
+// Wall-clock times are in `timeZone` unless the text names a zone. Also `touch -t`'s
+// [[CC]YY]MMDDhhmm[.ss].
 
 import { localTime } from './listing';
 
@@ -49,13 +50,13 @@ function unitOf(word: string): (typeof UNITS)[string] | undefined {
 /** The moment `text` names, or null when it is not a date touch understands. */
 export function parseDate(text: string, now: number, timeZone: string): number | null {
   const trimmed = text.trim().toLowerCase();
-  if (trimmed === '') return null;
   const epoch = /^@(-?\d+(?:\.\d+)?)$/.exec(trimmed);
   if (epoch !== null) return Math.round(Number(epoch[1]) * 1000);
 
   const today = localTime(now, timeZone);
   const fields: Fields = { year: today.year, month: today.month, day: today.day, hour: today.hour, minute: today.minute, second: today.second, ms: now % 1000 };
-  let dated = false;
+  // No text at all is a date with no time: midnight today.
+  let dated = trimmed === '';
   let timed = false;
   let offset: number | undefined;
   let shiftMs = 0;

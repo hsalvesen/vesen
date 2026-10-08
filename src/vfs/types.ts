@@ -4,6 +4,7 @@
 
 import type { Line } from '../output/model';
 import type { SysSnapshot } from '../services/types';
+import type { ProcessInfo } from '../shell/types';
 
 export type NodeType = 'file' | 'directory' | 'symlink' | 'device';
 export type DeviceName = 'null' | 'zero' | 'random' | 'urandom' | 'tty';
@@ -18,6 +19,10 @@ export interface GenerateContext {
   readonly sys: SysSnapshot | null;
   /** A number in [0, 1). */
   random(): number;
+  /** The shell's process table, which ps reads too: /proc has a folder for each. None without a shell. */
+  readonly processes?: readonly ProcessInfo[];
+  /** The process reading, which /proc/self names. */
+  readonly self?: number;
 }
 
 /**
@@ -42,6 +47,8 @@ export interface VirtualFile {
   styled?: readonly Line[];
   /** /proc: made on every read, never stored or persisted. */
   generate?: (context: GenerateContext) => string;
+  /** /proc: a folder's entries made on every lookup, besides its `children`: one for each process. */
+  list?: (context: GenerateContext) => readonly VirtualFile[];
   /** /dev: what reading and writing it does. */
   device?: DeviceName;
   /** /usr/bin: the registry command this stub stands for. */

@@ -101,6 +101,32 @@ describe('ip', () => {
     expect(await runLine('ip -z a')).toMatchObject({ status: 255, stderrPlain: 'Option "-z" is unknown, try "ip -help".' });
     expect((await runLine('ip')).status).toBe(255);
   });
+
+  it('answers ip route get with the route the synthetic table picks, asking nobody', async () => {
+    const net = serveNet();
+    expect(await runLine('ip route get 1.1.1.1', { tty: false })).toMatchObject({
+      status: 0,
+      stdoutPlain: ['1.1.1.1 via 10.42.0.1 dev eth0 src 10.42.0.42 uid 1000', '    cache', SYNTHETIC].join('\n'),
+      stderrPlain: '',
+    });
+    // On eth0's own network there is no gateway; lo and eth0's own address are local.
+    expect((await runLine('ip r g to 10.42.0.7', { tty: false })).stdoutPlain.split('\n')[0]).toBe('10.42.0.7 dev eth0 src 10.42.0.42 uid 1000');
+    expect((await runLine('ip route get 127.0.0.1', { tty: false })).stdoutPlain).toBe('local 127.0.0.1 dev lo src 127.0.0.1 uid 1000\n    cache <local>');
+    expect((await runLine('ip route get 10.42.0.42', { tty: false })).stdoutPlain).toBe('local 10.42.0.42 dev lo src 10.42.0.42 uid 1000\n    cache <local>');
+    expect((await runLine('ip route get ::1', { tty: false })).stdoutPlain).toBe('local ::1 from :: dev lo table local proto kernel src ::1 metric 0 pref medium');
+    // No IPv6 default route: the kernel's answer.
+    expect(await runLine('ip route get 2606:4700:4700::1111', { tty: false })).toMatchObject({ status: 2, stderrPlain: 'RTNETLINK answers: Network is unreachable' });
+    expect(net.requests).toEqual([]);
+  });
+
+  it("words a bad ip route get, and an unknown command, as iproute2 does, rather than reading them as a device", async () => {
+    expect(await runLine('ip route get nonsense')).toMatchObject({ status: 1, stderrPlain: 'Error: any valid prefix is expected rather than "nonsense".' });
+    expect(await runLine('ip -4 route get ::1')).toMatchObject({ status: 1, stderrPlain: 'Error: inet prefix is expected rather than "::1".' });
+    expect(await runLine('ip route get')).toMatchObject({ status: 255, stderrPlain: 'Usage: ip route show [ dev NAME ]\n       ip route get ADDRESS' });
+    expect(await runLine('ip route foo')).toMatchObject({ status: 255, stderrPlain: 'Command "foo" is unknown, try "ip route help".' });
+    expect(await runLine('ip link eth0')).toMatchObject({ status: 255, stderrPlain: 'Command "eth0" is unknown, try "ip link help".' });
+    expect(await runLine('ip addr get 1.1.1.1')).toMatchObject({ status: 255, stderrPlain: 'Command "get" is unknown, try "ip address help".' });
+  });
 });
 
 describe('ifconfig', () => {

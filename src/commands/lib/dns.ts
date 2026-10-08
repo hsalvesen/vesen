@@ -276,7 +276,7 @@ export function parseDoh(raw: unknown): DnsAnswer {
 const IPV4 = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
 
 /** The 8 groups of an IPv6 address, or null when it is not one. */
-function ipv6Groups(text: string): number[] | null {
+export function ipv6Groups(text: string): number[] | null {
   if (!/^[0-9a-f:.]+$/i.test(text) || !text.includes(':')) return null;
   let address = text;
   const tail: number[] = [];

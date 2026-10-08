@@ -38,6 +38,8 @@ describe('xargs', () => {
   it('exits as GNU xargs does', async () => {
     expect((await runLine('echo a | xargs false', pipe)).status).toBe(123);
     expect(await runLine('echo a | xargs nosuchcmd', pipe)).toMatchObject({ status: 127, stderrPlain: 'xargs: nosuchcmd: No such file or directory' });
+    // A file that is there but cannot be run is 126, said once, as timeout and nohup say it.
+    expect(await runLine('echo a | xargs /etc/hosts', pipe)).toMatchObject({ status: 126, stderrPlain: 'xargs: /etc/hosts: Permission denied' });
     expect(await runLine("echo \"it's\" | xargs echo", pipe)).toMatchObject({
       status: 1,
       stderrPlain: 'xargs: unmatched single quote; by default quotes are special to xargs unless you use the -0 option',

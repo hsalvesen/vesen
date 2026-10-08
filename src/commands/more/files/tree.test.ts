@@ -60,6 +60,29 @@ describe('tree', () => {
     s.stop();
   });
 
+  it('puts the permissions (-p), the size in bytes (-s) or in K, M and G (-h) in brackets before each name', async () => {
+    const run = async (line: string): Promise<string> => (await runLine(line, { tty: false })).stdoutPlain;
+    expect(await run('tree -p projects')).toBe(
+      [
+        'projects',
+        '├── [drwxr-xr-x]  learning',
+        '│   └── [-rw-r--r--]  javascript-basics.js',
+        '├── [drwxr-xr-x]  portfolio',
+        '│   └── [-rw-r--r--]  index.html',
+        '└── [drwxr-xr-x]  vesen',
+        '    └── [-rw-r--r--]  info.txt',
+        '',
+        '3 directories, 3 files',
+      ].join('\n'),
+    );
+    expect((await run('tree -s projects/vesen')).split('\n')[1]).toBe('└── [        118]  info.txt');
+    // -h is the size for people here, never help.
+    expect((await run('tree -h projects')).split('\n').slice(1, 3)).toEqual(['├── [4.0K]  learning', '│   └── [ 115]  javascript-basics.js']);
+    expect((await run('tree -psh documents')).split('\n')[1]).toBe('└── [-rw-r--r-- 3.1K]  linux.txt');
+    // A link's own type and size, not what it points to.
+    expect((await run('tree -p -L 1 /home')).split('\n')[3]).toBe('└── [lrwxrwxrwx]  user -> guest');
+  });
+
   it('prints full paths with -f', async () => {
     expect((await runLine('tree -f downloads', { tty: false })).stdoutPlain).toBe(
       'downloads\n├── downloads/README-download.txt\n└── downloads/software.tar.gz\n\n0 directories, 2 files',

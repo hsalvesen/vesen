@@ -2,6 +2,7 @@
 
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
 import { signalName, signalNumber } from '../../lib/procs';
+import { cannotRun } from '../../lib/runnable';
 import { shellQuote } from '../../shell/alias';
 import { interval } from '../../shell/sleep';
 
@@ -12,7 +13,7 @@ export const doc: CommandDoc = {
   man: [
     {
       heading: 'EXIT STATUS',
-      body: "124 when COMMAND ran out of time (or 128 plus the signal, as above); 125 when timeout itself failed, such as for a bad DURATION; 127 when COMMAND is not found; otherwise COMMAND's status.",
+      body: "124 when COMMAND ran out of time (or 128 plus the signal, as above); 125 when timeout itself failed, such as for a bad DURATION; 126 when COMMAND is found but cannot be run; 127 when it is not found; otherwise COMMAND's status.",
     },
   ],
 };
@@ -30,6 +31,9 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   const given = ctx.opts.signal;
   const signal = typeof given === 'string' ? signalNumber(given) : 15;
   if (signal === null || signal === 0) return ctx.usage(`${String(given)}: invalid signal`);
+  const name = command[0] ?? '';
+  const problem = await cannotRun(ctx, name);
+  if (problem !== null) return ctx.fail(`failed to run command '${name}': ${problem.reason}`, problem.status);
 
   const cancel = new AbortController();
   const expire = new AbortController();
@@ -38,7 +42,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
     ctx.clock.sleep(ms, cancel.signal).then(
       async () => {
         timedOut = true;
-        if (ctx.opts.verbose === true) await ctx.stderr.line(`timeout: sending signal ${signalName(signal)} to command '${command[0] ?? ''}'`).catch(() => {});
+        if (ctx.opts.verbose === true) await ctx.stderr.line(`timeout: sending signal ${signalName(signal)} to command '${name}'`).catch(() => {});
         expire.abort();
       },
       () => {

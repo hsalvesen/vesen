@@ -10,6 +10,12 @@ export const HOST = 'vesen';
 /** The visitor's login shell. */
 export const LOGIN_SHELL = '/bin/vesh';
 
+/** The shell's process id, `$$`: the same every session, as the process table, ps and /proc give it. */
+export const SHELL_PID = 4242;
+
+/** The terminal the visitor types in, /dev/pts/0: tty, ps, who and /dev all name it. */
+export const TERMINAL = 'pts/0';
+
 /** The visitor. */
 export const GUEST: User = {
   name: 'guest',

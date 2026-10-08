@@ -38,6 +38,24 @@ describe('wget', () => {
     expect(net.requests.map((request) => request.url)).toEqual(['https://httpbin.org/json', 'https://httpbin.org/json']);
   });
 
+  it('ends with saved [BYTES/LENGTH] when the length was given, and saved [BYTES] alone when it was unspecified', async () => {
+    serveNet(() => text('{"slideshow": true}\n'));
+    const known = await runLine('wget https://httpbin.org/json');
+    expect(known.stderrPlain).toContain('Length: 20 [application/json]');
+    expect(known.stderrPlain.split('\n')).toContain("2026-10-06 20:01:00 (--.-KB/s) - ‘json’ saved [20/20]");
+
+    // No Content-Length: wget can only count what arrived.
+    serveNet(() => new Response('{"slideshow": true}\n', { headers: { 'content-type': 'application/json' } }));
+    const s = await session();
+    const unspecified = await s.run('wget https://httpbin.org/json');
+    expect(unspecified.status).toBe(0);
+    expect(unspecified.stderrPlain).toContain('Length: unspecified [application/json]');
+    expect(unspecified.stderrPlain.split('\n')).toContain("2026-10-06 20:01:00 (--.-KB/s) - ‘json’ saved [20]");
+    expect(s.app.vfs.readFile('/home/guest/json')).toBe('{"slideshow": true}\n');
+    expect((await s.run('wget -O - https://httpbin.org/json')).stderrPlain).toContain('written to stdout [20]');
+    s.stop();
+  });
+
   it('writes to the file -O names, or to the terminal with -O -, and says nothing with -q', async () => {
     serveNet(() => text('hello\n', 'text/plain'));
     const s = await session();

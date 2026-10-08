@@ -65,6 +65,47 @@ describe('dig', () => {
     expect((await runLine('dig @google example.com TXT +short')).stdoutPlain).toBe('"_k2n1y4vw3qtb4skdx9e7dxt97qrmmq9"\n"v=spf1 -all"');
   });
 
+  it('asks for ANY, and shows what each resolver makes of it: NOTIMP, or the RFC 8482 stand-in', async () => {
+    const net = serveNet();
+    const cloudflare = await runLine('dig example.com ANY', { tty: false });
+    expect(cloudflare.status).toBe(0);
+    const rows = cloudflare.stdoutPlain.split('\n');
+    expect(rows).toContain(';; ->>HEADER<<- opcode: QUERY, status: NOTIMP, id: 0');
+    expect(rows).toContain('; EDE(21): Not Supported');
+    expect(rows).toContain(';example.com.\t\t\tIN\tANY');
+    // The type may come first, and * is ANY too; Google answers with HINFO and its signature.
+    const google = await runLine('dig @google ANY example.com +noall +answer', { tty: false });
+    expect(google.stdoutPlain.split('\n')[0]).toBe('example.com.\t\t3600\tIN\tHINFO\tRFC8482 ');
+    expect(google.stdoutPlain.split('\n')[1]).toMatch(/^example\.com\.\t\t3600\tIN\tRRSIG\thinfo 13 2 3600 /);
+    await runLine("dig example.com '*' +short", { tty: false });
+    expect(net.requests.map((request) => request.url)).toEqual([
+      'https://cloudflare-dns.com/dns-query?name=example.com&type=255',
+      'https://dns.google/resolve?name=example.com&type=255',
+      'https://cloudflare-dns.com/dns-query?name=example.com&type=255',
+    ]);
+    // host and nslookup ask the same, and say NOTIMP in their own words.
+    expect(await runLine('host -t ANY example.com', { tty: false })).toMatchObject({ status: 1, stderrPlain: 'Host example.com not found: 4(NOTIMP)' });
+    expect((await runLine('nslookup -type=any example.com', { tty: false })).stdoutPlain).toContain("** server can't find example.com: NOTIMP");
+  });
+
+  it('knows every type IANA has named, and TYPEn, so none is taken for a host; zone transfers it refuses', async () => {
+    const naptr = { Status: 0, Question: [{ name: 'example.com', type: 35 }], Answer: [{ name: 'example.com', type: 35, TTL: 60, data: '100 10 "u" "E2U+sip" "!^.*$!sip:info@example.com!" .' }] };
+    const net = serveNet((url) => (url.searchParams.get('type') === '35' || url.searchParams.get('type') === '99' ? json(naptr) : undefined));
+    expect(await runLine('dig example.com naptr +short', { tty: false })).toMatchObject({ status: 0, stdoutPlain: '100 10 "u" "E2U+sip" "!^.*$!sip:info@example.com!" .' });
+    expect((await runLine('dig -t TYPE99 example.com +short', { tty: false })).status).toBe(0);
+    expect((await runLine('nslookup -type=NAPTR example.com', { tty: false })).status).toBe(0);
+    expect(net.requests.map((request) => request.url)).toEqual([
+      'https://cloudflare-dns.com/dns-query?name=example.com&type=35',
+      'https://cloudflare-dns.com/dns-query?name=example.com&type=99',
+      'https://cloudflare-dns.com/dns-query?name=example.com&type=35',
+    ]);
+    const transfer = "AXFR is a zone transfer, which needs a TCP connection to the zone's own name server: a browser cannot make one";
+    expect(await runLine('dig example.com AXFR', { tty: false })).toMatchObject({ status: 1, stderrPlain: `dig: ${transfer}\nTry 'dig --help' for more information.` });
+    expect((await runLine('dig -t ixfr example.com', { tty: false })).stderrPlain).toContain('dig: IXFR is a zone transfer');
+    expect(await runLine('host -t AXFR example.com', { tty: false })).toMatchObject({ status: 1, stderrPlain: `host: ${transfer}` });
+    expect(net.requests).toHaveLength(3);
+  });
+
   it('looks an address up in reverse with -x', async () => {
     const net = serveNet();
     expect(await runLine('dig -x 1.1.1.1 +short')).toMatchObject({ status: 0, stdoutPlain: 'one.one.one.one.' });

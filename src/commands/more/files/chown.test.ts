@@ -77,6 +77,19 @@ describe('chown', () => {
     expect(await runLine(line, { tty: false })).toMatchObject({ status: 1, stderrPlain: stderr });
   });
 
+  it('changes a link named on the line with -h, not what it points to', async () => {
+    const s = await session({ tty: false });
+    await s.run('ln -s /etc/passwd pw');
+    // Without -h the link is followed to root's file, which the visitor may not change.
+    expect(await s.run('chown guest pw')).toMatchObject({ status: 1, stderrPlain: "chown: changing ownership of 'pw': Operation not permitted" });
+    // With -h (or --no-dereference) it is the visitor's own link, left as it is; -h is not help.
+    expect(await s.run('chown -h guest pw')).toMatchObject({ status: 0, stdoutPlain: '', stderrPlain: '' });
+    expect(await s.run('chown --no-dereference -v guest pw')).toMatchObject({ status: 0, stdoutPlain: "neither symbolic link 'pw' nor referent has been changed" });
+    expect(await s.run('chgrp -h guest pw')).toMatchObject({ status: 0, stdoutPlain: '', stderrPlain: '' });
+    expect(s.app.vfs.lstat('/etc/passwd').owner).toBe('root');
+    s.stop();
+  });
+
   it("takes --reference's owner and group", async () => {
     expect(await runLine('chown --reference=.bashrc README.md', { tty: false })).toMatchObject({ status: 0 });
     expect(await runLine('chown --reference=/etc/passwd README.md', { tty: false })).toMatchObject({

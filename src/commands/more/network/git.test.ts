@@ -149,6 +149,20 @@ describe('git', () => {
     s.stop();
   });
 
+  it('says wherever clone and init are typed that a tab cannot fetch or create a repository, and answers --version', async () => {
+    const net = serveNet();
+    const cannot = (command: string): string =>
+      `git: '${command}' is not available here: a browser tab cannot fetch or create repositories (log, show, status, remote, branch and diff work in ~/projects/vesen)`;
+    // Outside the repository too: neither needs one, so neither is "not a git repository".
+    expect(await runLine('git clone https://github.com/hsalvesen/vesen.git')).toMatchObject({ status: 1, stderrPlain: cannot('clone') });
+    expect(await runLine('cd /tmp; git init')).toMatchObject({ status: 1, stderrPlain: cannot('init') });
+    expect(await runLine(`${IN} clone x`)).toMatchObject({ status: 1, stderrPlain: cannot('clone') });
+    expect(await runLine(`${IN} init`)).toMatchObject({ status: 1, stderrPlain: cannot('init') });
+    expect(await runLine('git --version')).toMatchObject({ status: 0, stdoutPlain: `git (vesen) ${__APP_VERSION__}` });
+    expect(await runLine('git version')).toMatchObject({ status: 0, stdoutPlain: `git (vesen) ${__APP_VERSION__}` });
+    expect(net.requests).toEqual([]);
+  });
+
   it('refuses to change the copy, and knows what is not git', async () => {
     expect(await runLine(`${IN} push`)).toMatchObject({
       status: 1,
