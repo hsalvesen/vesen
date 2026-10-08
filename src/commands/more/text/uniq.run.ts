@@ -39,45 +39,46 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   const records = await openRecords(ctx, input);
   if (records === null) return 1;
   const output = ctx.args[1];
-  let written = '';
-  const write = async (text: string): Promise<void> => {
-    if (output === undefined || output === '-') await ctx.stdout.write(text);
-    else written += text;
-  };
-
-  const breathe = pacer(ctx);
-  let group: string[] = [];
-  let groupKey: string | null = null;
-  const flush = async (): Promise<void> => {
-    const first = group[0];
-    if (first === undefined) return;
-    const n = group.length;
-    if (allRepeated) {
-      if (n > 1) await write(group.map((line) => `${line}\n`).join(''));
-    } else if ((n > 1 && !unique) || (n === 1 && !repeated)) {
-      await write(count ? `${String(n).padStart(7)} ${first}\n` : `${first}\n`);
-    }
-  };
-  for await (const record of records) {
-    const key = compareKey(record.text, fields, chars, width, fold);
-    if (key !== groupKey) {
-      await flush();
-      group = [];
-      groupKey = key;
-    }
-    // -D keeps every line of a group; the others need only the first and the count.
-    if (allRepeated || group.length === 0) group.push(record.text);
-    else group.push('');
-    await breathe();
-  }
-  await flush();
-
-  if (output !== undefined && output !== '-') {
+  // An OUTPUT file is emptied once the input opens, then written as lines come, as GNU's is.
+  const path = output === undefined || output === '-' ? null : ctx.resolve(output);
+  if (path !== null) {
     try {
-      ctx.fs.writeFile(ctx.resolve(output), written);
+      ctx.fs.writeFile(path, '');
     } catch (error) {
       return ctx.fail(`${output}: ${reason(error)}`);
     }
+  }
+  const write = async (text: string): Promise<void> => {
+    if (path === null) await ctx.stdout.write(text);
+    else ctx.fs.writeFile(path, text, { append: true });
+  };
+
+  // Only the first line of a group and its count are kept, so a group of any length costs the
+  // same: -D writes its lines as they come, once the second shows it is repeated.
+  const breathe = pacer(ctx);
+  let first: string | null = null;
+  let n = 0;
+  let groupKey: string | null = null;
+  const flush = async (): Promise<void> => {
+    if (first === null || allRepeated) return;
+    if ((n > 1 && !unique) || (n === 1 && !repeated)) await write(count ? `${String(n).padStart(7)} ${first}\n` : `${first}\n`);
+  };
+  try {
+    for await (const record of records) {
+      const key = compareKey(record.text, fields, chars, width, fold);
+      if (key !== groupKey) {
+        await flush();
+        first = record.text;
+        n = 0;
+        groupKey = key;
+      }
+      n += 1;
+      if (allRepeated && n > 1) await write(n === 2 ? `${first ?? ''}\n${record.text}\n` : `${record.text}\n`);
+      await breathe();
+    }
+    await flush();
+  } catch (error) {
+    return ctx.fail(`${output ?? '-'}: ${reason(error)}`);
   }
   return 0;
 }

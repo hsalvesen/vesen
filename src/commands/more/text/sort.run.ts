@@ -3,7 +3,7 @@
 import { compareNames } from '../../../shell/glob';
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
 import { errorCode, reason } from '../../lib/files';
-import { operands, optList, optOn, optString, quoted, splitRecords } from '../../lib/text-input';
+import { operands, optList, optOn, optString, quoted, readOperand, splitRecords } from '../../lib/text-input';
 
 export const doc: CommandDoc = {
   description:
@@ -338,7 +338,9 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   for (const file of operands(ctx)) {
     let text: string;
     if (file === '-') {
-      text = await ctx.stdin.text();
+      const read = await readOperand(ctx, file);
+      if (read === null) return 2;
+      text = read;
     } else {
       try {
         text = ctx.fs.readFile(ctx.resolve(file));

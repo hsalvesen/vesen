@@ -54,6 +54,23 @@ describe('echo', () => {
   });
 });
 
+describe('printf at length', () => {
+  // Before, printf made its whole output first: '%65535s' with a few thousand arguments was
+  // hundreds of megabytes in one string. It now writes as it goes, and -v holds 16 MB at most.
+  it('writes a long result as it makes it, so a pipe paces it and ^C is heard', async () => {
+    const result = await runLine("printf '%65535s' $(seq 1 300) | head -c 10", { tty: false });
+    expect(result).toMatchObject({ status: 0, stdoutPlain: ' '.repeat(10) });
+    expect((await runLine("printf '%65535s|' $(seq 1 300) | tr -cd '|' | wc -c", { tty: false })).stdoutPlain).toBe('300');
+  });
+
+  it('refuses a -v value over 16 MB', async () => {
+    const result = await runLine("printf -v x '%65535s' $(seq 1 300); echo ${#x}", { tty: false });
+    expect(result.stderrPlain).toBe('vesen: printf: x: value too large (over 16 MB)');
+    expect(result.stdoutPlain).toBe('0');
+    expect((await runLine("printf -v x '%65535s' 1 2; echo ${#x}", { tty: false })).stdoutPlain).toBe('131070');
+  });
+});
+
 describe('printf', () => {
   it(`stops widths and precisions at ${MAX_FIELD}, so one line cannot fill the memory`, async () => {
     expect(printf('%150000000s|', 'x').text).toHaveLength(MAX_FIELD + 1);

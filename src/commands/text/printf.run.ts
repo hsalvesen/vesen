@@ -2,7 +2,7 @@
 // kernel's chunk carries only the spec.
 
 import { isVariableName } from '../../shell/session';
-import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
+import { MAX_INPUT, type CommandContext, type CommandDoc, type ExitCode } from '../../shell/types';
 import { readEscape, unescape } from '../lib/escapes';
 
 /** What --help, help and man say about printf, besides its spec (printf.ts). */
@@ -248,6 +248,15 @@ export interface Formatted {
 export function format(pieces: readonly Piece[], args: readonly string[]): Formatted {
   const errors: string[] = [];
   let text = '';
+  for (const part of formatParts(pieces, args, errors)) text += part;
+  return { text, errors };
+}
+
+/**
+ * The formatted text a conversion at a time, so a long result can be written as it is made
+ * rather than held whole; the errors are added to `errors` as they come.
+ */
+export function* formatParts(pieces: readonly Piece[], args: readonly string[], errors: string[]): Generator<string, void, undefined> {
   let next = 0;
   const take = (): string | undefined => (next < args.length ? args[next++] : undefined);
   const takeInt = (): number => {
@@ -260,10 +269,10 @@ export function format(pieces: readonly Piece[], args: readonly string[]): Forma
   do {
     for (const piece of pieces) {
       if (piece.kind === 'text') {
-        text += piece.text;
+        yield piece.text;
         continue;
       }
-      if (piece.kind === 'stop') return { text, errors };
+      if (piece.kind === 'stop') return;
       let flags = piece.flags;
       let width = piece.width === '*' ? takeInt() : (piece.width ?? 0);
       if (width < 0) {
@@ -276,22 +285,22 @@ export function format(pieces: readonly Piece[], args: readonly string[]): Forma
       switch (piece.letter) {
         case 's': {
           const value = arg ?? '';
-          text += pad('', '', precision === null ? value : Array.from(value).slice(0, precision).join(''), width, flags, false);
+          yield pad('', '', precision === null ? value : Array.from(value).slice(0, precision).join(''), width, flags, false);
           break;
         }
         case 'b': {
           const read = unescape(arg ?? '', 'echo');
           const value = precision === null ? read.text : read.text.slice(0, precision);
-          text += pad('', '', value, width, flags, false);
-          if (read.stop) return { text, errors };
+          yield pad('', '', value, width, flags, false);
+          if (read.stop) return;
           break;
         }
         case 'c':
-          text += pad('', '', Array.from(arg ?? '')[0] ?? '', width, flags, false);
+          yield pad('', '', Array.from(arg ?? '')[0] ?? '', width, flags, false);
           break;
         case 'q': {
           const value = shellQuoteQ(arg ?? '');
-          text += pad('', '', precision === null ? value : value.slice(0, precision), width, flags, false);
+          yield pad('', '', precision === null ? value : value.slice(0, precision), width, flags, false);
           break;
         }
         case 'd':
@@ -302,18 +311,17 @@ export function format(pieces: readonly Piece[], args: readonly string[]): Forma
         case 'X': {
           const read = readInteger(arg);
           if (read.error !== undefined) errors.push(read.error);
-          text += formatInteger(read.value, piece.letter, precision, flags, width);
+          yield formatInteger(read.value, piece.letter, precision, flags, width);
           break;
         }
         default: {
           const read = readFloat(arg);
           if (read.error !== undefined) errors.push(read.error);
-          text += formatFloat(read.value, piece.letter, precision, flags, width);
+          yield formatFloat(read.value, piece.letter, precision, flags, width);
         }
       }
     }
   } while (consumes && next < args.length);
-  return { text, errors };
 }
 
 /** Runs printf. */
@@ -324,7 +332,20 @@ export async function run(ctx: CommandContext): Promise<ExitCode | void> {
   if (fmt === undefined) return ctx.usage('missing operand');
   const pieces = parseFormat(fmt);
   if (!Array.isArray(pieces)) return ctx.fail(pieces.error);
-  const { text, errors } = format(pieces, rest);
+  const errors: string[] = [];
+  let text = '';
+  for (const part of formatParts(pieces, rest, errors)) {
+    text += part;
+    if (variable !== undefined) {
+      // A variable holds the whole result, so it is held to what standard input may be.
+      if (text.length > MAX_INPUT) return ctx.fail(`${variable}: value too large (over 16 MB)`);
+    } else if (text.length >= 65_536) {
+      // Written as it is made, so a pipe's reader paces it and ^C is heard.
+      await ctx.stdout.write(text);
+      text = '';
+      if (ctx.signal.aborted) throw ctx.signal.reason;
+    }
+  }
   if (variable !== undefined) ctx.env.set(variable, text);
   else await ctx.stdout.write(text);
   for (const error of errors) await ctx.fail(error);

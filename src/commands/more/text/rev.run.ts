@@ -2,6 +2,7 @@
 
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
 import { errorCode, reason } from '../../lib/files';
+import { inputRecords } from '../../lib/text-input';
 
 /** What --help, help and man say about rev, besides its spec (rev.ts). */
 export const doc: CommandDoc = {
@@ -20,15 +21,20 @@ export function reverseText(text: string): string {
   return text.split('\n').map(reverseLine).join('\n');
 }
 
-/** Standard input, a line at a time as it arrives, so `yes | rev | head -n 3` ends at once. */
+/**
+ * Standard input, a line at a time as it arrives, so `yes | rev | head -n 3` ends at once; a
+ * line longer than MAX_INPUT (16 MB) ends it with InputTooLarge.
+ */
 async function reverseInput(ctx: CommandContext): Promise<void> {
-  let pending = '';
-  for await (const chunk of ctx.stdin.chunks()) {
-    const lines = (pending + chunk).split('\n');
-    pending = lines.pop() ?? '';
-    if (lines.length > 0) await ctx.stdout.write(`${lines.map(reverseLine).join('\n')}\n`);
+  let out = '';
+  for await (const record of inputRecords(ctx)) {
+    out += record.nl ? `${reverseLine(record.text)}\n` : reverseLine(record.text);
+    if (out.length >= 4096) {
+      await ctx.stdout.write(out);
+      out = '';
+    }
   }
-  if (pending !== '') await ctx.stdout.write(reverseLine(pending));
+  if (out !== '') await ctx.stdout.write(out);
 }
 
 export async function run(ctx: CommandContext): Promise<ExitCode> {

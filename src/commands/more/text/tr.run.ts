@@ -107,14 +107,20 @@ export function parseSet(s: string, second: boolean): Piece[] {
   return pieces;
 }
 
-/** The characters of a set, with [c*] filled to `fill` characters. */
+/**
+ * The characters of a set, with [c*] filled to `fill` characters. A [c*N] is cut short where
+ * nothing could read the rest: past STRING1's length (`fill`) and the 256 places a complement
+ * maps; its character stays where it is, so the set's last character is the same. So
+ * [x*1000000000] costs no more than [x*300].
+ */
 export function expand(pieces: readonly Piece[], fill = 0): string[] {
   const fixed = pieces.reduce((n, p) => n + (p.t === 'char' ? 1 : p.t === 'class' ? (CLASSES[p.name]?.() ?? []).length : (p.n ?? 0)), 0);
+  const most = Math.max(fill, 256) + 1;
   const chars: string[] = [];
   for (const p of pieces) {
     if (p.t === 'char') chars.push(p.c);
     else if (p.t === 'class') chars.push(...(CLASSES[p.name]?.() ?? []));
-    else for (let k = 0; k < (p.n ?? Math.max(0, fill - fixed)); k += 1) chars.push(p.c);
+    else for (let k = Math.min(p.n ?? Math.max(0, fill - fixed), most); k > 0; k -= 1) chars.push(p.c);
   }
   return chars;
 }

@@ -185,6 +185,23 @@ describe('statuses and errors', () => {
     expect((await run('qqqq')).stderr).toBe("vesen: qqqq: command not found\nType 'help' to see all commands.");
   });
 
+  // Before, the engine's own words reached the visitor: `md5sum: Invalid string length`.
+  it("words an engine's failure to make a string or an array that large as GNU's memory exhausted", async () => {
+    const { run } = harness({
+      specs: [
+        defineCommand({ name: 'huge', category: 'text', summary: 'x', run: () => Promise.reject(new RangeError('Invalid string length')) }),
+        defineCommand({ name: 'wide', category: 'text', summary: 'x', run: () => Promise.reject(new RangeError('Invalid array length')) }),
+        defineCommand({ name: 'jsc', category: 'text', summary: 'x', run: () => Promise.reject(new RangeError('Out of memory')) }),
+        defineCommand({ name: 'other', category: 'text', summary: 'x', run: () => Promise.reject(new RangeError('Invalid time value')) }),
+      ],
+    });
+    expect(await run('huge')).toMatchObject({ status: 1, stderr: 'huge: memory exhausted' });
+    expect((await run('wide')).stderr).toBe('wide: memory exhausted');
+    expect((await run('jsc')).stderr).toBe('jsc: memory exhausted');
+    // Any other range error keeps its own words.
+    expect((await run('other')).stderr).toBe('other: Invalid time value');
+  });
+
   it('never runs an inherited name such as constructor', async () => {
     const { run } = harness();
     expect((await run('constructor')).status).toBe(127);

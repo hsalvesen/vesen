@@ -1,7 +1,7 @@
 // cowsay and cowthink: the bubble and its wrapping, every animal within 40 columns, the face, and
 // the command in the app's shell, on the terminal and into a pipe.
 import { describe, expect, it } from 'vitest';
-import { runLine } from '../../../../tests/harness';
+import { runLine, session } from '../../../../tests/harness';
 import { textWidth } from '../../../output/model';
 import { bubble, COW_NAMES, COWS, cowsay, DEFAULT_FACE, drawCow, findCow, messageLines, twoChars } from '../../lib/cows';
 import { ANIMALS } from './cowsay';
@@ -150,6 +150,35 @@ describe('cowsay in the shell', () => {
   it('refuses a width under 2 and a width that is not a number', async () => {
     expect(await runLine('cowsay -W 1 hi', { tty: false })).toMatchObject({ status: 1, stderrPlain: "cowsay: invalid width '1'\nTry 'cowsay --help' for more information." });
     expect((await runLine('cowsay -W wide hi', { tty: false })).status).toBe(1);
+  });
+});
+
+describe('what cowsay will draw', () => {
+  // Before, cowsay drew all of standard input, with all of it again as the alt text, and
+  // `seq 1 30000 | xargs -n1 cowsay` filled the page with drawings.
+  it('refuses a message over 4096 characters, from operands or a pipe, without reading it all', async () => {
+    const piped = await runLine('seq 1 2000 | cowsay', { tty: false });
+    expect(piped).toMatchObject({ status: 1, stdoutPlain: '', stderrPlain: 'cowsay: message too long (over 4096 characters)' });
+    const started = performance.now();
+    expect((await runLine('yes | cowthink', { tty: false })).stderrPlain).toBe('cowthink: message too long (over 4096 characters)');
+    expect(performance.now() - started).toBeLessThan(5000);
+    expect((await runLine(`cowsay ${'word '.repeat(900)}`, { tty: false })).stderrPlain).toBe('cowsay: message too long (over 4096 characters)');
+    // Just under it is drawn.
+    expect((await runLine(`cowsay ${'word '.repeat(800)}`, { tty: false })).status).toBe(0);
+  });
+
+  it('refuses a bubble too big to draw: one long line among many under -n, or a wide -W', async () => {
+    const s = await session({ tty: false });
+    await s.run("printf '%3000s\\n' x > m; seq 300 >> m");
+    const message = 'cowsay: bubble too big to draw (over 65536 characters): wrap the message with -W, or leave out -n';
+    expect(await s.run('cowsay -n < m')).toMatchObject({ status: 1, stdoutPlain: '', stderrPlain: message });
+    // Wrapped at the usual width, the same message is drawn.
+    expect((await s.run('cowsay < m')).status).toBe(0);
+    // A paragraph 2000 wide and a thousand blank lines under -W 2100 would be two million.
+    await s.run("printf '%2000s\\n' x | tr ' ' x > w; seq 1000 | tr -d 0-9 >> w; echo end >> w");
+    expect(await s.run('cowsay -W 2100 < w')).toMatchObject({ status: 1, stderrPlain: message });
+    expect((await s.run('cowsay < w')).status).toBe(0);
+    s.stop();
   });
 });
 

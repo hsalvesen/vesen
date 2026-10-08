@@ -89,4 +89,42 @@ describe('figlet in the shell', () => {
   it('refuses a width under 1', async () => {
     expect(await runLine('figlet -w 0 hi', { tty: false })).toMatchObject({ status: 1, stderrPlain: "figlet: invalid width '0'\nTry 'figlet --help' for more information." });
   });
+
+  // Before, -w took any width, and -c or -r padded every row to it: -r -w 80000000 wrote 400 MB.
+  it('refuses a width over 1000, so -c and -r cannot pad rows without end', async () => {
+    const started = performance.now();
+    expect(await runLine('figlet -r -w 80000000 hi', { tty: false })).toMatchObject({
+      status: 1,
+      stdoutPlain: '',
+      stderrPlain: "figlet: invalid width '80000000': Numerical result out of range\nTry 'figlet --help' for more information.",
+    });
+    expect(performance.now() - started).toBeLessThan(5000);
+    expect((await runLine('figlet -r -w 1000 hi', { tty: false })).stdoutPlain).toBe(figlet('hi', { width: 1000, align: 'right' }));
+  });
+
+  // Before, figlet drew all of standard input: `seq 1 100000 | figlet` was 12 MB of art.
+  it('refuses a message over 4096 characters, without reading the rest', async () => {
+    const started = performance.now();
+    expect(await runLine('yes | figlet', { tty: false })).toMatchObject({ status: 1, stdoutPlain: '', stderrPlain: 'figlet: message too long (over 4096 characters)' });
+    expect(await runLine('seq 1 100000 | figlet')).toMatchObject({ status: 1, blocks: [expect.objectContaining({ type: 'lines', stream: 'stderr' })] });
+    expect(performance.now() - started).toBeLessThan(5000);
+    expect((await runLine(`figlet ${'x'.repeat(4097)}`, { tty: false })).stderrPlain).toBe('figlet: message too long (over 4096 characters)');
+    expect((await runLine(`figlet ${'x'.repeat(4096)}`, { tty: false })).status).toBe(0);
+  });
+
+  // Before, -f was not an option at all: `figlet -f standard hi` said "invalid option -- 'f'".
+  it("takes -f with the font's own name or the default's, and cannot open any other", async () => {
+    const plain = (await runLine('figlet hi', { tty: false })).stdoutPlain;
+    for (const font of ['block', 'standard', 'standard.flf', 'block.flf']) {
+      expect(await runLine(`figlet -f ${font} hi`, { tty: false }), font).toMatchObject({ status: 0, stdoutPlain: plain });
+    }
+    expect(await runLine('figlet -f slant hi', { tty: false })).toMatchObject({ status: 1, stdoutPlain: '', stderrPlain: 'figlet: slant: Unable to open font file' });
+    expect((await runLine('figlet -fbanner hi', { tty: false })).stderrPlain).toBe('figlet: banner: Unable to open font file');
+  });
+
+  it('offers its fonts to -f, as the help says', async () => {
+    const { FONTS } = await import('./figlet');
+    expect(FONTS.map((font) => font.value)).toEqual(['block', 'standard']);
+    expect((await runLine('figlet --help', { tty: false })).stdoutPlain).toContain('-f FONT');
+  });
 });

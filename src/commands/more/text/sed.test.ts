@@ -127,6 +127,34 @@ describe('sed', () => {
     expect(await runLine('yes | sed s/y/n/ | head -n 2', pipe)).toMatchObject({ status: 0, stdoutPlain: 'n\nn' });
   });
 
+  // Before, the first line too long for a pattern ended sed (status 4) and lost the rest; it is
+  // now left unmatched, with one message a file, and sed goes on, as grep does.
+  it('goes on past a line too long for a pattern, saying so once a file', async () => {
+    const s = await session(pipe);
+    await s.run("echo 'a then b' > mixed; printf '%20000s\\n' x y >> mixed; echo 'and a or b' >> mixed");
+    const result = await s.run("sed 's/a.*b/[&]/' mixed mixed");
+    expect(result.status).toBe(2);
+    const lines = result.stdoutPlain.split('\n');
+    expect(lines).toHaveLength(8);
+    expect([lines[0], lines[3], lines[4], lines[7]]).toEqual(['[a then b]', '[and a or b]', '[a then b]', '[and a or b]']);
+    expect(lines[1]?.length).toBe(20000);
+    expect(result.stderrPlain).toBe('sed: mixed: line too long for this pattern (20000 characters, at most 14142); try a simpler pattern');
+    // An address too: the long lines are not selected, and the others are.
+    expect((await s.run("sed -n '/a.*b/p' mixed")).stdoutPlain).toBe('a then b\nand a or b');
+    s.stop();
+  });
+
+  // Before, sed -i wrote all but the end of a long file to standard output, and kept only the
+  // end in the file.
+  it('keeps every line of a long file in it with -i', async () => {
+    const s = await session(pipe);
+    await s.run('seq 1000 > f');
+    expect(await s.run("sed -i 's/^/n/' f")).toMatchObject({ status: 0, stdoutPlain: '' });
+    expect((await s.run('wc -l f')).stdoutPlain).toBe('1000 f');
+    expect((await s.run('tail -n 1 f')).stdoutPlain).toBe('n1000');
+    s.stop();
+  });
+
   // A loop that never ends (as in GNU sed) must still give the page a turn, so ^C reaches it.
   it.each([":a;ba", ':a;s/x/x/;ta', ':a;s/^/x/;ta'])('lets ^C end the loop %s', async (script) => {
     const shell = await session({ now: () => Date.now() });

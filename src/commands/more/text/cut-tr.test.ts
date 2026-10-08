@@ -113,4 +113,17 @@ describe('tr', () => {
   it('ends a pipe at once', async () => {
     expect(await runLine('yes | tr y n | head -n 2', pipe)).toMatchObject({ status: 0, stdoutPlain: 'n\nn' });
   });
+
+  // Before, [c*N] made N entries: [b*1000000000] a billion, which no page survives.
+  it('makes no more of a [c*N] than can be read, however large N is', async () => {
+    const started = performance.now();
+    expect(await runLine("echo aaa | tr a '[b*1000000000]'", pipe)).toMatchObject({ status: 0, stdoutPlain: 'bbb' });
+    expect(expand(parseSet('[b*1000000000]', true), 3).length).toBeLessThanOrEqual(258);
+    // The characters after it still come last, as -c's catch-all and padding read them.
+    expect(await out("echo 'abc!' | tr -c a '[x*1000000000]y'")).toBe('axxxx');
+    expect(await out("echo 'a€' | tr -c a '[x*1000000000]y'")).toBe('ayx');
+    expect(await out("echo abcd | tr abcd '[x*1000000000]y'")).toBe('xxxx');
+    expect(await out("echo abcd | tr -s abcd '[x*1000000000]'")).toBe('x');
+    expect(performance.now() - started).toBeLessThan(5000);
+  });
 });

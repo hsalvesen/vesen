@@ -2,6 +2,7 @@
 
 import { isVariableName } from '../../../shell/session';
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
+import { MAX_INPUT, tooLarge } from '../../lib/text-input';
 
 /** What --help, help and man say about read, besides its spec (read.ts). */
 export const doc: CommandDoc = {
@@ -83,6 +84,15 @@ async function readStream(ctx: CommandContext, delim: string, limit: number | nu
   let count = 0;
   let pendingBackslash = false;
   for await (const chunk of ctx.stdin.chunks()) {
+    // With no backslash to read and no count, a chunk is taken whole up to the delimiter, rather
+    // than a character at a time, so a long line costs one copy.
+    if (!pendingBackslash && limit === null && (raw || !chunk.includes('\\'))) {
+      const at = chunk.indexOf(delim);
+      if (at !== -1) return { text: text + chunk.slice(0, at), ended: false };
+      text += chunk;
+      if (text.length > MAX_INPUT) tooLarge(ctx);
+      continue;
+    }
     for (const c of chunk) {
       if (pendingBackslash) {
         pendingBackslash = false;
@@ -100,6 +110,8 @@ async function readStream(ctx: CommandContext, delim: string, limit: number | nu
       count += 1;
       if (limit !== null && count >= limit && !pendingBackslash) return { text, ended: false };
     }
+    // One line is held to MAX_INPUT, as every reader of standard input is.
+    if (text.length > MAX_INPUT) tooLarge(ctx);
   }
   return { text, ended: true };
 }

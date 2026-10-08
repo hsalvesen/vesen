@@ -4,8 +4,8 @@
 
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
 import { reason } from '../../lib/files';
-import { compilePatterns, patternMessage, type SafeRegex } from '../../lib/regex';
-import { inputRecords, optList, optOn, pacer, splitRecords, type Rec } from '../../lib/text-input';
+import { compilePatterns, patternMessage, SubjectTooLong, type SafeRegex } from '../../lib/regex';
+import { displayName, inputRecords, optList, optOn, pacer, splitRecords, type Rec } from '../../lib/text-input';
 
 export const doc: CommandDoc = {
   description:
@@ -17,9 +17,9 @@ export const doc: CommandDoc = {
     },
     {
       heading: 'LIMITS',
-      body: 'Regular expressions are refused when they could run for ever, as grep refuses them, and a pattern space longer than the pattern allows is an error. The pattern space and hold space may hold up to a million characters.',
+      body: 'Regular expressions are refused when they could run for ever, as grep refuses them. A pattern space longer than a pattern may be run against does not match it, with an error once a file, and sed goes on; the status is then 2. The pattern space and hold space may hold up to a million characters.',
     },
-    { heading: 'EXIT STATUS', body: '0 on success, 1 for an invalid script, 2 when an input file cannot be read, 4 for an I/O error; q and Q may set their own.' },
+    { heading: 'EXIT STATUS', body: '0 on success, 1 for an invalid script, 2 when an input file cannot be read or a line was too long for a pattern, 4 for an I/O error; q and Q may set their own.' },
   ],
 };
 
@@ -541,7 +541,10 @@ interface Run {
   readonly ctx: CommandContext;
   readonly script: Script;
   readonly input: Input;
+  /** What is printed, kept until the end when it goes to a file (-i), else written now and then. */
   out: string[];
+  /** The output goes to standard output, not back into a file. */
+  readonly toStdout: boolean;
   /** The previous output lacked its newline, which goes before anything more. */
   pendingNewline: boolean;
   lastRx: SafeRegex | null;
@@ -550,6 +553,10 @@ interface Run {
   written: Set<string>;
   /** sed exits with this, after q or Q. */
   quit: number | null;
+  /** The inputs a line too long for a pattern was found in, each reported once. */
+  readonly tooLong: Set<string>;
+  /** What to say about them on stderr, after the output so far. */
+  notes: string[];
 }
 
 function write(run: Run, text: string, newline = true): void {
@@ -572,9 +579,23 @@ function useRx(run: Run, rx: Rx): SafeRegex {
   return safe;
 }
 
+/**
+ * True when `text` is short enough for the pattern to be run against. A longer one does not
+ * match, and is reported once for each input, as grep reports such a line and goes on.
+ */
+function fits(run: Run, safe: SafeRegex, text: string): boolean {
+  if (text.length <= safe.limit) return true;
+  const name = run.input.name;
+  if (!run.tooLong.has(name)) {
+    run.tooLong.add(name);
+    run.notes.push(`${displayName(name)}: ${new SubjectTooLong(text.length, safe.limit).message}`);
+  }
+  return false;
+}
+
 function testRx(run: Run, rx: Rx, text: string): boolean {
   const safe = useRx(run, rx);
-  safe.check(text);
+  if (!fits(run, safe, text)) return false;
   safe.regex.lastIndex = 0;
   return safe.regex.test(text);
 }
@@ -684,7 +705,7 @@ function expandReplacement(pieces: readonly Piece[], m: RegExpExecArray): string
 /** s///: the new pattern space, or null when nothing was replaced. */
 function substitute(run: Run, cmd: Cmd, space: string): string | null {
   const safe = useRx(run, cmd.rx as Rx);
-  safe.check(space);
+  if (!fits(run, safe, space)) return null;
   const re = safe.regex;
   re.lastIndex = 0;
   let out = '';
@@ -925,7 +946,16 @@ async function execute(run: Run): Promise<void> {
     }
     if (autoprint) writeSpace(run, space);
     for (const text of appended) write(run, text, false);
-    if (run.out.length > 256) {
+    if (run.notes.length > 0) {
+      // The output so far first, so the message is where the line was.
+      if (run.toStdout) {
+        await ctx.stdout.write(run.out.join(''));
+        run.out = [];
+      }
+      for (const note of run.notes) await ctx.fail(note, 2);
+      run.notes = [];
+    }
+    if (run.toStdout && run.out.length > 256) {
       await ctx.stdout.write(run.out.join(''));
       run.out = [];
     }
@@ -1004,21 +1034,26 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   // The hold space and the files w writes last across files read separately.
   let hold = '';
   const written = new Set<string>();
+  const tooLong = new Set<string>();
   const go = async (files: readonly string[], target: string | null): Promise<number | null> => {
     const run: Run = {
       ctx,
       script,
       input: new Input(ctx, files, onError),
       out: [],
+      toStdout: target === null,
       pendingNewline: false,
       lastRx: null,
       hold,
       written,
       quit: null,
+      tooLong,
+      notes: [],
     };
     try {
       await execute(run);
       hold = run.hold;
+      if (run.tooLong.size > 0 && status === 0) status = 2;
     } catch (error) {
       const message = error instanceof ScriptError ? error.message : patternMessage(error);
       if (message === null) throw error;

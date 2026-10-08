@@ -98,6 +98,26 @@ describe('grep', () => {
     s.stop();
   });
 
+  // The reviewer's case: before the guard took the largest of a choice's branches, eight such
+  // patterns were refused, and seven allowed lines of only 37 characters.
+  it('searches an ordinary log with many .* patterns from -e or -f, and goes on past a long line to the next file', async () => {
+    const s = await session(pipe);
+    const patterns = ['error.*disk', 'warn.*net', 'fail.*io', 'error.*mem', 'warn.*cpu', 'fail.*auth', 'error.*fan', 'warn.*temp'];
+    await s.run(`printf '%s\\n' ${patterns.map((p) => `'${p}'`).join(' ')} > pats`);
+    const filler = 'x'.repeat(300);
+    await s.run(`printf '%s\\n' 'boot ${filler}' 'error: ${filler} disk full' 'warn: ${filler} net down' 'all fine ${filler}' > log`);
+    const expected = `log:error: ${filler} disk full\nlog:warn: ${filler} net down`;
+    expect(await s.run(`grep -H ${patterns.map((p) => `-e '${p}'`).join(' ')} log`)).toMatchObject({ status: 0, stdoutPlain: expected, stderrPlain: '' });
+    expect(await s.run('grep -H -f pats log')).toMatchObject({ status: 0, stdoutPlain: expected, stderrPlain: '' });
+    // A line too long for them is left out of its own file only; the next file is searched.
+    await s.run("printf '%65535s\\n' error > big; echo 'error on disk' >> big");
+    const both = await s.run('grep -f pats big log');
+    expect(both.status).toBe(2);
+    expect(both.stdoutPlain).toBe(`big:error on disk\n${expected}`);
+    expect(both.stderrPlain).toBe('grep: big: line too long for this pattern (65535 characters, at most 5000); try a simpler pattern');
+    s.stop();
+  });
+
   // GNU grep 3.5 and later: -L exits 0 when some line was selected and 1 when none was, as
   // without -L, whatever names it printed.
   it('gives -L the usual exit status', async () => {

@@ -8,7 +8,7 @@ import { basename } from '../../../vfs/path';
 import type { Stat } from '../../../vfs/types';
 import { errorCode, reason } from '../../lib/files';
 import { compilePatterns, isWordChar, patternMessage, SubjectTooLong, type SafeRegex } from '../../lib/regex';
-import { inputRecords, optList, optOn, optString, pacer, splitRecords, utf8Length, type Rec } from '../../lib/text-input';
+import { HeldRecords, InputTooLarge, inputRecords, optList, optOn, optString, pacer, splitRecords, utf8Length, type Rec } from '../../lib/text-input';
 
 export const doc: CommandDoc = {
   description:
@@ -158,7 +158,8 @@ class Searcher {
     };
     const contextOn = !o.only && (o.before > 0 || o.after > 0);
     const printLines = !o.count && !o.listMatching && !o.listMissing && !o.quiet;
-    const before: { line: number; offset: number; text: string }[] = [];
+    // Held to MAX_INPUT, so -B 1000000000 cannot keep a whole endless input.
+    const before = new HeldRecords<{ line: number; offset: number; text: string }>(ctx);
     let lastPrinted = -1;
     let afterLeft = 0;
     let selected = 0;
@@ -229,8 +230,8 @@ class Searcher {
       }
       if (o.listMatching) break;
       if (printLines && !binary) {
-        if (contextOn) for (const held of before) emit(held.line, held.offset, held.text, false);
-        before.length = 0;
+        if (contextOn) for (const held of before.all()) emit(held.line, held.offset, held.text, false);
+        before.clear();
         if (o.only) {
           for (const [start, end] of o.invert ? [] : matchesIn(safe, text, o.word)) {
             out.push(`${this.prefix(shown, lineNo, at + utf8Length(text.slice(0, start)), ':')}${paint(o.color, SGR.match, text.slice(start, end))}\n`);
@@ -288,7 +289,7 @@ async function readPatterns(ctx: CommandContext): Promise<{ patterns: string[]; 
     try {
       text = file === '-' ? await ctx.stdin.text() : ctx.fs.readFile(ctx.resolve(file));
     } catch (error) {
-      return { status: await ctx.fail(`${file}: ${reason(error)}`, 2) };
+      return { status: await ctx.fail(error instanceof InputTooLarge ? error.message : `${file}: ${reason(error)}`, 2) };
     }
     const lines = text.split('\n');
     if (lines[lines.length - 1] === '') lines.pop();

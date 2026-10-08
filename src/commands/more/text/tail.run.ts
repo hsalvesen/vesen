@@ -4,17 +4,20 @@ import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types'
 import { errorCode, reason } from '../../lib/files';
 import {
   displayName,
+  HeldRecords,
   inputRecords,
   joinRecords,
+  MAX_INPUT,
   operands,
   optOn,
   optString,
   quoted,
   readCount,
   splitRecords,
+  tooLarge,
   utf8Head,
+  utf8Length,
   utf8Tail,
-  type Rec,
 } from '../../lib/text-input';
 
 export const doc: CommandDoc = {
@@ -47,10 +50,46 @@ export function tailOf(text: string, plan: Plan): string {
   return joinRecords(plan.count === 0 ? [] : records.slice(-plan.count));
 }
 
+/** Standard input from byte `count` on (+NUM), written as it arrives. */
+async function bytesFrom(ctx: CommandContext, count: number): Promise<void> {
+  let skip = Math.max(0, count - 1);
+  for await (const chunk of ctx.stdin.chunks()) {
+    let rest = chunk;
+    if (skip > 0) {
+      const skipped = utf8Head(chunk, skip);
+      skip -= utf8Length(skipped);
+      rest = chunk.slice(skipped.length);
+      // A character that only partly fits in what is skipped is kept whole, as for a file.
+      if (rest !== '') skip = 0;
+    }
+    if (rest !== '') await ctx.stdout.write(rest);
+  }
+}
+
+/**
+ * The last `count` bytes of standard input. They are within the last `count` characters, so only
+ * those are kept as it goes by; keeping more than MAX_INPUT closes the input and throws
+ * InputTooLarge.
+ */
+async function lastBytes(ctx: CommandContext, count: number): Promise<void> {
+  let held = '';
+  for await (const chunk of ctx.stdin.chunks()) {
+    held += chunk;
+    if (count >= MAX_INPUT && held.length > MAX_INPUT) tooLarge(ctx);
+    // Cut back a megabyte at a time, so the held text is copied only now and then.
+    if (held.length > count + 1024 * 1024) held = held.slice(held.length - count - 1);
+  }
+  await ctx.stdout.write(utf8Tail(held, count));
+}
+
 async function tailInput(ctx: CommandContext, plan: Plan): Promise<void> {
-  if (plan.unit === 'bytes' || plan.count === 0) {
-    const text = await ctx.stdin.text();
-    await ctx.stdout.write(tailOf(text, plan));
+  if (plan.unit === 'bytes') {
+    await (plan.from ? bytesFrom(ctx, plan.count) : lastBytes(ctx, plan.count));
+    return;
+  }
+  if (plan.count === 0 && !plan.from) {
+    // Nothing to print, but the input is read to its end, as tail does.
+    for await (const chunk of ctx.stdin.chunks()) void chunk;
     return;
   }
   if (plan.from) {
@@ -62,12 +101,12 @@ async function tailInput(ctx: CommandContext, plan: Plan): Promise<void> {
     return;
   }
   // Only the last `count` lines are kept as standard input goes by.
-  const ring: Rec[] = [];
+  const ring = new HeldRecords(ctx);
   for await (const record of inputRecords(ctx)) {
     ring.push(record);
     if (ring.length > plan.count) ring.shift();
   }
-  await ctx.stdout.write(joinRecords(ring));
+  await ctx.stdout.write(joinRecords(ring.all()));
 }
 
 export async function run(ctx: CommandContext): Promise<ExitCode> {

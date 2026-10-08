@@ -17,7 +17,7 @@ import {
   TtySink,
   vfsWriteTarget,
 } from './streams';
-import { BrokenPipe } from './types';
+import { BrokenPipe, InputTooLarge, MAX_INPUT } from './types';
 
 /** Lets every settled promise run its callbacks. */
 async function flush(): Promise<void> {
@@ -116,6 +116,48 @@ describe('in streams', () => {
     expect(pipe.broken).toBe(true);
   });
 
+  // Safety: a whole input, or one line, is held to MAX_INPUT; past it the reader closes the pipe,
+  // so the writer stops with a broken pipe, and InputTooLarge says why.
+  it('stops reading text past MAX_INPUT, and closes the pipe so the writer stops', async () => {
+    const pipe = new AsyncPipe();
+    const reader = new PipeIn(pipe);
+    const reading = reader.text();
+    const chunk = 'y\n'.repeat(32 * 1024);
+    let refused: unknown = null;
+    for (let written = 0; written <= MAX_INPUT + chunk.length; written += chunk.length) {
+      try {
+        await pipe.write(chunk);
+      } catch (error) {
+        refused = error;
+        break;
+      }
+    }
+    await expect(reading).rejects.toBeInstanceOf(InputTooLarge);
+    await expect(reading).rejects.toThrow('standard input: input too large (over 16 MB)');
+    expect(pipe.broken).toBe(true);
+    expect(refused ?? (await pipe.write('more').catch((error: unknown) => error))).toBeInstanceOf(BrokenPipe);
+  });
+
+  it('holds one line to MAX_INPUT, and finds a long line without going over it again and again', async () => {
+    const pipe = new AsyncPipe();
+    const lines = collect(new PipeIn(pipe).lines());
+    const piece = 'x'.repeat(64 * 1024);
+    const started = performance.now();
+    // 8 MB in one line takes one pass, not a pass a chunk (which was 128 passes over up to 8 MB).
+    for (let i = 0; i < 128; i += 1) await pipe.write(piece);
+    await pipe.write('\nend\n');
+    pipe.closeWrite();
+    const got = await lines;
+    expect(performance.now() - started).toBeLessThan(5000);
+    expect(got.map((line) => line.length)).toEqual([128 * piece.length, 3]);
+
+    const endless = new AsyncPipe();
+    const reading = collect(new PipeIn(endless).lines());
+    for (let written = 0; written <= MAX_INPUT && !endless.broken; written += piece.length) await endless.write(piece).catch(() => undefined);
+    await expect(reading).rejects.toBeInstanceOf(InputTooLarge);
+    expect(endless.broken).toBe(true);
+  });
+
   it('reads a string once, as text or lines', async () => {
     expect(await new StringIn('x\ny\n').text()).toBe('x\ny\n');
     expect(await collect(new StringIn('x\ny\n').lines())).toEqual(['x', 'y']);
@@ -153,6 +195,18 @@ describe('out streams off the screen', () => {
     expect(capture.text).toBe('a tap\nx\ny\n');
     expect(capture.isTTY).toBe(false);
     expect(capture.columns).toBe(80);
+  });
+
+  it('collect for $( ) up to a limit, then refuse as a closed pipe would', async () => {
+    const capture = new CaptureOut(80, 10);
+    await capture.write('12345');
+    await expect(capture.write('678901')).rejects.toBeInstanceOf(BrokenPipe);
+    expect(capture.overflowed).toBe(true);
+    expect(capture.text).toBe('12345');
+    // Without a limit, as tests use it, everything is kept.
+    const all = new CaptureOut();
+    await all.write('x'.repeat(100));
+    expect(all.overflowed).toBe(false);
   });
 
   it('write into a pipe, and nowhere for /dev/null', async () => {
@@ -300,6 +354,33 @@ describe('the screen', () => {
     await new TtyOut(lines, 'stdout', cols).line('123456');
     await new TtyOut(lines, 'stderr', cols).line('7890ab');
     expect(text(lines)).toEqual(['123456', '[output truncated]']);
+  });
+
+  // Before, blocks were pushed whatever the caps said, so `seq 1 100000 | figlet` put 12 MB of
+  // art on the page, and `xargs -n1 cowsay` thousands of drawings.
+  it('counts blocks against the caps as their plain text, so no number or size of drawings gets past them', async () => {
+    const shown = (sink: TtySink) => sink.finish().blocks.map((block) => (block.type === 'lines' ? block.lines.map(lineText).join('|') : block.type));
+    const many = new TtySink({ maxLines: 10 });
+    const stdout = new TtyOut(many, 'stdout', cols);
+    for (let i = 0; i < 100; i += 1) await stdout.block(out.art('a\nb\nc', 'abc', 'scale'));
+    expect(shown(many)).toEqual(['art', 'art', 'art', '[output truncated]']);
+
+    const huge = new TtySink({ maxChars: 1000 });
+    await new TtyOut(huge, 'stderr', cols).block(out.art('#'.repeat(2000), 'big', 'scale'));
+    expect(huge.finish().blocks).toEqual([{ type: 'lines', stream: 'stderr', lines: [[{ text: '[output truncated]', style: { fg: 'muted' } }]] }]);
+
+    // What a screen reader is told counts too: art's alt repeats the message.
+    const alt = new TtySink({ maxChars: 1000 });
+    await new TtyOut(alt, 'stdout', cols).block(out.art('#'.repeat(600), 'x'.repeat(600), 'scale'));
+    expect(shown(alt)).toEqual(['[output truncated]']);
+
+    // Lines and blocks share one budget.
+    const mixed = new TtySink({ maxLines: 4 });
+    const mixedOut = new TtyOut(mixed, 'stdout', cols);
+    await mixedOut.write('1\n2\n');
+    await mixedOut.block(out.art('a\nb', 'ab', 'scale'));
+    await mixedOut.write('3\n');
+    expect(shown(mixed)).toEqual(['1|2', 'art', '[output truncated]']);
   });
 
   it('lets the browser run between many small lines and blocks too', async () => {

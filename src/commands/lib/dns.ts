@@ -322,17 +322,45 @@ export function reverseName(address: string): string | null {
   return `${nibbles.split('').reverse().join('.')}.ip6.arpa`;
 }
 
-/** True for the addresses a page on the internet may not reach: loopback, private, link-local. */
-export function isPrivateAddress(address: string): boolean {
-  if (IPV4.test(address)) {
-    const [a = 0, b = 0] = address.split('.').map(Number);
-    return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+/**
+ * What kind of address a page on the internet may not reach `address` is, or null for one it
+ * may: this device (loopback, and the unspecified 0.0.0.0/8 and ::), a private network (10/8,
+ * 172.16/12, 192.168/16, CGNAT's 100.64/10, link-local 169.254/16, fc00::/7, fe80::/10 and the
+ * old site-local fec0::/10), multicast (224/4, ff00::/8) or reserved (240/4, broadcast among
+ * them). An IPv6 address with an IPv4 address inside it (::ffff:a.b.c.d mapped, ::ffff:0:a.b.c.d
+ * translated, ::a.b.c.d compatible, 64:ff9b::/96 NAT64, 2002::/16 6to4) is judged by that one.
+ */
+export function addressScope(address: string): 'this device' | 'private' | 'multicast' | 'reserved' | null {
+  let bytes: number[];
+  if (IPV4.test(address)) bytes = address.split('.').map(Number);
+  else {
+    const groups = ipv6Groups(address);
+    if (groups === null) return null;
+    const [g0 = 0, g1 = 0, g2 = 0, g3 = 0, g4 = 0, g5 = 0, g6 = 0, g7 = 0] = groups;
+    const zeros = (n: number): boolean => groups.slice(0, n).every((group) => group === 0);
+    const quad = (hi: number, lo: number): number[] => [hi >> 8, hi & 0xff, lo >> 8, lo & 0xff];
+    if (zeros(7) && g7 <= 1) return 'this device';
+    const mapped = zeros(5) && g5 === 0xffff;
+    const translated = zeros(4) && g4 === 0xffff && g5 === 0;
+    const nat64 = g0 === 0x64 && g1 === 0xff9b && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 0;
+    if (mapped || translated || nat64 || zeros(6)) {
+      bytes = quad(g6, g7);
+    } else if (g0 === 0x2002) {
+      bytes = quad(g1, g2);
+    } else {
+      if ((g0 & 0xff00) === 0xff00) return 'multicast';
+      return (g0 & 0xfe00) === 0xfc00 || (g0 & 0xffc0) === 0xfe80 || (g0 & 0xffc0) === 0xfec0 ? 'private' : null;
+    }
   }
-  const groups = ipv6Groups(address);
-  if (groups === null) return false;
-  const [first = 0] = groups;
-  const loopbackOrUnspecified = groups.slice(0, 7).every((group) => group === 0) && (groups[7] ?? 0) <= 1;
-  return loopbackOrUnspecified || (first & 0xfe00) === 0xfc00 || (first & 0xffc0) === 0xfe80;
+  const [a = 0, b = 0] = bytes;
+  if (a === 0 || a === 127) return 'this device';
+  if (a >= 224) return a < 240 ? 'multicast' : 'reserved';
+  return a === 10 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) ? 'private' : null;
+}
+
+/** True for the addresses a page on the internet may not reach (addressScope says which). */
+export function isPrivateAddress(address: string): boolean {
+  return addressScope(address) !== null;
 }
 
 /** A host name as typed, as the DNS asks for it (lower case, punycode), or null when it cannot be one. */
