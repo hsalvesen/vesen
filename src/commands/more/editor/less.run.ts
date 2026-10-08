@@ -1,7 +1,9 @@
 // The body of less, and of more, which loads it too. On the terminal the text goes to the pager
-// (src/ui/apps/Pager.svelte); into a pipe, or where the pager cannot open, it is copied or
-// printed, as less does when its output is not a terminal.
+// (src/ui/apps/Pager.svelte), opening where less's leading +CMD words say; into a pipe, or where
+// the pager cannot open, it is copied or printed, as less does when its output is not a terminal
+// (with more's rule of colons between files only for more).
 
+import { pagerStart, type PagerStart } from '../../../lib/pager';
 import { out, type Line } from '../../../output/model';
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
 import { errorCode, reason } from '../../lib/files';
@@ -10,8 +12,12 @@ import { capLines, printLines, readCapped, showPager, textLines } from '../../li
 /** What --help, help and man say about less, besides its spec (less.ts). */
 export const doc: CommandDoc = {
   description:
-    'Shows each FILE, or standard input, a screen at a time on the terminal, so text longer than the screen can be read from the top. q leaves; space, f or Page Down goes on a screen and b goes back; j and k, or the arrows, move a line; d and u half a screen; g and G go to the start and the end. /text searches forward and ?text back, highlighting every match, and n and N go to the next one. h shows all the keys. On a touch screen, swipe to scroll or use the buttons along the bottom. Into a pipe, less copies its input as cat would.',
+    'Shows each FILE, or standard input, a screen at a time on the terminal, so text longer than the screen can be read from the top. q leaves; space, f or Page Down goes on a screen and b goes back; j and k, or the arrows, move a line; d and u half a screen; g and G go to the start and the end. /text searches forward and ?text back, highlighting every match, and n and N go to the next one. h shows all the keys. On a touch screen, swipe to scroll or use the buttons along the bottom. Into a pipe, less copies its input as cat would, every FILE one after another.',
   man: [
+    {
+      heading: 'COMMANDS AT THE START',
+      body: 'A word starting with + before the files is a command to run as the pager opens: +G (or +F) opens at the end, +NUMBER at that line, and +/text at the first line holding the text. Other commands are ignored. Into a pipe these words are dropped.',
+    },
     {
       heading: 'SEARCHING',
       body: 'A search looks for the text exactly as typed, not a regular expression. It ignores case unless the text has a capital in it, or with -i always. A search starts at the top line on the screen and does not go round past the end: Pattern not found says so.',
@@ -26,7 +32,7 @@ export const doc: CommandDoc = {
 
 export type Pager = 'less' | 'more';
 
-/** The line more and less print above each file when there are several. */
+/** The line more prints above each file when there are several; less never does. */
 const RULE = '::::::::::::::';
 
 interface Source {
@@ -53,12 +59,28 @@ async function complain(ctx: CommandContext, message: string): Promise<void> {
   await ctx.stderr.line(out.span(message, { fg: 'error' }));
 }
 
-/** Into a pipe: each file, or standard input, copied as it is, with more's rule between files. */
+/**
+ * less's leading +CMD words, before the files (`less +G notes.txt`), as where the pager opens: the
+ * last one it knows, or null. ++CMD, which less runs for every file, counts the same. A word after
+ * the first file is a file, as it is to less.
+ */
+function plusCommands(args: readonly string[]): { start: PagerStart | null; files: readonly string[] } {
+  let start: PagerStart | null = null;
+  let at = 0;
+  for (; at < args.length && /^\+./.test(args[at] ?? ''); at += 1) {
+    const word = args[at] ?? '';
+    start = pagerStart(word.startsWith('++') ? word.slice(1) : word) ?? start;
+  }
+  return { start, files: args.slice(at) };
+}
+
+/** Into a pipe: each file, or standard input, copied as it is; more puts its rule between files. */
 async function copy(ctx: CommandContext, pager: Pager, files: readonly string[]): Promise<ExitCode> {
   let status = 0;
+  const banners = pager === 'more' && files.length > 1;
   for (const file of files.length === 0 ? ['-'] : files) {
     if (file === '-') {
-      if (files.length > 1) await ctx.stdout.write(`${RULE}\n(standard input)\n${RULE}\n`);
+      if (banners) await ctx.stdout.write(`${RULE}\n(standard input)\n${RULE}\n`);
       for await (const chunk of ctx.stdin.chunks()) await ctx.stdout.write(chunk);
       continue;
     }
@@ -68,7 +90,7 @@ async function copy(ctx: CommandContext, pager: Pager, files: readonly string[])
       status = 1;
       continue;
     }
-    if (files.length > 1) await ctx.stdout.write(`${RULE}\n${file}\n${RULE}\n`);
+    if (banners) await ctx.stdout.write(`${RULE}\n${file}\n${RULE}\n`);
     await ctx.stdout.write(read.text);
   }
   return status;
@@ -76,7 +98,8 @@ async function copy(ctx: CommandContext, pager: Pager, files: readonly string[])
 
 /** less and more: the pager on the terminal, a copy into a pipe. */
 export async function page(ctx: CommandContext, pager: Pager): Promise<ExitCode> {
-  const files = ctx.args;
+  const { start, files } = pager === 'less' ? plusCommands(ctx.args) : { start: null, files: ctx.args };
+  // Into a pipe, less's +CMD words have nothing to move, and are dropped.
   if (!ctx.stdout.isTTY) return copy(ctx, pager, files);
   if (files.length === 0 && ctx.stdin.isTTY) {
     if (pager === 'more') return ctx.usage('bad usage');
@@ -120,6 +143,7 @@ export async function page(ctx: CommandContext, pager: Pager): Promise<ExitCode>
     mode: pager,
     numbers: ctx.opts.numbers === true,
     ignoreCase: ctx.opts.ignoreCase === true,
+    ...(start === null ? {} : { start }),
   });
   if (!shown) await printLines(ctx, text);
   return status;

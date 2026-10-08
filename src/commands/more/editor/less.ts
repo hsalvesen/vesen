@@ -8,7 +8,7 @@ export default defineCommand({
   name: 'less',
   category: 'editor',
   summary: 'page through text a screen at a time',
-  synopsis: ['less [OPTION]... [FILE]...'],
+  synopsis: ['less [OPTION]... [+CMD] [FILE]...'],
   flags: [
     { short: 'N', long: 'LINE-NUMBERS', key: 'numbers', description: 'show a line number before each line' },
     { short: 'i', long: 'ignore-case', key: 'ignoreCase', description: 'searches ignore case, even with capitals in them' },
@@ -19,6 +19,7 @@ export default defineCommand({
   examples: [
     { line: 'less README.md', note: 'q leaves, space goes on, /text searches', offline: true },
     { line: 'less -N documents/linux.txt', note: 'with line numbers', offline: true },
+    { line: 'less +G history.txt', note: 'opens at the end; +/text at a match', offline: true },
     { line: 'man ls | less', note: 'whatever a pipe brings', offline: true },
   ],
   seeAlso: ['more', 'cat', 'man'],

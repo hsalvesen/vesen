@@ -4,7 +4,8 @@
   lines on screen and how far through, or (END). less's keys move it (q, space, b, j, k, d, u, g,
   G, the arrows and Page keys); /text and ?text search, highlighting every match, n and N go on;
   h shows the keys. On a touch screen, swipes scroll and a toolbar of 44px buttons pages, searches
-  and closes, since a phone has no q. Colours come from the theme's roles.
+  and closes, since a phone has no q. Back (AppHost) does what Esc and q do: it closes the search
+  box or the help first, then the pager. Colours come from the theme's roles.
 
   It draws only the rows on screen, so a long file costs no more than a short one. AppHost has
   focus while it shows, so keys come to the window listener here, never to the prompt under it.
@@ -102,6 +103,14 @@
     if (closed) return;
     closed = true;
     close(PAGER_CLOSED);
+  }
+
+  /** Back (AppHost): the search box or the help goes first, as Esc and q take them; then it closes. */
+  export function back(): void {
+    if (closed) return;
+    if (searching !== null) endSearch();
+    else if (helping) toggleHelp();
+    else finish();
   }
 
   function scrollTo(next: number): void {

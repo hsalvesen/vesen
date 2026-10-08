@@ -116,4 +116,18 @@ describe('the Train app', () => {
     await fireEvent.keyDown(window, { key: 'x' });
     expect(onclose).toHaveBeenCalledWith(5, 'stopped');
   });
+
+  it('stops on Back, as a key stops it, and sl ends as usual', async () => {
+    const raf = frames();
+    const onclose = vi.fn();
+    render(AppHost, { props: { request: { id: 6, view: 'sl', props: trainView() }, onclose } });
+    await vi.waitFor(() => expect(screen.getByRole('button', { name: /steam train/ })).toBeInTheDocument());
+    try {
+      history.back();
+      expect(onclose).toHaveBeenCalledWith(6, 'stopped');
+      expect(raf.cancel).toHaveBeenCalled();
+    } finally {
+      history.replaceState(null, '');
+    }
+  });
 });

@@ -48,6 +48,7 @@ async function answer(text?: string): Promise<void> {
 
 describe('Editor', () => {
   it("shows the file's name and nano's first word on it, with the shortcuts along the bottom", () => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
     const { title, status, area } = open();
     expect(title()).toBe('vesen nano notes.txt');
     expect(status()).toBe('[ New File ]');
@@ -55,6 +56,22 @@ describe('Editor', () => {
     const keys = Array.from(document.querySelectorAll('.shortcut')).map((shortcut) => shortcut.textContent?.replace(/\s+/g, ' '));
     expect(keys).toEqual(['^G Help', '^O Write Out', '^W Where Is', '^K Cut', '^C Location', '^X Exit', '^S Save', '^F Find', '^U Paste']);
     expect(screen.queryByRole('toolbar')).toBeNull();
+    vi.restoreAllMocks();
+  });
+
+  it('offers ^F for Where Is off a Mac, where Ctrl+W closes the tab, and ^W still finds', async () => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('Win32');
+    try {
+      const { area } = open({ text: 'x needle y' });
+      const keys = Array.from(document.querySelectorAll('.shortcut')).map((shortcut) => shortcut.textContent?.replace(/\s+/g, ' '));
+      expect(keys).toEqual(['^G Help', '^O Write Out', '^F Where Is', '^K Cut', '^C Location', '^X Exit', '^S Save', '^U Paste']);
+      expect(keys.some((key) => key?.startsWith('^W'))).toBe(false);
+      // Where the browser lets ^W through, it is still Where Is.
+      await ctrl(area(), 'w');
+      expect(screen.getByRole('textbox', { name: 'Search:' })).toBeInTheDocument();
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 
   it('puts the caret in the text, where +LINE,COLUMN asks', async () => {
@@ -270,9 +287,22 @@ describe('Editor on a touch screen', () => {
     const { area } = open({ touch: true, text: 'x needle y' });
     await fireEvent.click(screen.getByRole('button', { name: 'Find' }));
     await tick();
-    await fireEvent.input(screen.getByRole('textbox', { name: 'Search:' }), { target: { value: 'needle' } });
+    await fireEvent.input(screen.getByRole('textbox', { name: 'Find:' }), { target: { value: 'needle' } });
     await fireEvent.click(screen.getByRole('button', { name: 'Find' }));
     await tick();
     expect([area().selectionStart, area().selectionEnd]).toEqual([2, 8]);
+    // The last search is offered again, as on a keyboard.
+    await fireEvent.click(screen.getByRole('button', { name: 'Find' }));
+    await tick();
+    expect(screen.getByRole('textbox', { name: 'Find [needle]:' })).toBeInTheDocument();
+  });
+
+  it("keeps the prompt's label short beside its buttons: 'Write to:' and 'Find:'", async () => {
+    const { container } = open({ touch: true, name: null });
+    await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await tick();
+    expect(screen.getByRole('textbox', { name: 'Write to:' })).toBeInTheDocument();
+    const row = container.querySelector('form.prompt');
+    expect(Array.from(row?.querySelectorAll('button') ?? []).map((button) => button.textContent)).toEqual(['Save', 'Cancel']);
   });
 });

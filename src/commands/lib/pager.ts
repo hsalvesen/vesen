@@ -4,7 +4,7 @@
 // script, a screen that did not load) the caller prints the lines instead, as less does when its
 // output is not a terminal.
 
-import { PAGER_CLOSED, type PagerMode, type PagerView } from '../../lib/pager';
+import { PAGER_CLOSED, type PagerMode, type PagerStart, type PagerView } from '../../lib/pager';
 import type { Block, Line } from '../../output/model';
 import { plain } from '../../output/plain';
 import { parseSgr } from '../../output/sgr';
@@ -69,6 +69,8 @@ export interface PagerRequest extends PagerText {
   readonly mode?: PagerMode;
   readonly numbers?: boolean;
   readonly ignoreCase?: boolean;
+  /** Where it opens: less's +G, +NUMBER or +/pattern. */
+  readonly start?: PagerStart;
 }
 
 /**
@@ -88,6 +90,7 @@ export async function showPager(ctx: CommandContext, request: PagerRequest): Pro
     ...(request.numbers === true ? { numbers: true } : {}),
     ...(request.ignoreCase === true ? { ignoreCase: true } : {}),
     ...(request.note === undefined ? {} : { note: request.note }),
+    ...(request.start === undefined ? {} : { start: request.start }),
   };
   try {
     return (await ctx.tty.fullscreen<unknown>('pager', view)) === PAGER_CLOSED;

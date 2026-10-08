@@ -59,6 +59,11 @@
     close(result);
   }
 
+  /** Back (AppHost) stops it, as a key does. */
+  export function back(): void {
+    finish(still ? 'still' : 'stopped');
+  }
+
   /** The screen's width in columns of the terminal's font; 80 when it cannot be measured. */
   function measure(): number {
     const width = screen?.clientWidth ?? 0;

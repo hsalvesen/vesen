@@ -62,6 +62,11 @@
     close('stopped');
   }
 
+  /** Back (AppHost) stops it, as a key does. */
+  export function back(): void {
+    finish();
+  }
+
   function stop(): void {
     if (raf !== 0 && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf);
     raf = 0;

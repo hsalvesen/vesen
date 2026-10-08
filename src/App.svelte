@@ -303,9 +303,12 @@
   {/if}
 {/snippet}
 
-<!-- Outside <main>, whose vintage CRT filter would capture it, and over the dock too. -->
+<!-- Outside <main>, whose vintage CRT filter would capture it, and over the dock too. A host of its
+     own for each app, so each has its own history entry. -->
 {#if app && AppHost}
-  <AppHost request={app} onclose={(id, result) => shell.closeApp(id, result)} />
+  {#key app.id}
+    <AppHost request={app} onclose={(id, result) => shell.closeApp(id, result)} />
+  {/key}
 {/if}
 
 <style>

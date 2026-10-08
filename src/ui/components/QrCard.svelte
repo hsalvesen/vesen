@@ -13,7 +13,8 @@
   Every action is a button made here from the trusted view model, never from the payload's text.
   A tap on the card never focuses the prompt (ui/actions/focusPolicy.ts), and its buttons never
   take focus from it, so a phone's keyboard stays as it was. Tapping the code opens Present mode,
-  in a layer on <body> (apps/qr-present.ts), and focus goes back where it was when it closes.
+  in a layer on <body> (apps/qr-present.ts) with a history entry of its own, so Back closes it
+  (apps/history-entry.ts), and focus goes back where it was when it closes.
 -->
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte';
@@ -33,6 +34,7 @@
   } from '../../lib/qr';
   import { browserHost, copy, pageClipboard, qrEnv, save, share, STATUS_MS, type QrEnv } from '../../services/qr-actions';
   import { cathode, crtTier } from '../../stores/cathode';
+  import { holdHistoryEntry, type HistoryEntry } from '../apps/history-entry';
   import { presentLayer } from '../apps/qr-present';
   import QrPresenter from '../apps/QrPresenter.svelte';
   import { measureWidth } from './qr-measure';
@@ -129,13 +131,19 @@
   /** Present mode, with where focus was when it opened; null while it is closed. */
   let presenting: { readonly returnFocus: Element | null } | null = $state(null);
 
+  /** Present mode's history entry, so Back closes it rather than leaving the page. */
+  let presentEntry: HistoryEntry | null = null;
+
   function present(): void {
     if (view === null || presenting !== null) return;
     presenting = { returnFocus: root?.ownerDocument.activeElement ?? null };
+    presentEntry = holdHistoryEntry(() => void endPresent());
   }
 
   /** Closes Present mode, and gives focus back where it was, so the keyboard is as it was. */
   async function endPresent(): Promise<void> {
+    presentEntry?.release();
+    presentEntry = null;
     const back = presenting?.returnFocus;
     presenting = null;
     await tick();
@@ -167,7 +175,11 @@
     }
   }
 
-  onDestroy(() => clearTimeout(statusTimer));
+  onDestroy(() => {
+    clearTimeout(statusTimer);
+    // Cleared away while presenting: its history entry goes too.
+    presentEntry?.release();
+  });
 </script>
 
 {#if view !== null}
