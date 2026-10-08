@@ -208,6 +208,11 @@ Inside `run`:
   options (`chmod -w file`, `find . -name x`) sets `rawArgs` on its spec and reads its own words;
   `readOptions` in `src/commands/lib/raw-options.ts` reads the options among them as getopt would,
   with getopt's error messages.
+- **Commands that run a command** (`timeout`, `nohup`, `xargs`) check it before they start with
+  `cannotRun(ctx, name)` in `src/commands/lib/runnable.ts`, which gives GNU's reason and status:
+  `No such file or directory` (127) or `Permission denied` (126).
+- **One process table.** `ctx.shell.processes()` lists init, the shell and the commands running
+  now, as `ps` and `/proc` show them; `ctx.shell.kill(pid)` ends only a running command.
 - **Original content.** Cows, fortunes, fonts and art are written for vesen, not copied, and
   credit no other project.
 - **Honest network commands.** A browser cannot send ICMP or raw DNS: say what is done instead

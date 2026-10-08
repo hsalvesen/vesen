@@ -17,12 +17,13 @@ Commit ranges are inclusive; `git log --oneline FIRST^..LAST` lists one. The pha
 | **3. Prompt and phone** | `b9be792`..`f1eda9a` (7) | The completion engine (Tab, ghost, chips); the line editor with readline keys and reverse search; the phone dock; link cards, the in-app link policy, the Shutdown screen and the Back snapshot; streaming output, the status line and reflow. |
 | **4. Data commands** | `147bd66`..`5547828` (10) | Room made in the first paint and the kernel; `curl`, `speedtest` and `fastfetch` on specs with one SysInfo; weather on Open-Meteo cards; stock's client, card and table; `qr` with its card and Present mode. |
 | **5. Finish the shell** | `f6c2265`..`ec96dee` (17) | 5.1 the legacy layer deleted (`f6c2265`); 5.2 the lazy catalogue (`b02b1d3`); waves F, E, D, C, A2 and A1 built side by side (`30d1818`, `7344b3b`, `f485027`, `d93ec7a`, `8fdeb59`, `d1c9fe0`, `8718c88`) and merged in order (`490e31c`..`775fe87`); the kernel kept in budget (`115ec06`); the review fixes (`ec96dee`). |
-| **Release** | the commit after `ec96dee` | Version 2.0.0, this page, the README, `docs/SHELL.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, the pull request template and issue forms, the theme screenshots. |
+| **Release** | `370355d` | Version 2.0.0, this page, the README, `docs/SHELL.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, the pull request template and issue forms, the theme screenshots. |
+| **Follow-up fixes** | `aaa19e8`, `0a14436`, `ef06bc0`, `239e9f0`, merged in `496b27e`..`372ba51`, and the commit after it | The 15 review findings the release left, in four tracks built side by side: apps (Back closes every full-screen view, `nano`'s phone prompt and ^F, `less +CMD`), caps (standard input and `$( )` held to 16 MB, drawings in the screen caps, `figlet`'s widths and fonts, `ping`'s IPv4 inside IPv6), prompt (no flag values in completion, ^C where it was pressed, no early Tab bell, the registry's hints) and gnu (`ip route get`, `timeout` and `nohup`, `date -d`, one process table for `ps` and `/proc`, the review fixes' regression tests). Still 2.0.0, as the tag was not yet pushed. |
 
 ### Numbers at release
 
-- **Bundles (gzip):** JavaScript before the first paint 56.8 of 60 kB; the kernel 72.2 of 75 kB, in three files (at most four); the catalogue's specs 28.7 of 40 kB; what `stock`'s first quote fetches 18.5 of 19 kB.
-- **Tests:** 5,165 unit tests in 223 files; 360 Playwright smoke tests across desktop Chrome, iPhone in Instagram and Pixel 7 (the merge step's full end-to-end run: 378 passed, 168 skipped by design).
+- **Bundles (gzip), with the follow-up fixes:** JavaScript before the first paint 57.0 of 60 kB; the kernel 73.3 of 75 kB, in three files (at most four); the catalogue's specs 29.6 of 40 kB; what `stock`'s first quote fetches 18.5 of 19 kB.
+- **Tests:** 5,360 unit tests in 227 files; 414 Playwright smoke tests across desktop Chrome, iPhone in Instagram and Pixel 7 (162 skipped by design), and in the full end-to-end run 438 passed and 171 were skipped by design.
 - **Commands:** about 160, 61 in the core and 97 in the catalogue.
 
 ## Deviations from the plan
@@ -33,7 +34,8 @@ Each was deliberate; the ADR amendment named in brackets has the detail.
 
 - **One branch, not a pull request per step.** The plan has every step as its own pull request with a Firebase preview, and a release after each phase (v1.2.1 to v1.6.0). The whole programme was built on `overhaul`, with parallel work in git worktrees merged locally, and ships as one release, v2.0.0. PR #3 carries it, with a Firebase preview channel of its own.
 - **No real-device run yet.** The device probe was meant to run on a real iPhone and Android phone before Phase 3. It has not been run (see below), so the phone work was built against the plan's assumptions and checked in Playwright's WebKit with Instagram's user agent and on a Pixel 7 profile. The results may still call for changes to the touch editor, persistence, link handling or QR saving.
-- **The review fixes were finished in the release session.** The Phase 5 fix step was cut off before it committed. What it had written passed every gate apart from four test expectations its own changes had made stale (the role count, the `cal` and `ps` transcripts, and `ps`'s procps-style error). Those were brought up to date, every gate was run, and the result was committed as `ec96dee` before the release commit; the findings it had not reached are under Follow-ups.
+- **The review fixes were finished in the release session.** The Phase 5 fix step was cut off before it committed. What it had written passed every gate apart from four test expectations its own changes had made stale (the role count, the `cal` and `ps` transcripts, and `ps`'s procps-style error). Those were brought up to date, every gate was run, and the result was committed as `ec96dee` before the release commit; the findings it had not reached were fixed next.
+- **The follow-up fixes came after the release commit, before the tag.** The 15 findings the review fix step had not reached were fixed in four tracks built side by side in git worktrees (apps, caps, prompt, gnu) and merged on `overhaul`. The tag `v2.0.0` had not been pushed, so they ship in 2.0.0 and its changelog entry describes them. [Phase 5 follow-up fixes]
 - **The golden snapshots are gone.** They pinned the legacy terminal during the ports and were deleted with it in Phase 5.1; command transcripts in `tests/transcripts/` at 40, 80 and 120 columns replace them for the new commands. `tests/golden/README.md` says where the snapshots are in history. [Phase 5.1]
 
 ### Contracts
@@ -46,6 +48,7 @@ Each was deliberate; the ADR amendment named in brackets has the detail.
 - **A link card is the `card` block**; `link-card` is not a component. `tty.open()` prints nothing and every opener prints its own card. `noopener` opens count a `null` return as opened.
 - **The market and weather cores are service contracts** that DOM-free code may import; their I/O sits behind ports (`market/port.ts`, the `WeatherService`).
 - **Additive kernel contracts from the waves:** `CommandContext.digest` (WebCrypto hashes through a port), the process table (`ShellApi.pid()`, `processes()`, `kill()`, `exec(line, { signal })`, `tty.readLine({ signal })`), `StreamInit.mode: 'no-cors'` for `ping`, a session-storage port for commands, `Frame.foreground` so a pipeline stage at the prompt may open the pager, and `ParsedArgs.version` for `--version`. [Waves A1, C, D, F; Phase 5 review fixes]
+- **Contracts from the follow-up fixes:** `MAX_INPUT` and `InputTooLarge` (standard input held to 16 MB), `CaptureOut`'s limit, `TtySink.block(block, stream)` counting blocks, `TtySink.caret()`, `ArgSpec.marks`, `ProcessInfo.uid`, `ShellApi.processes()` as the whole table, `Shell.proc()` with `GenerateContext.processes` and `self`, `VirtualFile.list`, and an app's `back()` export (`AppExports`). All are additive except that `processes()` now lists init and the shell too. [Phase 5 follow-up fixes]
 - **Six more text roles**, `rainbow-red` to `rainbow-purple`, so `lolcat` reads in every theme; `ROLES` has 28 names. [Phase 5 review fixes]
 
 ### Safety
@@ -57,6 +60,8 @@ Each was deliberate; the ADR amendment named in brackets has the detail.
 - **The snapshot is also saved before a same-view link is followed**, because WebKit drops `sessionStorage` writes made during `pagehide` across sites.
 - **One cleaner for upstream text** (`src/lib/upstream-text.ts`) for names from weather and stock sources.
 - **One regex guard with a line limit.** `src/commands/lib/regex.ts` refuses nested and ambiguous repeats, weighs bounded choices, and gives each pattern the longest line it may run against. `find -name`, `-path` and `tree -I` use shell wildcards (`fnmatch.ts`), so `find` has no `-regex`. [Wave A1, Wave A2, merge, Phase 5 review fixes]
+- **Standard input is capped, not only the screen.** No command holds more than 16 MB of standard input at once, `$( )` keeps at most 16 MB, and drawings count against the screen caps as their text would. [Phase 5 follow-up fixes]
+- **Back closes a full-screen view** (the pager, `nano`, `sl`, `cmatrix`, the Shutdown screen, QR Present mode) instead of leaving vesen: each holds one history entry with no URL of its own while it is open. [Phase 5 follow-up fixes]
 
 ### Size and loading
 
@@ -69,11 +74,12 @@ Each was deliberate; the ADR amendment named in brackets has the detail.
 ### Commands and help
 
 - **More than the waves asked:** `bc` computes with exact decimals on BigInt (up to 100,000 digits; its math library to a scale of 5,000); `grep -P` takes JavaScript's syntax through the guard; `dig` knows every IANA record type; `factor`, `cowthink`, `ps -o` and `ps` BSD formats, `--version` on every command.
-- **Skipped or partial:** `split` and `install` were optional in wave A2 and are not built, nor is `awk`, which the plan never listed; `sed` lacks `e`, `R`, `W` and `v`; `bc` lacks `define`, arrays and `read()`; `diff` cannot compare folders; `env -i` is not possible with the shell API; `nslookup`'s interactive mode is not supported; `less` has no `:n`/`:p` between files.
+- **Skipped or partial:** `split` and `install` were optional in wave A2 and are not built, nor is `awk`, which the plan never listed; `sed` lacks `e`, `R`, `W` and `v`; `bc` lacks `define`, arrays and `read()`; `diff` cannot compare folders; `env -i` is not possible with the shell API; `nslookup`'s interactive mode is not supported; `less` has no `:n`/`:p` between files, and `more` does not take `+NUM` or `+/pattern` (`less` does).
 - **One rule for help's short index.** On a terminal narrower than 80 columns each category's row keeps to one line, elsewhere to two; a long row keeps `helpRank`ed, then `featured`, then core names and ends with `+N more`, which runs `help --all`. Fun is one row like the rest. [merge]
 - **Fun commands are quiet in Tab lists** (unless typed in full or nothing else matches) and listed in help under Fun. [Wave E]
 - **`vi` and `vim` open `nano`** after a one-line note, and are hidden from help and Tab. [Wave F]
-- **Network stand-ins** (`traceroute`, `ssh`, `telnet`, `nc`, `ftp`) are hidden from help and Tab and exit 1 with one line. `ping` refuses loopback and private addresses. `git` shows authors by name only. [Wave D]
+- **Network stand-ins** (`traceroute`, `ssh`, `telnet`, `nc`, `ftp`) are hidden from help and Tab and exit 1 with one line. `ping` refuses loopback, private and reserved addresses in any form, IPv4 written inside IPv6 included. `git` shows authors by name only. [Wave D, Phase 5 follow-up fixes]
+- **One process table.** `ps`, `top`, `kill`, `pgrep`, `$$` and `/proc` read the same list: init, the shell and the commands running now, each with a `/proc/PID` folder; `/proc/self` is the command reading it. [Phase 5 follow-up fixes]
 
 ### Docs
 
@@ -83,7 +89,7 @@ Each was deliberate; the ADR amendment named in brackets has the detail.
 
 ## What still needs the owner
 
-- [ ] **Run the device probe** from an Instagram DM on an iPhone and an Android phone, and paste the results into [device-probe-results.md](device-probe-results.md), which says how. Then compare them with the assumptions above and file issues for anything that differs.
+- [ ] **Run the device probe** from an Instagram DM on an iPhone and an Android phone, and paste the results into [device-probe-results.md](device-probe-results.md), which says how. Then compare them with the assumptions above and file issues for anything that differs. While there, open `man ls` and `nano` (with a change) and press Back, twice for `nano`, in Instagram and in Chrome on Android: vesen should stay (see Follow-ups, "Back on real phones").
 - [ ] **Remove the probe** once the results are recorded: delete `public/probe/`, its script hash from the CSP and the `/probe/` cache headers in `firebase.json`, and its cases in `tests/hosting/hosting.test.ts` and `e2e/hosting.spec.ts`.
 - [ ] **Deploy the stock Worker**, following "Owner setup" in [worker/stock/README.md](../../worker/stock/README.md) (Cloudflare account, the Stage 0 spike, the KV namespace id, the lockfile, the two Cloudflare secrets), record the terms review in its table, and **set the `VITE_STOCK_API` repository variable**. Then delete `src/services/market/interim.ts` and return the stock budget in `scripts/check-bundle.mjs` to 12 kB.
 - [ ] **Redirect the apex domain** `vesen.app` (and `vesenterminal.web.app` and `vesenterminal.firebaseapp.com` if you can) to `https://www.vesen.app` in the Firebase console. The page already moves visitors there itself (`src/platform/hosts.ts`), but a server redirect is faster and keeps one origin for storage.
@@ -98,39 +104,32 @@ Each was deliberate; the ADR amendment named in brackets has the detail.
 
 ### Review findings not yet fixed
 
-The Phase 5 review found 33 problems; 18 are fixed, 2 in part, and these 15 remain. Each has a concrete fix in the review's report.
+None. The Phase 5 review found 33 problems. The release fixed 18 of them, some only in part, and left 15; the follow-up fixes fixed those 15 and finished the partial ones (`sed` now skips a line too long for its pattern and carries on, as `grep` did, and `figlet -w` and `stat`'s widths are bounded as `nl -w` was). ADR 0001's amendment "Phase 5 follow-up fixes" records the decisions.
 
-| Severity | Finding | Where | Fix |
-|---|---|---|---|
-| high | Back while the pager, `nano`, `cmatrix` or `sl` is open leaves vesen, and loses an unsaved `nano` buffer | `src/ui/AppHost.svelte` | Move `QrPresenter`'s history entry into `AppHost` for every app: push an entry on open, close the app (the editor asks to save) on `popstate`, and go back when it closes normally |
-| medium | Art blocks (`figlet`, `cowsay`, and through `xargs`) are not counted against the screen caps, so one line can put tens of MB of art in the page | `src/shell/streams.ts` (`TtySink.block`) | Count each block's plain size against the caps, and cap the message `figlet` and `cowsay` accept |
-| medium | Whole-input readers (`sort`, the checksums, `base64`, `column`, `diff`, `figlet`, `cowsay`, `bc`, `tail -c`) read standard input with no size cap | `src/commands/lib/text-input.ts` | One capped `readAll` (say 16 MB) that closes the pipe and fails with "input too large", used everywhere `stdin.text()` reads a whole operand |
-| medium | `figlet -w` (with `-c` or `-r`) takes any width and can allocate hundreds of MB | `src/commands/more/fun/figlet.ts`, `src/commands/lib/block-font.ts` | Bound it as `nl -w` now is (fixed), and check the other numeric width options |
-| medium | Tab and the chips offer flag values as operands (`ping 10`, `host TXT`, `dig 1.1.1.1`) | `src/shell/complete/sources.ts` (`operands`) | Skip the word after a flag that takes a value, and `+`/`@` words for dig |
-| low | `less +G`, `+N` and `+/pattern` are read as files, and `less` into a pipe adds `more`'s `::::` banners | `src/commands/more/editor/less.run.ts` | The pager can already open at a position (`PagerView.start`, `pagerStart` in `src/lib/pager.ts`); pass leading `+CMD` words to it, and write banners only for `more` |
-| low | `ping` lets IPv4-mapped IPv6 addresses (`::ffff:192.168.1.1`) past the private-address check | `src/commands/lib/dns.ts` (`isPrivateAddress`) | Apply the IPv4 rules to an embedded IPv4 address; add multicast and reserved ranges |
-| low | After ^C or Stop, `^C` appears below `ping`'s statistics instead of above | `src/shell/index.ts` | Mark where the output was when the interrupt arrived and put `^C` there |
-| low | A first Tab on a catalogue command before the catalogue arrives rings the bell and does nothing | `src/ui/prompt/promptController.svelte.ts` | With nothing to show, wait for the catalogue for the full wait, or press Tab again when it arrives |
-| low | `nano`'s touch prompt row squeezes its buttons and wraps its label | `src/ui/apps/Editor.svelte` | `flex: none` on the buttons and label, and a visible field underline |
-| low | `nano`'s bar offers ^W, which closes the tab on Windows and Linux | `src/lib/nano.ts`, `Editor.svelte` | Show ^F for Where Is off a Mac |
-| low | `ip route get ADDRESS` gives a misleading "is a garbage" error | `src/commands/more/network/ip.run.ts` | Answer with the synthetic route, and use iproute2's "Command is unknown" for other verbs |
-| low | `timeout` and `nohup` report a missing command as `command not found` | `src/commands/more/shell/timeout.run.ts`, `nohup.ts` | "failed to run command 'X': No such file or directory", status 127 |
-| low | `date` has no `-d` | `src/commands/system/date.ts` | Parse with `parseDate` from `src/commands/lib/datespec.ts`, as `touch -d` does |
-| low | `figlet -f FONT` is refused | `src/commands/more/fun/figlet.ts` | Accept the embedded font's name and `standard`; "Unable to open font file" for others |
+| Track | Commit | Findings fixed |
+|---|---|---|
+| apps | `aaa19e8` | Back leaves vesen while the pager, `nano`, `cmatrix` or `sl` is open (high); `less +G`, `+N`, `+/pattern` and `more`'s banners in a pipe; `nano`'s touch prompt row; `nano`'s ^W off a Mac |
+| caps | `0a14436` | Art blocks outside the screen caps; whole-input readers with no size cap; `figlet -w` and the other width options; `figlet -f`; `ping` and IPv4 inside IPv6 |
+| prompt | `ef06bc0` | Flag values offered as operands by Tab and the chips; `^C` below `ping`'s statistics; the first Tab's bell before the catalogue arrives |
+| gnu | `239e9f0` | `ip route get`; `timeout` and `nohup` with a missing command; `date -d` |
 
-The review fixes also lack direct regression tests for some of what they changed: `ps` formats and `-o`, `dig ANY`, `--version`, `tree -p -s -h`, `chown -h`, `whois -h`, `wget`'s saved line and `git clone`. Transcripts cover `cal` and the `ps` errors.
+Every follow-up fix has a regression test that fails without it. The release's own review fixes (`ec96dee`) now have direct regression tests too, added by the gnu track: `ps` formats with `-o`, `-eo` and `--format`, `dig ANY` (with `host` and `nslookup`) and other types, `--version` on every spec that is not a builtin, `tree -p -s -h`, `chown -h` and `chgrp -h`, `whois -h`, `wget`'s saved line with and without a length, and `git clone` and `git init`. Ten of those eleven fail on the code before `ec96dee`; the `ps -e`/`-ef` check was already right. Transcripts cover `cal` and the `ps` errors.
 
 ### Other follow-ups from the phase reports
 
-- **Kernel headroom** is 2.8 kB. Further kernel growth should move more inline bodies to `.run.ts` (the largest left are `cat`, `theme`, `keys`, `cd`, `echo` and `history`).
-- **Registry hints are stale:** `NOT_YET` and `ELSEWHERE` in `src/shell/registry.ts` still say `grep`, `less`, `ps` and others "isn't in vesen yet" and that vesen has no editor. They show only when the catalogue fails to load, but read wrong; trim them to `awk`, `htop` and the like, and point `htop` at `top`.
-- **`/proc` and `ps` disagree:** `/proc/1` describes vesh while `ps` shows init as pid 1 and vesh as 4242, and `tty` prints `/dev/pts/0`, which is not in the VFS.
+- **Kernel headroom** is 1.7 kB (73.3 of 75 kB). Further kernel growth should move more inline bodies to `.run.ts` (the largest left are `cat`, `theme`, `keys`, `cd`, `echo` and `history`).
+- **`curl`'s status line** can still name `-o FILE` instead of the URL. `ping`, `host`, `whois` and `wget` name their operand now; `curl` is a core command, so the same fix adds to the kernel.
+- **Back on real phones.** Chrome may mark a history entry pushed without a fresh tap or keystroke as one the Back button skips. The entry an app pushes when it opens follows Enter or a tap, so it should hold, but `nano` puts its entry back from inside `popstate` while it asks to save; after a second Back with no tap between, Chrome's button might go past vesen. Playwright's `page.goBack()` does not skip entries, so only a real Android phone and Instagram's browser can confirm it (see the device probe above).
+- **Heavy inputs under the cap.** `sort`, `diff` and `column` on nearly 16 MB of millions of tiny lines are slow and large: `yes | head -n 8000000 | sort` took about 7 s and 1.6 GB in Node. A line cap for `sort` (say 2 million), or sorting the plain array when there are no keys, would help. `head -c N`, `tr` and `wc` loop a character at a time and take several seconds over 16 MB; they let the page breathe, but could work a chunk at a time.
+- **Unbounded paths left:** `tr` with many full Unicode ranges in one set expands to millions of entries; `cut` with thousands of ranges costs characters × ranges; a sourced script that doubles a variable (`x=$x$x` 40 times) is not capped.
+- **The regex guard's budget** of about 10^8 steps may be generous for phones: under heavy load `a{0,16}!` took about 1.5 s on a million characters (110 ms unloaded).
+- **`grep -B` on a file:** `HeldRecords` charges each kept line 32 characters of overhead, so `grep -B 1000000` over a 512 KB file of empty lines could say `standard input: input too large` about a file.
+- **`/proc` edge cases:** `chmod` on `/proc/PID` succeeds until the next lookup, where Linux refuses it (EPERM); during `find /proc` the `self` link names the shell, as `walk`'s generator runs after the proxied call returns; writing to `/dev/pts/0` or `/dev/tty` is discarded rather than shown; `dig` shows Google's RFC 8482 HINFO data as given (`RFC8482 `, with a trailing space) rather than as quoted strings.
 - **Test stand-ins** for `head`, `wc` and `yes` in `src/testing/shell-harness.ts` could go now that the catalogue loads in most tests.
-- **`yes` or a huge `seq`** typed alone runs until ^C or the 15 s budget; a terminal-only stop could be friendlier.
+- **`yes` or a huge `seq`** typed alone runs until ^C or the 15 s budget, and `yes | tail -c 5` and `yes | uniq -c` until ^C, as in GNU; a terminal-only stop could be friendlier.
 - **`find` lists in the VFS's own order**, as GNU find does, which shows some folders in reverse; a sorted listing may read better.
 - **One time per file:** the VFS keeps only `mtime`, so `touch -a` changes nothing and `find -atime`/`-ctime` use `mtime`.
-- **`date.run.ts` has its own zone logic**; it could reuse `zoneOf` from `src/commands/lib/sysread.ts`.
 - **Transcripts for the data commands:** `curl`, `fastfetch`, `weather`, `stock` and `qr` lost their cross-width goldens in Phase 5.1; each has its own tests, but transcripts at 40, 80 and 120 columns would pin their layout.
-- **Browser tests for `dig` and `ping`** with `page.route`, to pin DNS over HTTPS and `no-cors` timing in WebKit.
-- **Pager and editor polish:** make `man`'s EXAMPLES and SEE ALSO tappable in the pager; `nano`'s cut, paste and tab reset the textarea's undo history.
-- **Load-sensitive tests:** a few smoke tests (QR `route.fulfill`, the head and theme reload check on iPhone) and some unit tests have failed once under heavy machine load and passed on a rerun.
+- **Browser tests for `dig`:** `ping` has one now (`^C` order, in `e2e/system-network.spec.ts`), which pings an address, because Playwright's Chromium never requests a `/favicon.ico` path and so `page.route` cannot answer `ping`'s probe to a host name. `dig` still needs one with `page.route`, to pin DNS over HTTPS in WebKit.
+- **Pager and editor polish:** make `man`'s EXAMPLES and SEE ALSO tappable in the pager; `nano`'s cut, paste and tab reset the textarea's undo history; `more` could take `+NUM` and `+/pattern` through `less`'s parser (`plusCommands` in `less.run.ts`).
+- **Load-sensitive tests:** a few smoke tests (QR `route.fulfill`, the head and theme reload check on iPhone, and "a link tapped inside Instagram" in `e2e/links.spec.ts`) and some unit tests (among them the regex guard's property test, "lets through only patterns that finish quickly at their line limit") have failed under heavy machine load and passed on a rerun. In WebKit under load, `page.goBack()` from vesen after the pager has shown sometimes reports "Navigation canceled by policy check" while the page goes back late, also on the v2.0.0 build, so `e2e/apps-back.spec.ts` leaves vesen with an in-page `history.back()` from the site's own `/404.html`.
