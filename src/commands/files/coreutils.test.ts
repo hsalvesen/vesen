@@ -331,6 +331,16 @@ describe('stat', () => {
     expect((await runLine("stat -c '%-8U|%5s|%N|%Y|%q' /home/user")).stdoutPlain).toBe(`root    |    5|'/home/user' -> 'guest'|${Date.UTC(2026, 9, 6) / 1000}|?`);
   });
 
+  // Before, a width was taken as it was: %999999999n padded to a gigabyte, or failed with the
+  // engine's "Invalid string length". It is held to 1024, as date's are.
+  it('pads a directive to 1024 columns at most', async () => {
+    const started = performance.now();
+    const result = await runLine("stat -c '%999999999n|%-999999999s|' .bashrc", { tty: false });
+    expect(result.status).toBe(0);
+    expect(result.stdoutPlain).toBe(`${'.bashrc'.padStart(1024)}|${'236'.padEnd(1024)}|`);
+    expect(performance.now() - started).toBeLessThan(5000);
+  });
+
   it("fails in GNU's words", async () => {
     expect(await runLine('stat nope')).toMatchObject({ status: 1, stderrPlain: "stat: cannot statx 'nope': No such file or directory" });
     expect(await runLine('stat')).toMatchObject({ status: 1, stderrPlain: "stat: missing operand\nTry 'stat --help' for more information." });

@@ -2,7 +2,23 @@
 
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
 import { errorCode, reason } from '../../lib/files';
-import { displayName, inputRecords, joinRecords, operands, optOn, optString, quoted, readCount, splitRecords, utf8Head, utf8Length, type Rec } from '../../lib/text-input';
+import {
+  displayName,
+  HeldRecords,
+  inputRecords,
+  joinRecords,
+  MAX_INPUT,
+  operands,
+  optOn,
+  optString,
+  quoted,
+  readCount,
+  splitRecords,
+  tooLarge,
+  utf8Head,
+  utf8Length,
+  type Rec,
+} from '../../lib/text-input';
 
 export const doc: CommandDoc = {
   description:
@@ -17,10 +33,31 @@ interface Plan {
   readonly allBut: boolean;
 }
 
+/**
+ * All but the last `count` bytes of standard input, written as it arrives. The last N bytes are
+ * within the last N characters, so only those are held back; holding more than MAX_INPUT closes
+ * the input and throws InputTooLarge.
+ */
+async function allButBytes(ctx: CommandContext, count: number): Promise<void> {
+  let held = '';
+  for await (const chunk of ctx.stdin.chunks()) {
+    held += chunk;
+    if (count >= MAX_INPUT && held.length > MAX_INPUT) tooLarge(ctx);
+    // Written a megabyte at a time, so the held text is copied only now and then.
+    if (held.length > count + 1024 * 1024) {
+      let at = held.length - count;
+      if (/[\udc00-\udfff]/.test(held.charAt(at))) at -= 1;
+      await ctx.stdout.write(held.slice(0, at));
+      held = held.slice(at);
+    }
+  }
+  await ctx.stdout.write(utf8Head(held, Math.max(0, utf8Length(held) - count)));
+}
+
 /** The first `plan.count` lines of standard input, or all but the last. */
 async function headInput(ctx: CommandContext, plan: Plan): Promise<void> {
   if (plan.unit === 'bytes' && plan.allBut) {
-    await ctx.stdout.write(cut(await ctx.stdin.text(), plan));
+    await allButBytes(ctx, plan.count);
     return;
   }
   if (plan.unit === 'bytes') {
@@ -37,7 +74,7 @@ async function headInput(ctx: CommandContext, plan: Plan): Promise<void> {
   }
   if (plan.allBut) {
     // Keep the last `count` lines back until more arrive behind them.
-    const held: Rec[] = [];
+    const held = new HeldRecords(ctx);
     for await (const record of inputRecords(ctx)) {
       held.push(record);
       if (held.length > plan.count) {

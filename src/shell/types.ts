@@ -310,6 +310,24 @@ export class BrokenPipe extends Error {
   }
 }
 
+/**
+ * The most of standard input a command holds at once, in characters: a whole input read with
+ * text(), one line, or the lines a tool keeps back (tail -n, grep -B). The output `$( )` collects
+ * is held to it too.
+ */
+export const MAX_INPUT = 16 * 1024 * 1024;
+
+/**
+ * Standard input went past MAX_INPUT. Whoever throws it closes the input first, so the writer
+ * stops with a broken pipe; uncaught, the kernel prints `NAME: MESSAGE` and the status is 1.
+ */
+export class InputTooLarge extends Error {
+  constructor() {
+    super('standard input: input too large (over 16 MB)');
+    this.name = 'InputTooLarge';
+  }
+}
+
 export interface OutStream {
   /** True when the stream ends at the screen rather than a pipe or a file. */
   readonly isTTY: boolean;
@@ -325,8 +343,9 @@ export interface OutStream {
 
 export interface InStream {
   readonly isTTY: boolean;
-  /** Everything until end of input. */
+  /** Everything until end of input; past MAX_INPUT characters it closes and throws InputTooLarge. */
   text(): Promise<string>;
+  /** One line at a time as it arrives; a line longer than MAX_INPUT closes and throws InputTooLarge. */
   lines(): AsyncIterable<string>;
   /** The input as it arrives, unchanged, for commands that copy it exactly, such as cat. */
   chunks(): AsyncIterable<string>;

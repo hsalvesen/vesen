@@ -13,7 +13,7 @@
 
 import { out } from '../../../output/model';
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
-import { DnsUnreachable, RCODE, RR_TYPES, addressesIn, ask, hostName, ipVersion, isPrivateAddress } from '../../lib/dns';
+import { DnsUnreachable, RCODE, RR_TYPES, addressScope, addressesIn, ask, hostName, ipVersion } from '../../lib/dns';
 
 /** What --help, help and man say about ping, besides its spec (ping.ts). */
 export const doc: CommandDoc = {
@@ -22,7 +22,7 @@ export const doc: CommandDoc = {
   man: [
     {
       heading: 'WHAT IT CAN AND CANNOT REACH',
-      body: "A page on the internet may not reach this device or a private network, so localhost, 10.x, 192.168.x and the like are refused. A host that does not serve HTTPS never answers, and an address answers only if its server accepts a request with no name. A request the browser cannot make looks the same as one the host refused: both are 'unreachable over HTTPS'.",
+      body: "A page on the internet may not reach this device or a private network, so localhost, 10.x, 192.168.x and the like are refused, written in IPv4 or IPv6 (::1, fc00::/7, fe80::/10, or an IPv4 address inside an IPv6 one, as ::ffff:192.168.1.1), as are multicast (224.x, ff00::/8) and reserved (240.x and up) addresses. A host that does not serve HTTPS never answers, and an address answers only if its server accepts a request with no name. A request the browser cannot make looks the same as one the host refused: both are 'unreachable over HTTPS'.",
     },
     {
       heading: 'EXIT STATUS',
@@ -106,6 +106,8 @@ async function findTarget(ctx: CommandContext, word: string): Promise<Target | s
   if (version !== null) return { name: literal, address: literal, url: `https://${version === 6 ? `[${literal}]` : literal}/` };
   const name = hostName(word);
   if (name === null) return `${word}: Name or service not known`;
+  // An address written another way, as 2130706433, 0x7f.1 or 127.1 are, is that address.
+  if (ipVersion(name) === 4) return { name: word, address: name, url: `https://${name}/` };
   const listed = fromHostsFile(ctx, name);
   if (listed !== null) return { name, address: listed, url: `https://${name}/favicon.ico` };
   try {
@@ -167,12 +169,13 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
 
   const target = await findTarget(ctx, word);
   if (typeof target === 'string') return ctx.fail(target, 2);
-  if (isPrivateAddress(target.address)) {
-    const here = /^(?:127\.|::1$|0\.)/.test(target.address);
+  const scope = addressScope(target.address);
+  if (scope !== null) {
+    const where = `${target.name} (${target.address})`;
     return ctx.fail(
-      here
-        ? `${target.name} (${target.address}) is this device: a browser tab cannot time a round trip to itself`
-        : `${target.name} (${target.address}) is a private address, which a page on the internet may not reach`,
+      scope === 'this device'
+        ? `${where} is this device: a browser tab cannot time a round trip to itself`
+        : `${where} is a ${scope} address, which a page on the internet may not reach`,
       2,
     );
   }

@@ -6,7 +6,7 @@ import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types'
 import { basename } from '../../../vfs/path';
 import { reason } from '../../lib/files';
 import { statDate } from '../../lib/listing';
-import { optList, optOn, quoted, splitRecords, type Rec } from '../../lib/text-input';
+import { optList, optOn, quoted, readOperand, splitRecords, type Rec } from '../../lib/text-input';
 
 export const doc: CommandDoc = {
   description:
@@ -42,12 +42,14 @@ export function myers(a: readonly number[], b: readonly number[]): Op[] {
   const tail: Op[] = Array<Op>(a.length - endA).fill('eq');
   const n = A.length;
   const m = B.length;
-  const max = n + m;
-  const offset = max + 1;
-  const v = new Int32Array(2 * max + 3);
+  // The frontier reaches at most MAX_D diagonals either way, so it is never larger than that,
+  // however long the inputs are.
+  const reach = Math.min(n + m, MAX_D);
+  const offset = reach + 1;
+  const v = new Int32Array(2 * reach + 3);
   const trace: Int32Array[] = [];
   let found = -1;
-  for (let d = 0; d <= Math.min(max, MAX_D); d += 1) {
+  for (let d = 0; d <= reach; d += 1) {
     trace.push(v.slice(offset - d - 1, offset + d + 2));
     for (let k = -d; k <= d; k += 2) {
       let x = k === -d || (k !== d && (v[offset + k - 1] ?? 0) < (v[offset + k + 1] ?? 0)) ? (v[offset + k + 1] ?? 0) : (v[offset + k - 1] ?? 0) + 1;
@@ -201,8 +203,8 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   let stdinText: string | null = null;
   const read = async (name: string, other: string): Promise<{ text: string; mtime: number; shown: string } | null> => {
     if (name === '-') {
-      stdinText ??= await ctx.stdin.text();
-      return { text: stdinText, mtime: ctx.clock.now(), shown: '-' };
+      stdinText ??= await readOperand(ctx, name);
+      return stdinText === null ? null : { text: stdinText, mtime: ctx.clock.now(), shown: '-' };
     }
     let path = ctx.resolve(name);
     let shown = name;

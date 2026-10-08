@@ -1,7 +1,7 @@
 // The body of watch; its spec, in watch.ts, loads this the first time watch runs.
 
 import { CaptureOut } from '../../../shell/streams';
-import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
+import { MAX_INPUT, type CommandContext, type CommandDoc, type ExitCode } from '../../../shell/types';
 import { HOST } from '../../../vfs/identity';
 import { ctimeText, wallClock } from '../../lib/sysread';
 
@@ -37,7 +37,8 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   let previous: string | null = null;
   let unchanged = 0;
   for (;;) {
-    const capture = new CaptureOut(ctx.stdout.columns);
+    // Held to MAX_INPUT, as `$( )` is, so `watch yes` stops the command rather than fill the memory.
+    const capture = new CaptureOut(ctx.stdout.columns, MAX_INPUT);
     const status = await ctx.shell.exec(line, { stdout: capture, stderr: capture });
     const output = capture.text;
     if (status !== 0 && ctx.opts.beep === true) ctx.tty.bell();

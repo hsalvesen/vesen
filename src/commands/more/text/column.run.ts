@@ -26,9 +26,12 @@ export function table(rows: readonly (readonly string[])[], separator: string): 
 /** Entries in columns of a common width (the widest, rounded up past a tab stop), as BSD column fills them. */
 export function fill(entries: readonly string[], total: number, byRow: boolean): string {
   if (entries.length === 0) return '';
-  const longest = Math.max(...entries.map(width));
+  // A loop, not Math.max(...), which runs out of stack on a long list.
+  let longest = 0;
+  for (const entry of entries) longest = Math.max(longest, width(entry));
   const cell = (longest + 8) & ~7;
-  const columns = Math.max(1, Math.floor(total / cell));
+  // Never more columns than entries, however wide -c makes the line.
+  const columns = Math.min(entries.length, Math.max(1, Math.floor(total / cell)));
   if (columns <= 1 || longest >= total) return entries.map((entry) => `${entry}\n`).join('');
   const rows = Math.ceil(entries.length / columns);
   let out = '';

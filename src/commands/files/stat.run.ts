@@ -15,7 +15,7 @@ export const doc: CommandDoc = {
   man: [
     {
       heading: 'FORMAT',
-      body: '%a permissions in octal, %A in ls form, %b blocks, %F file type, %g and %G group, %u and %U owner, %h links, %i inode, %n name, %N quoted name and link target, %s size in bytes, %y modified, %Y modified in seconds since 1970, %% a percent sign. A width goes between: %-8U.',
+      body: '%a permissions in octal, %A in ls form, %b blocks, %F file type, %g and %G group, %u and %U owner, %h links, %i inode, %n name, %N quoted name and link target, %s size in bytes, %y modified, %Y modified in seconds since 1970, %% a percent sign. A width goes between, up to 1024: %-8U.',
     },
     { heading: 'EXIT STATUS', body: '0 when every FILE was found, 1 otherwise.' },
   ],
@@ -91,12 +91,15 @@ function directive(letter: string, facts: Facts): string | null {
   }
 }
 
+/** The widest a directive's width pads to, as date's are held: wider would only fill the page. */
+const MAX_WIDTH = 1024;
+
 /** Fills a -c or --printf format: %-directives, with an optional width as in %-8U or %5s. */
 function fill(format: string, facts: Facts): string {
   return format.replace(/%(-?)(\d*)([a-zA-Z%])/g, (_whole, left: string, width: string, letter: string) => {
     if (letter === '%') return '%';
     const value = directive(letter, facts) ?? '?';
-    const size = Number(width || '0');
+    const size = Math.min(MAX_WIDTH, Number(width || '0'));
     return left === '-' ? value.padEnd(size) : value.padStart(size);
   });
 }

@@ -187,6 +187,16 @@ describe('watch', () => {
   });
 });
 
+describe('watch at length', () => {
+  // Before, each run's output was collected without end: `watch yes` never stopped `yes`.
+  it('collects at most 16 MB of a run, stopping the command there', async () => {
+    const started = performance.now();
+    const result = await runLine('watch -t -n 0.1 -q 1 yes | tail -c 4', { tty: false });
+    expect(result).toMatchObject({ status: 0, stdoutPlain: 'y\ny' });
+    expect(performance.now() - started).toBeLessThan(20_000);
+  }, 30_000);
+});
+
 describe('nohup', () => {
   it('runs the command as it is, saying at the prompt that it ignores input', async () => {
     const result = await runLine('nohup echo hi');

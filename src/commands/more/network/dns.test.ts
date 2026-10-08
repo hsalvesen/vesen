@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { runLine, session } from '../../../../tests/harness';
 import { doh, hang, json, serveNet } from '../../../../tests/support/net';
 import { createNet } from '../../../services/net';
-import { DnsUnreachable, ask, caaData, ipVersion, isPrivateAddress, parseDoh, reverseName, shown, txtData, RR_TYPES } from '../../lib/dns';
+import { DnsUnreachable, addressScope, ask, caaData, ipVersion, isPrivateAddress, parseDoh, reverseName, shown, txtData, RR_TYPES } from '../../lib/dns';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -341,6 +341,53 @@ describe('the DNS library', () => {
     expect(['10.0.0.1', '172.20.1.1', '192.168.1.1', '127.0.0.1', '169.254.0.1', '::1', 'fd00::1', 'fe80::1'].every(isPrivateAddress)).toBe(true);
     expect(['1.1.1.1', '172.32.0.1', '2606:4700::1111'].some(isPrivateAddress)).toBe(false);
   });
+
+  // Before, an IPv4 address inside an IPv6 one (::ffff:192.168.1.1) was judged as IPv6, which
+  // let it through, and multicast and reserved ranges were not known at all.
+  it.each([
+    ['127.0.0.1', 'this device'],
+    ['0.0.0.0', 'this device'],
+    ['::', 'this device'],
+    ['::1', 'this device'],
+    ['::ffff:127.0.0.1', 'this device'],
+    ['::ffff:7f00:1', 'this device'],
+    ['::127.0.0.1', 'this device'],
+    ['::ffff:192.168.1.1', 'private'],
+    ['0:0:0:0:0:ffff:c0a8:101', 'private'],
+    ['::ffff:0:10.0.0.1', 'private'],
+    ['::10.1.2.3', 'private'],
+    ['::ffff:100.64.0.1', 'private'],
+    ['::ffff:169.254.169.254', 'private'],
+    ['::ffff:172.16.0.1', 'private'],
+    ['64:ff9b::192.168.1.1', 'private'],
+    ['2002:c0a8:101::1', 'private'],
+    ['100.64.0.1', 'private'],
+    ['100.127.255.255', 'private'],
+    ['fc00::1', 'private'],
+    ['fd12:3456::1', 'private'],
+    ['fe80::1', 'private'],
+    ['febf::1', 'private'],
+    ['fec0::1', 'private'],
+    ['224.0.0.1', 'multicast'],
+    ['239.255.255.250', 'multicast'],
+    ['::ffff:224.0.0.251', 'multicast'],
+    ['ff02::1', 'multicast'],
+    ['ff05::fb', 'multicast'],
+    ['240.0.0.1', 'reserved'],
+    ['255.255.255.255', 'reserved'],
+    ['::ffff:255.255.255.255', 'reserved'],
+  ])('knows %s as %s', (address, scope) => {
+    expect(addressScope(address)).toBe(scope);
+    expect(isPrivateAddress(address)).toBe(true);
+  });
+
+  it.each(['1.1.1.1', '8.8.8.8', '100.63.255.255', '100.128.0.1', '172.32.0.1', '223.255.255.255', '2606:4700::1111', '::ffff:1.1.1.1', '64:ff9b::1.1.1.1', '2002:101:101::1', 'fbff::1', 'ff:1::1', 'example.com'])(
+    'lets %s through',
+    (address) => {
+      expect(addressScope(address)).toBeNull();
+      expect(isPrivateAddress(address)).toBe(false);
+    },
+  );
 
   it('shows TXT and CAA data as dig does, and escapes controls', () => {
     expect(txtData('v=spf1 -all')).toBe('"v=spf1 -all"');

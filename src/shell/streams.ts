@@ -17,7 +17,7 @@ import { type Block, type Line, type Span, type Stream } from '../output/model';
 import { plain } from '../output/plain';
 import { SgrParser } from '../output/sgr';
 import type { Vfs } from '../vfs/types';
-import { BrokenPipe, type InStream, type OutStream } from './types';
+import { BrokenPipe, InputTooLarge, MAX_INPUT, type InStream, type OutStream } from './types';
 
 /** How much may wait in a pipe before a write waits for the reader. */
 export const PIPE_HIGH_WATER = 64 * 1024;
@@ -131,20 +131,35 @@ export class AsyncPipe {
 
 // ── In streams ─────────────────────────────────────────────────────────────────────────────
 
-async function* splitLines(next: () => Promise<string | null>): AsyncGenerator<string, void, undefined> {
-  let buffer = '';
+/**
+ * The lines of the chunks `next` gives. Each chunk is searched once, so a long line costs no
+ * more than a short one, and a line past MAX_INPUT calls `close` and throws InputTooLarge.
+ */
+async function* splitLines(next: () => Promise<string | null>, close?: () => void): AsyncGenerator<string, void, undefined> {
+  let parts: string[] = [];
+  let held = 0;
   for (;;) {
     const chunk = await next();
     if (chunk === null) {
-      if (buffer !== '') yield buffer;
+      if (held > 0) yield parts.join('');
       return;
     }
-    buffer += chunk;
-    let newline = buffer.indexOf('\n');
-    while (newline !== -1) {
-      yield buffer.slice(0, newline);
-      buffer = buffer.slice(newline + 1);
-      newline = buffer.indexOf('\n');
+    let from = 0;
+    for (let at = chunk.indexOf('\n'); at !== -1; at = chunk.indexOf('\n', from)) {
+      parts.push(chunk.slice(from, at));
+      const line = parts.join('');
+      parts = [];
+      held = 0;
+      from = at + 1;
+      yield line;
+    }
+    if (from < chunk.length) {
+      held += chunk.length - from;
+      parts.push(chunk.slice(from));
+      if (held > MAX_INPUT) {
+        close?.();
+        throw new InputTooLarge();
+      }
     }
   }
 }
@@ -156,16 +171,26 @@ export class PipeIn implements InStream {
   constructor(private readonly pipe: AsyncPipe) {}
 
   async text(): Promise<string> {
-    let text = '';
+    const chunks: string[] = [];
+    let size = 0;
     for (;;) {
       const chunk = await this.pipe.read();
-      if (chunk === null) return text;
-      text += chunk;
+      if (chunk === null) return chunks.join('');
+      size += chunk.length;
+      chunks.push(chunk);
+      if (size > MAX_INPUT) {
+        // Closed at once, so the writer stops rather than filling the pipe again.
+        this.close();
+        throw new InputTooLarge();
+      }
     }
   }
 
   lines(): AsyncIterable<string> {
-    return splitLines(() => this.pipe.read());
+    return splitLines(
+      () => this.pipe.read(),
+      () => this.close(),
+    );
   }
 
   async *chunks(): AsyncGenerator<string, void, undefined> {
@@ -197,7 +222,10 @@ export class StringIn implements InStream {
   }
 
   lines(): AsyncIterable<string> {
-    return splitLines(() => this.take());
+    return splitLines(
+      () => this.take(),
+      () => this.close(),
+    );
   }
 
   async *chunks(): AsyncGenerator<string, void, undefined> {
@@ -274,11 +302,28 @@ export class NullOut extends TextOut {
   }
 }
 
-/** Collects what is written, for $( ) and tests. */
+/**
+ * Collects what is written, for $( ) and tests. With a `limit`, a write past it is refused as a
+ * closed pipe would refuse it, so the writer stops, and `overflowed` says so.
+ */
 export class CaptureOut extends TextOut {
   private chunks: string[] = [];
+  private size = 0;
+  overflowed = false;
+
+  constructor(
+    columns?: number,
+    private readonly limit = Infinity,
+  ) {
+    super(columns);
+  }
 
   write(text: string): Promise<void> {
+    this.size += text.length;
+    if (this.size > this.limit) {
+      this.overflowed = true;
+      return Promise.reject(new BrokenPipe());
+    }
     this.chunks.push(text);
     return Promise.resolve();
   }
@@ -436,14 +481,29 @@ export class TtySink {
     return this.counted(spans.reduce((sum, span) => sum + span.text.length, 1));
   }
 
-  block(block: Block): Promise<void> {
+  block(block: Block, stream: Stream = 'stdout'): Promise<void> {
     if (this.sealed) return Promise.reject(new JobDetached());
     this.endPartials();
     this.open = null;
-    if (!this.truncated) this.items.push(block);
+    // A block counts against the caps as its plain text would, with what a screen reader is
+    // told (art's alt) and a line at least, so no number of blocks, or one huge drawing, can
+    // put more on the page than lines could.
+    const text = plain(block);
+    const size = text.length + ('alt' in block ? block.alt.length : 0);
+    let rows = 1;
+    for (let at = text.indexOf('\n'); at !== -1 && at < text.length - 1; at = text.indexOf('\n', at + 1)) rows += 1;
+    if (!this.truncated) {
+      if (this.lines + rows > (this.options.maxLines ?? MAX_SCREEN_LINES) || this.chars + size > (this.options.maxChars ?? MAX_SCREEN_CHARS)) {
+        this.truncate(stream);
+      } else {
+        this.lines += rows;
+        this.chars += size;
+        this.items.push(block);
+      }
+    }
     this.changed();
-    // A block's size is not worth measuring here; it counts as a line of average length.
-    return this.counted(256);
+    // Even a small block costs the page more than its text, so it counts as a line of 256.
+    return this.counted(Math.max(256, size));
   }
 
   /** Adds to what was written since the browser last had a turn, and gives it one when due. */
@@ -581,6 +641,6 @@ export class TtyOut implements OutStream {
   }
 
   block(block: Block): Promise<void> {
-    return this.sink.block(block);
+    return this.sink.block(block, this.stream);
   }
 }

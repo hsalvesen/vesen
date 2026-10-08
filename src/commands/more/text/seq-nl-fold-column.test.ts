@@ -125,6 +125,15 @@ describe('column', () => {
     expect(wide.stdoutPlain.split('\n')).toHaveLength(3);
   });
 
+  // Before, Math.max(...entries) ran out of stack on a long list, and -c's width made that many
+  // columns to loop over, so `seq 3 | column -c 1000000000000` did not come back.
+  it('fills a long list, and any width, quickly', async () => {
+    const started = performance.now();
+    expect((await runLine('seq 300000 | column -c 80 | tail -n 1', pipe)).stdoutPlain).toBe('30000   60000   90000   120000  150000  180000  210000  240000  270000  300000');
+    expect(await out('seq 3 | column -c 1000000000000')).toBe('1       2       3');
+    expect(performance.now() - started).toBeLessThan(10_000);
+  });
+
   it('lays out tables and lists', () => {
     expect(table([['a', 'bb'], ['ccc', 'd']], '  ')).toBe('a    bb\nccc  d\n');
     expect(fill([], 80, false)).toBe('');

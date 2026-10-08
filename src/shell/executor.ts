@@ -46,6 +46,7 @@ import {
   DEFAULT_BUDGET_MS,
   EXIT,
   ExitRequest,
+  MAX_INPUT,
   OWNER_HOME,
   UsageError,
   type CommandContext,
@@ -530,7 +531,8 @@ export class Executor {
     if (read !== undefined && read.words.length === 0 && read.assigns.length === 0 && read.redirects.length === 1 && read.redirects[0]?.op === '<') {
       return this.readSubstitution(read.redirects[0], job, io, sub);
     }
-    const capture = new CaptureOut(io.stdout.columns);
+    // What it collects is held to MAX_INPUT, so `echo $(yes)` stops rather than fill the memory.
+    const capture = new CaptureOut(io.stdout.columns, MAX_INPUT);
     let status: ExitCode;
     try {
       status = await this.runList(parsed.ast, job, { stdin: new StringIn(''), stdout: capture, stderr: io.stderr }, sub);
@@ -540,6 +542,7 @@ export class Executor {
       else if (error instanceof LineAborted) status = EXIT.error;
       else throw error;
     }
+    if (capture.overflowed) throw new ExpandError('command substitution: output too large (over 16 MB)');
     return { stdout: capture.text, status };
   }
 
@@ -847,7 +850,8 @@ export class Executor {
       await say(io.stderr, [span(`${name}: ${error.message}`, ERROR)]);
       return EXIT.error;
     }
-    const message = error instanceof Error ? error.message : String(error);
+    // What the engine says when a string or an array would be too big, in GNU's words.
+    const message = error instanceof RangeError && /length|allocation|memory/i.test(error.message) ? 'memory exhausted' : error instanceof Error ? error.message : String(error);
     await say(io.stderr, [span(`${name}: ${message}`, ERROR)]);
     return EXIT.error;
   }

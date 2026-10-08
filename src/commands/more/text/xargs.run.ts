@@ -5,7 +5,7 @@
 import { StringIn } from '../../../shell/streams';
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
 import { reason } from '../../lib/files';
-import { inputRecords, optOn, optString, pacer, quoted, type Rec } from '../../lib/text-input';
+import { inputRecords, optOn, optString, pacer, quoted, splitChunks, type Rec } from '../../lib/text-input';
 
 export const doc: CommandDoc = {
   description:
@@ -80,17 +80,6 @@ function readDelimiter(text: string): string | null {
   return Array.from(text).length === 1 ? text : null;
 }
 
-/** The records of the input split on one character, as they arrive. */
-async function* splitOn(chunks: AsyncIterable<string> | Iterable<string>, delim: string): AsyncGenerator<Rec, void, undefined> {
-  let pending = '';
-  for await (const chunk of chunks) {
-    const pieces = (pending + chunk).split(delim);
-    pending = pieces.pop() ?? '';
-    for (const piece of pieces) yield { text: piece, nl: true };
-  }
-  if (pending !== '') yield { text: pending, nl: false };
-}
-
 /** True when `name` can be run: a command, or a program at a path. */
 async function runnable(ctx: CommandContext, name: string): Promise<boolean> {
   if (name.includes('/')) {
@@ -127,9 +116,9 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
     } catch (error) {
       return ctx.fail(`Cannot open input file ${quoted(argFile)}: ${reason(error)}`);
     }
-    records = splitOn([text], delim ?? '\n');
+    records = splitChunks(ctx, [text], delim ?? '\n');
   } else {
-    records = delim === null ? inputRecords(ctx) : splitOn(ctx.stdin.chunks(), delim);
+    records = delim === null ? inputRecords(ctx) : splitChunks(ctx, ctx.stdin.chunks(), delim);
   }
 
   const breathe = pacer(ctx);
@@ -155,6 +144,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
     return null;
   };
 
+  const base = command.reduce((sum, word) => sum + word.length + 1, 0);
   let batch: string[] = [];
   let chars = 0;
   let lines = 0;
@@ -171,6 +161,8 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
       }
       if (items.length === 0) continue;
       for (const item of items) {
+        // An item that cannot fit on a command line even alone ends xargs, as GNU's does.
+        if (base + item.length + 1 > MAX_CHARS) return await ctx.fail('argument line too long');
         batch.push(item);
         chars += item.length + 1;
         if ((maxArgs !== null && batch.length >= maxArgs) || chars >= MAX_CHARS) {

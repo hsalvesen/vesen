@@ -134,6 +134,36 @@ describe('ping', () => {
     expect(net.requests).toEqual([]);
   });
 
+  // Before, these went out as no-cors requests: the IPv4 rules were not applied to an IPv4
+  // address inside an IPv6 one, nor to multicast and reserved ranges, and a number such as
+  // 2130706433 was looked up as a name.
+  it.each([
+    ['::ffff:192.168.1.1', '::ffff:192.168.1.1 (::ffff:192.168.1.1) is a private address'],
+    ['[::ffff:192.168.1.1]', '::ffff:192.168.1.1 (::ffff:192.168.1.1) is a private address'],
+    ['::ffff:c0a8:101', '::ffff:c0a8:101 (::ffff:c0a8:101) is a private address'],
+    ['::10.0.0.1', '::10.0.0.1 (::10.0.0.1) is a private address'],
+    ['64:ff9b::10.0.0.1', '64:ff9b::10.0.0.1 (64:ff9b::10.0.0.1) is a private address'],
+    ['fd00::1', 'fd00::1 (fd00::1) is a private address'],
+    ['fe80::1', 'fe80::1 (fe80::1) is a private address'],
+    ['100.64.0.1', '100.64.0.1 (100.64.0.1) is a private address'],
+    ['224.0.0.1', '224.0.0.1 (224.0.0.1) is a multicast address'],
+    ['ff02::1', 'ff02::1 (ff02::1) is a multicast address'],
+    ['240.0.0.1', '240.0.0.1 (240.0.0.1) is a reserved address'],
+    ['255.255.255.255', '255.255.255.255 (255.255.255.255) is a reserved address'],
+    ['::ffff:127.0.0.1', '::ffff:127.0.0.1 (::ffff:127.0.0.1) is this device: a browser tab cannot time a round trip to itself'],
+    ['::1', '::1 (::1) is this device: a browser tab cannot time a round trip to itself'],
+    ['2130706433', '2130706433 (127.0.0.1) is this device: a browser tab cannot time a round trip to itself'],
+    ['127.1', '127.1 (127.0.0.1) is this device: a browser tab cannot time a round trip to itself'],
+    ['0xc0.0xa8.1.1', '0xc0.0xa8.1.1 (192.168.1.1) is a private address'],
+  ])('refuses %s without a request', async (word, why) => {
+    const { s, net } = await rig([]);
+    const result = await s.run(`ping -c 1 ${word}`);
+    s.stop();
+    expect(result.status).toBe(2);
+    expect(result.stderrPlain).toBe(why.includes('this device') ? `ping: ${why}` : `ping: ${why}, which a page on the internet may not reach`);
+    expect(net.requests).toEqual([]);
+  });
+
   it("checks its options as ping does", async () => {
     const { s } = await rig([]);
     expect(await s.run('ping')).toMatchObject({ status: 2, stderrPlain: 'ping: usage error: Destination address required' });

@@ -137,7 +137,10 @@ Inside `run`:
   `ctx.stdout.block(out.table(...))` and the other `out` builders in `src/output/model.ts`;
   every block has a plain form for pipes. Never write HTML;
 - read standard input with `ctx.stdin.chunks()` or `ctx.stdin.lines()` as it arrives, so
-  `yes | rev | head -n 2` ends at once;
+  `yes | rev | head -n 2` ends at once. No command holds more than `MAX_INPUT` (16 MB, in
+  `src/shell/types.ts`) of it at once: `ctx.stdin.text()` and a line from `lines()` close the
+  input and throw `InputTooLarge` past it, and what a command keeps back itself (a line, the
+  last lines) must be held to it too, through the helpers in `src/commands/lib/text-input.ts`;
 - reach files through `ctx.fs` and `ctx.resolve(path)`, and say what went wrong with the helpers in
   `src/commands/lib/files.ts`: `ctx.fail('cannot open nope: No such file or directory')` prints
   `rev: cannot open nope: No such file or directory` and returns 1;
@@ -186,7 +189,17 @@ Inside `run`:
   (none, or `-`, is standard input), standard input a line at a time as it arrives (so
   `yes | tool | head` ends at once), a last line without a newline kept that way, UTF-8 byte
   counts, coreutils' size suffixes (`2K`) and `pacer(ctx)`, which lets the page paint and ^C
-  arrive during a long loop.
+  arrive during a long loop. It holds standard input to `MAX_INPUT` (16 MB) wherever a tool
+  keeps it: `readOperand` reads a whole operand and says `NAME: standard input: input too large
+  (over 16 MB)` past it, `inputRecords` and `splitChunks` give lines (or `-d` records) of any
+  length up to it, `HeldRecords` keeps lines back (`tail -n`, `grep -B`) within it, and
+  `readAtMost` reads a small input (figlet's message) and stops as soon as it is too long. Each
+  closes the input when it gives up, so the command writing it stops with a broken pipe.
+- **Options that size what is made are bounded.** A width or count that a command would turn
+  into that many characters or entries (`nl -w`, `figlet -w`, `tr`'s `[c*N]`, `head -c -N`)
+  is refused past a stated limit, in GNU's words where GNU has one ("Numerical result out of
+  range"), or made not to matter (`tr` stops a repeat where nothing reads it, `printf` writes
+  as it goes). Say the limit in the command's man page.
 - **Wildcards are not regular expressions.** A shell pattern (`find -name`, `tree -I`) is matched
   with `fnmatch` in `src/commands/lib/fnmatch.ts`, which never backtracks past the last star and so
   needs no guard.
