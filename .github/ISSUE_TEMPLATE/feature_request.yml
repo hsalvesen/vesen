@@ -1,0 +1,33 @@
+name: Feature request
+description: A command, option or change you would like in vesen.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+      description: The command, option or behaviour, and what you would type to use it.
+      placeholder: "`diff -r` to compare two folders, as GNU diff does"
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What it would let you do, or what is awkward today.
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where would you use it?
+      multiple: true
+      options:
+        - On a phone
+        - In Instagram's or another app's browser
+        - On a desktop
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Optional. Other ways to get there, or how a real terminal does it.

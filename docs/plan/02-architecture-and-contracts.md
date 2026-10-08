@@ -4,6 +4,8 @@ Six design panels each solved one workstream well, but they overlapped. Between 
 
 When a reference design in [designs/](designs/) disagrees with this file, this file wins.
 
+> **Amended during the build.** [ADR 0001](../adr/0001-architecture.md) records every change made to these contracts while they were built; where it and this file disagree, the ADR wins. The two amendments that change a contract below, the command deadline and the lazy catalogue, are folded in here, each marked *Amended*. [STATUS.md](STATUS.md) lists the other deviations from the plan.
+
 ## Target module layout
 
 The layout follows the shell design, with two additions: `lib/` for framework-free libraries such as the QR encoder, and `ui/components/` for the rich cards that weather, stock and QR render.
@@ -28,7 +30,8 @@ src/
                               StatusLine, CompletionRow, dock/ (Dock, ChipRow, KeyBar, HistorySheet),
                               components/ (WeatherCard, QuoteCard, QuoteTable, QrCard, LinkCard),
                               apps/ (Pager, Editor, Shutdown, QrPresenter, Matrix)
-  commands/<category>/<name>.ts   one CommandSpec per file, auto-registered
+  commands/<category>/<name>.ts   one CommandSpec per file, auto-registered (the core, loaded with the kernel)
+  commands/more/<category>/<name>.ts   the catalogue: specs in one lazy chunk, loaded after the kernel
   content/                    owner documents in {colour} markup (README.vt, history.vt, linux.vt)
   styles/                     tokens.css, terminal.css, crt.css
 worker/stock/                 Cloudflare Worker for stock quotes (separate deployable)
@@ -84,10 +87,12 @@ export interface CommandSpec {
   next?(r: { status: ExitCode; argv: readonly string[] }): string[];  // follow-up chips
   complete?: Completer;                                     // escape hatch when ValueSource is not enough
 
-  run?: RunFn; load?: () => Promise<{ run: RunFn }>;        // exactly one; load() makes a lazy chunk
-  legacyHelp?: string;                                      // migration only
+  run?: RunFn; load?: () => Promise<{ run: RunFn; doc?: CommandDoc }>;  // exactly one; load() makes a lazy chunk
+  legacyHelp?: string;                                      // migration only (deleted in Phase 5.1)
 }
 ```
+
+*Amended (lazy catalogue).* Commands live in two places. The **core**, `src/commands/<category>/<name>.ts`, is registered with the kernel and is for what cannot wait: the portfolio commands and starter chips, the builtins a login uses, `help`, `man` and the other commands that look commands up, and any command with `opens()` (its preflight runs synchronously, before the line starts). Every other command is in the **catalogue**, `src/commands/more/<category>/<name>.ts`: `src/commands/more/catalogue.ts` gathers those specs into one chunk that `src/commands/index.ts` reaches only through `loadCatalogue()`, an `import()`, loaded when the page is idle or when a name the kernel lacks is typed. The `Registry` gains `complete`, `whenComplete()` (loads the catalogue once, never rejects; a failed load leaves `complete` false and the next call tries again), `takeFailure()` and `onChange()`. A name not yet registered waits for the catalogue (bounded by ^C and 8 s) before `$PATH` and `command not found`; `help`, `man`, `whatis`, `apropos`, `which`, `type`, `command -v` and `privacy` wait the same way, and a first Tab on a command name waits up to 300 ms. A lazy body may also carry the long help as `doc: CommandDoc` (`description` and `man`), read through `withDoc(spec)` by `--help`, `help NAME` and `man`; summaries, synopses, flags, examples and see-also stay in the spec. See ADR 0001, "Phase 5.2" and "Long help can live with a lazy body".
 
 This merges the shell design's spec (category, man, `opens`, `next`, `run`/`load`), the input design's `ValueSource`, placeholders and starter ranks, the phone design's loading label and data cost, and the budget field the weather and stock designs both needed. The registry is a `Map`, throws on a duplicate name or alias, and returns `undefined` for inherited keys such as `constructor` (F031, F034). Every command is cancellable, so there is no `interruptible` or `cancellable` flag; the three hard-coded allowlists (F045) disappear.
 
@@ -131,6 +136,8 @@ Budgets:
 | speedtest | Per phase, time-bounded | Asks first when `dataCost` applies |
 
 `AbortSignal.any` and `AbortSignal.timeout` are not used, because Instagram's WKWebView on iOS before 17.4 lacks them. A small manual signal-combining helper replaces them.
+
+*Amended (command deadline).* A command can see when its budget ends: `CommandContext.deadline` is the `clock` time at which the whole-command budget runs out, counted from before the body loads, and is absent for a command without one. A command that makes several requests plans them against it (`stock` keeps 500 ms to draw, so a table's later lookups never run past the budget and the rows in hand are still shown). See ADR 0001, "Phase 4 review fixes".
 
 Until the shell kernel lands in Phase 2, the Phase 0 hotfix adds the same timeouts to the existing fetches and a temporary `stores/job.ts`, which `Session` later absorbs.
 
@@ -207,6 +214,8 @@ Each theme in `themes.json` gains an optional `roles` map. Missing roles are com
 ## 11. Help comes only from specs
 
 `help`, `<cmd> --help`, `man`, `whatis`, `apropos`, Tab descriptions and starter chips are all generated from `CommandSpec`. From Phase 0, no workstream edits `src/utils/helpTexts.ts`; it is deleted in Phase 5.
+
+*Amended (lazy catalogue).* The long help of a command whose body loads lazily is the body's `doc`, fetched first by `--help`, `help NAME` and `man`; if the body cannot be loaded, the summary stands in. Commands that list or look up commands by name wait for the catalogue through `allCommands(ctx)` in `src/commands/lib/catalogue.ts`.
 
 ## 12. Secret input
 

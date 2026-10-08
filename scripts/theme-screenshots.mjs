@@ -58,6 +58,9 @@ async function shoot(browser, url, name) {
     await prompt.fill(line);
     await prompt.press('Enter');
     await page.locator('.command-input-display', { hasText: line }).last().waitFor();
+    // Then until it has finished: a line typed while `help` still waits for the catalogue is
+    // type-ahead, and filling the input then could lose it.
+    await page.locator('[role="log"][aria-busy="false"]').waitFor();
   }
   await page.evaluate(() => document.fonts.ready);
   await page.mouse.move(0, 0);

@@ -1,277 +1,192 @@
-# [Vesen Terminal](https://www.vesen.app)
+# [vesen](https://www.vesen.app)
 
-> A modern, web-based terminal emulator built with SVELTE.
+> A Unix-style terminal in the browser, built as much for a phone inside Instagram as for a desktop.
 
 ![banner](/docs/themes/banner.gif)
-## Overview
 
-Vesen Terminal is a fully-featured web-based terminal emulator that replicates a Unix-like environment in the browser. It features a virtual file system, interactive commands, modifiable themes, and a responsive design that works across devices.
+## What vesen is
 
+vesen is Has Salvesen's portfolio, in the shape of a Linux terminal. It runs entirely in the page:
 
-## Stack
+- **A real shell.** Quotes, pipes that stream, redirection, variables, `$( )` and `$(( ))`, globs, history expansion, aliases, exit codes, and ^C that stops anything. [docs/SHELL.md](docs/SHELL.md) lists what is supported and where it differs from bash.
+- **A file system.** `/home/guest` is yours, with permissions, symlinks, `/proc` and `/dev`; what you change under `~` is still there when you come back. `/home/has` holds the owner's documents.
+- **About 160 commands.** Coreutils and text tools (`grep`, `sed`, `sort`, `diff`, `bc`), file tools (`find`, `tree`, `chmod`), system tools (`ps`, `top`, `uname`), network tools that say what a browser can and cannot do (`dig`, `ping`, `whois`, `wget`), a pager and an editor (`less`, `man`, `nano`), and some fun (`cowsay`, `fortune`, `figlet`, `sl`).
+- **Cards.** `weather`, `stock` and `qr` draw live cards; `whoami`, `about` and `contact` give link cards with Copy.
+- **Ten themes** named for Australian animals, every one checked for contrast, with an optional CRT effect.
 
-- **Frontend framework**: [Svelte 5](https://svelte.dev/)
-- **Build tool**: [Vite](https://vitejs.dev/)
-- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
-- **Hosting**: [Firebase Hosting](https://firebase.google.com/docs/hosting)
-- **Package manager**: npm (Node.js 22.12+, see `.nvmrc`)
+Version 2.0.0 is a rewrite of the whole app; [CHANGELOG.md](CHANGELOG.md) says what changed.
 
-## Quick start
-
-### Local development
-
-**Prerequisites**: Node.js 22.12 or higher (`nvm use` reads `.nvmrc`)
+## A short tour
 
 ```bash
-# Clone the repository
-git clone https://github.com/hsalvesen/vesen.git
-cd vesen
-
-# Install dependencies
-npm install
-
-# Start development server at http://localhost:3000
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
+help                      # every command by category; help --all lists them all, man NAME explains one
+cat README.md             # the owner's README, in colour
+ls -la ~ | grep bash      # pipes, options and globs work as on Linux
+fastfetch                 # this device, as a terminal sees it
+weather Oslo              # a forecast card; weather --here uses this device's location
+stock AAPL CBA.AX         # quotes in a table; stock AAPL draws a card with a chart
+qr https://www.vesen.app  # a scannable QR card; tap it to present it full screen
+dig vesen.app +short      # DNS over HTTPS, and it says so
+man ls | less             # the pager; nano notes.txt is the editor
+fortune | cowsay          # the fun ones are under Fun in help --all
+theme ls                  # every theme with its colours; theme set wombat switches
+privacy                   # every service a command talks to, and what it is sent
 ```
 
-### Getting started
-Type `help` in the terminal to see every command by category, `man <command>` for one command's manual (`man vesen` is about the terminal itself), and `help keys` for the keys. Explore the file system with `ls` and `cd`; `exit` ends the session and offers a new one, and `poweroff` shows a Power on button that starts one with your files kept.
+### Keys
 
-For fun, try `fortune | cowsay`, `figlet hello | lolcat`, `sl` or `cmatrix`; `help --all` lists them all under Fun.
+At the prompt, Tab completes (extend, then list, then cycle), ↑ and ↓ step through the history lines that start with what is typed, Ctrl+R searches the history, and grey text offers the rest of a past line (→ takes it). The readline keys edit the line while the prompt has focus: Ctrl+A, E, U, K, Y, L and D everywhere, Ctrl+W, P, N, F, B and T on a Mac, and Alt+B, F, D, Y, . and Backspace. Ctrl+C stops the running command or abandons the line; on Windows and Linux, with text selected, it copies instead. Escape then a key is that key with Alt, as in readline, and Escape then Tab leaves the terminal for the rest of the page. `help keys` lists them all.
 
-`whoami`, `about` and `contact` say who made vesen, with link cards that have Copy. A desktop browser also opens LinkedIn or the source for `whoami` and `repo`; on phones a link opens only when tapped, and inside Instagram's browser it opens in the same view, so Back brings the terminal back as it was. `privacy` lists every service a command talks to and what it is sent, and `debug report` copies the details a bug report needs.
+### On a phone
 
-The network commands do what a browser allows, and say how. `dig`, `host` and `nslookup` ask Cloudflare's DNS over HTTPS (Google's when Cloudflare cannot be reached), and `whois` asks the registries over RDAP. A page cannot send ICMP, so `ping` times HTTPS round trips and labels them so, with ping's statistics at the end or on ^C. `ip addr` and `ifconfig` show a synthetic `eth0`, marked as such, and your public address, which they first say they are asking Cloudflare for. `wget` downloads into your files, with the same CORS rules as `curl`, and `git log` and `git show` in `~/projects/vesen` read this site's newest commits from GitHub. `ssh`, `telnet`, `nc`, `ftp` and `traceroute` say in one line why a browser tab cannot be them.
+A dock rides above the keyboard. Its chips run a starter command in one tap without opening the keyboard, offer what comes next after a command (every theme after `theme ls`), and build a line by tapping. Holding a chip puts it at the prompt instead of running it. The key bar has tab, ↑, ↓, ^C, clear, ••• for symbols and ⌄ to put the keyboard away; holding ↑ opens a list of past commands. A hardware keyboard hides the key bar, and `keys on|off|auto` chooses. Open the page with `?dock=1` to see the dock on a desktop.
 
-At the prompt, Tab completes, ↑ and ↓ step through the history lines that start with what is typed, Ctrl+R searches the history, and grey text offers the rest of a past line (→ takes it). While the prompt has focus, the readline keys edit the line: Ctrl+A, E, U, K, Y, L and D everywhere, Ctrl+W, P, N, F, B and T on a Mac, and Alt+B, F, D, Y, . and Backspace. Ctrl+C stops the running command or abandons the line; on Windows and Linux, with text selected, it copies instead (a Mac copies with Cmd+C). Escape then a key is that key with Alt, as in readline (Esc . inserts the last argument), and Escape then Tab leaves the terminal for the rest of the page.
+The page keeps pinch zoom, sizes itself to the visible screen above the keyboard, and never scrolls sideways: wide output such as `tree` or `ps aux` scrolls inside its own block. Inside Instagram's browser a link opens only when tapped, in the same view, and Back brings the terminal back as it was. The CRT effect is lighter on phones and in in-app browsers, and off under reduced motion, more contrast or forced colours.
 
-On a phone, a dock rides above the keyboard. Its chips run a starter command in one tap without opening the keyboard, offer what comes next after a command (every theme after `theme ls`), and build a line by tapping: a completion goes on the line as Tab would put it, and one that finishes the line runs it. Holding a chip that runs puts it at the prompt instead. The key bar has tab, ↑, ↓, ^C, clear, ••• for symbols and ⌄ to put the keyboard away; holding ↑ opens a list of past commands. A hardware keyboard hides the key bar; `keys on|off|auto` chooses. Open the page with `?dock=1` to see the dock on a desktop.
+### Network commands are honest
 
-## Stock quotes
+A browser tab cannot send ICMP or raw DNS, so vesen does what a page can and labels it. `dig`, `host` and `nslookup` ask Cloudflare's DNS over HTTPS (Google's when Cloudflare cannot be reached); `whois` asks the registries over RDAP; `ping` times HTTPS round trips and prints ping's statistics at the end or on ^C; `ip addr` and `ifconfig` show a synthetic `eth0`, marked as such, and your public address after saying they will ask Cloudflare for it; `wget` and `curl` download what CORS allows; `git log` in `~/projects/vesen` reads this repository's newest commits from GitHub. `ssh`, `telnet`, `nc`, `ftp` and `traceroute` say in one line why a tab cannot be them.
 
-`stock AAPL` shows a card with the price in the instrument's own currency, the change, the market's phase (open, pre-market, closed and when it opens), a chart and the day and 52-week ranges; `stock AAPL CBA.AX BTC-USD` shows a table, `stock -s commonwealth bank` finds tickers by name, and `stock -r 5d AAPL` changes the chart's range. Chips under a card refresh it or change the range in one tap. Quotes may be delayed, and every card says where its data came from and how old it is. Not investment advice.
+### Stock quotes
 
-The quotes come through vesen's own stock service, a small Cloudflare Worker in [`worker/stock`](worker/stock/README.md) that calls Yahoo Finance (and Cboe for US listings when Yahoo is down). The build finds it through `VITE_STOCK_API`: copy `.env.example` to `.env.local` and set it there, or set the `VITE_STOCK_API` repository variable, which CI passes to the build. Left unset or empty, `stock` uses an interim source, Yahoo's chart through the public `api.allorigins.win` proxy: it is slower, every card it feeds says "via public proxy, may be slow", and `privacy` lists it.
-
-Every request has an 8 s deadline and the whole command 10 s; a quick failure is tried once more, and answers are reused for 30 s. The last good quote of each ticker is kept in this browser (`vesen:stock:v1`, with the recent tickers), and shown marked STALE when live data cannot be reached.
-
-To run your own copy on another domain, deploy your own Worker with your domain in its `ALLOWED_ORIGINS` (see its README) and build with `VITE_STOCK_API` pointing at it. vesen's Worker answers only vesen.app, its preview channels and localhost, so elsewhere `stock` says that live quotes aren't available on that host.
+`stock AAPL` shows a card with the price in the instrument's currency, the change, the market's phase, a chart and the day and 52-week ranges; several tickers give a table, `stock -s commonwealth bank` searches by name, and `stock -r 5d AAPL` changes the range. Quotes may be delayed, every card says where its data came from and how old it is, and the last good quote is shown marked STALE when live data cannot be reached. Not investment advice.
 
 ## Themes
 
 ![themes](/docs/themes/themes.gif)
-View all themes: [Vesen themes](/docs/themes), or run `theme ls` in the terminal to see each one's colours.
 
-The CRT effect (`cathode ls`) shows in full on a desktop, in a lighter static form on phones and in in-app browsers, and not at all when the system asks for reduced motion, more contrast or forced colours. `cathode quality auto|full|lite|off` overrides that choice.
+[docs/themes](docs/themes) has a screenshot of each theme, or run `theme ls`. `cathode ls` shows the CRT modes, and `cathode quality auto|full|lite|off` overrides the device's choice.
 
-##  Development
+## Architecture
 
-### Project structure
-```bash
+The app is a DOM-free shell kernel with a Svelte interface on top. [ADR 0001](docs/adr/0001-architecture.md) records the shared contracts and every amendment made while building them; [docs/plan](docs/plan) holds the audit and the plan this version was built from, and [docs/plan/STATUS.md](docs/plan/STATUS.md) what was done, how it differs from the plan, and what is left.
+
+- **Composition root.** `src/main.ts` calls `src/app/bootstrap.ts`, the only place concrete services are built: storage and its migrations, the theme and CRT, the host redirect, the stale-chunk reload, then the shell.
+- **The kernel** (`src/shell`): one lexer that never throws, a parser, word expansion, an executor with concurrent pipes and redirections, option parsing, the command registry, help and `man` generated from the specs, the completion engine (`complete/`) and the line editor's pure parts (`editor/`).
+- **Commands** (`src/commands`): one `CommandSpec` per file, declared with `defineCommand`. The spec drives running, options, `--help`, `man`, Tab completion and the phone's chips. Long help and heavy bodies sit in a `<name>.run.ts` that loads on first use. Core commands load with the kernel; the rest are a catalogue in `src/commands/more` that loads in one chunk once the page is idle, or as soon as a name the kernel lacks is typed.
+- **Output** (`src/output`): commands write text with a small SGR subset, or typed blocks (`lines`, `grid`, `table`, `art`, `panel`, `chips`, `card`, `columns`, `component`), never HTML. `src/ui/OutputView.svelte` draws them with text interpolation only, and tap actions come only from the trusted `out` builders.
+- **The file system** (`src/vfs`): permissions, symlinks, `/proc` and `/dev`, a 512 KB quota, and an overlay of your changes under `~` saved in the browser.
+- **Services and platform** (`src/services`, `src/platform`): the only code that touches browser APIs. The network service gives every request a deadline and typed errors; storage falls back to memory when the browser blocks it; the opener holds the in-app link policy.
+- **Interface** (`src/ui`): the transcript, the prompt and its editor, the phone dock, the rich cards (loaded on first use) and the full-screen apps (`AppHost` with the pager, editor, QR presenter, train and rain).
+
+`npm run check:boundaries` keeps `src/shell`, `src/output`, `src/vfs`, `src/lib` and `src/commands` free of the DOM, and `npm run check:bundle` holds the budgets: 60 kB gzip of JavaScript before the first paint, 75 kB for the kernel (in at most four files), 40 kB for the catalogue's specs.
+
+## Project structure
+
+```text
 src/
-├── main.ts                       # Calls app/bootstrap.ts, then mounts the app, or shows a plain boot error
-├── app/bootstrap.ts              # Composition root: host redirect, storage and its migrations, theme and CRT
-│                                 # applied to the page, stale-chunk reload, the banner
-├── App.svelte                    # The app shell: the screen frame (transcript, prompt, new-output pill,
-│                                 # CRT overlay) above the phone dock, which loads in its own chunk
-├── app.css                       # Imports the style sheets below
-├── styles/                       # tokens.css (Vesen Mono, --term-font, --term-fs, --term-lh),
-│                                 # terminal.css (base type, the .art class for banners, logos and charts),
-│                                 # shell.css (the fixed shell sized to the visible viewport; phones
-│                                 # edge to edge, the desktop framed), components.css (output in role
-│                                 # colours: panels, theme ls swatches, the scrollbar) and
-│                                 # crt.css (the CRT effect, by tier)
-├── global.d.ts                   # Build-time globals
-├── interfaces/                   # TypeScript interfaces (theme)
-├── shell/                        # The DOM-free shell kernel (docs/adr/0001-architecture.md)
-│   ├── types.ts                  # CommandSpec, command context, registry, history, TTY, streams, identity
-│   ├── lexer-types.ts            # The lexer's result and tokens
-│   ├── help.ts                   # help, --help, man, whatis and apropos, all generated from the specs
-│   ├── reader.ts                 # A running command reading a line at the prompt (rm -i, sudo's password)
-│   ├── complete/                 # Tab completion, the ghost and the chips, from the specs
-│   ├── editor/                   # The line editor's pure parts: readline ops and the kill ring, the key
-│   │                             # table (keymap.ts), history stepping and reverse-i-search, the `> `
-│   │                             # continuation, and straightening typed and pasted text
-│   └── keys.ts                   # help keys and man vesen, generated from the key table
-├── output/                       # DOM-free output, never HTML
-│   ├── model.ts                  # Spans, blocks, actions and the `out` builders, the only makers of actions
-│   ├── plain.ts                  # Each block's plain text, for pipes and files
-│   ├── sgr.ts                    # The streaming SGR and OSC 8 reader: escapes become styles, never actions
-│   └── markup.ts                 # The {colour} markup the owner's documents are written in
-├── vfs/                          # The virtual file system, DOM-free: vfs.ts (permissions, symlinks,
-│                                 # devices, /proc, a 512 KB quota), path.ts, seed.ts (the tree a session
-│                                 # starts with: /home/guest, /home/has, /etc, /proc, /dev, /usr/bin),
-│                                 # special.ts (/proc and /dev), persist.ts (files under ~ kept across
-│                                 # reloads as an overlay on the seed), identity.ts (guest@vesen)
-├── content/                      # The owner's styled documents (README, history, linux notes) in {colour}
-│                                 # markup, converted once from the HTML the old page served
-├── commands/                     # One CommandSpec per file, DOM-free, by category: portfolio/ (theme,
-│                                 # cathode, banner, whoami, linkedin, about, contact and email, repo, open
-│                                 # and xdg-open, qr), files/ (ls, cat, cp, mv, rm, rmdir, mkdir, touch, ln,
-│                                 # stat, cd, pwd), text/ (echo, printf), shell/ (help, man, whatis,
-│                                 # apropos, history, clear, reset, alias, unalias, export, unset, env,
-│                                 # printenv, set, source, type, which, command, true, false, test, exit,
-│                                 # login, sleep, sudo), system/ (date, keys, poweroff, reboot, shutdown,
-│                                 # privacy, debug, fastfetch), network/ (weather, curl, speedtest, and
-│                                 # stock with its card's words in stock/); lib/ is what they share: the
-│                                 # banner, the link cards, weather's way to its service, qr's options
-│                                 # and payloads, the text tools' input helpers, the one guard every
-│                                 # visitor's regular expression passes (regex.ts), wildcards
-│                                 # (fnmatch.ts), chmod's modes, the process table (procs.ts), and the
-│                                 # network commands' DNS over HTTPS, interfaces and GitHub commits;
-│                                 # more/ is the catalogue, the commands that load after the kernel in
-│                                 # a chunk of their own (text/: grep, sed, sort, uniq, cut, tr, head,
-│                                 # tail, wc, diff, xargs, bc, the checksums and the rest; files/: chmod,
-│                                 # chown, chgrp, tree, find, du, df, basename, dirname, realpath,
-│                                 # readlink, mktemp, file, truncate, sync; system/ and shell/: uname,
-│                                 # ps, top, kill, pgrep, cal, read, timeout and the rest; network/: dig,
-│                                 # host, nslookup, ping, ip, ifconfig, whois, wget and git; see
-│                                 # docs/ADDING_COMMANDS.md)
-├── lib/                          # colour.ts (luminance, contrast, mixing, nudging a colour until it reads)
-│                                 # and roles.ts (each theme's --role-* colours, computed from its palette
-│                                 # where themes.json does not set them, and the contrast each must meet);
-│                                 # qr/ (the QR encoder: segments, error correction, masks, and text, SVG,
-│                                 # raster and PNG renderers, and the view a QR card draws); sysfacts.ts and
-│                                 # sysnames.ts (reading and naming what a browser says about its system);
-│                                 # md5.ts (MD5 for md5sum, which WebCrypto lacks)
-├── platform/                     # Browser-facing helpers: env.ts (touch, the in-app browser and the
-│                                 # system), errors.ts (recent errors for debug report), canonical host
-│                                 # redirect, stale-chunk reload,
-│                                 # head.ts (palette colours, theme-color, favicon), theme-apply.ts (the
-│                                 # role colours), perf.ts (the CRT tier: full, lite or off, and why),
-│                                 # crt.ts (CRT classes), measure.ts (--input-scale for the 16px touch
-│                                 # input), viewport.ts (--app-h, --app-top and --kb-h from visualViewport,
-│                                 # and the dock's layout for the visible height), geolocation.ts (the
-│                                 # device's location for weather --here, on its own timer, rounded to ~1 km)
-├── services/
-│   ├── net.ts                    # fetch with timeouts, cancelling, byte caps and typed network errors
-│   ├── bell.ts                   # The terminal bell: a short tone through one AudioContext, or a flash
-│   ├── storage.ts                # localStorage and sessionStorage with a memory fallback; one-time migrations
-│   ├── types.ts                  # Service interfaces: net, storage, bell, opener, clipboard, clock, system
-│   │                             # info, digest
-│   ├── sysinfo.ts                # System facts for fastfetch, /proc and debug report: the user agent, the GPU,
-│   │                             # client hints, battery, storage, and the public IP only when asked
-│   ├── opener.ts                 # The in-app link policy: planOpen, the new tab inside the gesture, and the
-│   │                             # escape to the real browser behind a tap
-│   ├── clipboard.ts              # Copy: the Clipboard API, then execCommand
-│   ├── digest.ts                 # SHA hashes through WebCrypto, for sha1sum, sha256sum and sha512sum
-│   ├── session-snapshot.ts       # The screen saved for Back (vesen:session:v1); session-restore.ts
-│   │                             # rebuilds it, loaded only after Back
-│   ├── storage-keys.ts           # Every browser storage key, in one registry
-│   ├── qr-actions.ts             # Save, Share and Copy for a QR code, black on white, inside the tap
-│   ├── weather/                  # Weather's sources (forecast, geocoding, IP location), place resolution,
-│   │                             # units and WMO codes, the view model a weather card draws, and the
-│   │                             # service the weather command reaches them through (loaded on first use)
-│   └── market/                   # stock's data: contract.ts (the Worker's wire format) and normalise.ts
-│                                 # (Yahoo's chart as a quote), both shared with the Worker; client.ts
-│                                 # (budgets, retry, memory, saved copies); interim.ts (the public proxy
-│                                 # until the Worker is deployed); port.ts (how the command reaches it)
-├── stores/                       # Svelte stores, pure state: screen (the transcript), term, theme, cathode,
-│                                 # prefs (the key bar setting), viewport (the visible height)
-├── ui/
-│   ├── prompt/                   # The prompt: promptController.svelte.ts (the line, its keys, Tab,
-│   │                             # history, search, type-ahead, ^C, reads and secrets), LineEditor.svelte
-│   │                             # (a real input; with a mouse, over a mirror with a block cursor and
-│   │                             # the ghost) and PromptLine.svelte (PS1, the running line, the status)
-│   ├── CompletionRow.svelte      # The chips under the prompt, and Tab's list
-│   ├── dock/                     # The phone dock: Dock.svelte (its layouts), ChipRow.svelte, KeyBar.svelte
-│   │                             # (keys.ts says what each key does), HistorySheet.svelte, press.ts (tap,
-│   │                             # hold, long press and repeat, never taking focus from the prompt)
-│   ├── Transcript.svelte         # Each entry: the prompt it was typed at, the line, its output
-│   ├── AppHost.svelte            # A command's full-screen app over the terminal: apps/Shutdown.svelte,
-│   │                             # apps/QrPresenter.svelte (qr's Present mode), apps/Train.svelte (sl) and
-│   │                             # apps/Matrix.svelte (cmatrix)
-│   ├── Cathode.svelte            # The CRT overlay, inside the screen frame
-│   ├── links.ts                  # Where links open and how Copy copies, for the cards and spans
-│   ├── Prompt.svelte             # guest@vesen:~/documents$, live under the transcript and as each entry's snapshot
-│   ├── OutputView.svelte         # Draws output blocks with text interpolation only
-│   ├── SpanView.svelte           # One styled span: link, trusted action button, live theme or CRT marker,
-│   │                             # or theme swatches
-│   ├── span-style.ts             # Colour tokens to CSS, with role fallbacks
-│   ├── actions/                  # stickToBottom (the one scroll owner, with the new-output pill) and
-│   │                             # focusPolicy (when a click, tap or key puts the caret in the prompt)
-│   └── components/               # LinkCard.svelte (the card block: the link, Copy, the in-app escape);
-│                                 # registry.ts, the rich cards a component block may name, each loaded on
-│                                 # first use: WeatherCard.svelte (compact and wide layouts by its own
-│                                 # width), QrCard.svelte, and QuoteCard, QuoteTable and Sparkline, stock's
-│                                 # cards
-└── testing/                      # Test setup, the kernel's stand-in commands and fakes
-public/                           # 404.html; fonts/ (Vesen Mono
-                                  # and its licence, OFL.txt); icons/ and og.png (generated, see scripts/);
-                                  # manifest.webmanifest; probe/ (device capability probe, not linked from the app)
-assets-src/fonts/                 # The source font Vesen Mono is built from (not served)
-themes.json                       # The ten colour themes: each palette, and any role colours a theme sets itself
-worker/stock/                     # vesen-stock, the Cloudflare Worker that serves stock quotes (its own README)
-tests/                            # The command harness and transcripts, XSS tests, recorded fixtures, hosting
-                                  # checks, helpers
-e2e/                              # Playwright end-to-end tests
-scripts/                          # Checks: module boundaries, bundle budget, theme contrast (and its baseline);
-                                  # vite-plugin-boot.ts (emits /boot.js, which paints the saved theme before
-                                  # the app loads); icons.mjs and og.mjs (regenerate public/icons and
-                                  # public/og.png with `node scripts/icons.mjs` or `node scripts/og.mjs`);
-                                  # theme-screenshots.mjs (regenerates docs/themes/screenshots after
-                                  # `npm run build`);
-                                  # fonts/build-vesen-mono.py (rebuilds public/fonts/VesenMono.woff2; needs
-                                  # `pip install fonttools brotli`)
-docs/
-├── adr/                          # Architecture decision records; 0001 fixes the shared contracts
-├── plan/                         # The improvement plan
-└── themes/                       # Theme screenshots, from scripts/theme-screenshots.mjs
+├── main.ts, App.svelte, app.css   # Entry: bootstrap, then the app shell; boot errors shown plainly
+├── app/                           # bootstrap.ts (composition root), shell.ts (builds the shell and its
+│                                  # services), lazy-shell.ts (loads the kernel), transcript.ts
+├── shell/                         # The DOM-free kernel: lexer, parser, expand, glob, histexpand,
+│   │                              # alias, arith, executor, streams, flags, registry, help, keys,
+│   │                              # session, prompt, reader; types.ts holds the contracts
+│   ├── complete/                  # Tab, the ghost text and the chips, all from the specs
+│   └── editor/                    # Readline operations, the kill ring, the key table, history search
+├── commands/                      # One CommandSpec per file (docs/ADDING_COMMANDS.md)
+│   ├── portfolio/ files/ text/    # The core, loaded with the kernel: theme, cathode, banner, whoami,
+│   ├── shell/ system/ network/    # qr, ls, cat, cd, help, man, alias, date, weather, stock, curl...
+│   ├── more/                      # The catalogue, loaded after the kernel: text/, files/, shell/,
+│   │                              # system/, network/, fun/, editor/
+│   └── lib/                       # What commands share: the regex guard, text input, file errors,
+│                                  # wildcards, the process table, DNS over HTTPS, tables, art
+├── output/                        # Spans, blocks and the `out` builders; plain text; the SGR reader;
+│                                  # the {colour} markup of the owner's documents
+├── vfs/                           # The file system, its seed (/home, /etc, /proc, /dev, /usr/bin),
+│                                  # persistence and identity (guest@vesen)
+├── content/                       # The owner's documents in {colour} markup
+├── lib/                           # Framework-free: qr/ (the QR encoder and renderers), colour and
+│                                  # roles (contrast), pager and nano models, md5, system names
+├── services/                      # Browser-facing: net, storage and storage-keys, opener, clipboard,
+│                                  # bell, clock, sysinfo, digest, session snapshot, weather/, market/
+├── platform/                      # Device and in-app detection, viewport, input scale, head tags,
+│                                  # theme application, CRT tier, geolocation, stale-chunk reload
+├── stores/                        # Svelte stores: screen, term, theme, cathode, prefs, viewport
+├── styles/                        # tokens.css (Vesen Mono, sizes), terminal, shell, components, crt
+├── interfaces/                    # The theme type
+├── testing/                       # Test setup, stand-in commands and fakes
+└── ui/                            # Transcript, OutputView, RichBlock, SpanView, StatusLine, AppHost
+    ├── prompt/                    # The prompt controller, LineEditor and PromptLine
+    ├── dock/                      # The phone dock: chips, key bar, history sheet
+    ├── components/                # Cards, each loaded on first use: link, weather, quote, QR
+    ├── apps/                      # Full-screen apps: Pager, Editor, QrPresenter, Train, Matrix, Shutdown
+    └── actions/                   # The one scroll owner, and the focus policy
+public/                            # 404.html, fonts/ (Vesen Mono and OFL.txt), icons/, og.png,
+                                   # manifest.webmanifest, probe/ (the device probe, not linked)
+assets-src/fonts/                  # The source Vesen Mono is built from (not served)
+themes.json                        # The ten themes: palettes and any role colours a theme sets
+worker/stock/                      # vesen-stock, the Cloudflare Worker for quotes (its own README)
+tests/                             # The command harness, transcripts, XSS tests, hosting checks,
+                                   # recorded network fixtures
+e2e/                               # Playwright: desktop Chrome, iPhone in Instagram (WebKit), Pixel 7
+scripts/                           # The checks (boundaries, bundle, contrast), the kernel chunk rule,
+                                   # the boot script plugin, icons, og image, theme screenshots, fonts/
+docs/                              # adr/, plan/ (with STATUS.md), themes/, SHELL.md, ADDING_COMMANDS.md
+.github/                           # CI, release and stock Worker workflows; issue forms; PR template
 ```
 
-### Available scripts
+## Scripts
+
+Node 22.12 or later (`nvm use` reads `.nvmrc`).
+
 ```bash
-npm run dev               # Start development server on port 3000
-npm run build             # Build for production into dist/
-npm run preview           # Serve the production build
-npm run check             # Svelte and TypeScript checking (svelte-check)
-npm run check:strict      # Strict TypeScript: the browser code with no Node types, then the unit
-                          # tests, test helpers, scripts and config files with Node types
-npm run check:boundaries  # Keep the DOM-free folders free of browser globals, Svelte and imports that
-                          # reach them; no {@html} anywhere; the deleted legacy layer stays deleted
-npm run check:bundle      # Initial JS budget (60 kB gzip); run after build
-npm run check:contrast    # WCAG contrast of every theme: the role colours as applied (4.5:1 for
-                          # text, 3:1 for ghost text and the cursor, 7:1 for QR codes) and the palette
-                          # slots output uses as text, which must be no worse than
-                          # scripts/contrast-baseline.json; add -- --strict, as CI does, to fail on
-                          # any role below its minimum
-npm test                  # Unit tests (Vitest)
-npm run test:e2e          # End-to-end tests (Playwright: desktop Chrome, iPhone Instagram, Pixel 7)
-npm run test:smoke        # The @smoke end-to-end tests on all three projects, as CI runs them
+npm ci                     # install exactly what package-lock.json names
+npm run dev                # development server on http://localhost:3000
+npm run build              # production build into dist/
+npm run preview            # serve the production build
+npm run check              # svelte-check, 0 errors
+npm run check:strict       # strict TypeScript: the browser code with no Node types, then tests,
+                           # scripts and config with them
+npm run check:boundaries   # DOM-free folders stay DOM-free, no {@html}, the catalogue stays out of
+                           # the kernel, the deleted legacy layer stays deleted
+npm test                   # unit tests (Vitest, node and happy-dom)
+npm run check:bundle       # after build: initial JS 60 kB, kernel 75 kB, catalogue 40 kB, stock's
+                           # first quote 19 kB (gzip)
+npm run check:contrast -- --strict   # WCAG contrast of every theme's roles
+npm run test:smoke         # the @smoke Playwright tests on all three projects, as CI runs them
+npm run test:e2e           # every Playwright test
 ```
 
-Install the Playwright browsers once with `npx playwright install chromium webkit`.
+Install the Playwright browsers once with `npx playwright install chromium webkit`. `PW_PORT` chooses the port Playwright's preview server uses. `npm run build && node scripts/theme-screenshots.mjs` regenerates the theme screenshots (and `themes.gif` when ffmpeg is installed).
+
+## Configuration
+
+Vite reads two variables at build time. Copy [.env.example](.env.example) to `.env.local` (ignored by git) to set them locally; CI reads the repository variables of the same names.
+
+| Variable | What it is | When empty |
+|---|---|---|
+| `VITE_STOCK_API` | The stock Worker's base URL, such as `https://vesen-stock.<subdomain>.workers.dev` | `stock` uses its interim source, Yahoo's chart through a public proxy, which is slower and says so on every card |
+| `VITE_FETCH_PROXY` | vesen's own fetch proxy for `curl --via-proxy` | `curl --via-proxy` says the site has none |
+
+## Deployment
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs every gate on each pull request and each push to `main`: svelte-check, strict types, boundaries, unit tests, the build, the bundle budgets, contrast and the Playwright smoke tests (Chromium and WebKit). The build it tested is the one deployed to Firebase Hosting:
+
+- a pull request from this repository gets a **preview channel**, and the bot comments its URL on the pull request;
+- a push to `main` deploys to the **live channel**, www.vesen.app.
+
+`firebase.json` sets the Content-Security-Policy and the other security headers, never caches `index.html` and caches hashed assets for a year. Pushing a `v*` tag runs `release.yml`, which creates the GitHub release.
+
+## The stock Worker
+
+Quotes come through vesen-stock, a small Cloudflare Worker in [`worker/stock`](worker/stock/README.md) that calls Yahoo Finance, with Cboe for US listings when Yahoo is down, and keeps a short snapshot in KV. It answers only vesen.app, its preview channels and localhost. Its README covers the owner's setup, and `.github/workflows/stock-worker.yml` deploys it when it changes and checks it daily. To run your own copy elsewhere, deploy your own Worker with your domain in its `ALLOWED_ORIGINS` and build with `VITE_STOCK_API` pointing at it.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit pull requests or open issues.
+[CONTRIBUTING.md](CONTRIBUTING.md) covers setup, the gates and the pull request flow, and [docs/ADDING_COMMANDS.md](docs/ADDING_COMMANDS.md) how to add a command. Please report security problems privately, as [SECURITY.md](SECURITY.md) describes.
 
-### Development setup
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/new-feature`
-3. Make your changes
-4. Run the checks: `npm run check && npm test` (CI runs the checks, tests, build and smoke tests on each pull request). [docs/ADDING_COMMANDS.md](docs/ADDING_COMMANDS.md) says where a new command goes and how to test it
-5. Commit your changes: `git commit -m 'Add new feature'`
-6. Push to the branch: `git push origin feature/new-feature`
-7. Open a Pull Request
+## Credits
 
-## License
+- Weather data by [Open-Meteo.com](https://open-meteo.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- Place names © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, under the [ODbL](https://opendatacommons.org/licenses/odbl/).
+- The terminal font, Vesen Mono (`public/fonts/VesenMono.woff2`), is a modified subset of Cascadia Code, distributed under the SIL Open Font License 1.1 under its own name: see [public/fonts/OFL.txt](public/fonts/OFL.txt).
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+`privacy` in the terminal lists every service a command talks to and what it sends.
 
-The terminal font, Vesen Mono (`public/fonts/VesenMono.woff2`), is a modified subset of a font released under the SIL Open Font License 1.1, and is distributed under that licence: see [public/fonts/OFL.txt](public/fonts/OFL.txt).
+## Licence
+
+MIT: see [LICENSE](LICENSE).
 
 ## Author
 
-**Has Salvesen**
-- [Website](https://www.vesen.app)
-- [Github](https://github.com/hsalvesen)
-- [LinkedIn](https://www.linkedin.com/in/harrysalvesen/)
-
----
+**Has Salvesen** · [vesen.app](https://www.vesen.app) · [GitHub](https://github.com/hsalvesen) · [LinkedIn](https://www.linkedin.com/in/harrysalvesen/)

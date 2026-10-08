@@ -1,0 +1,63 @@
+name: Bug report
+description: Something in the terminal does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. `debug report` in the terminal copies the build, browser and recent errors; paste it below if you can.
+        Please report security problems privately instead (see SECURITY.md).
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: The phone, tablet or computer, and its system version.
+      placeholder: iPhone 15, iOS 18.6 / Pixel 7, Android 15 / MacBook Air, macOS 15
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: The browser and its version, or the app whose browser it was.
+      placeholder: Safari 18 / Chrome 140 / Instagram 400
+    validations:
+      required: true
+  - type: dropdown
+    id: in-app
+    attributes:
+      label: In an app's browser?
+      description: Was vesen open inside another app, such as from a link in Instagram, Facebook or TikTok?
+      options:
+        - "No"
+        - "Yes"
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command typed
+      description: The line you ran, exactly as typed, or what you tapped.
+      placeholder: ls -la ~ | grep bash
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+      description: What you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      description: What happened instead. Screenshots help, especially on a phone.
+    validations:
+      required: true
+  - type: textarea
+    id: debug
+    attributes:
+      label: debug report
+      description: Optional. The output of `debug report`.
+      render: text

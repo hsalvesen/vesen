@@ -2,6 +2,8 @@
 
 *Prepared 6 October 2026 against `main` at 23758b9, the build live on www.vesen.app.*
 
+> **Status (8 October 2026):** every phase below is built and ships as v2.0.0. [STATUS.md](STATUS.md) records what landed in each phase with its commits, every deviation from this plan, what still needs the owner, and the remaining follow-ups. The device probe results go in [device-probe-results.md](device-probe-results.md).
+
 This folder holds a full audit of the vesen web terminal and a plan to improve it. The plan covers:
 
 - the user interface and experience;
@@ -105,6 +107,8 @@ Each workstream document ends with its own, more detailed questions.
 
 | File | Contents |
 |---|---|
+| [STATUS.md](STATUS.md) | What was built in each phase, the deviations from this plan, what needs the owner, and the follow-ups |
+| [device-probe-results.md](device-probe-results.md) | The template for the device probe's results from Instagram on an iPhone and an Android phone |
 | [01-audit.md](01-audit.md) | Every finding with corrected severity, verification, fix and phase; live reproductions; measurements; contrast table; branches; font licence |
 | [02-architecture-and-contracts.md](02-architecture-and-contracts.md) | Target module layout and the fifteen shared decisions every workstream builds against |
 | [03-terminal-input.md](03-terminal-input.md) | Tab completion, ghost text, readline keys, history, the line editor |

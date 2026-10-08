@@ -100,7 +100,9 @@ The file's default export is the spec, made with `defineCommand`, which insists 
 | `usageStatus`, `posixArgs`, `numericShortcut`, `handlesHelp`, `assignmentArgs` | For commands that need Linux's exact behaviour: `ls` exits 2 on a usage error, `head -5`, `echo` reading its own options. |
 
 `-h` and `--help` print the help generated from the spec, unless the spec defines an `h` flag of
-its own (as `ls -h` does); `--help` still works then.
+its own (as `ls -h` and `tree -h` do); `--help` still works then. `--version` prints
+`NAME (vesen) VERSION` for every command that is not a `builtin` and does not set `handlesHelp`,
+so a spec never needs a flag for it.
 
 ## The body and its `doc`
 
@@ -148,6 +150,12 @@ Inside `run`:
   did not load closes with no result, so always have a fallback: `less` and `man` print the text
   (`src/commands/lib/pager.ts`). The last stage of a pipeline typed at the prompt may show one
   (`man ls | less`), when its output is the terminal;
+- write a table whose columns are padded with spaces (`column -t`, `free`, `ps`) through
+  `writeTable(ctx, text)` in `src/commands/lib/table-out.ts`: on a screen narrower than the table
+  it becomes a block that scrolls sideways, so rows never wrap under the wrong headings;
+- colour text with roles (`fg: 'muted'`, `'error'`, `'accent'`, `'rainbow-red'`…) rather than raw
+  palette slots where it must be readable: `npm run check:contrast` holds every text role to
+  4.5:1 in every theme, and a palette slot only to its baseline;
 - return the exit status, or nothing for 0.
 
 ## House rules
@@ -237,10 +245,12 @@ npm run check:strict       # the strict TypeScript settings
 npm run check:boundaries   # DOM-free folders, no {@html}, the catalogue kept out of the kernel
 npm test                   # Vitest, offline examples included
 npm run build
-npm run check:bundle       # initial JS 60 kB, kernel 75 kB, catalogue 40 kB (gzip)
+npm run check:bundle       # initial JS 60 kB, kernel 75 kB in at most 4 files, catalogue 40 kB (gzip)
 npm run check:contrast -- --strict
 npm run test:smoke         # Playwright: desktop Chrome, iPhone in Instagram, Pixel 7
 ```
 
 If `check:bundle` says the catalogue is over budget, move what a spec imports into its body. If it
-says the kernel grew, a core file is importing something it should not.
+says the kernel grew, a core file is importing something it should not. If it says the kernel
+comes in too many files, a module the kernel shares with a later chunk has been split out:
+`scripts/kernel-chunk.ts` decides what goes in the kernel's chunk.
