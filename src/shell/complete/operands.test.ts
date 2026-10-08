@@ -2,6 +2,7 @@
 // for one, never the word a flag's value took (`ping -c 10`), nor dig's `+short` and `@google`,
 // which stand anywhere. Run with the catalogue in, where ping, host, dig and the others live.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { runLine } from '../../../tests/harness';
 import { at, completionHarness, type CompletionHarness } from '../../testing/completion-env';
 import { chipsFor } from './chips';
 import { operandsOf } from './context';
@@ -115,5 +116,63 @@ describe('operandsOf', () => {
     const qr = env.registry.get('qr');
     if (qr === undefined) return;
     expect(operandsOf(['--ec=H', '--type', 'utf8', 'hi'], qr).operands).toEqual(['hi']);
+  });
+});
+
+// ip's words choose what follows them (EnumValue.args): its object, then its command, then a
+// device or an address. Only `ip route` takes get, and get takes an ADDRESS, never a device.
+describe('operands chosen by the word before them', () => {
+  const touchChips = (line: string): { label: string; line?: string }[] => {
+    const state = at(line);
+    const { chips } = chipsFor({ mode: 'edit', state, result: complete(state, env), tab: TAB_IDLE, touch: true, registry: env.registry, history: [], max: 12, env });
+    return chips.map((chip) => ({ label: chip.label, ...(chip.line === undefined ? {} : { line: chip.line }) }));
+  };
+  const runs = (line: string): string[] => touchChips(line).flatMap((chip) => (chip.line === undefined ? [] : [chip.line]));
+
+  it("offers each ip object only the commands it has: get for route alone", () => {
+    expect(values('ip ')).toEqual(['addr', 'link', 'route']);
+    expect(values('ip addr ')).toEqual(['show']);
+    expect(values('ip link ')).toEqual(['show']);
+    expect(values('ip route ')).toEqual(['get', 'show']);
+    expect(values('ip addr g')).toEqual([]);
+    expect(complete(at('ip route '), env).placeholder).toBe('COMMAND');
+  });
+
+  it('offers an address after ip route get, and a device after show', () => {
+    const get = complete(at('ip route get '), env);
+    expect(get.placeholder).toBe('ADDRESS');
+    expect(get.candidates.map((c) => c.value)).toEqual(['1.1.1.1', '10.42.0.7']);
+    expect(values('ip route get e')).toEqual([]);
+    expect(values('ip route show ')).toEqual(['dev', 'eth0', 'lo']);
+    expect(values('ip addr show ')).toEqual(['dev', 'eth0', 'lo']);
+    expect(values('ip addr show dev ')).toEqual(['eth0', 'lo']);
+    expect(complete(at('ip addr show dev '), env).placeholder).toBe('NAME');
+    expect(values('ip link show lo ')).toEqual([]);
+  });
+
+  it("follows ip's abbreviations and options as ip reads them", () => {
+    expect(values('ip a ')).toEqual(['show']);
+    expect(values('ip r g ')).toEqual(['1.1.1.1', '10.42.0.7']);
+    expect(values('ip a s ')).toEqual(['dev', 'eth0', 'lo']);
+    expect(values('ip -4 route ')).toEqual(['get', 'show']);
+    expect(values('ip -br link ')).toEqual(['show']);
+  });
+
+  it('never puts a line on the phone that ip would refuse', () => {
+    expect(runs('ip route get ')).toEqual([]);
+    expect(runs('ip route get')).toEqual([]);
+    expect(touchChips('ip route get ').map((chip) => chip.label)).toEqual(['1.1.1.1', '10.42.0.7']);
+    expect(runs('ip addr ')).toEqual(['ip addr']);
+    expect(runs('ip route ')).toEqual(['ip route']);
+    expect(runs('ip route show ')).toEqual(['ip route show', 'ip route show eth0', 'ip route show lo']);
+    expect(runs('ip addr show dev ')).toEqual(['ip addr show dev eth0', 'ip addr show dev lo']);
+    expect(runs('ip ')).toEqual([]);
+  });
+
+  it('runs every line those chips offer', async () => {
+    for (const line of ['ip route show eth0', 'ip addr show dev lo', 'ip route get 10.42.0.7', 'ip link show']) {
+      const { status } = await runLine(line);
+      expect(status, line).toBe(0);
+    }
   });
 });

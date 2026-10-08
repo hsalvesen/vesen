@@ -11,7 +11,7 @@ import { createClock } from '../src/services/clock';
 import { expandAliases } from '../src/shell/alias';
 import { wrapText } from '../src/shell/help';
 import { CaptureOut } from '../src/shell/streams';
-import type { Clipboard, Digest, Opener, SysInfo } from '../src/services/types';
+import type { Clipboard, Digest, KV, Opener, SysInfo } from '../src/services/types';
 import { defineCommand, type CommandSpec, type FullscreenView, type InAppBrowser } from '../src/shell/types';
 import { createScreen } from '../src/stores/screen';
 import { screenText, stubCommands } from '../src/testing/shell-harness';
@@ -52,6 +52,8 @@ export interface RunOptions {
    * something asks for it, as on a line typed the moment the kernel arrives.
    */
   readonly catalogue?: 'loaded' | 'lazy';
+  /** The browser's local storage, which keeps files, history and nano's unsaved buffers; none by default. */
+  readonly storage?: KV<'local'>;
 }
 
 export interface LineResult {
@@ -144,6 +146,7 @@ export async function session(options: RunOptions = {}): Promise<Session> {
     ...(options.clipboard === undefined ? {} : { clipboard: options.clipboard }),
     ...(options.sys === undefined ? {} : { sys: options.sys }),
     ...(options.digest === undefined ? {} : { digest: options.digest }),
+    ...(options.storage === undefined ? {} : { storage: options.storage }),
     yieldToHost: () => Promise.resolve(),
   });
   if (options.catalogue !== 'lazy') await app.shell.registry.whenComplete();

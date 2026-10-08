@@ -157,6 +157,10 @@
 
   onMount(() => {
     void restored?.then((snapshot) => snapshot !== null && restoreView(snapshot));
+    // Only an app's history entry carries a state (ui/apps/history-entry.ts). A page reloaded,
+    // or reached by Back, while an app was open starts on that entry, which no app holds now:
+    // it comes off, or the visitor's next Back would seem to do nothing.
+    if (win !== undefined && win.history.state != null) void import('./ui/apps/history-entry').then(({ dropStrayEntry }) => dropStrayEntry(), () => {});
     if (win === undefined || session === null) return;
     // Saving loads in its own chunk just after the first paint, as the status line does: before
     // then nothing on the screen is worth putting back.

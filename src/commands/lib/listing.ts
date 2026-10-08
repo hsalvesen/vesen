@@ -125,6 +125,8 @@ function formatter(timeZone: string): Intl.DateTimeFormat {
       minute: 'numeric',
       second: 'numeric',
       hourCycle: 'h23',
+      // Before year 1 the year counts back from 1 BC, so the era says which way.
+      era: 'short',
     };
     try {
       found = new Intl.DateTimeFormat('en-US', { ...options, timeZone });
@@ -137,20 +139,34 @@ function formatter(timeZone: string): Intl.DateTimeFormat {
   return found;
 }
 
-/** A moment as a wall clock in `timeZone`, with that zone's offset from UTC at the time. */
+/** Date.UTC for every year: Date.UTC itself reads the years 0 to 99 as 1900 to 1999. NaN past a date's range. */
+export function utcTime(year: number, month: number, day: number, hour = 0, minute = 0, second = 0, ms = 0): number {
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  return date.setUTCHours(hour, minute, second, ms);
+}
+
+/**
+ * A moment as a wall clock in `timeZone`, with that zone's offset from UTC at the time. The year
+ * is astronomical (0 is 1 BC). At the very ends of a date's range the wall clock may lie past
+ * it, and the offset is then NaN.
+ */
 export function localTime(ms: number, timeZone: string): LocalTime {
   const whole = Math.floor(ms / 1000) * 1000;
   const parts: Record<string, number> = {};
+  let before = false;
   for (const part of formatter(timeZone).formatToParts(new Date(whole))) {
-    if (part.type !== 'literal') parts[part.type] = Number(part.value);
+    if (part.type === 'era') before = /^b/i.test(part.value);
+    else if (part.type !== 'literal') parts[part.type] = Number(part.value);
   }
-  const year = parts.year ?? 1970;
+  const counted = parts.year ?? 1970;
+  const year = before ? 1 - counted : counted;
   const month = parts.month ?? 1;
   const day = parts.day ?? 1;
   const hour = (parts.hour ?? 0) % 24;
   const minute = parts.minute ?? 0;
   const second = parts.second ?? 0;
-  const offset = Math.round((Date.UTC(year, month - 1, day, hour, minute, second) - whole) / 60_000);
+  const offset = Math.round((utcTime(year, month, day, hour, minute, second) - whole) / 60_000);
   return { year, month, day, hour, minute, second, offset };
 }
 

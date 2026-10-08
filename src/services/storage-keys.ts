@@ -57,6 +57,11 @@ export const STORAGE_KEYS = {
     area: 'local',
     holds: 'Last good quotes and recent tickers',
   },
+  nano: {
+    key: 'vesen:nano:v1',
+    area: 'local',
+    holds: "nano's unsaved buffers, kept when Back or leaving the page could lose them, until saved, discarded, reset or 30 days old",
+  },
   session: {
     key: 'vesen:session:v1',
     area: 'session',

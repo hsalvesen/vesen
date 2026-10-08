@@ -27,6 +27,16 @@ export interface EditorView {
   readonly column?: number;
   /** Writes `text` to the file `name`, as the visitor; never throws. */
   readonly save: (name: string, text: string) => SaveResult;
+  /**
+   * Changes to this file that were never saved, kept when Back or leaving the page might have
+   * lost them: the editor offers them back before anything else.
+   */
+  readonly kept?: string;
+  /**
+   * Keeps the unsaved buffer `text` for the file `name` (null for a new buffer) where Back cannot
+   * lose it, or forgets what is kept for it when `text` is null; never throws.
+   */
+  readonly keep?: (name: string | null, text: string | null) => void;
 }
 
 /** A view read defensively; null when it has no way to save, which a command always gives. */
@@ -37,6 +47,7 @@ export function asEditorView(value: unknown): EditorView | null {
   const position = (n: unknown): number | undefined => (typeof n === 'number' && Number.isInteger(n) && n >= 1 ? n : undefined);
   const line = position(raw.line);
   const column = position(raw.column);
+  const keep = typeof raw.keep === 'function' ? (raw.keep as NonNullable<EditorView['keep']>) : undefined;
   return {
     name: typeof raw.name === 'string' && raw.name !== '' ? raw.name : null,
     text: typeof raw.text === 'string' ? raw.text : '',
@@ -45,6 +56,8 @@ export function asEditorView(value: unknown): EditorView | null {
     ...(line === undefined ? {} : { line }),
     ...(column === undefined ? {} : { column }),
     save,
+    ...(typeof raw.kept === 'string' ? { kept: raw.kept } : {}),
+    ...(keep === undefined ? {} : { keep }),
   };
 }
 

@@ -12,7 +12,7 @@ export const doc: CommandDoc = {
   man: [
     {
       heading: 'DATES',
-      body: "-d reads @SECONDS since 1970, a date (2026-10-01, 1 Oct 2026, Oct 1), a time (09:30, 09:30:15), both (2026-10-01T09:30:00Z), and words: now, today, yesterday, tomorrow, '3 days ago', '+2 hours', 'next week', 'last month'. Times are in your time zone unless a zone (UTC, Z, +11:00) is given. -t reads [[CC]YY]MMDDhhmm[.ss], as 202610010930.",
+      body: "-d reads @SECONDS since 1970, a date (2026-10-01, 1 Oct 2026, Oct 1), a time (09:30, 09:30:15, 9am, 9:30 pm), both (2026-10-01T09:30:00Z), a day of the week (monday, 'next fri', 'last tuesday'), and words: now, today, yesterday, tomorrow, '3 days ago', '+2 hours', 'next week', 'last month'. Times are in your time zone unless a zone (UTC, Z, +11:00) is given. A day the month does not have, such as 2024-02-30, is refused. -t reads [[CC]YY]MMDDhhmm[.ss], as 202610010930.",
     },
     {
       heading: 'TIMES',

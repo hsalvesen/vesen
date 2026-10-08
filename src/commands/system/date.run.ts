@@ -3,13 +3,13 @@
 
 import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
 import { parseDate } from '../lib/datespec';
-import { localTime } from '../lib/listing';
+import { localTime, utcTime } from '../lib/listing';
 import { zoneOf } from '../lib/sysread';
 
 /** What --help, help and man say about date, besides its spec (date.ts). */
 export const doc: CommandDoc = {
   description:
-    "Prints the date and time in your time zone, or in $TZ when it names one; with -u, in UTC. With -d STRING, prints the time STRING describes rather than now: '@1700000000' (seconds since 1970), a date such as '2026-12-25' or 'Dec 25' (midnight unless a time is given), a time such as '14:30', a zone such as 'UTC' or '+05:30' after the time, and words such as 'now', 'today', 'tomorrow', 'yesterday', 'next week', 'last month', '+2 hours' and '3 days ago'; an empty STRING is the start of today. A time without a zone is read in the zone date prints in. With +FORMAT, prints FORMAT with each conversion replaced: %Y year, %m month, %d day, %H hour, %M minute, %S second, %N nanoseconds, %a and %b the day and month names, %Z the zone, %s seconds since 1970, %j day of the year, %u day of the week (1 is Monday), %V the ISO week, %e the day padded with a space, %c %x %X %r the date and time as the C locale writes them. After the %, - drops the padding (%-d), _ pads with spaces, 0 with zeros, ^ makes it upper case, and a number sets the width. Only one of +FORMAT, -I and -R may be given.",
+    "Prints the date and time in your time zone, or in $TZ when it names one; with -u, in UTC. With -d STRING, prints the time STRING describes rather than now: '@1700000000' (seconds since 1970), a date such as '2026-12-25' or 'Dec 25' (midnight unless a time is given), a time such as '14:30', '9am' or '9:30 pm', a zone such as 'UTC' or '+05:30' after the time, a day of the week such as 'monday', 'next fri' or 'last tuesday' (midnight on that day: today counts for a day named alone, next skips it), and words such as 'now', 'today', 'tomorrow', 'yesterday', 'next week', 'last month', '+2 hours' and '3 days ago'; an empty STRING is the start of today. A day the month does not have, such as '2024-02-30', is an invalid date, and a time a date cannot hold is out of range. A time without a zone is read in the zone date prints in. With +FORMAT, prints FORMAT with each conversion replaced: %Y year, %m month, %d day, %H hour, %M minute, %S second, %N nanoseconds, %a and %b the day and month names, %Z the zone, %s seconds since 1970, %j day of the year, %u day of the week (1 is Monday), %V the ISO week, %e the day padded with a space, %c %x %X %r the date and time as the C locale writes them. After the %, - drops the padding (%-d), _ pads with spaces, 0 with zeros, ^ makes it upper case, and a number sets the width. Only one of +FORMAT, -I and -R may be given.",
 };
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
@@ -60,11 +60,11 @@ const DATE_SPEC = /^([-_0^#]*)(\d*)[EO]?(:{0,3}z|[A-Za-z%])/;
 
 /** ISO 8601's week-numbering year and week of a date, as %G and %V give them. */
 function isoWeek(year: number, month: number, day: number): { year: number; week: number } {
-  const date = Date.UTC(year, month - 1, day);
+  const date = utcTime(year, month, day);
   const isoDay = ((new Date(date).getUTCDay() + 6) % 7) + 1;
   const thursday = new Date(date + (4 - isoDay) * 86_400_000);
   const isoYear = thursday.getUTCFullYear();
-  const week = Math.floor((thursday.getTime() - Date.UTC(isoYear, 0, 1)) / (7 * 86_400_000)) + 1;
+  const week = Math.floor((thursday.getTime() - utcTime(isoYear, 1, 1)) / (7 * 86_400_000)) + 1;
   return { year: isoYear, week };
 }
 
@@ -74,8 +74,8 @@ function isoWeek(year: number, month: number, day: number): { year: number; week
  */
 export function formatDate(format: string, ms: number, zone: string): string {
   const t = localTime(ms, zone);
-  const weekday = new Date(Date.UTC(t.year, t.month - 1, t.day)).getUTCDay();
-  const dayOfYear = Math.round((Date.UTC(t.year, t.month - 1, t.day) - Date.UTC(t.year, 0, 1)) / 86_400_000) + 1;
+  const weekday = new Date(utcTime(t.year, t.month, t.day)).getUTCDay();
+  const dayOfYear = Math.round((utcTime(t.year, t.month, t.day) - utcTime(t.year, 1, 1)) / 86_400_000) + 1;
   const sign = t.offset < 0 ? '-' : '+';
   const abs = Math.abs(t.offset);
   const hour12 = t.hour % 12 === 0 ? 12 : t.hour % 12;
@@ -196,7 +196,23 @@ export async function run(ctx: CommandContext): Promise<ExitCode | void> {
   // -u is TZ=UTC0, as POSIX has it: STRING is read in UTC too.
   const zone = ctx.opts.utc === true ? 'UTC' : zoneOf(ctx);
   const at = typeof described === 'string' ? parseDate(described, ctx.clock.now(), zone) : ctx.clock.now();
-  if (at === null) return ctx.fail(`invalid date '${String(described)}'`);
+  if (at === null) {
+    // @SECONDS that a time_t holds but a date cannot: GNU's localtime fails the same way.
+    const seconds = typeof described === 'string' ? epochSeconds(described) : null;
+    return ctx.fail(seconds === null ? `invalid date '${String(described)}'` : `time '${seconds}' is out of range`);
+  }
+  // At the ends of a date's range, a zone ahead of or behind UTC puts the wall clock past them.
+  if (!Number.isFinite(localTime(at, zone).offset)) return ctx.fail(`time '${Math.floor(at / 1000)}' is out of range`);
   await ctx.stdout.write(`${formatDate(format, at, zone)}\n`);
   return 0;
+}
+
+/** The whole seconds of `@SECONDS`, as GNU prints them, when they fit a 64-bit time_t; null otherwise. */
+function epochSeconds(text: string): string | null {
+  const match = /^@(-?)0*(\d+?)(?:\.\d+)?$/.exec(text.trim());
+  if (match === null) return null;
+  const [, sign = '', digits = ''] = match;
+  const limit = sign === '-' ? '9223372036854775808' : '9223372036854775807';
+  if (digits.length > limit.length || (digits.length === limit.length && digits > limit)) return null;
+  return sign + digits;
 }

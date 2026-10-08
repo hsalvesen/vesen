@@ -31,7 +31,7 @@ A rewrite of the whole app, built from the audit and plan in [docs/plan](docs/pl
 - Every command is one spec that drives running, options, `--help`, `man`, `whatis`, `apropos`, Tab completion, the phone's chips, its `/usr/bin` stub and its man page; every command that is not a builtin answers `--version`.
 - About 160 commands. New: the text tools (`grep`, `sed`, `sort`, `uniq`, `cut`, `tr`, `head`, `tail`, `wc`, `nl`, `diff`, `xargs`, `column`, `bc`, `expr`, `base64`, the checksums and more), the file tools (`find`, `tree`, `chmod`, `chown`, `du`, `df`, `realpath`, `file` and more), the system tools (`ps`, `top`, `kill`, `uname`, `free`, `cal`, `id`, `uptime` and more), job builtins (`read`, `time`, `timeout`, `watch`), network tools over HTTPS (`dig`, `host`, `nslookup`, `ping`, `ip`, `ifconfig`, `whois`, `wget`, `git log`), the pager and editor (`less`, `more`, `man` in the pager, `nano`), and fun (`cowsay`, `fortune`, `figlet`, `lolcat`, `sl`, `cmatrix`, `factor`) with art written for vesen.
 - Coreutils are silent on success with `-v` to confirm, and use GNU's wording and exit codes.
-- `less` opens at `+G`, `+F`, `+NUMBER` or `+/text`, and into a pipe copies like `cat`; `date -d` and `--date` read a date as `touch -d` does; `ip route get ADDRESS` shows the route it would take; `timeout`, `nohup` and `xargs` say `No such file or directory` (127) or `Permission denied` (126) for a command they cannot run; `figlet -f` knows its font's names.
+- `less` opens at `+G`, `+F`, `+NUMBER` or `+/text`, and into a pipe copies like `cat`; `date -d` and `--date` read a date as `touch -d` does, days of the week (`monday`, `next friday`, `last tuesday`) and `9am` or `9:30 pm` included, and refuse a day the month lacks (`2024-02-30`) or a time out of range, in GNU's words; `ip route get ADDRESS` shows the route it would take; `timeout`, `nohup` and `xargs` say `No such file or directory` (127) or `Permission denied` (126) for a command they cannot run; `figlet -f` knows its font's names.
 - One process table: `ps`, `top`, `kill`, `pgrep`, `$$` and `/proc` agree, each process has a `/proc/PID` folder, `/proc/self` is the command reading it, and `/dev/pts/0`, which `tty` names, exists.
 - New commands load in a catalogue after the kernel, so the first paint and the first command do not wait for them.
 - `privacy` lists every service a command talks to and what it is sent; `debug report` copies what a bug report needs.
@@ -48,13 +48,14 @@ A rewrite of the whole app, built from the audit and plan in [docs/plan](docs/pl
 - The shell is sized to the visible screen above the keyboard, with one scroll owner and no sideways scrolling; pinch zoom is back, with a 16 px touch input that never zooms the page.
 - A phone dock: starter and follow-up chips, a key bar (tab, ↑, ↓, ^C, clear, symbols, hide keyboard), a history sheet, and `keys on|off|auto`.
 - Links open only on a tap inside in-app browsers, in the same view, and Back restores the terminal as it was; link cards with Copy everywhere.
-- Back (Android's button, iOS's edge swipe) closes `man`, `less`, `nano`, `cmatrix`, `sl`, the Shutdown screen and QR Present mode and stays in vesen; `nano` asks to save changes first, and a second Back cancels the question.
+- Back (Android's button, iOS's edge swipe) closes `man`, `less`, `nano`, `cmatrix`, `sl`, the Shutdown screen and QR Present mode and stays in vesen, even while the app is still loading on a slow connection; `nano` asks to save changes first, and asks again at each Back until it is answered. A reload or a return with an app open leaves no step behind, so one Back still leaves.
+- `nano` keeps unsaved changes in this browser while Back asks about them and whenever the page is put away, so a Back that leaves vesen anyway loses nothing: the next `nano` of that file offers to restore them.
 - `nano`'s prompt row on a phone keeps its label (`Write to:`, `Find:`) and buttons on one line, and its shortcut bar offers ^F for Where Is off a Mac, where ^W would close the tab.
 - Output reflows on rotation without re-running; wide tables and drawings scroll inside their own block.
 
 ### Prompt and completion
 
-- One completion engine for Tab (extend, list, cycle), ghost text and the chips, from the specs. It never offers a flag's value, `--` or `dig`'s `+option` and `@server` words as an operand.
+- One completion engine for Tab (extend, list, cycle), ghost text and the chips, from the specs. It never offers a flag's value, `--` or `dig`'s `+option` and `@server` words as an operand, and it follows a command's words where they decide what comes next: only `ip route` offers `get`, which offers addresses rather than devices.
 - A first Tab before the catalogue of commands has arrived waits for it rather than ringing the bell.
 - A line editor with a block cursor on desktop, readline keys, the kill ring, reverse search, history prefix search and type-ahead while a command runs.
 - A status line while a command runs, and each line's output streams into its entry. `^C` shows where it was pressed: at the end of an unfinished line, and above what the command prints on its way out, such as `ping`'s statistics.

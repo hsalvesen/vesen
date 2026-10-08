@@ -11,6 +11,10 @@
 //   the entry is still the current one, and that popstate is not taken for the visitor's Back. A
 //   view opened before it lands waits for it to push its own entry, as a push made while a
 //   traversal is pending can land in either order.
+// - An entry of vesen's that no open view holds comes off the same way, so Back never seems to do
+//   nothing: the page starts on one after a reload (pull to refresh, a discarded tab reopened)
+//   or after Back to a page left with a view open (`dropStrayEntry`, at boot), and Forward can
+//   land on one a view left when it closed.
 //
 // Nothing else changes history: the Back snapshot (services/session-snapshot.ts) still comes
 // back only when the page itself is reached by Back or Forward.
@@ -46,6 +50,8 @@ interface Entry {
 export interface HistoryEntries {
   /** Adds an entry for a view that has just opened; `onBack` closes it, or asks first. */
   hold(onBack: () => void): HistoryEntry;
+  /** Goes back off the current entry if it is vesen's and no open view holds it. */
+  dropStray(): void;
 }
 
 let tokens = 0;
@@ -101,10 +107,29 @@ export function createHistoryEntries(host: HistoryHost): HistoryEntries {
     return false;
   }
 
+  function listen(): void {
+    if (listening) return;
+    host.addEventListener('popstate', onPopState);
+    listening = true;
+  }
+
+  /** Goes back once from an entry of vesen's that no open view holds, as a view's own Back. */
+  function dropStray(): void {
+    const now = current();
+    if (now === null || leaving !== null || open.some((entry) => entry.pushed && entry.token === now)) return;
+    listen();
+    leaving = now;
+    leavingTimer = host.setTimeout(landed, OWN_BACK_WAIT_MS);
+    host.history.back();
+  }
+
   function onPopState(): void {
     if (leaving !== null) {
-      // The popstate of a view's own Back: not the visitor's.
-      if (current() !== leaving) landed();
+      // The popstate of a view's own Back: not the visitor's. Another stray under it goes too.
+      if (current() !== leaving) {
+        landed();
+        dropStray();
+      }
       return;
     }
     const now = current();
@@ -116,6 +141,8 @@ export function createHistoryEntries(host: HistoryHost): HistoryEntries {
       entry.onBack();
       if (!entry.released) push(entry);
     }
+    // Forward onto the entry of a view that has closed, or Back onto one left under another.
+    dropStray();
   }
 
   function release(entry: Entry): void {
@@ -136,16 +163,14 @@ export function createHistoryEntries(host: HistoryHost): HistoryEntries {
 
   return {
     hold(onBack) {
-      if (!listening) {
-        host.addEventListener('popstate', onPopState);
-        listening = true;
-      }
+      listen();
       const entry: Entry = { token: newToken(), onBack, pushed: false, released: false };
       open.push(entry);
       if (inFlight()) waiting.push(entry);
       else push(entry);
       return { release: () => release(entry) };
     },
+    dropStray,
   };
 }
 
@@ -156,4 +181,14 @@ export function holdHistoryEntry(onBack: () => void): HistoryEntry {
   if (typeof window === 'undefined') return { release() {} };
   shared ??= createHistoryEntries(window);
   return shared.hold(onBack);
+}
+
+/**
+ * At boot: a page reloaded, or reached by Back or Forward, while a view was open starts on that
+ * view's entry, which nothing holds now; it comes off, so one Back leaves vesen again.
+ */
+export function dropStrayEntry(): void {
+  if (typeof window === 'undefined') return;
+  shared ??= createHistoryEntries(window);
+  shared.dropStray();
 }

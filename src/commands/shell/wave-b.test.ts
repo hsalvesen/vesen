@@ -331,6 +331,35 @@ describe('date', () => {
     expect((await runLine("TZ=Nowhere/Land date -d '12:00' +%H:%M%z")).stdoutPlain).toBe('12:00+0000');
   });
 
+  it('refuses a day the month lacks, and a time past the range, in GNU date\'s words', async () => {
+    for (const day of ['2024-02-30', '2023-02-29', '2024-04-31 10:00']) {
+      expect(await runLine(`date -d '${day}'`)).toMatchObject({ status: 1, stdoutPlain: '', stderrPlain: `date: invalid date '${day}'` });
+    }
+    expect(await runLine("touch -d '2024-02-30' x")).toMatchObject({ status: 1, stderrPlain: "touch: invalid date format '2024-02-30'" });
+    for (const seconds of ['99999999999999999', '8640000000001', '-8640000000001']) {
+      expect(await runLine(`date -d @${seconds}`)).toMatchObject({ status: 1, stdoutPlain: '', stderrPlain: `date: time '${seconds}' is out of range` });
+    }
+    // Past a 64-bit time_t, GNU cannot read the number at all.
+    expect(await runLine('date -d @009223372036854775807')).toMatchObject({ status: 1, stderrPlain: "date: time '9223372036854775807' is out of range" });
+    expect(await runLine('date -d @-9223372036854775808.5')).toMatchObject({ status: 1, stderrPlain: "date: time '-9223372036854775808' is out of range" });
+    expect(await runLine('date -d @9223372036854775808')).toMatchObject({ status: 1, stderrPlain: "date: invalid date '@9223372036854775808'" });
+    // The last moment a date can hold, which in Sydney is past it as a wall clock; in UTC it prints.
+    expect(await runLine('date -d @8640000000000')).toMatchObject({ status: 1, stdoutPlain: '', stderrPlain: "date: time '8640000000000' is out of range" });
+    expect(await runLine('date -u -d @8640000000000')).toMatchObject({ status: 0, stdoutPlain: 'Sat Sep 13 00:00:00 UTC 275760' });
+    // Before year 1000 too: the year, the day of the week and of the year are the calendar's.
+    expect(await runLine('date -u -d @-8640000000000 +%Y-%m-%d')).toMatchObject({ status: 0, stdoutPlain: '-271821-04-20' });
+    expect(await runLine('date -u -d @-62135596800 +%m-%d%t%a')).toMatchObject({ status: 0, stdoutPlain: '01-01\tMon' });
+    expect(await runLine("date -u -d '0050-03-01' +%s%t%m-%d%t%a%t%j")).toMatchObject({ status: 0, stdoutPlain: '-60584198400\t03-01\tTue\t060' });
+  });
+
+  it('reads days of the week and am/pm as GNU date does', async () => {
+    // The harness's clock: Tuesday 2026-10-06, 20:01 in Sydney.
+    expect((await runLine('date -d monday')).stdoutPlain).toBe('Mon Oct 12 00:00:00 AEDT 2026');
+    expect((await runLine("date -d 'next tuesday' +%F")).stdoutPlain).toBe('2026-10-13');
+    expect((await runLine("date -d 'last friday' +%F")).stdoutPlain).toBe('2026-10-02');
+    expect((await runLine("date -d 'tomorrow 9am'")).stdoutPlain).toBe('Wed Oct  7 09:00:00 AEDT 2026');
+  });
+
   it('words a bad -d, a stray operand and two output formats as GNU date does', async () => {
     expect(await runLine('date -d nonsense')).toMatchObject({ status: 1, stderrPlain: "date: invalid date 'nonsense'" });
     expect(await runLine('date -d now later')).toMatchObject({

@@ -8,7 +8,7 @@
 
 import { lex, lexPartial } from '../lexer';
 import type { Quote, WordToken } from '../lexer-types';
-import type { ArgSpec, CommandSpec, FlagSpec, SubcommandSpec, ValueSource } from '../types';
+import type { ArgSpec, CommandSpec, EnumValue, FlagSpec, SubcommandSpec, ValueSource } from '../types';
 import { cutAt, scanRaw } from './quote';
 import type { CompletionEnv, EditState, Slot } from './types';
 
@@ -50,6 +50,15 @@ export interface CursorContext {
   /** The flags the command takes, in declared order, and those already given. */
   readonly flags: readonly FlagSpec[];
   readonly used: ReadonlySet<FlagSpec>;
+  /** The operands in force after a value that names its own (ip's `route get`), and the words that chose them. */
+  readonly branch?: Branch;
+}
+
+/** After a value with operands of its own: those operands, and the operands typed up to them. */
+export interface Branch {
+  readonly args: readonly ArgSpec[];
+  /** The values of the operands before `args`, from the first (`['route', 'get']` for `ip r g`). */
+  readonly words: readonly string[];
 }
 
 /** The word under the cursor. */
@@ -160,6 +169,30 @@ function reentryIndex(args: readonly ArgSpec[]): number {
   return at;
 }
 
+/** The value of `arg` that `word` names, by its own name or an alias: ip's `r` is `route`. */
+function choice(arg: ArgSpec | undefined, word: string): EnumValue | undefined {
+  if (arg?.source.kind !== 'enum') return undefined;
+  return arg.source.values({}).find((value) => value.value === word || value.aliases?.includes(word) === true);
+}
+
+/**
+ * The operands in force after `words`, the operands of a command or of its subcommand (`args`),
+ * once a value among them has chosen its own: ip's `r g` is `route get`, which takes an ADDRESS.
+ * Undefined while none has.
+ */
+export function branchOf(args: readonly ArgSpec[], words: readonly string[]): Branch | undefined {
+  let branch: Branch | undefined;
+  const chosen: string[] = [];
+  words.forEach((word, i) => {
+    const list = branch?.args ?? args;
+    const last = list[list.length - 1];
+    const value = choice(list[i - (branch?.words.length ?? 0)] ?? (last?.variadic === true ? last : undefined), word);
+    chosen.push(value?.value ?? word);
+    if (value?.args !== undefined) branch = { args: value.args, words: [...chosen] };
+  });
+  return branch;
+}
+
 /** True when a word can be the operand `arg`: env's NAME=VALUE operands look like assignments. */
 function fits(arg: ArgSpec | undefined, word: string): boolean {
   return arg === undefined || arg.source.kind !== 'var' || ASSIGNMENT.test(word);
@@ -190,6 +223,7 @@ interface Classified {
   readonly used: ReadonlySet<FlagSpec>;
   /** For `--name=value`: how many characters of the word come before the value. */
   readonly valueAt?: number;
+  readonly branch?: Branch;
 }
 
 const NOTHING: ReadonlySet<FlagSpec> = new Set();
@@ -221,10 +255,15 @@ function classify(input: readonly string[], word: CursorWord, env: CompletionEnv
   let sub: string | undefined;
   let subSpec: SubcommandSpec | undefined;
   const flags = (): FlagSpec[] => [...(spec.flags ?? []), ...(subSpec?.flags ?? [])];
+  // After a value with operands of its own (ip's `route`), those follow instead of the rest.
+  let branch: Branch | undefined;
+  const typed: string[] = [];
   // A subcommand takes only its own operands: `theme ls` takes none, so offers no theme names.
-  const operands = (): readonly ArgSpec[] => (sub === undefined ? (spec.args ?? []) : (subSpec?.args ?? []));
+  const operands = (): readonly ArgSpec[] => branch?.args ?? (sub === undefined ? (spec.args ?? []) : (subSpec?.args ?? []));
   const used = new Set<FlagSpec>();
   let positional = 0;
+  /** Where the next operand falls in `operands()`. */
+  const index = (): number => positional - (branch?.words.length ?? 0);
   let endOfOptions = false;
   let pending: FlagSpec | null = null;
   const optionsOpen = (): boolean => !endOfOptions && !(spec.posixArgs === true && positional > 0);
@@ -252,13 +291,17 @@ function classify(input: readonly string[], word: CursorWord, env: CompletionEnv
       subSpec = spec.subcommands[w];
       continue;
     }
-    if (argFor(operands(), positional, w).reenter && depth < MAX_DEPTH) {
+    const taken = argFor(operands(), index(), w);
+    if (taken.reenter && depth < MAX_DEPTH) {
       return classify(words.slice(i), word, env, depth + 1);
     }
     positional += 1;
+    const value = choice(taken.arg, w);
+    typed.push(value?.value ?? w);
+    if (value?.args !== undefined) branch = { args: value.args, words: [...typed] };
   }
 
-  const base = { spec, ...(sub === undefined ? {} : { sub }), words, flags: flags(), used };
+  const base = { spec, ...(sub === undefined ? {} : { sub }), ...(branch === undefined ? {} : { branch }), words, flags: flags(), used };
   if (pending !== null && pending.value !== undefined) {
     return { ...base, slot: 'flag-value', argIndex: positional, source: pending.value.source, valueName: pending.value.name };
   }
@@ -277,7 +320,7 @@ function classify(input: readonly string[], word: CursorWord, env: CompletionEnv
   const subcommands = spec.subcommands === undefined ? [] : Object.keys(spec.subcommands);
   if (positional === 0 && sub === undefined && subcommands.length > 0) return { ...base, slot: 'subcommand', argIndex: 0 };
 
-  const target = argFor(operands(), positional, word.value);
+  const target = argFor(operands(), index(), word.value);
   if (target.reenter && depth < MAX_DEPTH) return classify([], word, env, depth + 1);
   if (target.arg === undefined) return { ...base, slot: 'none', argIndex: positional };
   return { ...base, slot: 'arg', argIndex: positional, source: target.arg.source, valueName: target.arg.name };
@@ -335,6 +378,7 @@ export function cursorContext(state: EditState, env: CompletionEnv): CursorConte
     slot: found.slot,
     ...(found.spec === undefined ? {} : { spec: found.spec }),
     ...(found.sub === undefined ? {} : { sub: found.sub }),
+    ...(found.branch === undefined ? {} : { branch: found.branch }),
     words: found.words,
     argIndex: found.argIndex,
     ...(found.source === undefined ? {} : { source: found.source }),

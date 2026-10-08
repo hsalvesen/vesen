@@ -110,8 +110,8 @@ export function readyToRun(text: string, env: CompletionEnv): boolean {
   if (at.slot === 'flag-value' || at.slot === 'redirect') return false;
   if (at.slot === 'arg' && at.spec !== undefined) {
     const sub = at.sub === undefined ? undefined : at.spec.subcommands?.[at.sub];
-    const operands = at.sub === undefined ? (at.spec.args ?? []) : (sub?.args ?? []);
-    const next = operands[at.argIndex];
+    const operands = at.branch?.args ?? (at.sub === undefined ? (at.spec.args ?? []) : (sub?.args ?? []));
+    const next = operands[at.argIndex - (at.branch?.words.length ?? 0)];
     if (next !== undefined && next.optional !== true) return false;
   }
   return true;

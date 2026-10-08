@@ -6,7 +6,7 @@
 
 import { lex } from '../lexer';
 import type { Candidate, CommandSpec, EnumValue, ValueSource } from '../types';
-import { ANY_PATH, operandsOf, type CursorContext } from './context';
+import { ANY_PATH, branchOf, operandsOf, type CursorContext } from './context';
 import { matchPrefix } from './match';
 import type { CompletionEnv, FsEntry } from './types';
 
@@ -240,22 +240,30 @@ function operandAt(words: readonly string[], index: number, variadic: boolean): 
 function examplePool(context: CursorContext, source: Extract<ValueSource, { kind: 'examples' }>, env: CompletionEnv): Pool {
   const spec = context.spec;
   if (spec === undefined) return EMPTY;
-  const args = (context.sub !== undefined ? spec.subcommands?.[context.sub]?.args : undefined) ?? spec.args ?? [];
+  const branch = context.branch;
+  const own = (context.sub !== undefined ? spec.subcommands?.[context.sub]?.args : undefined) ?? spec.args ?? [];
+  const args = branch?.args ?? own;
   const last = args[args.length - 1];
-  const variadic = last?.variadic === true && context.argIndex >= args.length - 1;
+  const variadic = last?.variadic === true && context.argIndex - (branch?.words.length ?? 0) >= args.length - 1;
+  // After values that chose their own operands (ip's `route get`), only lines that chose the same.
+  const along = (words: readonly string[]): boolean => {
+    if (branch === undefined) return true;
+    const theirs = branchOf(own, words.slice(0, branch.words.length))?.words ?? [];
+    return theirs.length === branch.words.length && theirs.every((word, i) => word === branch.words[i]);
+  };
   const items: Candidate[] = [];
   if (source.fromHistory === true) {
     const history = env.history();
     for (let i = history.length - 1, seen = 0; i >= 0 && seen < HISTORY_SCAN; i -= 1, seen += 1) {
       const found = operands(history[i] ?? '', spec, context.sub);
-      const value = found === null ? undefined : operandAt(found.words, context.argIndex, variadic);
+      const value = found === null || !along(found.words) ? undefined : operandAt(found.words, context.argIndex, variadic);
       // An operand after `--` that looks like an option would be read as one where it lands.
       if (value !== undefined && value !== '' && !value.startsWith('-')) items.push({ value, label: value, kind: 'history', summary: 'from history', terminal: true });
     }
   }
   for (const example of spec.examples ?? []) {
     const found = operands(example.line, spec, context.sub);
-    const value = found === null ? undefined : operandAt(found.words, context.argIndex, variadic);
+    const value = found === null || !along(found.words) ? undefined : operandAt(found.words, context.argIndex, variadic);
     if (value === undefined || value === '' || value.startsWith('-')) continue;
     // A note tells what its whole line does, so it goes with the value only when the line ends
     // with the value and has nothing else but operands: example.com from

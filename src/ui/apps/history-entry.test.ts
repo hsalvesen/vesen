@@ -176,7 +176,7 @@ describe('history entries for full-screen views', () => {
     expect(page.pushState).toHaveBeenCalledTimes(2);
   });
 
-  it('does nothing on a popstate onto an entry left from a view that has closed', () => {
+  it('takes Forward back off the entry of a view that has closed, so the next Back leaves', () => {
     const page = browser();
     const entries = createHistoryEntries(page.host);
     let entry = { release() {} };
@@ -184,9 +184,72 @@ describe('history entries for full-screen views', () => {
     entry = entries.hold(onBack);
     page.visitorBack();
     page.visitorForward();
-    page.visitorBack();
+    // Nothing holds that entry now: the page goes back off it once, and that popstate is its own.
+    expect(page.back).toHaveBeenCalledTimes(1);
+    page.land();
+    expect(page.index).toBe(0);
     expect(onBack).toHaveBeenCalledTimes(1);
     expect(page.pushState).toHaveBeenCalledTimes(1);
+  });
+
+  describe('an entry the page starts on, which no view holds (a reload, or Back to a page left with a view open)', () => {
+    /** The page as a reload finds it: its last entry is one an earlier page's view held. */
+    function reloaded(strays = 1) {
+      const page = browser();
+      for (let i = 0; i < strays; i += 1) page.host.history.pushState({ [HISTORY_KEY]: `old-${i}` }, '');
+      page.pushState.mockClear();
+      return page;
+    }
+
+    it('comes off with one Back of its own, so the next Back leaves vesen', () => {
+      const page = reloaded();
+      const entries = createHistoryEntries(page.host);
+      entries.dropStray();
+      entries.dropStray();
+      expect(page.back).toHaveBeenCalledTimes(1);
+      page.land();
+      expect(page.index).toBe(0);
+      expect(page.pushState).not.toHaveBeenCalled();
+    });
+
+    it('takes off every stray entry under it too, one at a time', () => {
+      const page = reloaded(2);
+      const entries = createHistoryEntries(page.host);
+      entries.dropStray();
+      expect(page.back).toHaveBeenCalledTimes(1);
+      // The first lands on the second, which goes too.
+      page.land();
+      expect(page.back).toHaveBeenCalledTimes(2);
+      expect(page.index).toBe(0);
+    });
+
+    it("lets a view opened meanwhile wait for that Back, and its own Back still closes it", () => {
+      const page = reloaded();
+      const entries = createHistoryEntries(page.host);
+      entries.dropStray();
+      let entry = { release() {} };
+      const onBack = vi.fn(() => entry.release());
+      entry = entries.hold(onBack);
+      expect(page.pushState).not.toHaveBeenCalled();
+      page.land();
+      expect(page.pushState).toHaveBeenCalledTimes(1);
+      expect(page.index).toBe(1);
+      expect(onBack).not.toHaveBeenCalled();
+      page.visitorBack();
+      expect(onBack).toHaveBeenCalledTimes(1);
+      expect(page.index).toBe(0);
+    });
+
+    it("leaves alone an entry that is not vesen's, and one a view holds", () => {
+      const page = browser();
+      page.host.history.pushState({ other: true }, '');
+      const entries = createHistoryEntries(page.host);
+      entries.dropStray();
+      expect(page.back).not.toHaveBeenCalled();
+      entries.hold(() => {});
+      entries.dropStray();
+      expect(page.back).not.toHaveBeenCalled();
+    });
   });
 
   it("leaves Back to the page when the entry cannot be pushed", () => {

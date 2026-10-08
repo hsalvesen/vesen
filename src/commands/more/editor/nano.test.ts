@@ -4,7 +4,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { runLine, session } from '../../../../tests/harness';
 import { EDITOR_CLOSED, type EditorView, type SaveResult } from '../../../lib/nano';
+import { createStorage } from '../../../services/storage';
 import { createAppRunner } from '../../../shell/apps';
+import { MAX_KEPT, MAX_KEPT_CHARS } from '../../lib/nano-keep';
 import { readOperands } from './nano.run';
 
 /**
@@ -145,5 +147,109 @@ describe('vi and vim', () => {
   it('is left out of help and the first Tab list, but has a man page', async () => {
     expect((await runLine('help', { tty: false })).stdoutPlain).toMatch(/^Editor: less more nano$/m);
     expect((await runLine('man vim', { tty: false })).stdoutPlain).toContain('vi, vim - open nano, since vesen has no vi');
+  });
+});
+
+// What the editor keeps when Back, or leaving the page, might lose an unsaved buffer (Editor.svelte
+// calls the view's keep): the next nano of that file offers it back, as nano's .save files do.
+describe("nano's kept buffers", () => {
+  const DAY = 86_400_000;
+
+  /** A screen whose editor does `edit` with each view it is shown. */
+  function keeping(edit: (view: EditorView, round: number) => void) {
+    const shown: EditorView[] = [];
+    const fullscreen = vi.fn(async (_view: string, props: unknown) => {
+      const view = props as EditorView;
+      shown.push(view);
+      edit(view, shown.length);
+      return EDITOR_CLOSED;
+    });
+    return { shown, fullscreen };
+  }
+
+  it('offers a kept buffer at the next nano of that file, by whatever name, and nowhere else', async () => {
+    const editor = keeping((view, round) => {
+      if (round === 1) view.keep?.(view.name, 'unsaved words\n');
+    });
+    const s = await session({ fullscreen: editor.fullscreen, storage: createStorage(null).local });
+    await s.run('nano notes.txt');
+    expect(editor.shown[0]?.kept).toBeUndefined();
+    await s.run('nano ~/notes.txt');
+    expect(editor.shown[1]?.kept).toBe('unsaved words\n');
+    await s.run('cd /tmp; nano ../home/guest/notes.txt');
+    expect(editor.shown[2]?.kept).toBe('unsaved words\n');
+    await s.run('nano notes.txt');
+    expect(editor.shown[3]?.kept).toBeUndefined();
+    s.stop();
+  });
+
+  it('keeps a new buffer with no name for the next nano with none', async () => {
+    const editor = keeping((view, round) => {
+      if (round === 1) view.keep?.(null, 'scratch');
+    });
+    const s = await session({ fullscreen: editor.fullscreen, storage: createStorage(null).local });
+    await s.run('nano');
+    await s.run('nano notes.txt');
+    await s.run('nano');
+    expect(editor.shown.map((view) => view.kept)).toEqual([undefined, undefined, 'scratch']);
+    s.stop();
+  });
+
+  it('forgets a kept buffer the editor lets go of, one the file already holds, and one over 30 days old', async () => {
+    let now = Date.UTC(2026, 9, 6, 9, 0, 0);
+    const editor = keeping((view, round) => {
+      if (round === 1) view.keep?.(view.name, 'first\n');
+      if (round === 2) view.keep?.(view.name, null);
+      if (round === 4) view.save(view.name ?? '', 'second\n');
+      if (round === 4) view.keep?.(view.name, 'second\n');
+      if (round === 6) view.keep?.(view.name, 'third\n');
+    });
+    const s = await session({ fullscreen: editor.fullscreen, storage: createStorage(null).local, now: () => now });
+    await s.run('nano a.txt');
+    await s.run('nano a.txt');
+    await s.run('nano a.txt');
+    expect(editor.shown[1]?.kept).toBe('first\n');
+    // Let go of in round 2.
+    expect(editor.shown[2]?.kept).toBeUndefined();
+    await s.run('nano a.txt');
+    await s.run('nano a.txt');
+    // The file holds what was kept: nothing to offer.
+    expect(editor.shown[4]?.kept).toBeUndefined();
+    await s.run('nano a.txt');
+    now += 31 * DAY;
+    await s.run('nano a.txt');
+    expect(editor.shown[6]?.kept).toBeUndefined();
+    s.stop();
+  });
+
+  it('forgets every kept buffer at reset, as it forgets the files', async () => {
+    const editor = keeping((view, round) => {
+      if (round === 1) view.keep?.(view.name, 'unsaved\n');
+    });
+    const s = await session({ fullscreen: editor.fullscreen, storage: createStorage(null).local });
+    await s.run('nano notes.txt');
+    await s.run('reset');
+    await s.run('nano notes.txt');
+    expect(editor.shown[1]?.kept).toBeUndefined();
+    s.stop();
+  });
+
+  it('keeps the newest few, within a size a browser can store', async () => {
+    const seen = new Set<string | null>();
+    const editor = keeping((view) => {
+      if (seen.has(view.name)) return;
+      seen.add(view.name);
+      view.keep?.(view.name, view.name === 'big.txt' ? 'x'.repeat(MAX_KEPT_CHARS + 1) : `${view.name ?? ''}\n`);
+    });
+    const s = await session({ fullscreen: editor.fullscreen, storage: createStorage(null).local });
+    for (let i = 0; i <= MAX_KEPT; i += 1) await s.run(`nano f${i}`);
+    await s.run('nano big.txt');
+    await s.run('nano big.txt');
+    for (let i = 0; i <= MAX_KEPT; i += 1) await s.run(`nano f${i}`);
+    const offered = editor.shown.slice(-(MAX_KEPT + 1)).map((view) => view.kept);
+    // The oldest gave way to the newest.
+    expect(offered).toEqual([undefined, ...Array.from({ length: MAX_KEPT }, (_, i) => `f${i + 1}\n`)]);
+    expect(editor.shown[MAX_KEPT + 2]?.kept).toBeUndefined();
+    s.stop();
   });
 });

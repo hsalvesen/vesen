@@ -107,7 +107,8 @@ describe('AppHost and the Shutdown app', () => {
 
 // Back while an app shows (apps/history-entry.ts): each app holds one history entry, so Back
 // closes the app through its own close path instead of leaving vesen; nano with changes asks to
-// save and keeps its entry while it asks; an app that closes itself takes its entry off once.
+// save, at every Back until answered, and keeps its entry (and its buffer) while it asks; an app
+// that closes itself takes its entry off once.
 // happy-dom's history goes back within the document at once, with its popstate.
 describe('Back while an app shows', () => {
   const vesenEntry = (): boolean => typeof (history.state as { vesenApp?: unknown } | null)?.vesenApp === 'string';
@@ -187,9 +188,10 @@ describe('Back while an app shows', () => {
     expect(onclose).not.toHaveBeenCalled();
   });
 
-  it("asks 'Save modified buffer?' in nano with changes, keeping the text and the entry, and Back again cancels", async () => {
+  it("asks 'Save modified buffer?' in nano with changes, keeping the text and the entry, and asks again at every Back", async () => {
     const save = vi.fn(written);
-    const { onclose, container } = await show({ id: 15, view: 'editor', props: editorView(save) });
+    const keep = vi.fn();
+    const { onclose, container } = await show({ id: 15, view: 'editor', props: { ...editorView(save), keep } });
     const area = screen.getByRole('textbox', { name: 'Editing draft.txt' }) as HTMLTextAreaElement;
     await fireEvent.input(area, { target: { value: 'unsaved words' } });
     await tick();
@@ -200,23 +202,23 @@ describe('Back while an app shows', () => {
     expect(container.querySelector('.question')?.textContent).toBe('Save modified buffer?');
     expect(area.value).toBe('unsaved words');
     expect(vesenEntry()).toBe(true);
+    // Kept meanwhile, should a Back leave the page instead.
+    expect(keep).toHaveBeenLastCalledWith('draft.txt', 'unsaved words');
 
     history.back();
     await tick();
     expect(onclose).not.toHaveBeenCalled();
-    expect(container.querySelector('.question')).toBeNull();
-    expect(container.querySelector('.status-line')?.textContent?.trim()).toBe('[ Cancelled ]');
+    expect(container.querySelector('.question')?.textContent).toBe('Save modified buffer?');
     expect(area.value).toBe('unsaved words');
     expect(vesenEntry()).toBe(true);
 
-    // Back, then Y and the file name: saved, closed, and the entry gone.
-    history.back();
-    await tick();
+    // Y and the file name: saved, closed, what was kept forgotten, and the entry gone.
     await fireEvent.keyDown(window, { key: 'y' });
     await tick();
     const name = screen.getByRole('textbox', { name: 'File Name to Write:' }) as HTMLInputElement;
     await fireEvent.submit(name.form as HTMLFormElement);
     expect(save).toHaveBeenCalledWith('draft.txt', 'unsaved words\n');
+    expect(keep).toHaveBeenLastCalledWith('draft.txt', null);
     expect(onclose).toHaveBeenCalledWith(15, EDITOR_CLOSED);
     expect(vesenEntry()).toBe(false);
   });

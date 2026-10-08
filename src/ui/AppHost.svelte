@@ -7,7 +7,9 @@
   Each app has one history entry while it shows (apps/history-entry.ts), so Back (Android's
   button, iOS's edge swipe) closes the app rather than leaving vesen: Back calls the app's own
   back(), which closes it the way q or ^X would (nano asks to save first, and keeps its entry
-  while it asks), and an app that closes itself takes its entry off again.
+  while it asks), and an app that closes itself takes its entry off again. A Back that comes
+  before the app's chunk (a slow phone) lets the entry go and closes the app the moment it shows,
+  so the command still gets its usual result; only a chunk that cannot load closes with none.
 -->
 <script lang="ts">
   import { onMount } from 'svelte';
@@ -27,17 +29,49 @@
     return load === undefined ? Promise.reject(new Error(`no app called ${request.view}`)) : load().then((module) => module.default);
   });
 
+  let closed = false;
   const close = (result?: unknown): void => {
     entry?.release();
+    if (closed) return;
+    closed = true;
     onclose(request.id, result);
   };
 
+  /** Back came before the app did: it closes as soon as it shows. */
+  let backPending = false;
+  /** Its chunk could not load: the command goes on without it. */
+  let failed = false;
+
   /** Back left the app's entry: the app closes as it closes itself, or asks first. */
   function back(): void {
-    if (instance?.back !== undefined) instance.back();
-    // Not loaded yet, or it could not load: the command goes on without it.
-    else close();
+    if (instance !== undefined) {
+      if (instance.back !== undefined) instance.back();
+      else close();
+    } else if (failed) {
+      close();
+    } else {
+      // Its chunk is still on its way (a slow phone): Back has taken the entry, so let it go,
+      // and close the app the moment it shows, so man and an unchanged nano end as they end
+      // themselves. Only a chunk that cannot load closes it with no result.
+      backPending = true;
+      entry?.release();
+    }
   }
+
+  $effect(() => {
+    app.catch(() => {
+      failed = true;
+      if (backPending) close();
+    });
+  });
+
+  $effect(() => {
+    if (instance === undefined || !backPending) return;
+    backPending = false;
+    back();
+    // It took something away instead of closing (nano's offer to restore): Back is caught again.
+    if (!closed) entry = holdHistoryEntry(back);
+  });
 
   onMount(() => {
     entry = holdHistoryEntry(back);

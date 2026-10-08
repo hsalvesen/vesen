@@ -11,7 +11,10 @@
 
   Writing goes through the command's `save`, which writes as the visitor, so a file they may not
   change says [ File is unwritable ] and what is saved under ~ persists. While there are unsaved
-  changes, leaving the page asks first.
+  changes, leaving the page asks first. Back with changes asks 'Save modified buffer?', and keeps
+  asking until Y, N or ^C answers; the buffer goes to the command's `keep` meanwhile, and when
+  the page is put away, so a Back that leaves vesen anyway (a phone's browser may skip the entry)
+  loses nothing: the next nano of the file asks 'Restore unsaved changes from before?'.
 -->
 <script lang="ts">
   import { onMount, tick } from 'svelte';
@@ -48,8 +51,11 @@
   type Prompt = { readonly kind: 'write'; readonly then: 'stay' | 'exit' } | { readonly kind: 'search' };
   let prompt = $state<Prompt | null>(null);
   let answer = $state('');
-  /** 'Save modified buffer?' is waiting for Y, N or ^C. */
-  let asking = $state(false);
+  /** A Y or N question is waiting for Y, N or ^C: 'Save modified buffer?', or whether to restore what was kept. */
+  let asking = $state<'save' | 'restore' | null>(view?.kept === undefined ? null : 'restore');
+  const QUESTIONS = { save: 'Save modified buffer?', restore: 'Restore unsaved changes from before?' } as const;
+  /** The name the buffer is kept under (null for a new buffer), while something is kept for it. */
+  let keptAs: { readonly name: string | null } | null = view?.kept === undefined ? null : { name: view.name };
   let helping = $state(false);
   let lastSearch = $state('');
   /** What ^K cut; cuts in a row collect, as nano's do. */
@@ -60,7 +66,7 @@
   let area: HTMLTextAreaElement | undefined = $state();
   let promptBox: HTMLInputElement | undefined = $state();
 
-  const busy = $derived(prompt !== null || asking || helping);
+  const busy = $derived(prompt !== null || asking !== null || helping);
   /** nano's words on a keyboard; shorter on a touch screen, where Save or Find and Cancel share the row. */
   const promptLabel = $derived.by(() => {
     if (prompt === null) return '';
@@ -72,7 +78,7 @@
   const SHORTCUTS = shortcutsFor(keyPlatform(typeof navigator === 'undefined' ? undefined : navigator));
   const ASKING: Shortcuts = [[['Y', 'Yes'], ['N', 'No']], [['^C', 'Cancel']]];
   const shortcuts: Shortcuts = $derived(
-    asking ? ASKING : prompt !== null ? [[['Enter', prompt.kind === 'write' ? 'Write' : 'Find']], [['^C', 'Cancel']]] : SHORTCUTS,
+    asking !== null ? ASKING : prompt !== null ? [[['Enter', prompt.kind === 'write' ? 'Write' : 'Find']], [['^C', 'Cancel']]] : SHORTCUTS,
   );
 
   function finish(): void {
@@ -97,6 +103,23 @@
     area?.setSelectionRange(at, at);
   }
 
+  // ── Keeping what is not saved ──
+
+  /** Hands the unsaved buffer to the command to keep, under its name now. */
+  function keepBuffer(): void {
+    if (view?.keep === undefined || !modified || closed) return;
+    view.keep(name, text);
+    if (keptAs !== null && keptAs.name !== name) view.keep(keptAs.name, null);
+    keptAs = { name };
+  }
+
+  /** The buffer was saved or discarded: nothing kept for it is wanted now. */
+  function forgetKept(): void {
+    if (keptAs === null) return;
+    view?.keep?.(keptAs.name, null);
+    keptAs = null;
+  }
+
   // ── Writing ──
 
   /** Writes the buffer as `target`; true when it was written. */
@@ -107,6 +130,7 @@
     message = result.message;
     if (!result.ok) return false;
     name = result.name;
+    forgetKept();
     if (body !== text) {
       // The newline nano adds at the end; the caret stays where it is.
       const start = area?.selectionStart ?? 0;
@@ -145,33 +169,59 @@
       return;
     }
     message = '';
-    asking = true;
+    asking = 'save';
   }
 
   function answerSave(yes: boolean): void {
-    asking = false;
+    asking = null;
     if (yes) writeOut('exit');
-    else finish();
+    else {
+      forgetKept();
+      finish();
+    }
+  }
+
+  /** Y puts back what was kept, still to be saved; N forgets it. */
+  function answerRestore(yes: boolean): void {
+    asking = null;
+    if (yes && view?.kept !== undefined) {
+      void setText(view.kept, 0);
+      message = '[ Restored unsaved changes ]';
+    } else {
+      forgetKept();
+    }
+    focusArea();
+  }
+
+  function answerQuestion(yes: boolean): void {
+    if (asking === 'restore') answerRestore(yes);
+    else answerSave(yes);
   }
 
   function cancel(): void {
-    asking = false;
+    // Not now: what was kept stays kept, and is offered again next time.
+    if (asking === 'restore') keptAs = null;
+    asking = null;
     prompt = null;
     message = '[ Cancelled ]';
     focusArea();
   }
 
   /**
-   * Back (AppHost): what is on top goes first (the help; a prompt or 'Save modified buffer?',
-   * cancelled as ^C would), then it leaves as ^X does, asking first when there are changes, so
-   * Back never loses the buffer. AppHost puts the history entry back while it stays open.
+   * Back (AppHost): what is on top goes first (the help, a prompt, the offer to restore, each
+   * cancelled as ^C would), then it leaves as ^X does. With changes it asks 'Save modified
+   * buffer?', and goes on asking at each Back until it is answered, while the buffer is kept in
+   * case Back leaves the page instead. AppHost puts the history entry back while it stays open.
    */
   export function back(): void {
     if (closed) return;
     if (view === null) close();
     else if (helping) toggleHelp();
-    else if (prompt !== null || asking) cancel();
-    else leave();
+    else if (prompt !== null || asking === 'restore') cancel();
+    else {
+      keepBuffer();
+      leave();
+    }
   }
 
   // ── Finding ──
@@ -301,9 +351,9 @@
   function onWindowKey(event: KeyboardEvent): void {
     if (closed || event.isComposing || MODIFIERS.includes(event.key)) return;
     const key = event.key.toLowerCase();
-    if (asking) {
-      if (key === 'y') answerSave(true);
-      else if (key === 'n') answerSave(false);
+    if (asking !== null) {
+      if (key === 'y') answerQuestion(true);
+      else if (key === 'n') answerQuestion(false);
       else if (key === 'escape' || (event.ctrlKey && key === 'c')) cancel();
       event.preventDefault();
       event.stopPropagation();
@@ -321,12 +371,25 @@
     if (event.pointerType !== 'touch') event.preventDefault();
   }
 
-  // Unsaved changes: leaving the page asks first.
+  // Unsaved changes: leaving the page asks first, and the buffer is kept whenever the page is put
+  // away (left, hidden, or closed by a phone that needs the memory), in case it never comes back.
   $effect(() => {
     if (!modified || typeof window === 'undefined') return;
-    const warn = (event: BeforeUnloadEvent): void => event.preventDefault();
+    const warn = (event: BeforeUnloadEvent): void => {
+      keepBuffer();
+      event.preventDefault();
+    };
+    const hidden = (): void => {
+      if (document.visibilityState === 'hidden') keepBuffer();
+    };
     window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
+    window.addEventListener('pagehide', keepBuffer);
+    document.addEventListener('visibilitychange', hidden);
+    return () => {
+      window.removeEventListener('beforeunload', warn);
+      window.removeEventListener('pagehide', keepBuffer);
+      document.removeEventListener('visibilitychange', hidden);
+    };
   });
 
   onMount(() => {
@@ -407,22 +470,22 @@
             <button type="button" class="tool" onclick={cancel}>Cancel</button>
           {/if}
         </form>
-      {:else if asking}
-        <div class="question">Save modified buffer?</div>
+      {:else if asking !== null}
+        <div class="question">{QUESTIONS[asking]}</div>
       {:else}
         <div class="status-line">
           {#if message !== ''}<span class="status">{message}</span>{/if}
         </div>
       {/if}
-      <p class="sr-only" role="status" aria-live="polite">{asking ? 'Save modified buffer? Y or N' : message}</p>
+      <p class="sr-only" role="status" aria-live="polite">{asking !== null ? `${QUESTIONS[asking]} Y or N` : message}</p>
 
       {#if touch}
         <!-- A prompt has its own buttons beside it, in the toolbar's place. -->
         {#if prompt === null}
-          <div class="toolbar" class:three={asking} role="toolbar" aria-label="Editor">
-            {#if asking}
-              <button type="button" class="tool" onclick={() => answerSave(true)}>Yes</button>
-              <button type="button" class="tool" onclick={() => answerSave(false)}>No</button>
+          <div class="toolbar" class:three={asking !== null} role="toolbar" aria-label="Editor">
+            {#if asking !== null}
+              <button type="button" class="tool" onclick={() => answerQuestion(true)}>Yes</button>
+              <button type="button" class="tool" onclick={() => answerQuestion(false)}>No</button>
               <button type="button" class="tool" onclick={cancel}>Cancel</button>
             {:else}
               <button type="button" class="tool" disabled={busy} onpointerdown={keepFocus} onmousedown={(event) => event.preventDefault()} onclick={save}>Save</button>

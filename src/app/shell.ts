@@ -3,6 +3,7 @@
 // (bootstrap.ts) passes in the browser services; tests pass in fakes.
 
 import { buildRegistry } from '../commands/index';
+import { provideLocalStore } from '../commands/lib/local-store';
 import { provideSessionStore } from '../commands/lib/session-store';
 import { forgetWeather, provideWeather, type WeatherLoader } from '../commands/lib/weather';
 import type { Block, Line } from '../output/model';
@@ -106,6 +107,7 @@ export function createAppShell(options: AppShellOptions): AppShell {
   const registry = buildRegistry(options.specs ?? []);
   provideWeather(options.weather ?? null);
   provideSessionStore(options.sessionStorage ?? null);
+  provideLocalStore(options.storage ?? null);
   const clock = options.clock ?? createClock();
   const sys = options.sys ?? createSysInfo(options.sysHost ?? null, options.errors ? { errors: options.errors } : {});
   const screen = options.screen ?? appScreen;
@@ -166,7 +168,11 @@ export function createAppShell(options: AppShellOptions): AppShell {
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.bell ? { bell: options.bell } : {}),
     ...(options.yieldToHost ? { yieldToHost: options.yieldToHost } : {}),
-    onReset: forgetWeather,
+    // What a new session should not inherit beyond the shell: weather's places, nano's kept buffers.
+    onReset: () => {
+      forgetWeather();
+      storage?.remove(STORAGE_KEYS.nano.key);
+    },
   });
   const built = shell;
 

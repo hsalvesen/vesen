@@ -134,16 +134,14 @@ test.describe('Back while an app is open', { tag: '@smoke' }, () => {
     expect(page.url()).toBe(home);
     await expect(text).toHaveValue('unsaved words');
 
-    // Back again while it asks cancels the question; the text is still there.
+    // Back again while it asks leaves the question up: only Y, N or ^C answers it.
     await page.evaluate(() => history.back());
-    await expect(editor(page).locator('.question')).toHaveCount(0);
-    await expect(editor(page).locator('.status')).toHaveText('[ Cancelled ]');
+    await page.waitForTimeout(300);
+    await expect(editor(page).locator('.question')).toHaveText('Save modified buffer?');
     await expect(text).toHaveValue('unsaved words');
     expect(page.url()).toBe(home);
 
-    // A third Back asks again; Yes, then the file name, saves and leaves.
-    await page.goBack();
-    await expect(editor(page).locator('.question')).toHaveText('Save modified buffer?');
+    // Yes, then the file name, saves and leaves.
     if (isPhone()) {
       await page.getByRole('button', { name: 'Yes' }).tap();
       await expect(page.getByRole('textbox', { name: /Write to|File Name to Write/ })).toHaveValue('/home/guest/draft.txt');
@@ -235,6 +233,104 @@ test.describe('Back while an app is open', { tag: '@smoke' }, () => {
     await page.goBack();
     await backAtPrompt(page, line, home);
     await leave(page);
+    expect(errors).toEqual([]);
+  });
+});
+
+// What Back meets on a slow phone and after a reload: an app whose chunk is still on its way, and
+// a history entry that an app of the page before the reload held.
+test.describe('Back before an app has loaded, and after a reload', { tag: '@smoke' }, () => {
+  const entryState = (page: Page): Promise<unknown> => page.evaluate(() => (history.state as { vesenApp?: unknown } | null)?.vesenApp ?? null);
+
+  for (const { line, chunk } of [
+    { line: 'nano ~/x.txt', chunk: /\/assets\/Editor-[\w-]+\.js$/ },
+    { line: 'man ls', chunk: /\/assets\/Pager-[\w-]+\.js$/ },
+  ]) {
+    test(`'${line}': Back while its chunk loads closes it as it closes itself`, async ({ page }) => {
+      let release: () => void = () => {};
+      const arrived = new Promise<void>((resolve) => (release = resolve));
+      await page.route(chunk, async (route) => {
+        await arrived;
+        await route.continue();
+      });
+      const errors = await arrive(page);
+      const home = page.url();
+      await enter(page, line);
+      // AppHost is up and holds its entry; the app itself has not come.
+      await expect.poll(() => entryState(page)).not.toBeNull();
+      await expect(appHost(page)).toHaveCount(1);
+      await page.goBack();
+      expect(page.url()).toBe(home);
+      release();
+      await backAtPrompt(page, line, home);
+      // Not "the editor could not be opened", and not the manual printed in its place.
+      await expect(entryOf(page, line).locator('.command-output')).toHaveCount(0);
+      await leave(page);
+      expect(errors).toEqual([]);
+    });
+  }
+
+  test('a reload while the pager is open leaves no entry behind: one Back leaves vesen', async ({ page }) => {
+    const errors = await arrive(page);
+    await enter(page, 'man ls');
+    await expect(page.locator('[data-pager]')).toBeVisible();
+    await page.reload();
+    await expect(page.locator('[data-completion="ready"]')).toHaveCount(1);
+    await expect(appHost(page)).toHaveCount(0);
+    // The entry the pager held comes off without reloading the page again.
+    await expect.poll(() => entryState(page)).toBeNull();
+    expect(await page.evaluate(() => (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type)).toBe('reload');
+    await leave(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("Forward onto a closed app's entry comes straight back off it", async ({ page }) => {
+    const errors = await arrive(page);
+    const home = page.url();
+    await enter(page, 'man ls');
+    await expect(page.locator('[data-pager]')).toBeVisible();
+    await page.goBack();
+    await backAtPrompt(page, 'man ls', home);
+    await page.goForward();
+    await expect.poll(() => entryState(page)).toBeNull();
+    await expect(appHost(page)).toHaveCount(0);
+    expect(page.url()).toBe(home);
+    await leave(page);
+    expect(errors).toEqual([]);
+  });
+});
+
+// A phone's browser may skip the entry nano put back while it asked, so Back could still leave
+// vesen with the buffer unsaved: nano keeps it when the page goes, and offers it back.
+test.describe("nano's unsaved buffer when the page goes anyway", { tag: '@smoke' }, () => {
+  test('is offered back by the next nano of the file, and Yes restores it', async ({ page }) => {
+    page.on('dialog', (dialog) => void dialog.accept());
+    const errors = await arrive(page);
+    await enter(page, 'nano ~/draft.txt');
+    const text = editor(page).locator('textarea');
+    await expect(text).toBeVisible();
+    if (isPhone()) {
+      await text.tap();
+      await text.fill('words nobody saved');
+    } else {
+      await expect(text).toBeFocused();
+      await page.keyboard.type('words nobody saved');
+    }
+    await expect(editor(page)).toContainText('Modified');
+
+    // Away, with no popstate for nano to catch, as when the browser skips its entry.
+    await page.goto(BEFORE);
+    await wasBefore(page);
+    await page.goto('/');
+    await expect(page.locator('[data-completion="ready"]')).toHaveCount(1);
+    await focusPrompt(page);
+    await enter(page, 'nano ~/draft.txt');
+    await expect(editor(page).locator('.question')).toHaveText('Restore unsaved changes from before?');
+    await expect(text).toHaveValue('');
+    if (isPhone()) await page.getByRole('button', { name: 'Yes' }).tap();
+    else await page.keyboard.press('y');
+    await expect(text).toHaveValue('words nobody saved');
+    await expect(editor(page)).toContainText('Modified');
     expect(errors).toEqual([]);
   });
 });

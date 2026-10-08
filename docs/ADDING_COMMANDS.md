@@ -84,7 +84,7 @@ The file's default export is the spec, made with `defineCommand`, which insists 
 | `summary` | One line, 50 characters at most, lower case, no full stop: `help`, `whatis`, Tab and the chips show it. |
 | `synopsis` | The usage lines, such as `rev [FILE]...`; generated from the flags and arguments when left out. |
 | `flags` | Each with `short` and/or `long`, a `description`, and `value` when it takes one. `-la`, `-n5`, `--lines=5` and `--` are parsed for you, and the values arrive in `ctx.opts`. |
-| `args` | The operands, with a `source` that completion reads: `path`, `command`, `enum`, `examples`, `free` and others. Only the last may be `variadic`. `marks` names the characters that start an argument's words wherever they stand, as `+` and `@` start dig's `+short` and `@google`, so completion never takes them for another operand. |
+| `args` | The operands, with a `source` that completion reads: `path`, `command`, `enum`, `examples`, `free` and others. Only the last may be `variadic`. `marks` names the characters that start an argument's words wherever they stand, as `+` and `@` start dig's `+short` and `@google`, so completion never takes them for another operand. An `enum` value may carry `args` of its own, which follow it instead of the rest of the list, and `aliases`, other words that choose it: ip's `route` takes a COMMAND whose `get` takes an ADDRESS, and `r` is `route` (`src/commands/more/network/ip.ts`). |
 | `subcommands` | `theme ls`, `theme set`: each with its own summary, flags and arguments. |
 | `examples` | Lines that show the command at work; see below. |
 | `seeAlso` | Related commands, for `man`. |
@@ -156,7 +156,9 @@ Inside `run`:
   (`man ls | less`), when its output is the terminal. AppHost gives every app a history entry, so
   Back (Android's button, iOS's edge swipe) closes the app rather than leaving vesen: the app
   exports a `back()` function that closes it the way it closes itself, so the command gets its
-  usual result (nano asks to save first). Without one, Back closes it with no result;
+  usual result (nano asks to save first, and keeps the buffer through the view's `keep` in case Back
+  leaves the page anyway). Without one, Back closes it with no result. A Back that comes before
+  the app's chunk closes the app as soon as it shows;
 - write a table whose columns are padded with spaces (`column -t`, `free`, `ps`) through
   `writeTable(ctx, text)` in `src/commands/lib/table-out.ts`: on a screen narrower than the table
   it becomes a block that scrolls sideways, so rows never wrap under the wrong headings;
@@ -171,7 +173,10 @@ Inside `run`:
   with `-v` to say what they did.
 - **DOM-free.** `src/commands` never touches `window`, `document`, `navigator`, browser storage or
   Svelte; services reach the browser for it (`ctx.net`, `ctx.sys`, `ctx.clock`, `ctx.tty`, and
-  `ctx.digest` for WebCrypto's hashes).
+  `ctx.digest` for WebCrypto's hashes). A command that keeps something reads and writes its own
+  key in `src/services/storage-keys.ts` through `sessionStore()` (`src/commands/lib/session-store.ts`,
+  until the tab closes, as git's commits) or `localStore()` (`local-store.ts`, across visits, as
+  nano's unsaved buffers).
   `npm run check:boundaries` enforces it. Avoid `AbortSignal.any` and `AbortSignal.timeout`,
   `Array.prototype.at`, `Object.hasOwn`, `Object.groupBy` and `Promise.withResolvers`: Instagram's
   browser on older iPhones lacks them.

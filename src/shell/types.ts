@@ -39,6 +39,13 @@ export interface EnumValue {
   readonly summary?: string;
   /** A hex colour shown next to the value, for theme names. */
   readonly swatch?: string;
+  /**
+   * The operands that follow this value, in place of the rest of its list: ip's `route` takes a
+   * COMMAND, whose `get` takes an ADDRESS and whose `show` a device. Completion reads them.
+   */
+  readonly args?: readonly ArgSpec[];
+  /** Other words that choose this value, never offered: ip's `a` and `address` for `addr`. */
+  readonly aliases?: readonly string[];
 }
 
 /** What an `enum` source may read its values from: the theme and CRT lists come from appearance. */

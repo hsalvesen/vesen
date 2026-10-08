@@ -306,3 +306,128 @@ describe('Editor on a touch screen', () => {
     expect(Array.from(row?.querySelectorAll('button') ?? []).map((button) => button.textContent)).toEqual(['Save', 'Cancel']);
   });
 });
+
+// Back may leave the page whatever nano does (a phone's browser can skip an entry put back with no
+// tap), so the buffer is kept through the view's `keep` while Back asks and whenever the page is
+// put away, and the next nano of the file offers it back.
+describe('Editor and what it keeps', () => {
+  const question = () => document.querySelector('.question')?.textContent ?? null;
+  const backOf = (component: unknown) => (component as { back: () => void }).back;
+
+  it('keeps the buffer while Back asks, asks again at every Back, and forgets it once N discards it', async () => {
+    const keep = vi.fn();
+    const { area, close, component, status } = open({ keep });
+    await type(area(), 'unsaved words');
+    await tick();
+    const back = backOf(component);
+
+    back();
+    await tick();
+    expect(question()).toBe('Save modified buffer?');
+    expect(keep).toHaveBeenLastCalledWith('notes.txt', 'unsaved words');
+    // Back again does not cancel the question, so a run of Backs never ends it either way.
+    back();
+    await tick();
+    back();
+    await tick();
+    expect(question()).toBe('Save modified buffer?');
+    expect(status()).not.toBe('[ Cancelled ]');
+    expect(close).not.toHaveBeenCalled();
+    expect(area().value).toBe('unsaved words');
+
+    await key(window, 'n');
+    expect(keep).toHaveBeenLastCalledWith('notes.txt', null);
+    expect(close).toHaveBeenCalledWith(EDITOR_CLOSED);
+  });
+
+  it('forgets what it kept once the buffer is saved, under whatever name', async () => {
+    const keep = vi.fn();
+    const { area, files, component } = open({ keep });
+    await type(area(), 'words');
+    await tick();
+    backOf(component)();
+    await tick();
+    await key(window, 'y');
+    await answer('other.txt');
+    expect(files.get('other.txt')).toBe('words\n');
+    expect(keep.mock.calls).toEqual([
+      ['notes.txt', 'words'],
+      ['notes.txt', null],
+    ]);
+  });
+
+  it('keeps the buffer when the page is put away with changes, and not without', async () => {
+    const keep = vi.fn();
+    const { area } = open({ keep });
+    window.dispatchEvent(new Event('pagehide'));
+    expect(keep).not.toHaveBeenCalled();
+    await type(area(), 'half a thought');
+    await tick();
+    window.dispatchEvent(new Event('pagehide'));
+    expect(keep).toHaveBeenLastCalledWith('notes.txt', 'half a thought');
+    keep.mockClear();
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    try {
+      document.dispatchEvent(new Event('visibilitychange'));
+    } finally {
+      visibility.mockRestore();
+    }
+    expect(keep).toHaveBeenLastCalledWith('notes.txt', 'half a thought');
+    keep.mockClear();
+    window.dispatchEvent(new Event('beforeunload', { cancelable: true }));
+    expect(keep).toHaveBeenLastCalledWith('notes.txt', 'half a thought');
+  });
+
+  it("offers what was kept first: Y puts it back, modified, and it is forgotten once saved", async () => {
+    const keep = vi.fn();
+    const { area, title, status, files } = open({ text: 'saved\n', message: '[ Read 1 line ]', kept: 'saved\nand more\n', keep });
+    expect(question()).toBe('Restore unsaved changes from before?');
+    expect(area().value).toBe('saved\n');
+    await key(window, 'y');
+    expect(question()).toBeNull();
+    expect(area().value).toBe('saved\nand more\n');
+    expect(title()).toContain('Modified');
+    expect(status()).toBe('[ Restored unsaved changes ]');
+    expect(keep).not.toHaveBeenCalled();
+    await ctrl(area(), 's');
+    expect(files.get('notes.txt')).toBe('saved\nand more\n');
+    expect(keep).toHaveBeenLastCalledWith('notes.txt', null);
+  });
+
+  it('N forgets what was kept, and ^C or Back leaves it for next time', async () => {
+    const keep = vi.fn();
+    const first = open({ text: 'saved\n', kept: 'other\n', keep });
+    await key(window, 'n');
+    expect(first.area().value).toBe('saved\n');
+    expect(keep).toHaveBeenCalledWith('notes.txt', null);
+    first.unmount();
+
+    keep.mockClear();
+    const second = open({ text: 'saved\n', kept: 'other\n', keep });
+    await key(window, 'c', { ctrlKey: true });
+    expect(second.status()).toBe('[ Cancelled ]');
+    expect(second.area().value).toBe('saved\n');
+    // Unchanged, ^X leaves at once, and what was kept stays kept.
+    await ctrl(second.area(), 'x');
+    expect(second.close).toHaveBeenCalledWith(EDITOR_CLOSED);
+    expect(keep).not.toHaveBeenCalled();
+    second.unmount();
+
+    const third = open({ text: 'saved\n', kept: 'other\n', keep });
+    const back = backOf(third.component);
+    back();
+    await tick();
+    expect(question()).toBeNull();
+    back();
+    expect(third.close).toHaveBeenCalledWith(EDITOR_CLOSED);
+    expect(keep).not.toHaveBeenCalled();
+  });
+
+  it('answers the offer with the buttons on a touch screen', async () => {
+    const { area } = open({ touch: true, text: '', kept: 'from before\n', keep: vi.fn() });
+    expect(Array.from(screen.getByRole('toolbar').querySelectorAll('button')).map((button) => button.textContent)).toEqual(['Yes', 'No', 'Cancel']);
+    await fireEvent.click(screen.getByRole('button', { name: 'Yes' }));
+    await tick();
+    expect(area().value).toBe('from before\n');
+  });
+});

@@ -5,6 +5,7 @@ import { countLines, EDITOR_CLOSED, linesMessage, type EditorView, type SaveResu
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
 import { strerror } from '../../../vfs/errors';
 import { VfsError } from '../../../vfs/types';
+import { keepBuffer, keptBuffer } from '../../lib/nano-keep';
 
 /** What --help, help and man say about nano, besides its spec (nano.ts). */
 export const doc: CommandDoc = {
@@ -14,6 +15,10 @@ export const doc: CommandDoc = {
     {
       heading: 'FILES',
       body: "nano writes with your permissions: a file you cannot change, such as /etc/hostname, opens with a warning, and saving it says [ File is unwritable ]. What you save under ~ is kept in this browser, as other files are. Saving adds a newline at the end of the file if it has none, as nano does.",
+    },
+    {
+      heading: 'BACK AND UNSAVED CHANGES',
+      body: "The browser's Back leaves nano as ^X does: with changes it asks 'Save modified buffer?', and asks again at each Back until Y, N or ^C answers. Meanwhile, and whenever the page is put away with changes, the buffer is kept in this browser, as nano writes FILE.save when it is stopped, so a Back that leaves vesen loses nothing: the next nano of that file asks 'Restore unsaved changes from before?'. Saving or discarding the buffer forgets it, as do reset and 30 days.",
     },
     { heading: 'EXIT STATUS', body: "0 when nano opened, whether or not anything was saved; 1 when it could not." },
   ],
@@ -75,6 +80,13 @@ export async function edit(ctx: CommandContext): Promise<ExitCode> {
   if ('error' in operands) return ctx.usage(operands.error);
   const opened = operands.file === null ? { text: '', message: '' } : open(ctx, operands.file);
   if ('error' in opened) return ctx.fail(opened.error);
+  // A buffer kept when Back or leaving the page might have lost it ('' is one with no name).
+  const keptAs = (name: string | null): string => (name === null ? '' : ctx.resolve(name));
+  let kept = keptBuffer(keptAs(operands.file), ctx.clock.now());
+  if (kept === opened.text) {
+    keepBuffer(keptAs(operands.file), null, ctx.clock.now());
+    kept = null;
+  }
   const view: EditorView = {
     name: operands.file,
     text: opened.text,
@@ -83,6 +95,8 @@ export async function edit(ctx: CommandContext): Promise<ExitCode> {
     ...(operands.line === undefined ? {} : { line: operands.line }),
     ...(operands.column === undefined ? {} : { column: operands.column }),
     save: (name, text) => saveAs(ctx, name, text),
+    ...(kept === null ? {} : { kept }),
+    keep: (name, text) => keepBuffer(keptAs(name), text, ctx.clock.now()),
   };
   let result: unknown;
   try {
