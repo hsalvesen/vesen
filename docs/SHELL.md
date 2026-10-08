@@ -91,4 +91,4 @@ Also missing:
 - **Commands that cannot exist in a tab say so** rather than pretend: `ping` times HTTPS round trips, `dig` uses DNS over HTTPS, `ssh` and `traceroute` explain in one line. `ps` lists the commands of the running line under a shell and init.
 - **Regular expressions are guarded.** A pattern a page cannot stop once it starts (`(a+)+`, `(a|aa)*`, long runs of optional parts) is refused, and a line too long for a pattern is skipped with an error, so `grep`, `sed`, `expr` and the rest can never freeze the page.
 - **Long loops yield.** `yes`, `seq`, `sed ':a;ba'` and other long runs pause so the page can paint and ^C can arrive; output to the screen is capped so the page stays responsive.
-- **Full-screen apps** (`less`, `man`, `nano`, `sl`, `cmatrix`) open only at the prompt; in a pipe, a script or `$( )` they print instead.
+- **Full-screen apps** (`less`, `man`, `nano`, `sl`, `cmatrix`) open only at the prompt; in a pipe, a script or `$( )` they print instead. The browser's Back closes the app and stays in vesen (`nano` asks to save any changes first).

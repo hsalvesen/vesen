@@ -1,8 +1,11 @@
 // The alternate screen and the Shutdown app (F029): systemd's lines, a fade (at once under reduced
-// motion), '● vesen is off' with Power on, and the in-app hint; never window.close.
+// motion), '● vesen is off' with Power on, and the in-app hint; never window.close. Back while an
+// app shows closes it through its own close path.
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { EDITOR_CLOSED, type EditorView, type SaveResult } from '../lib/nano';
+import { PAGER_CLOSED, type PagerView } from '../lib/pager';
 import { POWER_ON, type ShutdownView } from '../shell/shutdown';
 import type { FullscreenView } from '../shell/types';
 import AppHost from './AppHost.svelte';
@@ -84,11 +87,150 @@ describe('AppHost and the Shutdown app', () => {
     expect(onclose).toHaveBeenCalledWith(2, POWER_ON);
   });
 
+  it('powers on when Back leaves its history entry', async () => {
+    vi.useFakeTimers();
+    const onclose = vi.fn();
+    render(AppHost, { props: { request: { id: 5, view: 'shutdown', props: view() }, onclose } });
+    await settle();
+    history.back();
+    expect(onclose).toHaveBeenCalledWith(5, POWER_ON);
+  });
+
   it('lets the command go on when there is no such app', async () => {
     const onclose = vi.fn();
     render(AppHost, { props: { request: { id: 3, view: 'no-such-app' as FullscreenView, props: {} }, onclose } });
     await vi.waitFor(() => expect(screen.getByText(/could not load/)).toBeInTheDocument());
     await fireEvent.click(screen.getByRole('button', { name: 'Back to the terminal' }));
     expect(onclose).toHaveBeenCalledWith(3, undefined);
+  });
+});
+
+// Back while an app shows (apps/history-entry.ts): each app holds one history entry, so Back
+// closes the app through its own close path instead of leaving vesen; nano with changes asks to
+// save and keeps its entry while it asks; an app that closes itself takes its entry off once.
+// happy-dom's history goes back within the document at once, with its popstate.
+describe('Back while an app shows', () => {
+  const vesenEntry = (): boolean => typeof (history.state as { vesenApp?: unknown } | null)?.vesenApp === 'string';
+
+  const pagerView = (): PagerView => ({
+    title: 'notes.txt',
+    lines: Array.from({ length: 100 }, (_, i) => [{ text: `line ${i + 1}` }]),
+    mode: 'less',
+    touch: false,
+    columns: 80,
+    rows: 11,
+  });
+
+  const written = (name: string): SaveResult => ({ ok: true, name, message: '[ Wrote 1 line ]' });
+
+  const editorView = (save: EditorView['save'] = written): EditorView => ({ name: 'draft.txt', text: '', message: '[ New File ]', touch: false, save });
+
+  async function show(request: { id: number; view: FullscreenView; props: unknown }) {
+    const onclose = vi.fn();
+    const pushes = vi.spyOn(history, 'pushState');
+    const backs = vi.spyOn(history, 'back');
+    const result = render(AppHost, { props: { request, onclose } });
+    await vi.dynamicImportSettled();
+    await tick();
+    return { ...result, onclose, pushes, backs };
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    history.replaceState(null, '');
+  });
+
+  it('adds one entry with no URL of its own; Back closes the pager as q does, and does not go back again', async () => {
+    const { onclose, pushes, backs } = await show({ id: 11, view: 'pager', props: pagerView() });
+    expect(pushes).toHaveBeenCalledTimes(1);
+    expect(pushes.mock.calls[0]![1]).toBe('');
+    expect(pushes.mock.calls[0]![2]).toBeUndefined();
+    expect(vesenEntry()).toBe(true);
+
+    history.back();
+    expect(onclose).toHaveBeenCalledTimes(1);
+    expect(onclose).toHaveBeenCalledWith(11, PAGER_CLOSED);
+    // Only the visitor's Back: nothing went back again, and nothing was pushed again.
+    expect(backs).toHaveBeenCalledTimes(1);
+    expect(pushes).toHaveBeenCalledTimes(1);
+    expect(vesenEntry()).toBe(false);
+  });
+
+  it("takes the pager's help away first, as q does", async () => {
+    const { onclose, container } = await show({ id: 12, view: 'pager', props: pagerView() });
+    await fireEvent.keyDown(window, { key: 'h' });
+    await tick();
+    expect(container.querySelector('.status')?.textContent).toContain('HELP');
+    history.back();
+    await tick();
+    expect(onclose).not.toHaveBeenCalled();
+    expect(container.querySelector('.status')?.textContent).not.toContain('HELP');
+    // Its entry is back, so the next Back closes it.
+    expect(vesenEntry()).toBe(true);
+    history.back();
+    expect(onclose).toHaveBeenCalledWith(12, PAGER_CLOSED);
+  });
+
+  it('takes its entry off once when the app closes itself', async () => {
+    const { onclose, backs } = await show({ id: 13, view: 'pager', props: pagerView() });
+    await fireEvent.keyDown(window, { key: 'q' });
+    expect(onclose).toHaveBeenCalledWith(13, PAGER_CLOSED);
+    expect(backs).toHaveBeenCalledTimes(1);
+    expect(vesenEntry()).toBe(false);
+  });
+
+  it('takes its entry off when the app is taken down from outside (^C)', async () => {
+    const { onclose, backs, unmount } = await show({ id: 14, view: 'pager', props: pagerView() });
+    unmount();
+    expect(backs).toHaveBeenCalledTimes(1);
+    expect(vesenEntry()).toBe(false);
+    expect(onclose).not.toHaveBeenCalled();
+  });
+
+  it("asks 'Save modified buffer?' in nano with changes, keeping the text and the entry, and Back again cancels", async () => {
+    const save = vi.fn(written);
+    const { onclose, container } = await show({ id: 15, view: 'editor', props: editorView(save) });
+    const area = screen.getByRole('textbox', { name: 'Editing draft.txt' }) as HTMLTextAreaElement;
+    await fireEvent.input(area, { target: { value: 'unsaved words' } });
+    await tick();
+
+    history.back();
+    await tick();
+    expect(onclose).not.toHaveBeenCalled();
+    expect(container.querySelector('.question')?.textContent).toBe('Save modified buffer?');
+    expect(area.value).toBe('unsaved words');
+    expect(vesenEntry()).toBe(true);
+
+    history.back();
+    await tick();
+    expect(onclose).not.toHaveBeenCalled();
+    expect(container.querySelector('.question')).toBeNull();
+    expect(container.querySelector('.status-line')?.textContent?.trim()).toBe('[ Cancelled ]');
+    expect(area.value).toBe('unsaved words');
+    expect(vesenEntry()).toBe(true);
+
+    // Back, then Y and the file name: saved, closed, and the entry gone.
+    history.back();
+    await tick();
+    await fireEvent.keyDown(window, { key: 'y' });
+    await tick();
+    const name = screen.getByRole('textbox', { name: 'File Name to Write:' }) as HTMLInputElement;
+    await fireEvent.submit(name.form as HTMLFormElement);
+    expect(save).toHaveBeenCalledWith('draft.txt', 'unsaved words\n');
+    expect(onclose).toHaveBeenCalledWith(15, EDITOR_CLOSED);
+    expect(vesenEntry()).toBe(false);
+  });
+
+  it('closes nano without changes, as ^X does', async () => {
+    const { onclose } = await show({ id: 16, view: 'editor', props: editorView() });
+    history.back();
+    expect(onclose).toHaveBeenCalledWith(16, EDITOR_CLOSED);
+  });
+
+  it('closes with no result when the app could not load', async () => {
+    const { onclose } = await show({ id: 17, view: 'no-such-app' as FullscreenView, props: {} });
+    await vi.waitFor(() => expect(screen.getByText(/could not load/)).toBeInTheDocument());
+    history.back();
+    expect(onclose).toHaveBeenCalledWith(17, undefined);
   });
 });

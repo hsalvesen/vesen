@@ -12,7 +12,18 @@ export interface AppProps {
   close: (result?: unknown) => void;
 }
 
-type Loader = () => Promise<{ default: Component<AppProps> }>;
+/** What an app exports for AppHost. */
+export interface AppExports {
+  /**
+   * Back (Android's button, iOS's edge swipe) left the app's history entry: close the way the app
+   * closes itself, so the command gets its usual result, or dismiss what is on top first (a
+   * prompt, the help). An app that stays open gets its entry back. Without it, Back closes the
+   * app with no result.
+   */
+  back?: () => void;
+}
+
+type Loader = () => Promise<{ default: Component<AppProps, AppExports> }>;
 
 const APPS: Partial<Record<FullscreenView, Loader>> = {
   shutdown: () => import('./Shutdown.svelte'),

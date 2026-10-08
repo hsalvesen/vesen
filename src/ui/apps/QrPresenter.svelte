@@ -3,12 +3,13 @@
   sheet over everything with the code as large as fits, so a visitor can hold the phone up for a
   friend to scan, or save it. The code is a PNG, black on white, which a long press saves; Save,
   Share and Copy show where they work. It closes with ✕, Esc, q or Enter, a tap outside the code,
-  and Back (Android's button, iOS's swipe): opening it adds a history entry with no URL of its
-  own, and going back from it closes it. The screen stays awake while it shows, where it can.
+  and Back (Android's button, iOS's swipe): whatever shows it holds a history entry for it
+  (history-entry.ts), and going back from it closes it. The screen stays awake while it shows,
+  where it can.
 
   It is a modal dialog: focus starts on ✕ and Tab stays inside. `qr -f` shows it through AppHost,
   which puts focus back afterwards; a tapped card draws it in a layer on <body> (qr-present.ts)
-  and puts focus back itself.
+  and puts focus back itself. Each holds the history entry.
 -->
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
@@ -50,26 +51,19 @@
     return middleEllipsis(display, perLine * 2);
   });
 
-  // ── Back closes it ──
-  const token = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-  let pushed = false;
+  // ── Closing ──
   let finished = false;
 
-  function ours(): boolean {
-    const state = history.state as { vesenQr?: unknown } | null;
-    return state !== null && typeof state === 'object' && state.vesenQr === token;
-  }
-
-  /** Closes the dialog; `fromBack` when Back already left its history entry. */
-  function finish(fromBack = false): void {
+  /** Closes the dialog; whatever shows it takes its history entry off. */
+  function finish(): void {
     if (finished) return;
     finished = true;
-    if (pushed && !fromBack && ours()) history.back();
     close();
   }
 
-  function onPopState(): void {
-    if (!ours()) finish(true);
+  /** Back (AppHost's, or the card's) left its history entry. */
+  export function back(): void {
+    finish();
   }
 
   // ── Keys and focus ──
@@ -163,12 +157,6 @@
   let focusTimer: ReturnType<typeof setTimeout> | undefined;
 
   onMount(() => {
-    try {
-      history.pushState({ vesenQr: token }, '');
-      pushed = true;
-    } catch {
-      pushed = false;
-    }
     void stayAwake();
     document.addEventListener('visibilitychange', onVisibility);
     // After AppHost has focused itself, so ✕ ends up with focus either way.
@@ -181,13 +169,11 @@
     clearTimeout(focusTimer);
     if (lock !== null) void lock.release().catch(() => {});
     lock = null;
-    // Taken down from outside (^C on qr -f): leave no history entry behind.
-    if (!finished && pushed && ours()) history.back();
     finished = true;
   });
 </script>
 
-<svelte:window onkeydowncapture={onKey} onpopstate={onPopState} />
+<svelte:window onkeydowncapture={onKey} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div

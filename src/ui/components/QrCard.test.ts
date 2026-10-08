@@ -163,6 +163,35 @@ describe('QrCard', () => {
     input.remove();
   });
 
+  it('holds a history entry while Present mode shows: Back closes it, and Esc takes the entry off once', async () => {
+    const pushes = vi.spyOn(history, 'pushState');
+    const backs = vi.spyOn(history, 'back');
+    const ours = (): boolean => typeof (history.state as { vesenApp?: unknown } | null)?.vesenApp === 'string';
+    try {
+      show(['vesen.app']);
+      const code = screen.getByRole('button', { name: 'QR code for https://vesen.app. Show full screen' });
+      await fireEvent.click(code);
+      expect(pushes).toHaveBeenCalledTimes(1);
+      expect(ours()).toBe(true);
+      // Back (happy-dom goes back within the document at once): closed, with no second Back.
+      history.back();
+      await tick();
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(backs).toHaveBeenCalledTimes(1);
+      expect(ours()).toBe(false);
+
+      await fireEvent.click(code);
+      expect(pushes).toHaveBeenCalledTimes(2);
+      await fireEvent.keyDown(window, { key: 'Escape' });
+      await tick();
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(backs).toHaveBeenCalledTimes(2);
+      expect(ours()).toBe(false);
+    } finally {
+      history.replaceState(null, '');
+    }
+  });
+
   it('draws text art with -t utf8: light on an ink field, hidden from screen readers', () => {
     const { container, view } = show(['-t', 'utf8', 'hello']);
     const art = container.querySelector<HTMLElement>('[data-qr-text]')!;

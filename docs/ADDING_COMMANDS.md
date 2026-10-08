@@ -149,7 +149,10 @@ Inside `run`:
   result. It rejects in a script, `$( )` or anywhere else not at the prompt, and an app whose chunk
   did not load closes with no result, so always have a fallback: `less` and `man` print the text
   (`src/commands/lib/pager.ts`). The last stage of a pipeline typed at the prompt may show one
-  (`man ls | less`), when its output is the terminal;
+  (`man ls | less`), when its output is the terminal. AppHost gives every app a history entry, so
+  Back (Android's button, iOS's edge swipe) closes the app rather than leaving vesen: the app
+  exports a `back()` function that closes it the way it closes itself, so the command gets its
+  usual result (nano asks to save first). Without one, Back closes it with no result;
 - write a table whose columns are padded with spaces (`column -t`, `free`, `ps`) through
   `writeTable(ctx, text)` in `src/commands/lib/table-out.ts`: on a screen narrower than the table
   it becomes a block that scrolls sideways, so rows never wrap under the wrong headings;

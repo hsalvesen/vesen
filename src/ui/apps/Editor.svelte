@@ -3,10 +3,11 @@
   the text, a status line and, on a keyboard, nano's two rows of shortcuts. The text is a native
   textarea everywhere, so typing, the caret keys, selection, IME and autocorrect are the
   browser's own; nano's Ctrl keys are added on top: ^O writes out (asking the file name), ^S
-  saves, ^X leaves (asking 'Save modified buffer?' when there are changes), ^W or ^F finds, ^K cuts
-  the line and ^U pastes it, ^C says where the caret is and ^G shows the keys. Its prompts are
-  its own, at the bottom, never the terminal's. On a touch screen a toolbar of 44px buttons
-  stands in for the keys a phone keyboard lacks.
+  saves, ^X leaves (asking 'Save modified buffer?' when there are changes), ^F or ^W finds, ^K
+  cuts the line and ^U pastes it, ^C says where the caret is and ^G shows the keys. The bar shows
+  ^W only on a Mac: elsewhere Ctrl+W closes the browser's tab. Its prompts are its own, at the
+  bottom, never the terminal's. On a touch screen a toolbar of 44px buttons stands in for the
+  keys a phone keyboard lacks, and Back (AppHost) leaves as ^X does.
 
   Writing goes through the command's `save`, which writes as the visitor, so a file they may not
   change says [ File is unwritable ] and what is saved under ~ persists. While there are unsaved
@@ -24,9 +25,11 @@
     location,
     offsetOf,
     pasteAt,
-    SHORTCUTS,
+    shortcutsFor,
     withFinalNewline,
+    type Shortcuts,
   } from '../../lib/nano';
+  import { keyPlatform } from '../../platform/env';
   import type { AppProps } from './registry';
 
   let { props, close }: AppProps = $props();
@@ -58,10 +61,15 @@
   let promptBox: HTMLInputElement | undefined = $state();
 
   const busy = $derived(prompt !== null || asking || helping);
-  const promptLabel = $derived(
-    prompt === null ? '' : prompt.kind === 'write' ? 'File Name to Write:' : lastSearch === '' ? 'Search:' : `Search [${lastSearch}]:`,
-  );
-  type Shortcuts = readonly (readonly (readonly [key: string, label: string])[])[];
+  /** nano's words on a keyboard; shorter on a touch screen, where Save or Find and Cancel share the row. */
+  const promptLabel = $derived.by(() => {
+    if (prompt === null) return '';
+    if (prompt.kind === 'write') return touch ? 'Write to:' : 'File Name to Write:';
+    const word = touch ? 'Find' : 'Search';
+    return lastSearch === '' ? `${word}:` : `${word} [${lastSearch}]:`;
+  });
+  /** ^W closes the tab off a Mac, so the bar offers ^F there instead. */
+  const SHORTCUTS = shortcutsFor(keyPlatform(typeof navigator === 'undefined' ? undefined : navigator));
   const ASKING: Shortcuts = [[['Y', 'Yes'], ['N', 'No']], [['^C', 'Cancel']]];
   const shortcuts: Shortcuts = $derived(
     asking ? ASKING : prompt !== null ? [[['Enter', prompt.kind === 'write' ? 'Write' : 'Find']], [['^C', 'Cancel']]] : SHORTCUTS,
@@ -151,6 +159,19 @@
     prompt = null;
     message = '[ Cancelled ]';
     focusArea();
+  }
+
+  /**
+   * Back (AppHost): what is on top goes first (the help; a prompt or 'Save modified buffer?',
+   * cancelled as ^C would), then it leaves as ^X does, asking first when there are changes, so
+   * Back never loses the buffer. AppHost puts the history entry back while it stays open.
+   */
+  export function back(): void {
+    if (closed) return;
+    if (view === null) close();
+    else if (helping) toggleHelp();
+    else if (prompt !== null || asking) cancel();
+    else leave();
   }
 
   // ── Finding ──
@@ -547,6 +568,15 @@
     padding: 0 1ch;
   }
 
+  /* The label keeps to one line; only a long one (a long last search) gives way, with an ellipsis. */
+  .prompt label {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .prompt input {
     flex: 1 1 auto;
     min-width: 0;
@@ -557,6 +587,19 @@
     font: inherit;
     caret-color: var(--role-cursor, currentColor);
     outline: none;
+  }
+
+  /* Save or Find and Cancel stay whole beside it. */
+  .prompt .tool {
+    flex: none;
+  }
+
+  /* On a phone the field is a line to type on, at least six characters wide, and takes what the
+     label and the buttons leave. */
+  .touch .prompt input {
+    flex: 1 1 0;
+    min-width: 6ch;
+    border-bottom: 1px solid var(--role-muted);
   }
 
   .shortcuts {

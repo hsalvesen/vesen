@@ -66,6 +66,31 @@ test.describe('the pager and the editor', { tag: '@smoke' }, () => {
     expect(errors).toEqual([]);
   });
 
+  test("'less +G' opens at the end and '+/text' at a match; into a pipe less adds no banners", async ({ page }) => {
+    const errors = await open(page);
+    const pager = page.locator('[data-pager]');
+    const quit = async (): Promise<void> => {
+      if (isPhone()) await page.getByRole('button', { name: 'Close' }).tap();
+      else await page.keyboard.press('q');
+      await expect(pager).toBeHidden();
+      await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
+      if (isPhone()) await prompt(page).tap();
+    };
+    await enter(page, 'less +G documents/linux.txt');
+    await expect(pager.locator('.status')).toContainText('(END)');
+    await quit();
+    await expect(entryOf(page, 'less +G documents/linux.txt')).not.toContainText('No such file');
+
+    await enter(page, 'less +/alsamixer documents/linux.txt');
+    await expect(pager.locator('.hit').first()).toHaveText('alsamixer');
+    await quit();
+
+    await enter(page, 'less .bashrc .profile | cat');
+    await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
+    await expect(entryOf(page, 'less .bashrc .profile | cat')).not.toContainText('::::');
+    expect(errors).toEqual([]);
+  });
+
   test("'nano ~/notes.txt': type, save, leave, and cat shows the text", async ({ page }) => {
     const errors = await open(page);
     await enter(page, 'nano ~/notes.txt');
@@ -103,4 +128,56 @@ test.describe('the pager and the editor', { tag: '@smoke' }, () => {
     await expect(entryOf(page, 'cat ~/notes.txt')).toContainText('written in nano');
     expect(errors).toEqual([]);
   });
+});
+
+test.describe("nano's prompt row on a phone", { tag: '@smoke' }, () => {
+  test.beforeEach(() => {
+    test.skip(!isPhone(), 'the touch prompt row');
+  });
+
+  for (const width of [320, 0]) {
+    test(`the Write and Find prompts keep their label on one line, their buttons whole and a visible field${width > 0 ? ` at ${width} px` : ''}`, async ({ page }) => {
+      if (width > 0) await page.setViewportSize({ width, height: 640 });
+      await open(page);
+      await enter(page, 'nano');
+      const editor = page.locator('[data-editor]');
+      await expect(editor).toBeVisible();
+
+      const check = async (): Promise<void> => {
+        const row = editor.locator('form.prompt');
+        await expect(row).toBeVisible();
+        const shape = await row.evaluate((form) => {
+          const label = form.querySelector('label')!;
+          const input = form.querySelector('input')!;
+          const style = getComputedStyle(input);
+          const line = parseFloat(getComputedStyle(label).lineHeight) || parseFloat(getComputedStyle(label).fontSize) * 1.5;
+          return {
+            labelLines: Math.round(label.getBoundingClientRect().height / line),
+            overflowing: Array.from(form.querySelectorAll('button')).filter((button) => button.scrollWidth > button.clientWidth).map((button) => button.textContent),
+            underline: parseFloat(style.borderBottomWidth),
+            field: input.getBoundingClientRect().width,
+            cell: parseFloat(style.fontSize) * 0.6,
+            sideways: Math.max(0, form.scrollWidth - form.clientWidth),
+          };
+        });
+        expect(shape.labelLines).toBe(1);
+        expect(shape.overflowing).toEqual([]);
+        expect(shape.underline).toBeGreaterThanOrEqual(1);
+        expect(shape.field).toBeGreaterThanOrEqual(shape.cell * 6 - 1);
+        expect(shape.sideways).toBe(0);
+      };
+
+      // A new buffer's Save asks for the file name.
+      await page.getByRole('button', { name: 'Save' }).tap();
+      await expect(page.getByRole('textbox', { name: /File Name to Write|Write to/ })).toBeVisible();
+      await check();
+      await editor.getByRole('button', { name: 'Cancel' }).tap();
+
+      await page.getByRole('button', { name: 'Find' }).tap();
+      await expect(page.getByRole('textbox', { name: /Search|Find/ })).toBeVisible();
+      await check();
+      await editor.getByRole('button', { name: 'Cancel' }).tap();
+      await expect(editor.locator('form.prompt')).toHaveCount(0);
+    });
+  }
 });

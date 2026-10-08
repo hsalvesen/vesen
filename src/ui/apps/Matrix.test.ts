@@ -106,6 +106,20 @@ describe('the Matrix app', () => {
     await fireEvent.keyDown(window, { key: 'Enter' });
     expect(onclose).toHaveBeenCalledWith(9, 'stopped');
   });
+
+  it('stops on Back, as a key stops it', async () => {
+    const raf = frames();
+    const onclose = vi.fn();
+    render(AppHost, { props: { request: { id: 10, view: 'matrix', props: VIEW }, onclose } });
+    await vi.waitFor(() => expect(screen.getByRole('button', { name: /rain/ })).toBeInTheDocument());
+    try {
+      history.back();
+      expect(onclose).toHaveBeenCalledWith(10, 'stopped');
+      expect(raf.cancel).toHaveBeenCalled();
+    } finally {
+      history.replaceState(null, '');
+    }
+  });
 });
 
 describe('the still rain', () => {

@@ -49,6 +49,11 @@
     close(POWER_ON);
   }
 
+  /** Back (AppHost) powers on: the visitor stays in vesen, never on a dead page. */
+  export function back(): void {
+    powerOn();
+  }
+
   async function off(): Promise<void> {
     phase = 'off';
     if (view.kind === 'reboot') {

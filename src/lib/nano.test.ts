@@ -13,6 +13,7 @@ import {
   location,
   offsetOf,
   pasteAt,
+  shortcutsFor,
   withFinalNewline,
 } from './nano';
 
@@ -106,5 +107,19 @@ describe('the view', () => {
 
   it('has help that fits a phone', () => {
     expect(Math.max(...EDITOR_HELP.map((line) => line.length))).toBeLessThanOrEqual(44);
+  });
+
+  it("offers ^W on a Mac only, where Ctrl+W does not close the browser's tab; ^F finds everywhere", () => {
+    const keys = (platform: 'mac' | 'other') => shortcutsFor(platform).flat().map(([key, label]) => `${key} ${label}`);
+    expect(keys('mac')).toContain('^W Where Is');
+    expect(keys('mac')).toContain('^F Find');
+    expect(keys('other')).not.toContain('^W Where Is');
+    expect(keys('other').filter((key) => key.startsWith('^W'))).toEqual([]);
+    expect(keys('other')).toContain('^F Where Is');
+    // Every row fits nano's five columns.
+    for (const platform of ['mac', 'other'] as const) for (const row of shortcutsFor(platform)) expect(row.length).toBeLessThanOrEqual(5);
+    // The help says why.
+    expect(EDITOR_HELP.join('\n')).toMatch(/\^F {2}Where Is/);
+    expect(EDITOR_HELP.join('\n')).toMatch(/\^W {2}Where Is {3}the same on a Mac; elsewhere\n {15}the browser closes the tab/);
   });
 });

@@ -152,8 +152,10 @@ export function offsetOf(text: string, line: number, column = 1): number {
   return Math.min(start + Math.max(0, column - 1), end);
 }
 
-/** The shortcuts along the bottom on a keyboard, two rows as nano draws them. */
-export const SHORTCUTS: readonly (readonly (readonly [key: string, label: string])[])[] = [
+export type Shortcuts = readonly (readonly (readonly [key: string, label: string])[])[];
+
+/** The shortcuts along the bottom on a Mac's keyboard, two rows as nano draws them. */
+export const SHORTCUTS: Shortcuts = [
   [
     ['^G', 'Help'],
     ['^O', 'Write Out'],
@@ -169,6 +171,31 @@ export const SHORTCUTS: readonly (readonly (readonly [key: string, label: string
   ],
 ];
 
+/**
+ * Elsewhere Ctrl+W closes the browser's tab before the page can stop it, taking the session with
+ * it, so the bar offers ^F for Where Is, as nano 8 binds it, and leaves ^W out. ^W still finds
+ * wherever the browser lets it through.
+ */
+export const SHORTCUTS_NOT_MAC: Shortcuts = [
+  [
+    ['^G', 'Help'],
+    ['^O', 'Write Out'],
+    ['^F', 'Where Is'],
+    ['^K', 'Cut'],
+    ['^C', 'Location'],
+  ],
+  [
+    ['^X', 'Exit'],
+    ['^S', 'Save'],
+    ['^U', 'Paste'],
+  ],
+];
+
+/** The bar for the keyboard's platform: 'mac' where Cmd, not Ctrl, does the browser's shortcuts. */
+export function shortcutsFor(platform: 'mac' | 'other'): Shortcuts {
+  return platform === 'mac' ? SHORTCUTS : SHORTCUTS_NOT_MAC;
+}
+
 /** What ^G shows in place of the text; ^X, Esc or q go back to it. It fits a phone. */
 export const EDITOR_HELP: readonly string[] = [
   'nano: the keys',
@@ -181,9 +208,9 @@ export const EDITOR_HELP: readonly string[] = [
   '^S  Save       save under the same name',
   '^X  Exit       leave, asking to save any',
   '               changes first',
-  '^W  Where Is   find text after the caret',
-  '^F  Find       the same, where the browser',
-  '               keeps ^W for itself',
+  '^F  Where Is   find text after the caret',
+  '^W  Where Is   the same on a Mac; elsewhere',
+  '               the browser closes the tab',
   '^K  Cut        cut the line the caret is on;',
   '               cuts in a row collect',
   '^U  Paste      put back what was cut',

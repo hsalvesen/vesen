@@ -138,8 +138,65 @@ describe('less into a pipe', () => {
     const cat = await runLine('cat .bashrc', { tty: false });
     expect(await runLine('less .bashrc', { tty: false })).toMatchObject({ status: 0, stdoutPlain: cat.stdoutPlain });
     expect((await runLine("printf 'a\\nb' | less", { tty: false })).stdoutPlain).toBe('a\nb');
-    expect((await runLine('less .bashrc .profile', { tty: false })).stdoutPlain).toMatch(/^::::::::::::::\n\.bashrc\n::::::::::::::\n/);
     expect(await runLine('less nope', { tty: false })).toMatchObject({ status: 1, stderrPlain: 'nope: No such file or directory' });
+  });
+
+  it("copies several files one after another with no banners between them, as cat does; more's ':::' banners are more's", async () => {
+    const cat = await runLine('cat .bashrc .profile', { tty: false });
+    expect(await runLine('less .bashrc .profile', { tty: false })).toMatchObject({ status: 0, stdoutPlain: cat.stdoutPlain });
+    expect((await runLine("printf 'piped\\n' | less .bashrc -", { tty: false })).stdoutPlain).not.toContain('::::');
+    expect((await runLine('more .bashrc .profile', { tty: false })).stdoutPlain).toMatch(/^::::::::::::::\n\.bashrc\n::::::::::::::\n/);
+  });
+
+  it('drops +CMD words silently', async () => {
+    const cat = await runLine('cat .bashrc', { tty: false });
+    for (const word of ['+G', '+F', '+12', '+/alias', '++G']) {
+      expect(await runLine(`less ${word} .bashrc`, { tty: false })).toMatchObject({ status: 0, stdoutPlain: cat.stdoutPlain, stderrPlain: '' });
+    }
+  });
+});
+
+describe('less +CMD', () => {
+  it('opens at the end with +G and +F, at a line with +NUMBER, and at the first match with +/pattern', async () => {
+    const cases: [string, PagerView['start']][] = [
+      ['+G', { end: true }],
+      ['+F', { end: true }],
+      ['++G', { end: true }],
+      ['+12', { line: 12 }],
+      ['+/alias', { search: 'alias' }],
+    ];
+    for (const [word, start] of cases) {
+      const screen = pagerScreen();
+      const result = await runLine(`less ${word} .bashrc`, { fullscreen: screen.fullscreen });
+      expect(result, word).toMatchObject({ status: 0, stdoutPlain: '', stderrPlain: '' });
+      expect(screen.shown, word).toHaveLength(1);
+      expect(screen.shown[0]?.props.title, word).toBe('.bashrc');
+      expect(screen.shown[0]?.props.start, word).toEqual(start);
+    }
+  });
+
+  it('takes +CMD among the options before the files, and with standard input', async () => {
+    const screen = pagerScreen();
+    expect((await runLine('less -N +G .bashrc', { fullscreen: screen.fullscreen })).status).toBe(0);
+    expect(screen.shown[0]?.props).toMatchObject({ title: '.bashrc', numbers: true, start: { end: true } });
+    expect((await runLine("printf 'one\\ntwo\\n' | less +/two", { fullscreen: screen.fullscreen })).status).toBe(0);
+    expect(screen.shown[1]?.props).toMatchObject({ title: '(standard input)', start: { search: 'two' } });
+    expect(screen.text(1)).toEqual(['one', 'two']);
+  });
+
+  it('opens at the top for a +CMD it does not know, as less beeps and carries on, and still needs a file', async () => {
+    const screen = pagerScreen();
+    expect(await runLine('less +x .bashrc', { fullscreen: screen.fullscreen })).toMatchObject({ status: 0, stderrPlain: '' });
+    expect(screen.shown[0]?.props.start).toBeUndefined();
+    expect(await runLine('less +G')).toMatchObject({ status: 1, stderrPlain: 'Missing filename ("less --help" for help)' });
+  });
+
+  it('reads a +word after the first file as a file, as less does', async () => {
+    const screen = pagerScreen();
+    const result = await runLine('less .bashrc +G', { fullscreen: screen.fullscreen });
+    expect(result).toMatchObject({ status: 1, stderrPlain: '+G: No such file or directory' });
+    expect(screen.shown[0]?.props.title).toBe('.bashrc');
+    expect(screen.shown[0]?.props.start).toBeUndefined();
   });
 });
 

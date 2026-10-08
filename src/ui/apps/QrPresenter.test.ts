@@ -1,7 +1,7 @@
 // Present mode (docs/plan/06-qr.md, "Present mode and actions"): a labelled modal dialog with the
-// code as a black-on-white PNG, closed by ✕, Esc, q, Enter, a tap outside the code and Back (a
-// history entry with no URL of its own); focus stays inside; the screen stays awake; Save is
-// hidden in in-app browsers, which say how to save instead.
+// code as a black-on-white PNG, closed by ✕, Esc, q, Enter, a tap outside the code and Back (the
+// history entry AppHost or the card holds for it); focus stays inside; the screen stays awake;
+// Save is hidden in in-app browsers, which say how to save instead.
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -60,24 +60,22 @@ describe('QrPresenter', () => {
     expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['✕', 'Share', 'Copy text']);
   });
 
-  it('adds a history entry with no URL of its own, and Back closes it without going back again', async () => {
+  it('leaves the history to whatever shows it, and closes once on Back', async () => {
     const push = vi.spyOn(history, 'pushState');
-    const { close } = present();
-    expect(push).toHaveBeenCalledTimes(1);
-    expect(push.mock.calls[0]![1]).toBe('');
-    expect(push.mock.calls[0]![2]).toBeUndefined();
-    // Back: the entry before this one is current again.
-    history.replaceState(null, '');
-    window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
+    const { close, component } = present();
+    expect(push).not.toHaveBeenCalled();
+    // AppHost, or the card, calls back() when Back leaves the entry it holds.
+    component.back();
+    component.back();
     expect(close).toHaveBeenCalledTimes(1);
     expect(back).not.toHaveBeenCalled();
   });
 
-  it.each(['Escape', 'q', 'Enter'])('closes on %s, leaving its history entry', async (key) => {
+  it.each(['Escape', 'q', 'Enter'])('closes on %s', async (key) => {
     const { close } = present();
     await fireEvent.keyDown(screen.getByRole('dialog'), { key });
     expect(close).toHaveBeenCalledTimes(1);
-    expect(back).toHaveBeenCalledTimes(1);
+    expect(back).not.toHaveBeenCalled();
   });
 
   it('lets Enter press a button rather than close', async () => {
@@ -154,6 +152,23 @@ describe('QrPresenter', () => {
     expect(await screen.findByRole('img', { name: 'QR code for https://vesen.app' })).toBeInTheDocument();
     await fireEvent.keyDown(window, { key: 'Escape' });
     expect(onclose).toHaveBeenCalledWith(3, undefined);
+    // It closed itself, so AppHost took its history entry off.
+    expect(back).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes on Back through AppHost, which holds its history entry', async () => {
+    const push = vi.spyOn(history, 'pushState');
+    const onclose = vi.fn();
+    render(AppHost, { props: { request: { id: 4, view: 'qr-present', props: view }, onclose } });
+    await vi.dynamicImportSettled();
+    await tick();
+    await screen.findByRole('img', { name: 'QR code for https://vesen.app' });
+    expect(push).toHaveBeenCalledTimes(1);
+    // Back: the entry before AppHost's is current again.
+    history.replaceState(null, '');
+    window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
+    expect(onclose).toHaveBeenCalledWith(4, undefined);
+    expect(back).not.toHaveBeenCalled();
   });
 
   it('says so when it has no code to show', () => {
