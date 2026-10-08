@@ -63,6 +63,13 @@ export const STEADY_MS = 600;
  */
 export const TAB_CATALOGUE_WAIT_MS = 300;
 
+/**
+ * When the commands there are have nothing to offer, a first Tab waits on for the rest as long as
+ * a line waits for a command (CATALOGUE_WAIT_MS in shell/registry.ts), or until the line changes:
+ * the bell would say a command that is on its way does not exist.
+ */
+export const TAB_EMPTY_WAIT_MS = 8000;
+
 /** The id of a read the prompt asks itself: the Tab list's `Display all N possibilities?`. */
 const OWN_READ = -1;
 
@@ -435,8 +442,7 @@ export class PromptController {
   destroy(): void {
     for (const stop of this.stops.splice(0)) stop();
     clearTimeout(this.bellTimer);
-    if (this.tabWait !== null) clearTimeout(this.tabWait.timer);
-    this.tabWait = null;
+    this.cancelTabWait();
     this.input = null;
   }
 
@@ -488,6 +494,8 @@ export class PromptController {
   /** What follows any change to the line, typed or made here; `edited` when its text changed. */
   private changed(options: WriteOptions, edited: boolean): void {
     if (options.keepTab !== true && this.tab.phase !== 'idle') this.tab = TAB_IDLE;
+    // A Tab still waiting for the catalogue was for the line as it was: an edit or ^C drops it.
+    if (options.keepTab !== true && edited) this.cancelTabWait();
     // Moving the cursor is not editing: Up and Down go on from where they were, as in bash.
     if (options.keepNav !== true && edited) this.nav = NAV_IDLE;
     if (options.keepLastArg !== true) this.lastArg = null;
@@ -1046,24 +1054,38 @@ export class PromptController {
     this.applyTab(completion.engine.pressTab(this.tab, this.state, completion.env, reverse));
   }
 
-  /** Presses Tab on the line `key` once the catalogue is in, or TAB_CATALOGUE_WAIT_MS have passed. */
+  /**
+   * Presses Tab on the line `key` once the catalogue is in, or TAB_CATALOGUE_WAIT_MS have passed;
+   * with nothing to show by then, it waits on, up to TAB_EMPTY_WAIT_MS, rather than ring the bell.
+   */
   private waitForCommands(key: string, arrived: Promise<void>, reverse: boolean): void {
-    if (this.tabWait !== null) clearTimeout(this.tabWait.timer);
+    this.cancelTabWait();
     let done = false;
-    const press = (): void => {
-      if (done) return;
-      done = true;
+    const press = (last: boolean): void => {
       const wait = this.tabWait;
-      if (wait === null || wait.key !== key) return;
-      clearTimeout(wait.timer);
-      this.tabWait = null;
+      if (done || wait === null || wait.key !== key) return;
       const completion = this.completion;
       // Only if nothing has moved on meanwhile: the line, a read, a search, a command.
-      if (completion === null || tabKey(this.state) !== key || this.read !== null || this.search !== null || this.running !== null || this.ps2 !== null) return;
-      this.applyTab(completion.engine.pressTab(this.tab, this.state, completion.env, reverse));
+      const current = completion !== null && tabKey(this.state) === key && this.read === null && this.search === null && this.running === null && this.ps2 === null;
+      if (current && !last && completion.engine.complete(this.state, completion.env).total === 0) {
+        this.tabWait = { key, timer: setTimeout(() => press(true), TAB_EMPTY_WAIT_MS - TAB_CATALOGUE_WAIT_MS) };
+        return;
+      }
+      done = true;
+      this.cancelTabWait();
+      if (current) this.applyTab(completion.engine.pressTab(this.tab, this.state, completion.env, reverse));
     };
-    this.tabWait = { key, timer: setTimeout(press, TAB_CATALOGUE_WAIT_MS) };
-    void arrived.then(press, press);
+    this.tabWait = { key, timer: setTimeout(() => press(false), TAB_CATALOGUE_WAIT_MS) };
+    void arrived.then(
+      () => press(true),
+      () => press(true),
+    );
+  }
+
+  /** A Tab waiting on the catalogue is dropped: the line changed, or the prompt went away. */
+  private cancelTabWait(): void {
+    if (this.tabWait !== null) clearTimeout(this.tabWait.timer);
+    this.tabWait = null;
   }
 
   /**

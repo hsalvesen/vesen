@@ -278,6 +278,48 @@ describe('the screen', () => {
     expect(sink.finish().blocks).toEqual([{ type: 'lines', stream: 'stdout', lines: [[{ text: 'kept' }]] }]);
   });
 
+  describe('^C', () => {
+    const texts = (sink: TtySink) => sink.finish().blocks.flatMap((block) => (block.type === 'lines' ? block.lines.map(lineText) : []));
+
+    it('goes where the output had got to, before what the command writes on its way out', async () => {
+      const sink = new TtySink();
+      const stdout = new TtyOut(sink, 'stdout', cols);
+      await stdout.write('reply 1\nreply 2\n');
+      sink.caret();
+      // ping's statistics start with a newline, which ends the caret's line.
+      await stdout.write('\n--- statistics ---\n');
+      expect(texts(sink)).toEqual(['reply 1', 'reply 2', '^C', '--- statistics ---']);
+    });
+
+    it('ends an unfinished line as a terminal echoes it, plain whatever its style', async () => {
+      const sink = new TtySink();
+      await new TtyOut(sink, 'stdout', cols).write('\u001b[31mhalf');
+      sink.caret();
+      expect(sink.view().blocks).toEqual([{ type: 'lines', stream: 'stdout', lines: [[{ text: 'half', style: { fg: 'red' } }, { text: '^C' }]] }]);
+      expect(texts(sink)).toEqual(['half^C']);
+    });
+
+    it('starts a line of its own after an unfinished error', async () => {
+      const sink = new TtySink();
+      await new TtyOut(sink, 'stderr', cols).write('oops');
+      sink.caret();
+      const { blocks } = sink.finish();
+      expect(blocks).toEqual([
+        { type: 'lines', stream: 'stderr', lines: [[{ text: 'oops' }]] },
+        { type: 'lines', stream: 'stdout', lines: [[{ text: '^C' }]] },
+      ]);
+    });
+
+    it('still shows after the output was cut short, and not once sealed', async () => {
+      const sink = new TtySink({ maxLines: 2 });
+      await new TtyOut(sink, 'stdout', cols).write('1\n2\n3\n');
+      sink.caret();
+      sink.seal();
+      sink.caret();
+      expect(texts(sink)).toEqual(['1', '2', '[output truncated]', '^C']);
+    });
+  });
+
   it('stops after the line limit with one notice', async () => {
     const sink = new TtySink({ maxLines: 3 });
     await new TtyOut(sink, 'stdout', cols).write('1\n2\n3\n4\n5\n');

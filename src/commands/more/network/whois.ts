@@ -19,7 +19,8 @@ export default defineCommand({
     },
   ],
   args: [{ name: 'DOMAIN', source: { kind: 'examples', caseInsensitive: true, fromHistory: true } }],
-  loadingLabel: (argv) => `whois: asking RDAP about ${argv[1] ?? 'the domain'}…`,
+  // DOMAIN, never -h's HOST.
+  loadingLabel: (argv) => `whois: asking RDAP about ${argv.find((word, i) => i > 0 && !word.startsWith('-') && !/^(-h|--host)$/.test(argv[i - 1] ?? '')) ?? 'the domain'}…`,
   examples: [
     { line: 'whois vesen.app', note: 'its registrar, dates and name servers' },
     { line: 'whois example.com' },

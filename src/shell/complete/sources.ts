@@ -6,7 +6,7 @@
 
 import { lex } from '../lexer';
 import type { Candidate, CommandSpec, EnumValue, ValueSource } from '../types';
-import { ANY_PATH, type CursorContext } from './context';
+import { ANY_PATH, operandsOf, type CursorContext } from './context';
 import { matchPrefix } from './match';
 import type { CompletionEnv, FsEntry } from './types';
 
@@ -211,18 +211,24 @@ export function pathPool(typed: string, source: PathSource, env: CompletionEnv):
 
 // ── Values ─────────────────────────────────────────────────────────────────────────────────
 
-/** A line's operands for a command, after its name, flags and the subcommand; null for another command. */
-function operands(line: string, spec: CommandSpec, sub: string | undefined): string[] | null {
+/**
+ * A line's operands for a command, after its name, its flags with their values and the
+ * subcommand (`ping -c 10 example.com` has only example.com); null for another command. `bare`
+ * when the line is nothing but the command and its operands.
+ */
+function operands(line: string, spec: CommandSpec, sub: string | undefined): { readonly words: string[]; readonly bare: boolean } | null {
+  const tokens = lex(line).tokens;
   const words: string[] = [];
-  for (const token of lex(line).tokens) {
+  for (const token of tokens) {
     if (token.kind !== 'word') break;
     words.push(token.value);
   }
   const name = words.shift();
   if (name === undefined || (name !== spec.name && !(spec.aliases ?? []).includes(name))) return null;
-  const rest = words.filter((word) => !word.startsWith('-'));
-  if (sub === undefined) return rest;
-  return rest[0] === sub ? rest.slice(1) : null;
+  const { operands: rest, all } = operandsOf(words, spec, sub);
+  const bare = all && tokens.length === words.length + 1;
+  if (sub === undefined) return { words: rest, bare };
+  return rest[0] === sub ? { words: rest.slice(1), bare } : null;
 }
 
 /** The operand at `index` of a line, or all the rest joined for a variadic argument: 'New York'. */
@@ -241,16 +247,21 @@ function examplePool(context: CursorContext, source: Extract<ValueSource, { kind
   if (source.fromHistory === true) {
     const history = env.history();
     for (let i = history.length - 1, seen = 0; i >= 0 && seen < HISTORY_SCAN; i -= 1, seen += 1) {
-      const words = operands(history[i] ?? '', spec, context.sub);
-      const value = words === null ? undefined : operandAt(words, context.argIndex, variadic);
-      if (value !== undefined && value !== '') items.push({ value, label: value, kind: 'history', summary: 'from history', terminal: true });
+      const found = operands(history[i] ?? '', spec, context.sub);
+      const value = found === null ? undefined : operandAt(found.words, context.argIndex, variadic);
+      // An operand after `--` that looks like an option would be read as one where it lands.
+      if (value !== undefined && value !== '' && !value.startsWith('-')) items.push({ value, label: value, kind: 'history', summary: 'from history', terminal: true });
     }
   }
   for (const example of spec.examples ?? []) {
-    const words = operands(example.line, spec, context.sub);
-    const value = words === null ? undefined : operandAt(words, context.argIndex, variadic);
-    if (value === undefined || value === '') continue;
-    items.push({ value, label: value, kind: 'example', ...(example.note === undefined ? {} : { summary: example.note }), terminal: true });
+    const found = operands(example.line, spec, context.sub);
+    const value = found === null ? undefined : operandAt(found.words, context.argIndex, variadic);
+    if (value === undefined || value === '' || value.startsWith('-')) continue;
+    // A note tells what its whole line does, so it goes with the value only when the line ends
+    // with the value and has nothing else but operands: example.com from
+    // `ping -c 10 -i 0.5 example.com` is not "ten, half a second apart".
+    const note = found?.bare === true && (variadic || found.words.length === context.argIndex + 1) ? example.note : undefined;
+    items.push({ value, label: value, kind: 'example', ...(note === undefined ? {} : { summary: note }), terminal: true });
   }
   return { items, ...(source.caseInsensitive === true ? { caseInsensitive: true } : {}) };
 }

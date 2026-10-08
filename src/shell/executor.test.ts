@@ -284,6 +284,30 @@ describe('^C', () => {
     expect(spans(h.commits.at(-1)?.blocks ?? []).map((span) => span.text)).toEqual(['^C']);
   });
 
+  it('shows ^C where the output was, before what the command says on its way out', async () => {
+    let ready = false;
+    const lastWords = defineCommand({
+      name: 'last-words',
+      category: 'shell',
+      summary: 'say something on ^C',
+      run: async (ctx) => {
+        await ctx.stdout.write('working\nhalf');
+        ctx.signal.addEventListener('abort', () => void ctx.stdout.write('\nsummary\n').catch(() => {}), { once: true });
+        ready = true;
+        await new Promise(() => {});
+      },
+    });
+    const h = harness({ specs: [lastWords] });
+    const handle = h.shell.start('last-words');
+    await vi.waitFor(() => expect(ready).toBe(true));
+    h.shell.abort();
+    const result = await handle.done;
+    expect(result.status).toBe(130);
+    // As a terminal: the caret ends the unfinished line, and the summary's newline ends the caret's.
+    expect(result.blocks.flatMap((block) => (block.type === 'lines' ? block.lines.map(lineText) : []))).toEqual(['working', 'half^C', 'summary']);
+    expect(h.commits.at(-1)?.blocks).toEqual(result.blocks);
+  });
+
   it('interrupts a pipeline, and a new line interrupts the old one', async () => {
     const h = harness();
     const first = h.shell.start('yes | hang');

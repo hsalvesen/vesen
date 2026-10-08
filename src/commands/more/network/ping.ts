@@ -20,7 +20,8 @@ export default defineCommand({
     { short: 'q', description: 'quiet: only the summary at the end' },
   ],
   args: [{ name: 'HOST', source: { kind: 'examples', caseInsensitive: true, fromHistory: true } }],
-  loadingLabel: (argv) => `ping: timing ${argv.slice(1).find((word) => /^[^-]/.test(word) && /[.:]/.test(word)) ?? 'the host'}…`,
+  // The host, never the value -c, -i or -W took: `ping -c 10 -i 0.5 example.com` times example.com.
+  loadingLabel: (argv) => `ping: timing ${argv.find((word, i) => i > 0 && !word.startsWith('-') && !/^-[a-zA-Z]*[ciW]$/.test(argv[i - 1] ?? '')) ?? 'the host'}…`,
   examples: [
     { line: 'ping vesen.app', note: 'four requests, a second apart' },
     { line: 'ping -c 10 -i 0.5 example.com', note: 'ten, half a second apart' },

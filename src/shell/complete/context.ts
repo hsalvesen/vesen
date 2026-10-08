@@ -119,6 +119,37 @@ function readOption(word: string, flags: readonly FlagSpec[], used: Set<FlagSpec
   return null;
 }
 
+/** The argument whose marks start `word`: dig's OPTION for `+short` and `@google`. */
+function markedArg(args: readonly ArgSpec[], word: string): ArgSpec | undefined {
+  const first = word.charAt(0);
+  return first === '' ? undefined : args.find((arg) => arg.marks?.includes(first) === true);
+}
+
+/**
+ * The operands among a command's words (its name already taken off), as getopt would see them:
+ * not its flags, nor the word a flag's value takes (`-c 10`; `-c10` and `--count=10` carry theirs),
+ * nor `--`, nor a marked word such as dig's `+short`. A subcommand's name stays, as the first.
+ * `all` is true when every word is an operand.
+ */
+export function operandsOf(words: readonly string[], spec: CommandSpec, sub?: string): { readonly operands: string[]; readonly all: boolean } {
+  const subSpec = sub === undefined ? undefined : spec.subcommands?.[sub];
+  const flags = [...(spec.flags ?? []), ...(subSpec?.flags ?? [])];
+  const args = (subSpec === undefined ? spec.args : subSpec.args) ?? [];
+  const operands: string[] = [];
+  let open = true;
+  let pending = false;
+  for (const word of words) {
+    if (pending) pending = false;
+    else if (open && word === '--') open = false;
+    else if (open && isOption(word)) pending = readOption(word, flags, new Set()) !== null;
+    else if (markedArg(args, word) === undefined) {
+      operands.push(word);
+      if (spec.posixArgs === true) open = false;
+    }
+  }
+  return { operands, all: operands.length === words.length };
+}
+
 /**
  * The argument at which a command's words become a command line of their own: sudo's COMMAND,
  * env's COMMAND, or `command`'s COMMAND when it is followed by the rest of that line.
@@ -214,6 +245,8 @@ function classify(input: readonly string[], word: CursorWord, env: CompletionEnv
         continue;
       }
     }
+    // dig's +short and @google may stand anywhere, and are not NAME or TYPE.
+    if (markedArg(operands(), w) !== undefined) continue;
     if (positional === 0 && sub === undefined && spec.subcommands !== undefined && hasOwn(spec.subcommands, w)) {
       sub = w;
       subSpec = spec.subcommands[w];
@@ -239,6 +272,8 @@ function classify(input: readonly string[], word: CursorWord, env: CompletionEnv
     }
     return { ...base, slot: 'flag', argIndex: positional };
   }
+  const marked = markedArg(operands(), word.value);
+  if (marked !== undefined) return { ...base, slot: 'arg', argIndex: positional, source: marked.source, valueName: marked.name };
   const subcommands = spec.subcommands === undefined ? [] : Object.keys(spec.subcommands);
   if (positional === 0 && sub === undefined && subcommands.length > 0) return { ...base, slot: 'subcommand', argIndex: 0 };
 

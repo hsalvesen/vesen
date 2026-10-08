@@ -84,3 +84,34 @@ test.describe('Tab completion', { tag: '@smoke' }, () => {
     await expect(prompt(page)).toBeFocused();
   });
 });
+
+test.describe('Tab before the catalogue arrives', () => {
+  test('a first Tab on one of its commands waits for it, without the bell, then completes', async ({ page, hasTouch }) => {
+    // The catalogue's chunk is held until the Tab has had time to give up, as on a slow network.
+    let release: () => void = () => {};
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route(/\/assets\/catalogue-[\w-]+\.js$/, async (route) => {
+      await released;
+      await route.continue();
+    });
+    await page.goto('/');
+    await expect(page.locator('[data-completion="ready"]')).toHaveCount(1);
+    if (hasTouch) {
+      await prompt(page).tap();
+      await prompt(page).fill('gre');
+      await page.locator('.dock').getByRole('button', { name: 'Tab: complete', exact: true }).tap();
+    } else {
+      await prompt(page).fill('gre');
+      await page.keyboard.press('Tab');
+    }
+    // Well past the short wait: nothing rang or was said, and the line is as typed.
+    await page.waitForTimeout(800);
+    await expect(prompt(page)).toHaveValue('gre');
+    await expect(page.locator('[aria-live]').filter({ hasText: 'No completions' })).toHaveCount(0);
+    release();
+    await expect(prompt(page)).toHaveValue('grep ');
+    await expect(prompt(page)).toBeFocused();
+  });
+});

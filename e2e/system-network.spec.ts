@@ -91,6 +91,43 @@ test.describe('fastfetch', { tag: '@smoke' }, () => {
   });
 });
 
+test.describe('ping', () => {
+  test('^C, or the Stop chip on a phone, shows where the replies had got to, above the statistics', async ({ page }) => {
+    // An address, so there is no name to look up, and its probes go to https://ADDRESS/ (a
+    // favicon request never reaches Playwright's routes in Chromium). Two are answered; the third hangs.
+    const address = '93.184.215.14';
+    let probes = 0;
+    await page.route(`https://${address}/**`, async (route) => {
+      probes += 1;
+      if (probes > 2) await new Promise((resolve) => setTimeout(resolve, 10_000));
+      await route.fulfill({ status: 200, body: '' }).catch(() => {});
+    });
+    await page.goto('/');
+    await expect(page.locator('[data-completion="ready"]')).toHaveCount(1);
+    const line = `ping -c 10 -i 0.2 ${address}`;
+    if (isPhone()) await prompt(page).tap();
+    await prompt(page).fill(line);
+    await prompt(page).press('Enter');
+    const entry = entryOf(page, line);
+    await expect(entry).toContainText(`reply from ${address}: seq=2 `);
+    await expect.poll(() => probes).toBe(3);
+
+    if (isPhone()) await page.locator('.dock').getByRole('option', { name: 'Cancel the running command (Control C)', exact: true }).tap();
+    else await prompt(page).press('Control+c');
+    await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
+
+    const rows = (await entry.locator('.command-output').innerText()).split('\n').filter((row) => row.trim() !== '');
+    const shown = rows.join('\n');
+    const at = (text: string) => rows.findIndex((row) => row.includes(text));
+    expect(at('seq=2'), shown).toBeGreaterThan(at('seq=1'));
+    expect(rows[at('seq=2') + 1]?.trim(), shown).toBe('^C');
+    expect(rows[at('^C') + 1], shown).toContain(`--- ${address} ping statistics ---`);
+    expect(rows.at(-1), shown).toContain('rtt min/avg/max/mdev');
+    expect(rows.filter((row) => row.includes('^C')), shown).toHaveLength(1);
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  });
+});
+
 test.describe('curl', { tag: '@smoke' }, () => {
   test.beforeEach(() => {
     test.skip(test.info().project.name === 'pixel-7', 'desktop Chrome and Instagram on an iPhone');

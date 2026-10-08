@@ -10,7 +10,8 @@ import { createScreen, type ScreenStore } from '../../stores/screen';
 import { harness } from '../../testing/shell-harness';
 import PromptLine from './PromptLine.svelte';
 import { REVEAL_EVENT, SUBMIT_EVENT } from '../actions/stickToBottom';
-import { ESCAPE_TAB_MS, PromptController, READ_HINT_ID, SECRET_MASK, TAB_CATALOGUE_WAIT_MS } from './promptController.svelte';
+import { ESCAPE_TAB_MS, PromptController, READ_HINT_ID, SECRET_MASK, TAB_CATALOGUE_WAIT_MS, TAB_EMPTY_WAIT_MS } from './promptController.svelte';
+import { CATALOGUE_WAIT_MS } from '../../shell/registry';
 import { defineCommand, type CatalogueLoader, type CommandSpec } from '../../shell/types';
 
 const SECRET = 'hunter2-correct-horse';
@@ -327,6 +328,86 @@ describe('Tab while the catalogue is on its way', () => {
     catalogue.arrive([hush]);
     await vi.waitFor(() => expect(values()).toEqual(['hang', 'head', 'hush']));
     expect(input.value).toBe('h');
+  });
+
+  it('waits on, without the bell, when there is nothing to show yet, and completes when the rest lands', async () => {
+    const catalogue = later();
+    const { input, controller } = setup({ catalogue: catalogue.load });
+    await engineReady(controller);
+    const bell = vi.spyOn(controller, 'ringBell');
+    await type(input, 'hu');
+    press(input, 'Tab');
+    await new Promise((resolve) => setTimeout(resolve, TAB_CATALOGUE_WAIT_MS + 150));
+    // Past the short wait: no bell, no "No completions", the line as it was.
+    expect(bell).not.toHaveBeenCalled();
+    expect(controller.announce.trim()).not.toBe('No completions');
+    expect(input.value).toBe('hu');
+    catalogue.arrive([hush]);
+    await vi.waitFor(() => expect(input.value).toBe('hush '));
+    expect(bell).not.toHaveBeenCalled();
+  });
+
+  it("does the same for the dock's tab key", async () => {
+    const catalogue = later();
+    const { input, controller } = setup({ catalogue: catalogue.load, touch: true, dock: true });
+    await engineReady(controller);
+    const bell = vi.spyOn(controller, 'ringBell');
+    await type(input, 'hu');
+    controller.pressKey('Tab');
+    await new Promise((resolve) => setTimeout(resolve, TAB_CATALOGUE_WAIT_MS + 150));
+    expect(bell).not.toHaveBeenCalled();
+    catalogue.arrive([hush]);
+    await vi.waitFor(() => expect(input.value).toBe('hush '));
+  });
+
+  it('rings once the catalogue fails, or once a line would have stopped waiting for it', async () => {
+    let fail: () => void = () => {};
+    const failing: CatalogueLoader = () =>
+      new Promise((_, reject) => {
+        fail = () => reject(new Error('offline'));
+      });
+    const first = setup({ catalogue: failing });
+    await engineReady(first.controller);
+    const bell = vi.spyOn(first.controller, 'ringBell');
+    await type(first.input, 'hu');
+    press(first.input, 'Tab');
+    await new Promise((resolve) => setTimeout(resolve, TAB_CATALOGUE_WAIT_MS + 150));
+    expect(bell).not.toHaveBeenCalled();
+    fail();
+    await vi.waitFor(() => expect(bell).toHaveBeenCalledTimes(1));
+    expect(first.input.value).toBe('hu');
+
+    // A catalogue that never comes: the bell after as long as a line waits for a command.
+    expect(TAB_EMPTY_WAIT_MS).toBe(CATALOGUE_WAIT_MS);
+    vi.useFakeTimers();
+    try {
+      const second = setup({ catalogue: later().load });
+      await vi.waitFor(() => expect(second.controller.completion).not.toBeNull());
+      const rang = vi.spyOn(second.controller, 'ringBell');
+      await type(second.input, 'hu');
+      press(second.input, 'Tab');
+      vi.advanceTimersByTime(TAB_EMPTY_WAIT_MS - 1);
+      expect(rang).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(rang).toHaveBeenCalledTimes(1);
+      expect(second.input.value).toBe('hu');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('forgets the Tab once the line is edited, even back to what it was', async () => {
+    const catalogue = later();
+    const { input, controller } = setup({ catalogue: catalogue.load });
+    await engineReady(controller);
+    await type(input, 'hu');
+    press(input, 'Tab');
+    await new Promise((resolve) => setTimeout(resolve, TAB_CATALOGUE_WAIT_MS + 150));
+    await type(input, 'h');
+    await type(input, 'hu');
+    catalogue.arrive([hush]);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(input.value).toBe('hu');
   });
 
   it('does not wait for a path', async () => {
