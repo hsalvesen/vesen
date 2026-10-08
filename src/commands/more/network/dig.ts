@@ -39,7 +39,8 @@ export default defineCommand({
   args: [
     { name: 'NAME', source: { kind: 'examples', caseInsensitive: true, fromHistory: true }, optional: true },
     { name: 'TYPE', source: { kind: 'enum', values: () => TYPES, caseInsensitive: true }, optional: true },
-    { name: 'OPTION', source: { kind: 'enum', values: () => OPTIONS }, optional: true, variadic: true },
+    // +short and @google may stand anywhere on the line, so they are never taken for NAME or TYPE.
+    { name: 'OPTION', source: { kind: 'enum', values: () => OPTIONS }, optional: true, variadic: true, marks: '+@' },
   ],
   loadingLabel: (argv) => `dig: resolving ${argv.slice(1).find((word) => /^[^-+@]/.test(word) && word.includes('.')) ?? 'the name'}…`,
   examples: [

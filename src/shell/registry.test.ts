@@ -117,7 +117,7 @@ describe('CommandRegistry', () => {
 
     it('takes a distance of 2 only for five letters or more, with the same first letter', () => {
       const real = new CommandRegistry(['repo', 'email', 'help', 'ls', 'set', 'man', 'qr', 'cat', 'history', 'theme'].map((name) => spec(name)));
-      for (const typo of ['grep', 'tail', 'head', 'less', 'sort', 'cut', 'tr', 'ps']) {
+      for (const typo of ['grep', 'tail', 'head', 'less', 'sort']) {
         expect(real.suggest(typo).near, typo).toEqual([]);
       }
       expect(real.suggest('hstory').near).toEqual(['history']);
@@ -127,16 +127,27 @@ describe('CommandRegistry', () => {
       expect(real.suggest('xestory').near).toEqual([]);
     });
 
-    it("says plainly that common Linux commands aren't in vesen yet", () => {
-      for (const name of ['grep', 'head', 'tail', 'less', 'more', 'wc', 'sort', 'uniq', 'cut', 'tr', 'sed', 'awk', 'ps', 'top']) {
+    it("says plainly that common Linux commands vesen lacks aren't in vesen yet", () => {
+      for (const name of ['awk', 'gawk', 'split', 'install']) {
         expect(registry.suggest(name)).toEqual({ near: [], hint: `${name} isn't in vesen yet.` });
       }
-      expect(registry.suggest('nano').hint).toContain('no editor');
+      expect(registry.suggest('egrep')).toEqual({ near: [], hint: "Use 'grep -E' instead." });
+    });
+
+    it('no longer calls built commands missing, or vesen editorless', () => {
+      // Each is built now; its name falls through to the guesses like any other.
+      for (const name of ['grep', 'head', 'tail', 'less', 'more', 'wc', 'sort', 'sed', 'ps', 'top', 'kill', 'chmod', 'find']) {
+        expect(registry.suggest(name).hint, name).toBeUndefined();
+      }
+      expect(registry.suggest('nano').hint).toBeUndefined();
     });
 
     it('points to what vesen has instead of commands from elsewhere', () => {
-      expect(registry.suggest('vim')).toMatchObject({ near: ['nano'] });
-      expect(registry.suggest('vi')).toMatchObject({ near: ['nano'] });
+      const withTop = new CommandRegistry([...names, 'top'].map((name) => spec(name)));
+      expect(withTop.suggest('htop')).toEqual({ near: ['top'] });
+      expect(withTop.suggest('btop')).toEqual({ near: ['top'] });
+      expect(registry.suggest('nvim')).toMatchObject({ near: ['nano'] });
+      expect(registry.suggest('emacs')).toMatchObject({ near: ['nano'] });
       expect(registry.suggest('cls')).toEqual({ near: ['clear'] });
       for (const name of ['apt', 'apt-get', 'yum', 'brew']) {
         expect(registry.suggest(name)).toEqual({ near: [], hint: 'vesen has no package manager.' });
@@ -145,7 +156,30 @@ describe('CommandRegistry', () => {
 
     it('suggests an alternative only once it exists', () => {
       const bare = new CommandRegistry([spec('ls')]);
-      expect(bare.suggest('vim')).toMatchObject({ near: [], hint: expect.stringContaining('no editor') });
+      expect(bare.suggest('emacs')).toEqual({ near: [], hint: "vesen's editor is nano." });
+      expect(bare.suggest('htop').near).toEqual([]);
+    });
+
+    it('guesses nothing while the catalogue is missing, since the name may be one of its commands', async () => {
+      const failing = new CommandRegistry([spec('ls'), spec('cat'), spec('top')], { catalogue: () => Promise.reject(new Error('offline')) });
+      await failing.whenComplete();
+      expect(failing.complete).toBe(false);
+      expect(failing.suggest('ps')).toEqual({ near: [] });
+      expect(failing.suggest('cut')).toEqual({ near: [] });
+      // What is certain still holds: another case, and what vesen has instead.
+      expect(failing.suggest('LS')).toEqual({ near: ['ls'] });
+      expect(failing.suggest('htop')).toEqual({ near: ['top'] });
+      const loaded = new CommandRegistry([spec('ls'), spec('cat')]);
+      expect(loaded.suggest('ps')).toEqual({ near: ['ls'] });
+    });
+
+    it('has a hint for no command that the kernel or the catalogue has', async () => {
+      const { buildRegistry, specFiles } = await import('../commands/index');
+      const full = buildRegistry([], specFiles());
+      await full.whenComplete();
+      const every = full.names({ includeHidden: true });
+      expect(every).toContain('grep');
+      for (const name of every) expect(full.suggest(name).hint, name).toBeUndefined();
     });
   });
 

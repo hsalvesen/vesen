@@ -102,6 +102,12 @@ export interface ArgSpec {
   readonly optional?: boolean;
   /** Only the last argument may be variadic. */
   readonly variadic?: boolean;
+  /**
+   * The characters that mark this argument's words wherever they stand, as `+` and `@` mark dig's
+   * `+short` and `@google`. Completion never counts such a word as another operand, and offers
+   * this argument's values for a word being typed that starts with one.
+   */
+  readonly marks?: string;
 }
 
 export interface SubcommandSpec {

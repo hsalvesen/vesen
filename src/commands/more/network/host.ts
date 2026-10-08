@@ -19,7 +19,8 @@ export default defineCommand({
     { name: 'NAME', source: { kind: 'examples', caseInsensitive: true, fromHistory: true } },
     { name: 'SERVER', source: { kind: 'enum', values: () => SERVERS }, optional: true },
   ],
-  loadingLabel: (argv) => `host: looking up ${argv[argv.length - 1] ?? 'the name'}…`,
+  // NAME, never -t's TYPE or the SERVER after it.
+  loadingLabel: (argv) => `host: looking up ${argv.find((word, i) => i > 0 && !word.startsWith('-') && argv[i - 1] !== '-t') ?? 'the name'}…`,
   examples: [
     { line: 'host vesen.app', note: 'its addresses and mail servers' },
     { line: 'host -t TXT example.com', note: 'one type of record' },

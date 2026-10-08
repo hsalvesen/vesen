@@ -177,6 +177,12 @@ export class SgrParser {
     return events;
   }
 
+  /** Adds plain text to the unfinished line, outside any style or link: the terminal's echo of ^C. */
+  echo(text: string): void {
+    this.flushRun();
+    this.spans.push({ text });
+  }
+
   /** The unfinished line so far, without taking it. */
   partial(): Line {
     return this.run === '' ? [...this.spans] : [...this.spans, this.span(this.run)];

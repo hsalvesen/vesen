@@ -76,18 +76,33 @@ describe('ping', () => {
     const pending = s.run('ping -c 10 -i 0.2 example.com');
     await vi.waitFor(() => expect(probes()).toBe(3));
     s.app.shell.abort();
-    const { status, stdoutPlain } = await pending;
+    const { status, stdoutPlain, screen } = await pending;
     s.stop();
     expect(status).toBe(130);
-    const lines = stdoutPlain.split('\n');
-    expect(lines.slice(-5)).toEqual([
-      '',
+    // As a terminal shows it: ^C where it was pressed, after two replies, then the statistics,
+    // whose leading newline ends the caret's line rather than leaving a blank one.
+    expect(screen).toEqual([
+      'PING example.com (172.66.147.243) over HTTPS',
+      'ICMP is not available in a browser: each probe times an HTTPS request to https://example.com/favicon.ico',
+      'reply from example.com: seq=1 time=12.0 ms (HTTPS round trip)',
+      'reply from example.com: seq=2 time=18.0 ms (HTTPS round trip)',
+      '^C',
       '--- example.com ping statistics ---',
       '3 requests transmitted, 2 received, 33.3333% loss, time 30ms',
       'rtt min/avg/max/mdev = 12.000/15.000/18.000/3.000 ms',
-      '^C',
     ]);
     expect(stdoutPlain.match(/ping statistics/g)).toHaveLength(1);
+  });
+
+  it('puts ^C after the reply in progress with -q too, and after a request that never answered', async () => {
+    const { s, probes } = await rig([12], (n, init) => (n === 2 ? hang(init) : undefined));
+    const pending = s.run('ping -q -c 5 -i 0.2 example.com');
+    await vi.waitFor(() => expect(probes()).toBe(2));
+    s.app.shell.abort();
+    const { status, screen } = await pending;
+    s.stop();
+    expect(status).toBe(130);
+    expect(screen.slice(2)).toEqual(['^C', '--- example.com ping statistics ---', '2 requests transmitted, 1 received, 50% loss, time 12ms', 'rtt min/avg/max/mdev = 12.000/12.000/12.000/0.000 ms']);
   });
 
   it('stops early, with its statistics, before its five minutes run out', async () => {

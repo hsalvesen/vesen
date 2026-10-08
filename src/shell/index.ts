@@ -389,9 +389,17 @@ export function createShell(deps: ShellDeps): Shell {
       },
       describe: (name, label) => session.jobs.describe(id, name, label),
     };
-    // ^C seals the screen before anything the job does next can write to it. Only what the abort
-    // event itself writes still lands, so a command can say its last words: ping's statistics.
-    signal.addEventListener('abort', () => void Promise.resolve().then(() => sink.seal()), { once: true });
+    // ^C shows where the output had got to, first, then seals the screen before anything the job
+    // does next can write to it. Only what the abort event itself writes still lands, after the
+    // caret, so a command can say its last words: ping's statistics.
+    signal.addEventListener(
+      'abort',
+      () => {
+        sink.caret();
+        void Promise.resolve().then(() => sink.seal());
+      },
+      { once: true },
+    );
     // The line shows at once, with its output to follow as the job writes it (F013).
     transcript?.begin?.({
       id,
@@ -441,8 +449,9 @@ export function createShell(deps: ShellDeps): Shell {
         status = outcome.status;
       }
       const { blocks, screen } = sink.finish();
+      // The caret is in already when ^C ended the line; a line ended another way gets it last.
       const caret: Line = [{ text: '^C' }];
-      const shown: readonly Block[] = interrupted ? [...blocks, { type: 'lines', lines: [caret], stream: 'stdout' }] : blocks;
+      const shown: readonly Block[] = interrupted && !signal.aborted ? [...blocks, { type: 'lines', lines: [caret], stream: 'stdout' }] : blocks;
       session.setStatus(status);
       // After `exit`, the live prompt is already the next session's: home, and a clean $.
       if (ended) session.reset();

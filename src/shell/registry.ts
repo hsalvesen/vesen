@@ -11,23 +11,25 @@ export const CATEGORY_ORDER: readonly Category[] = ['portfolio', 'files', 'text'
 
 export const MAX_SUMMARY = 50;
 
-const NO_EDITOR = "vesen has no editor yet: 'cat FILE' shows a file, and 'echo TEXT > FILE' writes one.";
+const EDITOR = "vesen's editor is nano.";
 const NO_PACKAGES = 'vesen has no package manager.';
 
-/** Linux commands visitors try that vesen does not have yet; each gets a plain hint. */
-const NOT_YET = [
-  'grep', 'egrep', 'head', 'tail', 'less', 'more', 'wc', 'sort', 'uniq', 'cut', 'tr', 'sed', 'awk',
-  'find', 'tree', 'diff', 'xargs', 'tee', 'chmod', 'chown', 'ps', 'top', 'htop', 'kill',
-];
+/**
+ * Linux commands visitors try that vesen does not have; each gets a plain hint. Only names that
+ * are in neither the kernel nor the catalogue (registry.test.ts checks), since a hint shows when
+ * the catalogue could not be loaded too.
+ */
+const NOT_YET = ['awk', 'gawk', 'mawk', 'split', 'install'];
 
 /** Commands people type from other systems, and what vesen has instead. */
 const ELSEWHERE: Readonly<Record<string, { readonly use?: string; readonly hint?: string }>> = {
   ...Object.fromEntries(NOT_YET.map((name) => [name, { hint: `${name} isn't in vesen yet.` }])),
-  vim: { use: 'nano', hint: NO_EDITOR },
-  vi: { use: 'nano', hint: NO_EDITOR },
-  nvim: { use: 'nano', hint: NO_EDITOR },
-  emacs: { use: 'nano', hint: NO_EDITOR },
-  nano: { hint: NO_EDITOR },
+  htop: { use: 'top' },
+  btop: { use: 'top' },
+  egrep: { hint: "Use 'grep -E' instead." },
+  fgrep: { hint: "Use 'grep -F' instead." },
+  nvim: { use: 'nano', hint: EDITOR },
+  emacs: { use: 'nano', hint: EDITOR },
   cls: { use: 'clear' },
   apt: { hint: NO_PACKAGES },
   'apt-get': { hint: NO_PACKAGES },
@@ -285,6 +287,10 @@ export class CommandRegistry implements Registry {
     const candidates = this.names();
     const sameCase = candidates.filter((candidate) => candidate.toLowerCase() === lower);
     if (sameCase.length > 0) return { near: sameCase.slice(0, 3) };
+    // Asked for, the catalogue is not in (it could not be loaded, or is late): a guess from the
+    // rest would take a command vesen has for a typo of another, ps for ls or cut for cat.
+    const kind = this.catalogue.kind;
+    if (kind === 'failed' || kind === 'loading') return { near: [] };
 
     // Short names would match nearly anything at distance 2, so it takes five letters and the
     // same first letter: grep is not a typo of repo, nor tail of email.

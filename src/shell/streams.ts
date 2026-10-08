@@ -530,6 +530,23 @@ export class TtySink {
     this.changed();
   }
 
+  /**
+   * ^C, where the output had got to when it came, as a terminal echoes it: at the end of an
+   * unfinished line, and before anything the command writes on its way out. ping's statistics
+   * start with a newline, which ends the caret's line.
+   */
+  caret(): void {
+    if (this.sealed) return;
+    if (this.partialStream === 'stderr') this.endPartial('stderr');
+    if (this.truncated) {
+      this.items.push({ type: 'lines', lines: [[{ text: '^C' }]], stream: 'stdout' });
+    } else {
+      this.parsers.stdout.echo('^C');
+      this.partialStream = 'stdout';
+    }
+    this.changed();
+  }
+
   /** Stops taking output: unfinished lines are ended, and later writes reject with JobDetached. */
   seal(): void {
     if (this.sealed) return;

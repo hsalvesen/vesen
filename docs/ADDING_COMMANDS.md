@@ -40,7 +40,8 @@ What the visitor sees does not depend on the folder. Until the catalogue arrives
   wait for it too, through `allCommands(ctx)` in `src/commands/lib/catalogue.ts`; a command that
   lists or looks up commands by name should do the same;
 - a first Tab on a command name waits up to 300 ms, then shows what it has; the list, the ghost
-  and the chips fill in when the rest arrives;
+  and the chips fill in when the rest arrives. With nothing to show yet, it waits on as long as a
+  line would (8 s, or until the line changes) rather than ring the bell;
 - the catalogue's `/usr/bin` stubs and man pages are added to the file system when it arrives.
 
 If the catalogue cannot be loaded, the first lookup that misses it says so once, and the next
@@ -83,7 +84,7 @@ The file's default export is the spec, made with `defineCommand`, which insists 
 | `summary` | One line, 50 characters at most, lower case, no full stop: `help`, `whatis`, Tab and the chips show it. |
 | `synopsis` | The usage lines, such as `rev [FILE]...`; generated from the flags and arguments when left out. |
 | `flags` | Each with `short` and/or `long`, a `description`, and `value` when it takes one. `-la`, `-n5`, `--lines=5` and `--` are parsed for you, and the values arrive in `ctx.opts`. |
-| `args` | The operands, with a `source` that completion reads: `path`, `command`, `enum`, `examples`, `free` and others. Only the last may be `variadic`. |
+| `args` | The operands, with a `source` that completion reads: `path`, `command`, `enum`, `examples`, `free` and others. Only the last may be `variadic`. `marks` names the characters that start an argument's words wherever they stand, as `+` and `@` start dig's `+short` and `@google`, so completion never takes them for another operand. |
 | `subcommands` | `theme ls`, `theme set`: each with its own summary, flags and arguments. |
 | `examples` | Lines that show the command at work; see below. |
 | `seeAlso` | Related commands, for `man`. |
@@ -219,6 +220,11 @@ Every example marked `offline: true` is run by `src/commands/examples.test.ts`, 
 and into a pipe, on a fresh file system, and must exit 0. The same examples are what `help` and
 `man` show; one with a `starter` rank is also a chip on an empty phone prompt, which is for core
 commands. Examples that need the network leave `offline` out.
+
+An argument whose source is `examples` completes to the operand at its place in each example (and
+in history), read as getopt would: `ping -c 10 -i 0.5 example.com` offers `example.com`, never
+`10`. An example's `note` goes with that value only when the example is the command and its
+operands alone, so write the plainest example of an operand first.
 
 Every spec must have at least one offline example, and `src/commands/shell/help-man.test.ts`
 checks that `--help` and `man` render for every spec, the catalogue's included.
