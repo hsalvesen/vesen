@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import type { SysSnapshot } from '../services/types';
-import { cpuinfo, loadavg, meminfo, memTotalKb, mounts, status, uptime, version } from './special';
+import { cpuinfo, loadavg, meminfo, memoryOf, memTotalKb, mounts, processStatus, uptime, version } from './special';
 import type { GenerateContext } from './types';
 
 const BOOT = Date.UTC(2026, 9, 6, 9, 0, 0);
@@ -62,14 +62,37 @@ describe('/proc, from an injected clock and device', () => {
     );
   });
 
-  it('gives a sane load average, version, mounts and shell status', () => {
+  it('gives a sane load average, version and mounts', () => {
     const [one, five, fifteen] = loadavg(context({ random: () => 0.99 })).split(' ').map(Number);
     expect(one).toBeLessThan(1);
     expect(five).toBeLessThan(one ?? 0);
     expect(fifteen).toBeLessThan(five ?? 0);
     expect(version('2.0.0')(context())).toBe('Linux version 6.6.0-vesen (build@vesen) (vesen v2.0.0) #1 SMP PREEMPT_DYNAMIC\n');
     expect(mounts()).toContain('localstorage /home/guest vesenfs');
-    expect(status(context())).toMatch(/^Pid:\s+1$/m);
-    expect(status(context())).toMatch(/^Uid:\s+1000\t1000\t1000\t1000$/m);
+  });
+});
+
+describe('/proc for the process table', () => {
+  const init = { pid: 1, ppid: 0, uid: 0, name: 'init', argv: ['/sbin/init'], startedAt: BOOT };
+  const shell = { pid: 4242, ppid: 1, uid: 1000, name: 'vesh', argv: ['-vesh'], startedAt: BOOT };
+  const ps = { pid: 4250, ppid: 4242, uid: 1000, name: '/bin/ps', argv: ['/bin/ps', 'aux'], startedAt: BOOT + 60_000 };
+
+  it("lays out /proc/PID/status as Linux does, root's init and the visitor's others, the reader running", () => {
+    expect(processStatus(init, context({ self: 4250 }))).toBe(
+      ['Name:\tinit', 'State:\tS (sleeping)', 'Pid:\t1', 'PPid:\t0', 'Uid:\t0\t0\t0\t0', 'Gid:\t0\t0\t0\t0', 'VmSize:\t  167812 kB', 'VmRSS:\t   11904 kB', 'Threads:\t1', ''].join('\n'),
+    );
+    expect(processStatus(shell, context({ self: 4250 }))).toMatch(/^Name:\tvesh\nState:\tS \(sleeping\)\nPid:\t4242\nPPid:\t1\nUid:\t1000\t1000\t1000\t1000\nGid:\t1000\t1000\t1000\t1000\n/);
+    // Known by the last part of the name it was run by, as ps -e and pgrep know it.
+    expect(processStatus(ps, context({ self: 4250 }))).toMatch(/^Name:\tps\nState:\tR \(running\)\nPid:\t4250\nPPid:\t4242\n/);
+  });
+
+  it("gives each process the same memory wherever it is read, and counts the table in /proc/loadavg", () => {
+    expect(memoryOf(init)).toEqual({ vsz: 167_812, rss: 11_904 });
+    expect(memoryOf(shell)).toEqual({ vsz: 8_916, rss: 5_248 });
+    expect(memoryOf(ps)).toEqual(memoryOf({ ...ps, pid: 4300, name: 'ps' }));
+    const { vsz, rss } = memoryOf(ps);
+    expect(processStatus(ps, context())).toContain(`VmSize:\t${String(vsz).padStart(8)} kB\nVmRSS:\t${String(rss).padStart(8)} kB\n`);
+    expect(loadavg(context({ processes: [init, shell, ps] })).split(' ').slice(3)).toEqual(['1/3', '4250\n']);
+    expect(loadavg(context()).split(' ').slice(3)).toEqual(['1/1', '1\n']);
   });
 });

@@ -40,6 +40,21 @@ describe('whois', () => {
     expect(net.requests[0]).toMatchObject({ url: 'https://rdap.org/domain/example.com', init: { headers: { accept: 'application/rdap+json' } } });
   });
 
+  it('takes -h HOST, the server to ask, and says it asked over RDAP instead; -h is not help', async () => {
+    const net = serveNet();
+    const { status, stdoutPlain } = await runLine('whois -h whois.verisign-grs.com example.com', { tty: false });
+    expect(status).toBe(0);
+    expect(stdoutPlain.split('\n').slice(0, 4)).toEqual([
+      "% Asked over RDAP: whois's own port 43 is out of a browser's reach.",
+      '% From rdap.verisign.com, found through rdap.org',
+      '% Not whois.verisign-grs.com: RDAP finds the registry itself.',
+      '',
+    ]);
+    expect(stdoutPlain).toContain('   Domain Name: EXAMPLE.COM');
+    expect((await runLine('whois --host=whois.iana.org example.com', { tty: false })).stdoutPlain).toContain('% Not whois.iana.org: RDAP finds the registry itself.');
+    expect(net.requests.map((request) => request.url)).toEqual(['https://rdap.org/domain/example.com', 'https://rdap.org/domain/example.com']);
+  });
+
   it('reads another registry the same way', async () => {
     serveNet();
     const { stdoutPlain } = await runLine('whois VESEN.app.', { tty: false });

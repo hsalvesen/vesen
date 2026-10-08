@@ -1,16 +1,15 @@
-// The process table that ps, top, kill, pgrep and pkill share: init (pid 1), the shell (vesh,
-// pid $$) and the commands of the line running now, each with the pid the kernel gave it
-// (ShellApi.processes). vesen runs one line at a time, so there is nothing else to show.
+// The process table that ps, top, kill, pgrep and pkill share, read from the shell's one table
+// (ShellApi.processes), which /proc's numbered folders show too: init (pid 1), the shell (vesh,
+// pid $$) and the commands of the line running now, each with the pid the kernel gave it. vesen
+// runs one line at a time, so there is nothing else to show.
 
 import { out } from '../../output/model';
-import { SHELL_PID } from '../../shell/executor';
 import { ExitRequest, type CommandContext, type ExitCode } from '../../shell/types';
-import { bootTime, memInfo, type SysContext } from './sysread';
+import { SHELL_PID, TERMINAL } from '../../vfs/identity';
+import { commOf, memoryOf } from '../../vfs/special';
+import { memInfo, type SysContext } from './sysread';
 
-export { SHELL_PID };
-
-/** The terminal the visitor types in, as ps and who name it. */
-export const TERMINAL = 'pts/0';
+export { SHELL_PID, TERMINAL };
 
 /** One row of the table. */
 export interface Proc {
@@ -27,61 +26,40 @@ export interface Proc {
   readonly comm: string;
   /** The whole command line, as ps aux and pgrep -a show it. */
   readonly args: string;
-  /** Virtual and resident memory, in KiB. */
+  /** Virtual and resident memory, in KiB, as /proc/PID/status gives them. */
   readonly vsz: number;
   readonly rss: number;
   /** The command asking: ps itself, which a pgrep leaves out. */
   readonly self: boolean;
 }
 
-/** A small number from a name, so each command's memory looks its own and stays the same. */
-function spread(name: string, range: number): number {
-  let hash = 7;
-  for (let i = 0; i < name.length; i += 1) hash = (hash * 31 + name.charCodeAt(i)) % 104_729;
-  return hash % range;
-}
-
-/** Every process, by pid: init, the shell, then the line's commands. */
-export function processTable(ctx: SysContext & Pick<CommandContext, 'shell' | 'user'>): Proc[] {
-  const booted = bootTime(ctx);
+/**
+ * Every process, by pid: init, the shell, then the line's commands. init is root's and has no
+ * terminal; init and the shell lead their sessions; the asking command is the one running.
+ */
+export function processTable(ctx: Pick<CommandContext, 'shell' | 'user'>): Proc[] {
   const me = ctx.shell.pid();
-  const rows: Proc[] = [
-    { pid: 1, ppid: 0, user: 'root', uid: 0, tty: '?', stat: 'Ss', startedAt: booted, comm: 'init', args: '/sbin/init', vsz: 167_812, rss: 11_904, self: false },
-    {
-      pid: SHELL_PID,
-      ppid: 1,
-      user: ctx.user.name,
-      uid: ctx.user.uid,
-      tty: TERMINAL,
-      stat: 'Ss',
-      startedAt: booted,
-      comm: 'vesh',
-      // A login shell, as ps shows one: its name with a dash in front.
-      args: '-vesh',
-      vsz: 8_916,
-      rss: 5_248,
-      self: me === SHELL_PID,
-    },
-  ];
-  for (const info of ctx.shell.processes()) {
-    const self = info.pid === me;
-    const base = info.name.slice(info.name.lastIndexOf('/') + 1) || info.name;
-    rows.push({
-      pid: info.pid,
-      ppid: info.ppid,
-      user: ctx.user.name,
-      uid: ctx.user.uid,
-      tty: TERMINAL,
-      stat: self ? 'R+' : 'S+',
-      startedAt: info.startedAt,
-      comm: base,
-      args: info.argv.join(' '),
-      vsz: 6_400 + spread(base, 4_000),
-      rss: 1_200 + spread(`${base}.`, 2_400),
-      self,
-    });
-  }
-  return rows.sort((a, b) => a.pid - b.pid);
+  return ctx.shell
+    .processes()
+    .map((info) => {
+      const root = info.uid === 0;
+      const self = info.pid === me;
+      const leader = info.pid === 1 || info.pid === SHELL_PID;
+      return {
+        pid: info.pid,
+        ppid: info.ppid,
+        user: root ? 'root' : ctx.user.name,
+        uid: info.uid,
+        tty: root ? '?' : TERMINAL,
+        stat: leader ? 'Ss' : self ? 'R+' : 'S+',
+        startedAt: info.startedAt,
+        comm: commOf(info),
+        args: info.argv.join(' '),
+        ...memoryOf(info),
+        self,
+      };
+    })
+    .sort((a, b) => a.pid - b.pid);
 }
 
 /** A process's share of memory, as %MEM shows it. */

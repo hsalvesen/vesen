@@ -2,7 +2,8 @@
 // section 5): /proc, made from the visitor's device on every read; /dev's devices; the /usr/bin
 // stubs and /usr/share/man pages, one per registered command. None of it is ever persisted.
 
-import { GUEST, HOST, LOGIN_SHELL } from './identity';
+import type { ProcessInfo } from '../shell/types';
+import { ACCOUNTS, GUEST, HOST, LOGIN_SHELL, SHELL_PID, TERMINAL } from './identity';
 import type { GenerateContext, VirtualFile } from './types';
 
 /** The kernel /proc/version and uname report. */
@@ -105,11 +106,13 @@ export function uptime(context: GenerateContext): string {
   return `${up.toFixed(2)} ${idle.toFixed(2)}\n`;
 }
 
+/** The loads, then the running and all processes, and the newest pid, from the process table ps reads. */
 export function loadavg(context: GenerateContext): string {
   const one = 0.05 + context.random() * 0.4;
   const five = one * 0.7;
   const fifteen = five * 0.6;
-  return `${one.toFixed(2)} ${five.toFixed(2)} ${fifteen.toFixed(2)} 1/97 1\n`;
+  const processes = context.processes ?? [];
+  return `${one.toFixed(2)} ${five.toFixed(2)} ${fifteen.toFixed(2)} 1/${Math.max(1, processes.length)} ${processes[processes.length - 1]?.pid ?? 1}\n`;
 }
 
 export function mounts(): string {
@@ -123,33 +126,78 @@ export function mounts(): string {
   ].join('\n');
 }
 
-/** /proc/1/status: the shell, which is the only process. */
-export function status(context: GenerateContext): string {
-  const rss = Math.max(1, Math.floor(memTotalKb(context) / 400));
-  return [
-    `${pad('Name', 8)}vesh`,
-    `${pad('State', 8)}R (running)`,
-    `${pad('Pid', 8)}1`,
-    `${pad('PPid', 8)}0`,
-    `${pad('Uid', 8)}${GUEST.uid}\t${GUEST.uid}\t${GUEST.uid}\t${GUEST.uid}`,
-    `${pad('Gid', 8)}${GUEST.gid}\t${GUEST.gid}\t${GUEST.gid}\t${GUEST.gid}`,
-    `${pad('VmRSS', 8)}${rss} kB`,
-    `${pad('Threads', 8)}1`,
-    '',
-  ].join('\n');
+/** A small number from a name, so each command's memory looks its own and stays the same. */
+function spread(name: string, range: number): number {
+  let hash = 7;
+  for (let i = 0; i < name.length; i += 1) hash = (hash * 31 + name.charCodeAt(i)) % 104_729;
+  return hash % range;
+}
+
+/** The name a process is known by (ps -e, pgrep, /proc/PID/comm): the last part of what it was run as. */
+export function commOf(info: ProcessInfo): string {
+  return info.name.slice(info.name.lastIndexOf('/') + 1) || info.name;
+}
+
+/** A process's virtual and resident memory in KiB, the same in /proc/PID/status as in ps and top. */
+export function memoryOf(info: ProcessInfo): { readonly vsz: number; readonly rss: number } {
+  if (info.pid === 1) return { vsz: 167_812, rss: 11_904 };
+  if (info.pid === SHELL_PID) return { vsz: 8_916, rss: 5_248 };
+  const comm = commOf(info);
+  return { vsz: 6_400 + spread(comm, 4_000), rss: 1_200 + spread(`${comm}.`, 2_400) };
+}
+
+/** /proc/PID/status, as Linux lays it out: the process reading it is running, the rest sleep. */
+export function processStatus(info: ProcessInfo, context: GenerateContext): string {
+  const { vsz, rss } = memoryOf(info);
+  const ids = (n: number): string => `${n}\t${n}\t${n}\t${n}`;
+  const kb = (n: number): string => `${String(n).padStart(8)} kB`;
+  const gid = ACCOUNTS.find((account) => account.uid === info.uid)?.gid ?? info.uid;
+  return `${[
+    ['Name', commOf(info)],
+    ['State', info.pid === context.self ? 'R (running)' : 'S (sleeping)'],
+    ['Pid', info.pid],
+    ['PPid', info.ppid],
+    ['Uid', ids(info.uid)],
+    ['Gid', ids(gid)],
+    ['VmSize', kb(vsz)],
+    ['VmRSS', kb(rss)],
+    ['Threads', 1],
+  ]
+    .map(([label, value]) => `${label}:\t${value}`)
+    .join('\n')}\n`;
+}
+
+/** /proc/PID: its status, name, command line (each word ended by a NUL) and program, owned as the process is. */
+function processDir(info: ProcessInfo): VirtualFile {
+  const owner = ACCOUNTS.find((account) => account.uid === info.uid)?.name ?? 'root';
+  const owned = (node: VirtualFile): VirtualFile => ({ ...node, owner, group: owner, mtime: info.startedAt });
+  const program = info.pid === 1 ? '/sbin/init' : info.pid === SHELL_PID ? LOGIN_SHELL : `/usr/bin/${commOf(info)}`;
+  return owned(
+    dir(String(info.pid), [
+      owned(file('status', (context) => processStatus(info, context))),
+      owned(file('comm', () => `${commOf(info)}\n`)),
+      owned(file('cmdline', () => info.argv.map((word) => `${word}\0`).join(''))),
+      owned({ name: 'exe', type: 'symlink', target: program, mode: 0o777 }),
+    ]),
+  );
 }
 
 export function procTree(appVersion: string): VirtualFile {
-  return dir('proc', [
-    file('cpuinfo', cpuinfo),
-    file('meminfo', meminfo),
-    file('version', version(appVersion)),
-    file('uptime', uptime),
-    file('loadavg', loadavg),
-    file('mounts', mounts),
-    { name: 'self', type: 'symlink', target: '1', mode: 0o777, owner: 'root', group: 'root' },
-    { ...dir('1', [file('status', status), { name: 'exe', type: 'symlink', target: LOGIN_SHELL, mode: 0o777, owner: GUEST.name, group: GUEST.name }]), owner: GUEST.name, group: GUEST.name },
-  ]);
+  return {
+    ...dir('proc', [
+      file('cpuinfo', cpuinfo),
+      file('meminfo', meminfo),
+      file('version', version(appVersion)),
+      file('uptime', uptime),
+      file('loadavg', loadavg),
+      file('mounts', mounts),
+    ]),
+    // A folder for each process in the shell's table, and self, the one reading.
+    list: (context) => [
+      ...(context.self === undefined ? [] : [{ name: 'self', type: 'symlink' as const, target: String(context.self), mode: 0o777, owner: 'root', group: 'root' }]),
+      ...(context.processes ?? []).map(processDir),
+    ],
+  };
 }
 
 // ── /dev ───────────────────────────────────────────────────────────────────────────────────
@@ -163,7 +211,10 @@ export function devTree(): VirtualFile {
     owner: 'root',
     group,
   });
-  return dir('dev', [device('null'), device('zero'), device('random'), device('urandom'), device('tty', 'tty')], 0o755);
+  // The terminal the visitor types in, which tty names: theirs, writable by the tty group, as a pseudo-terminal is.
+  const [pts = '', number = ''] = TERMINAL.split('/');
+  const terminal: VirtualFile = { name: number, type: 'device', device: 'tty', mode: 0o620, owner: GUEST.name, group: 'tty' };
+  return dir('dev', [device('null'), device('zero'), device('random'), device('urandom'), device('tty', 'tty'), dir(pts, [terminal], 0o755)], 0o755);
 }
 
 // ── /usr/bin and man pages ─────────────────────────────────────────────────────────────────

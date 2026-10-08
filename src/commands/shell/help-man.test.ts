@@ -126,6 +126,30 @@ describe('help', () => {
   });
 });
 
+describe('--version', () => {
+  it("answers NAME (vesen) VERSION for every command but the shell's builtins and those that read their own options", async () => {
+    const s = await session({ tty: false });
+    let answered = 0;
+    for (const spec of await allSpecFiles()) {
+      if (spec.builtin === true || spec.handlesHelp === true) continue;
+      expect(await s.run(`${spec.name} --version`), spec.name).toMatchObject({ status: 0, stdoutPlain: `${spec.name} (vesen) ${__APP_VERSION__}`, stderrPlain: '' });
+      answered += 1;
+    }
+    expect(answered).toBeGreaterThan(100);
+    // Wherever an option may be, as GNU's getopt finds it, and before --help.
+    expect((await s.run('ls -l --version')).stdoutPlain).toBe(`ls (vesen) ${__APP_VERSION__}`);
+    expect((await s.run('sort --version --help')).stdoutPlain).toBe(`sort (vesen) ${__APP_VERSION__}`);
+    expect((await s.run('ps --version')).stdoutPlain).toBe(`ps (vesen) ${__APP_VERSION__}`);
+    // After --, or as a value, it is an operand.
+    expect(await s.run('grep -e --version /dev/null')).toMatchObject({ status: 1, stdoutPlain: '' });
+    expect((await s.run('echo --version')).stdoutPlain).toBe('--version');
+    // A builtin has no version, as bash's have none.
+    expect((await s.run('cd --version')).stdoutPlain).toBe('');
+    expect((await s.run('export --version')).stdoutPlain).not.toContain('(vesen)');
+    s.stop();
+  });
+});
+
 describe('man', () => {
   it('prints a page inline, laid out to the width, 80 columns at most', async () => {
     const { status, stdoutPlain } = await runLine('man ls', { tty: false, cols: 120 });

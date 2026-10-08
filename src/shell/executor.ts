@@ -17,7 +17,8 @@ import { DeadlineExceeded, combineSignals, deadline, whenAborted } from '../lib/
 import { out, type Line, type Span, type SpanStyle } from '../output/model';
 import type { Appearance, Bell, Clipboard, Clock, Digest, Net, NetError, Opener, SysInfo } from '../services/types';
 import { strerror } from '../vfs/errors';
-import { VfsError, type BoundVfs } from '../vfs/types';
+import { SHELL_PID } from '../vfs/identity';
+import { VfsError, type BoundVfs, type GenerateContext } from '../vfs/types';
 import type { AndOr, List, ParseFailure, Pipeline, Redirect, SimpleCommand } from './ast';
 import { expandAliases } from './alias';
 import { AmbiguousRedirect, ExpandError, Expander } from './expand';
@@ -84,8 +85,11 @@ const NO_DIGEST: Digest = { hash: () => Promise.reject(new Error('no hashing ser
 /** How long a command whose budget ran out may take to stop and say why, before the kernel stops waiting. */
 const BUDGET_GRACE_MS = 250;
 
-/** `$$`: vesen is one process, always the same one. */
-export const SHELL_PID = 4242;
+/** When the page booted, in clock time: init and the shell started then, and /proc/uptime counts from it. */
+export function bootedAt(clock: Clock, sys: SysInfo): number {
+  const up = sys.uptimeMs();
+  return up > 0 ? clock.now() - up : clock.bootTime();
+}
 
 /** Process ids go up to Linux's default pid_max, then start again above the system's. */
 const PID_MAX = 32_768;
@@ -272,6 +276,8 @@ export class Executor {
   /** The commands running now, by pid (ps, kill, pgrep); builtins run in the shell and are not here. */
   private readonly running = new Map<number, Running>();
   private lastPid = SHELL_PID;
+  /** The process whose command is reading the files now, which /proc/self names: the shell's unless a command's is. */
+  private reader = SHELL_PID;
 
   constructor(private readonly deps: ExecutorDeps) {}
 
@@ -764,13 +770,13 @@ export class Executor {
       pid = pid >= PID_MAX ? PID_WRAP : pid + 1;
     } while (pid === SHELL_PID || this.running.has(pid));
     this.lastPid = pid;
-    const info: ProcessInfo = { pid, ppid: frame.parent ?? SHELL_PID, name, argv: [...argv], startedAt: this.deps.clock.now() };
+    const info: ProcessInfo = { pid, ppid: frame.parent ?? SHELL_PID, uid: this.scope(frame).user.uid, name, argv: [...argv], startedAt: this.deps.clock.now() };
     this.running.set(pid, { info, job });
     return pid;
   }
 
   /** The commands running now: those of a line ^C has ended, or that has finished, are gone. */
-  private processes(): ProcessInfo[] {
+  private commands(): ProcessInfo[] {
     const found: ProcessInfo[] = [];
     for (const [pid, entry] of this.running) {
       if (entry.job.signal.aborted || entry.job.sink.ended) this.running.delete(pid);
@@ -779,9 +785,45 @@ export class Executor {
     return found;
   }
 
-  /** Ends the line that process `pid` is part of, as ^C would; false when there is no such process. */
+  /** The one process table, which ps, kill, pgrep and /proc read: init, the shell, then the commands running now. */
+  processes(): ProcessInfo[] {
+    const booted = bootedAt(this.deps.clock, this.deps.sys);
+    return [
+      { pid: 1, ppid: 0, uid: 0, name: 'init', argv: ['/sbin/init'], startedAt: booted },
+      // A login shell, as ps shows one: its name with a dash in front.
+      { pid: SHELL_PID, ppid: 1, uid: this.session.user.uid, name: 'vesh', argv: ['-vesh'], startedAt: booted },
+      ...this.commands(),
+    ];
+  }
+
+  /** What /proc is made from: the process table, and which process is reading it (/proc/self). */
+  proc(): Pick<GenerateContext, 'processes' | 'self'> {
+    return { processes: this.processes(), self: this.reader };
+  }
+
+  /** The file system as process `pid` sees it: each call is made as that process, so /proc/self is it. */
+  private fsAs(pid: number): ShellFs {
+    const fs = this.deps.fs;
+    return new Proxy(fs, {
+      get: (target, key) => {
+        const value: unknown = Reflect.get(target, key);
+        if (typeof value !== 'function') return value;
+        return (...args: unknown[]): unknown => {
+          const was = this.reader;
+          this.reader = pid;
+          try {
+            return (value as (...args: unknown[]) => unknown).apply(target, args);
+          } finally {
+            this.reader = was;
+          }
+        };
+      },
+    });
+  }
+
+  /** Ends the line that process `pid` is part of, as ^C would; false when no running command has that pid. */
   private killProcess(pid: number): boolean {
-    if (!this.processes().some((info) => info.pid === pid)) return false;
+    if (!this.commands().some((info) => info.pid === pid)) return false;
     const entry = this.running.get(pid);
     if (entry !== undefined && this.session.jobs.store.get()?.id === entry.job.id) this.session.jobs.abort();
     return true;
@@ -884,7 +926,8 @@ export class Executor {
       fmt: createFmt(io.stdout.isTTY),
       env: o.env,
       cwd: scope.currentDir,
-      fs: deps.fs,
+      // A builtin reads the files as the shell; any other command as its own process.
+      fs: o.pid === undefined ? deps.fs : this.fsAs(o.pid),
       user: scope.user,
       signal: o.signal,
       ...(o.deadlineAt === undefined ? {} : { deadline: o.deadlineAt }),

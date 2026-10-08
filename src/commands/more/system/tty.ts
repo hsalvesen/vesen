@@ -1,7 +1,9 @@
-// tty: print the name of the terminal standard input is, as coreutils' tty does: pts/0 when
-// typed at the prompt, `not a tty` in a pipe or from a file.
+// tty: print the name of the terminal standard input is, as coreutils' tty does: /dev/pts/0,
+// which is in /dev and is the terminal ps and who name, when typed at the prompt; `not a tty` in
+// a pipe or from a file.
 
 import { defineCommand } from '../../../shell/types';
+import { TERMINAL } from '../../../vfs/identity';
 
 export default defineCommand({
   name: 'tty',
@@ -22,7 +24,7 @@ export default defineCommand({
   async run(ctx) {
     if (ctx.args[0] !== undefined) return ctx.usage(`extra operand '${ctx.args[0]}'`);
     const terminal = ctx.stdin.isTTY;
-    if (ctx.opts.silent !== true) await ctx.stdout.write(terminal ? '/dev/pts/0\n' : 'not a tty\n');
+    if (ctx.opts.silent !== true) await ctx.stdout.write(terminal ? `/dev/${TERMINAL}\n` : 'not a tty\n');
     return terminal ? 0 : 1;
   },
 });

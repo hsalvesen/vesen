@@ -504,17 +504,20 @@ export interface ShellOptionFlags {
 }
 
 /**
- * A command running in a line, as ps, kill and pgrep see it. Builtins run in the shell itself
- * and have none; src/commands/lib/procs.ts adds init and the shell.
+ * A process in the one process table that ps, top, kill, pgrep and /proc all read: init (pid 1),
+ * the shell (pid $$) and each command running in a line. Builtins run in the shell itself and
+ * have none of their own.
  */
 export interface ProcessInfo {
   readonly pid: number;
-  /** The process that ran it: the shell, or the command that ran it (time, timeout, watch). */
+  /** The process that ran it: init for the shell, the shell, or the command that ran it (time, timeout, watch). */
   readonly ppid: number;
+  /** Whose it is: 0 for init, which is root's, else the visitor's uid. */
+  readonly uid: number;
   /** The name it was run by. */
   readonly name: string;
   readonly argv: readonly string[];
-  /** When it started, in `clock` time (ms). */
+  /** When it started, in `clock` time (ms): init and the shell when the page booted. */
   readonly startedAt: number;
 }
 
@@ -540,7 +543,7 @@ export interface ShellApi {
   ): Promise<ExitCode>;
   /** The process id the command runs as: its own, or the shell's ($$) for a builtin. */
   pid(): number;
-  /** The commands running now, each with its pid, in the order they started. */
+  /** The process table: init, the shell, then the commands running now, in the order they started. */
   processes(): readonly ProcessInfo[];
   /**
    * Ends the line that process `pid` is part of, as ^C ends it (kill, pkill). False when no

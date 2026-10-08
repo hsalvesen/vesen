@@ -14,7 +14,7 @@ import { createSysInfo, type SysHost } from '../services/sysinfo';
 import { createDigest } from '../services/digest';
 import type { Bell, Clipboard, Clock, Digest, KV, Net, Opener, SysInfo } from '../services/types';
 import { loadArith } from '../shell/expand';
-import { createShell, type Shell, type TerminalInfo } from '../shell/index';
+import { bootedAt, createShell, type Shell, type TerminalInfo } from '../shell/index';
 import { loginFiles } from '../shell/session';
 import type { CommandSpec } from '../shell/types';
 import { cathode, cathodeModeInfo, cathodeQuality, crtQualities, crtTier } from '../stores/cathode';
@@ -117,15 +117,14 @@ export function createAppShell(options: AppShellOptions): AppShell {
   const seed = (): VirtualFile =>
     seedTree({ version, commands: registry.list({ includeHidden: true }).map(({ name, summary }) => ({ name, summary })), timeZone: clock.timeZone() });
 
+  // Made below, once the file system it runs on is.
+  let shell: Shell | undefined;
   const vfs = new Vfs({
     seed,
     now: () => clock.now(),
-    // /proc/uptime counts from when the page started, as fastfetch's Uptime does.
-    context: () => {
-      const now = clock.now();
-      const up = sys.uptimeMs();
-      return { now, bootTime: up > 0 ? now - up : clock.bootTime(), sys: sys.snapshot(), random: () => clock.random() };
-    },
+    // /proc/uptime counts from when the page started, as fastfetch's Uptime does, and /proc's
+    // numbered folders are the shell's process table, as ps lists it.
+    context: () => ({ now: clock.now(), bootTime: bootedAt(clock, sys), sys: sys.snapshot(), random: () => clock.random(), ...shell?.proc() }),
   });
   const persistence = createPersistence({
     vfs,
@@ -139,7 +138,6 @@ export function createAppShell(options: AppShellOptions): AppShell {
   // The catalogue arriving: its commands' stubs and man pages join the ones already there.
   const stopReseed = registry.onChange(() => vfs.reseed(COMMAND_FOLDERS));
 
-  let shell: Shell | undefined;
   const renderPrompt = (): Line => shell?.renderPrompt() ?? [];
   shell = createShell({
     registry,

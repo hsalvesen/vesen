@@ -31,10 +31,12 @@ import { createLineReader, type ReadRequest } from './reader';
 import { Session, type HistoryStore, type JobState } from './session';
 import { JobDetached, NullOut, StringIn, TtyIn, TtyOut, TtySink, vfsWriteTarget, type LiveOutput, type ScreenAction, type WriteTarget } from './streams';
 import { EXIT, ExitRequest, type CommandSpec, type Env, type ExitCode, type JobInfo, type Registry, type User } from './types';
+import type { GenerateContext } from '../vfs/types';
 
 export type { AppRequest } from './apps';
 export type { Completion, CompletionEnv } from './complete/types';
 export type { ShellFs, TerminalInfo } from './executor';
+export { bootedAt } from './executor';
 export type { ReadRequest } from './reader';
 export type { IncompleteReason } from './ast';
 export type { LiveOutput, ScreenAction, WriteTarget } from './streams';
@@ -182,6 +184,8 @@ export interface Shell extends ShellPort {
   readonly completionEnv: CompletionEnv;
   /** `reset` without a job: variables, files, history and the theme, as a new session has them. */
   reset(options?: { files?: boolean }): void;
+  /** What /proc is made from: the process table ps reads, and the process reading /proc/self. */
+  proc(): Pick<GenerateContext, 'processes' | 'self'>;
   /**
    * Runs a file's lines in this session, as `source` does, outside any job: at boot, for
    * /etc/profile and ~/.bashrc. With `quiet`, nothing it prints is shown. It is interrupted
@@ -528,6 +532,7 @@ export function createShell(deps: ShellDeps): Shell {
       }
     },
     reset: (options) => executor.reset(null, options),
+    proc: () => executor.proc(),
     renderPrompt,
     source: async (path, options = {}) => {
       // Its own job, which nothing on the screen shows; ^C cannot reach it, the deadline can.

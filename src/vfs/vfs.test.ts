@@ -402,13 +402,43 @@ describe('devices and generated files', () => {
     expect(fs.stat('/dev/tty')).toMatchObject({ type: 'device', group: 'tty' });
   });
 
-  it('makes /proc on every read, and follows /proc/self to 1', () => {
+  it('makes /proc on every read', () => {
     let now = NOW + 90_000;
     const fs = seeded({ context: () => ({ now, bootTime: NOW, sys: null, random: () => 0 }) });
     expect(fs.readFile('/proc/uptime')).toMatch(/^90\.00 /);
     now += 1000;
     expect(fs.readFile('/proc/uptime')).toMatch(/^91\.00 /);
-    expect(fs.readFile('/proc/self/status')).toContain('Name:   vesh');
     expect(fs.stat('/proc/uptime').size).toBe(0);
+    // With no process table there is no process to show, and no self.
+    expect(fs.readdir('/proc')).toEqual(['cpuinfo', 'meminfo', 'version', 'uptime', 'loadavg', 'mounts']);
+  });
+
+  it("makes a folder in /proc for each process in the table, as it is at each lookup, and self for the one reading", () => {
+    const init = { pid: 1, ppid: 0, uid: 0, name: 'init', argv: ['/sbin/init'], startedAt: NOW };
+    const shell = { pid: 4242, ppid: 1, uid: 1000, name: 'vesh', argv: ['-vesh'], startedAt: NOW };
+    const cat = { pid: 4243, ppid: 4242, uid: 1000, name: 'cat', argv: ['cat', '/proc/self/status'], startedAt: NOW + 60_000 };
+    let processes = [init, shell, cat];
+    let self = 4243;
+    const fs = seeded({ context: () => ({ now: NOW + 90_000, bootTime: NOW, sys: null, random: () => 0, processes, self }) });
+    expect(fs.readdir('/proc')).toEqual(['1', '4242', '4243', 'cpuinfo', 'meminfo', 'version', 'uptime', 'loadavg', 'mounts', 'self']);
+    expect(fs.readlink('/proc/self')).toBe('4243');
+    expect(fs.readFile('/proc/self/status')).toMatch(/^Name:\tcat\nState:\tR \(running\)\nPid:\t4243\nPPid:\t4242\n/);
+    expect(fs.readFile('/proc/4242/status')).toContain('State:\tS (sleeping)');
+    expect(fs.readFile('/proc/4243/cmdline')).toBe('cat\0/proc/self/status\0');
+    expect(fs.readFile('/proc/1/comm')).toBe('init\n');
+    expect(fs.readlink('/proc/4243/exe')).toBe('/usr/bin/cat');
+    // Owned as the process is, started when it started, and read-only to everyone.
+    expect(fs.stat('/proc/1')).toMatchObject({ type: 'directory', owner: 'root', mode: 0o555, mtime: NOW });
+    expect(fs.stat('/proc/4243')).toMatchObject({ owner: 'guest', group: 'guest', mtime: NOW + 60_000 });
+    expect(fs.stat('/proc').nlink).toBe(5);
+    expect(code(() => fs.writeFile('/proc/4243/status', 'x'))).toBe('EACCES');
+    expect(code(() => fs.mkdir('/proc/9'))).toBe('EACCES');
+    expect([...fs.walk('/proc/4242')].map(([path]) => path)).toEqual(['/proc/4242', '/proc/4242/status', '/proc/4242/comm', '/proc/4242/cmdline', '/proc/4242/exe']);
+    // When the command has ended, its folder is gone; /proc/self follows whoever reads next.
+    processes = [init, shell];
+    self = 4242;
+    expect(fs.exists('/proc/4243')).toBe(false);
+    expect(code(() => fs.readFile('/proc/4243/status'))).toBe('ENOENT');
+    expect(fs.readFile('/proc/self/comm')).toBe('vesh\n');
   });
 });

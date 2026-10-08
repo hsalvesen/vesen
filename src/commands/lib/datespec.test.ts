@@ -42,8 +42,13 @@ describe('parseDate', () => {
     expect(iso(parseDate('3 days ago', NOW, ZONE))).toBe('2026-10-03T10:00:00.000Z');
   });
 
+  it("reads no text at all as the start of today, as GNU's date -d '' and touch -d '' do", () => {
+    expect(iso(parseDate('', NOW, ZONE))).toBe('2026-10-05T13:00:00.000Z');
+    expect(iso(parseDate('  ', NOW, ZONE))).toBe('2026-10-05T13:00:00.000Z');
+  });
+
   it('refuses what it does not understand', () => {
-    for (const bad of ['', 'nonsense', '2026-13-01', '25:00', '3 lightyears ago', '2026', 'monday']) expect(parseDate(bad, NOW, ZONE), bad).toBeNull();
+    for (const bad of ['nonsense', '2026-13-01', '25:00', '3 lightyears ago', '2026', 'monday']) expect(parseDate(bad, NOW, ZONE), bad).toBeNull();
   });
 });
 

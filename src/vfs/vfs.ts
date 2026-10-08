@@ -309,7 +309,7 @@ export class Vfs implements BoundVfs {
     const { node } = this.lookup(path, true, 'scandir');
     if (node.type !== 'directory') throw new VfsError('ENOTDIR', path, 'scandir');
     if (!this.can(node, 'r')) throw new VfsError('EACCES', path, 'scandir');
-    return Object.keys(node.children ?? {}).filter((name) => options.all || !name.startsWith('.'));
+    return Object.keys(this.entries(node) ?? {}).filter((name) => options.all || !name.startsWith('.'));
   }
 
   readFile(path: string): string {
@@ -617,8 +617,9 @@ export class Vfs implements BoundVfs {
     const visit = function* (this: Vfs, at: string, node: VirtualFile): Generator<[string, Stat]> {
       yield [at, this.statOf(at, node)];
       if (node.type !== 'directory' || !this.can(node, 'r') || !this.can(node, 'x')) return;
-      for (const name of Object.keys(node.children ?? {})) {
-        const child = own(node.children, name);
+      const entries = this.entries(node);
+      for (const name of Object.keys(entries ?? {})) {
+        const child = own(entries, name);
         if (child !== undefined) yield* visit.call(this, at === '/' ? `/${name}` : `${at}/${name}`, child);
       }
     };
@@ -699,7 +700,7 @@ export class Vfs implements BoundVfs {
       const dir = (stack[stack.length - 1] as { node: VirtualFile }).node;
       if (dir.type !== 'directory') throw new VfsError('ENOTDIR', path, syscall);
       if (!this.can(dir, 'x')) throw new VfsError('EACCES', path, syscall);
-      const child = own(dir.children, segment);
+      const child = own(this.entries(dir), segment);
       if (child === undefined) throw new VfsError('ENOENT', path, syscall);
       if (child.type === 'symlink' && (pending.length > 0 || follow)) {
         hops += 1;
@@ -730,7 +731,7 @@ export class Vfs implements BoundVfs {
       const parent = this.lookup(fromSegments(parts), true, syscall);
       if (parent.node.type !== 'directory') throw new VfsError('ENOTDIR', path, syscall);
       if (!this.can(parent.node, 'x')) throw new VfsError('EACCES', path, syscall);
-      const node = own(parent.node.children, name);
+      const node = own(this.entries(parent.node), name);
       if (follow && node?.type === 'symlink') {
         if (hops >= MAX_SYMLINK_HOPS) throw new VfsError('ELOOP', path, syscall);
         current = linkTarget(parent.path, node.target ?? '');
@@ -749,6 +750,14 @@ export class Vfs implements BoundVfs {
   private children(node: VirtualFile): Record<string, VirtualFile> {
     if (node.children === undefined) node.children = emptyChildren();
     return node.children;
+  }
+
+  /** What a folder holds now: its children, and for /proc what its `list` makes (a folder for each process). */
+  private entries(node: VirtualFile): Record<string, VirtualFile> | undefined {
+    if (node.list === undefined) return node.children;
+    const all = Object.assign(emptyChildren(), node.children);
+    for (const child of node.list(this.context())) all[child.name] = adopt(child, this.now(), node.owner, node.group);
+    return all;
   }
 
   private createDirectory(path: string, mode: number | undefined, shown: string): void {
@@ -889,10 +898,8 @@ export class Vfs implements BoundVfs {
     if (node.type === 'directory') size = 4096;
     else if (node.type === 'symlink') size = byteLength(node.target ?? '');
     else if (node.type === 'file' && node.generate === undefined) size = this.sizeOf(node);
-    const subdirs =
-      node.type === 'directory'
-        ? Object.keys(node.children ?? {}).filter((name) => own(node.children, name)?.type === 'directory').length
-        : 0;
+    const entries = this.entries(node);
+    const subdirs = node.type === 'directory' ? Object.keys(entries ?? {}).filter((name) => own(entries, name)?.type === 'directory').length : 0;
     return {
       path,
       type: node.type,

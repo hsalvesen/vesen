@@ -317,4 +317,29 @@ describe('date', () => {
     expect((await runLine('date -R')).stdoutPlain).toBe('Tue, 06 Oct 2026 20:01:00 +1100');
     expect(await runLine('date tomorrow')).toMatchObject({ status: 1, stderrPlain: "date: invalid date 'tomorrow'" });
   });
+
+  it('prints the time -d describes, read as touch -d reads it, in the zone it prints in', async () => {
+    // The harness's clock: 2026-10-06 20:01 in Sydney.
+    expect((await runLine('date -d tomorrow')).stdoutPlain).toBe('Wed Oct  7 20:01:00 AEDT 2026');
+    expect((await runLine('date --date=@1700000000')).stdoutPlain).toBe('Wed Nov 15 09:13:20 AEDT 2023');
+    expect((await runLine("date -d '3 days ago' +%F")).stdoutPlain).toBe('2026-10-03');
+    expect((await runLine("date -d '' -R")).stdoutPlain).toBe('Tue, 06 Oct 2026 00:00:00 +1100');
+    expect((await runLine("date -d '2026-12-25 09:00' -Iminutes")).stdoutPlain).toBe('2026-12-25T09:00+11:00');
+    // -u reads STRING in UTC too; $TZ is the zone for both, an unknown one UTC, as date's own.
+    expect((await runLine("date -u -d '2026-12-25 09:00'")).stdoutPlain).toBe('Fri Dec 25 09:00:00 UTC 2026');
+    expect((await runLine("TZ=Europe/Oslo date -d '2026-07-01 12:00' -R")).stdoutPlain).toBe('Wed, 01 Jul 2026 12:00:00 +0200');
+    expect((await runLine("TZ=Nowhere/Land date -d '12:00' +%H:%M%z")).stdoutPlain).toBe('12:00+0000');
+  });
+
+  it('words a bad -d, a stray operand and two output formats as GNU date does', async () => {
+    expect(await runLine('date -d nonsense')).toMatchObject({ status: 1, stderrPlain: "date: invalid date 'nonsense'" });
+    expect(await runLine('date -d now later')).toMatchObject({
+      status: 1,
+      stderrPlain:
+        "date: the argument 'later' lacks a leading '+';\nwhen using an option to specify date(s), any non-option\nargument must be a format string beginning with '+'\nTry 'date --help' for more information.",
+    });
+    expect(await runLine('date -R -I')).toMatchObject({ status: 1, stderrPlain: 'date: multiple output formats specified' });
+    expect(await runLine('date -I +%s')).toMatchObject({ status: 1, stderrPlain: 'date: multiple output formats specified' });
+    expect(await runLine('date +%s +%F')).toMatchObject({ status: 1, stderrPlain: "date: extra operand '+%F'\nTry 'date --help' for more information." });
+  });
 });

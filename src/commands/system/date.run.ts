@@ -2,12 +2,14 @@
 // kernel's chunk carries only the spec.
 
 import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
+import { parseDate } from '../lib/datespec';
 import { localTime } from '../lib/listing';
+import { zoneOf } from '../lib/sysread';
 
 /** What --help, help and man say about date, besides its spec (date.ts). */
 export const doc: CommandDoc = {
   description:
-    'Prints the date and time in your time zone, or in $TZ when it names one. With +FORMAT, prints FORMAT with each conversion replaced: %Y year, %m month, %d day, %H hour, %M minute, %S second, %N nanoseconds, %a and %b the day and month names, %Z the zone, %s seconds since 1970, %j day of the year, %u day of the week (1 is Monday), %V the ISO week, %e the day padded with a space, %c %x %X %r the date and time as the C locale writes them. After the %, - drops the padding (%-d), _ pads with spaces, 0 with zeros, ^ makes it upper case, and a number sets the width.',
+    "Prints the date and time in your time zone, or in $TZ when it names one; with -u, in UTC. With -d STRING, prints the time STRING describes rather than now: '@1700000000' (seconds since 1970), a date such as '2026-12-25' or 'Dec 25' (midnight unless a time is given), a time such as '14:30', a zone such as 'UTC' or '+05:30' after the time, and words such as 'now', 'today', 'tomorrow', 'yesterday', 'next week', 'last month', '+2 hours' and '3 days ago'; an empty STRING is the start of today. A time without a zone is read in the zone date prints in. With +FORMAT, prints FORMAT with each conversion replaced: %Y year, %m month, %d day, %H hour, %M minute, %S second, %N nanoseconds, %a and %b the day and month names, %Z the zone, %s seconds since 1970, %j day of the year, %u day of the week (1 is Monday), %V the ISO week, %e the day padded with a space, %c %x %X %r the date and time as the C locale writes them. After the %, - drops the padding (%-d), _ pads with spaces, 0 with zeros, ^ makes it upper case, and a number sets the width. Only one of +FORMAT, -I and -R may be given.",
 };
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
@@ -26,16 +28,6 @@ const ISO_FORMATS: Readonly<Record<string, string>> = {
 };
 
 const two = (n: number): string => String(n).padStart(2, '0');
-
-/** True when the platform knows the zone. */
-function knownZone(zone: string): boolean {
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone: zone });
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /** `+11`, `+0530`, `-03`: the numeric names tzdata gives zones without letters. */
 function numericZone(offset: number): string {
@@ -180,22 +172,31 @@ export function formatDate(format: string, ms: number, zone: string): string {
 
 /** Runs date. */
 export async function run(ctx: CommandContext): Promise<ExitCode | void> {
-  if (ctx.args.length > 1) return ctx.fail(`extra operand '${ctx.args[1] ?? ''}'`, 1);
+  if (ctx.args.length > 1) return ctx.usage(`extra operand '${ctx.args[1] ?? ''}'`);
   const [given] = ctx.args;
-  if (given !== undefined && !given.startsWith('+')) return ctx.fail(`invalid date '${given}'`);
-  let format = given === undefined ? DEFAULT_FORMAT : given.slice(1);
+  const described = ctx.opts.date;
+  if (given !== undefined && !given.startsWith('+')) {
+    if (typeof described !== 'string') return ctx.fail(`invalid date '${given}'`);
+    return ctx.usage(
+      `the argument '${given}' lacks a leading '+';\nwhen using an option to specify date(s), any non-option\nargument must be a format string beginning with '+'`,
+    );
+  }
   const iso = ctx.opts['iso-8601'];
+  const rfc = ctx.opts['rfc-email'] === true;
+  if ([given !== undefined, iso !== undefined, rfc].filter(Boolean).length > 1) return ctx.fail('multiple output formats specified');
+  let format = given === undefined ? DEFAULT_FORMAT : given.slice(1);
   if (iso !== undefined) {
     const fmt = typeof iso === 'string' ? iso : 'date';
     const found = ISO_FORMATS[fmt];
     if (found === undefined) return ctx.fail(`invalid argument '${fmt}' for '--iso-8601'`);
     format = found;
-  } else if (ctx.opts['rfc-email'] === true) {
+  } else if (rfc) {
     format = '%a, %d %b %Y %H:%M:%S %z';
   }
-  const tz = ctx.env.get('TZ');
-  // glibc reads an unknown $TZ as UTC.
-  const zone = ctx.opts.utc === true ? 'UTC' : tz !== undefined && tz !== '' ? (knownZone(tz) ? tz : 'UTC') : ctx.clock.timeZone();
-  await ctx.stdout.write(`${formatDate(format, ctx.clock.now(), zone)}\n`);
+  // -u is TZ=UTC0, as POSIX has it: STRING is read in UTC too.
+  const zone = ctx.opts.utc === true ? 'UTC' : zoneOf(ctx);
+  const at = typeof described === 'string' ? parseDate(described, ctx.clock.now(), zone) : ctx.clock.now();
+  if (at === null) return ctx.fail(`invalid date '${String(described)}'`);
+  await ctx.stdout.write(`${formatDate(format, at, zone)}\n`);
   return 0;
 }

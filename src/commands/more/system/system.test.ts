@@ -165,6 +165,103 @@ describe('ps and the process table', () => {
     expect(await runLine('ps q', { tty: false })).toMatchObject({ status: 1, stderrPlain: "error: unsupported option (BSD syntax)\nTry 'ps --help' for more information." });
   });
 
+  it("prints procps' BSD formats: ax and axu every process, x all of yours, a every one with a terminal", async () => {
+    const run = async (line: string): Promise<string[]> => (await runLine(line, { tty: false })).stdoutPlain.split('\n');
+    const bsd = '    PID TTY      STAT   TIME COMMAND';
+    expect(await run('ps ax')).toEqual([bsd, '      1 ?        Ss     0:00 /sbin/init', '   4242 pts/0    Ss     0:00 -vesh', '   4243 pts/0    R+     0:00 ps ax']);
+    expect(await run('ps x')).toEqual([bsd, '   4242 pts/0    Ss     0:00 -vesh', '   4243 pts/0    R+     0:00 ps x']);
+    expect(await run('ps a')).toEqual([bsd, '   4242 pts/0    Ss     0:00 -vesh', '   4243 pts/0    R+     0:00 ps a']);
+    const user = [
+      'USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND',
+      'root           1  0.0  0.1 167812 11904 ?        Ss   20:00   0:00 /sbin/init',
+      'guest       4242  0.0  0.1   8916  5248 pts/0    Ss   20:00   0:00 -vesh',
+    ];
+    expect(await run('ps aux')).toEqual([...user, 'guest       4243  0.0  0.0   8714  1993 pts/0    R+   20:01   0:00 ps aux']);
+    expect(await run('ps axu')).toEqual([...user, 'guest       4243  0.0  0.0   8714  1993 pts/0    R+   20:01   0:00 ps axu']);
+  });
+
+  it('prints the Unix formats: -e (and -A) every process by name, -ef the full format', async () => {
+    const run = async (line: string): Promise<string[]> => (await runLine(line, { tty: false })).stdoutPlain.split('\n');
+    const every = ['    PID TTY          TIME CMD', '      1 ?        00:00:00 init', '   4242 pts/0    00:00:00 vesh', '   4243 pts/0    00:00:00 ps'];
+    expect(await run('ps -e')).toEqual(every);
+    expect(await run('ps -A')).toEqual(every);
+    expect(await run('ps -ef')).toEqual([
+      'UID          PID    PPID  C STIME TTY          TIME CMD',
+      'root           1       0  0 20:00 ?        00:00:00 /sbin/init',
+      'guest       4242       1  0 20:00 pts/0    00:00:00 -vesh',
+      'guest       4243    4242  0 20:01 pts/0    00:00:00 ps -ef',
+    ]);
+  });
+
+  it('takes -o and -eo column lists: every keyword, its other names, NAME= and NAME=HEADING', async () => {
+    const run = async (line: string): Promise<string[]> => (await runLine(line, { tty: false })).stdoutPlain.split('\n');
+    expect(await run('ps -o pid,ppid,user,uid,tty,stat,time,etime,start,%cpu,%mem,vsz,rss,comm,args')).toEqual([
+      '    PID    PPID USER       UID TT       STAT     TIME     ELAPSED  STARTED %CPU %MEM    VSZ   RSS COMMAND         COMMAND',
+      '   4242       1 guest     1000 pts/0    Ss   00:00:00       01:00 20:00:00  0.0  0.1   8916  5248 vesh            -vesh',
+      '   4243    4242 guest     1000 pts/0    R+   00:00:00       00:00 20:01:00  0.0  0.0   8714  1993 ps              ps -o pid,ppid,user,uid,tty,stat,time,etime,start,%cpu,%mem,vsz,rss,comm,args',
+    ]);
+    // procps' other names for the same columns, and a list with spaces.
+    expect(await run("ps -p 1 -o 'pcpu pmem command ucmd ucomm tname tt uname euser euid cputime vsize rssize stime'")).toEqual([
+      '%CPU %MEM COMMAND                     COMMAND         COMMAND         TT       TT       USER     USER       UID     TIME    VSZ   RSS  STARTED',
+      ' 0.0  0.1 /sbin/init                  init            init            ?        ?        root     root         0 00:00:00 167812 11904 20:00:00',
+    ]);
+    expect(await run('ps -eo pid,cmd')).toEqual(['    PID CMD', '      1 /sbin/init', '   4242 -vesh', '   4243 ps -eo pid,cmd']);
+    expect(await run('ps --format=pid,comm -p 4242')).toEqual(['    PID COMMAND', '   4242 vesh']);
+    // NAME= leaves out the heading, and no headings leaves out the heading line; NAME=HEADING renames it.
+    expect(await run('ps -p $$ -o comm=')).toEqual(['vesh']);
+    expect(await run('ps -o pid=PROCESS -p 1')).toEqual(['PROCESS', '      1']);
+    expect(await runLine('ps -o bogus', { tty: false })).toMatchObject({ status: 1, stderrPlain: 'error: unknown user-defined format specifier "bogus"\nTry \'ps --help\' for more information.' });
+    expect(await runLine('ps -o', { tty: false })).toMatchObject({ status: 1, stderrPlain: "error: format specification must follow -o\nTry 'ps --help' for more information." });
+  });
+
+  it('agrees with /proc: one table, with init as pid 1, the shell as $$ and each command a folder while it runs', async () => {
+    const s = await session({ tty: false });
+    expect((await s.run('echo $$')).stdoutPlain).toBe('4242');
+    // /proc/1 is init, root's, and /proc/$$ is the shell, with the memory ps gives them.
+    expect((await s.run('cat /proc/1/status')).stdoutPlain).toMatch(/^Name:\tinit\nState:\tS \(sleeping\)\nPid:\t1\nPPid:\t0\nUid:\t0\t0\t0\t0\n/);
+    expect((await s.run('cat /proc/$$/status')).stdoutPlain).toMatch(/^Name:\tvesh\nState:\tS \(sleeping\)\nPid:\t4242\nPPid:\t1\nUid:\t1000\t1000\t1000\t1000\n/);
+    const memory = (await s.run('ps -o pid= -o vsz= -o rss= -p 1,$$')).stdoutPlain.split('\n').map((row) => row.trim().split(/\s+/));
+    expect(memory).toEqual([
+      ['1', '167812', '11904'],
+      ['4242', '8916', '5248'],
+    ]);
+    for (const [pid, vsz, rss] of memory) {
+      expect((await s.run(`grep -E '^Vm' /proc/${pid ?? ''}/status`)).stdoutPlain.split('\n').map((row) => row.split(/\s+/)[1])).toEqual([vsz, rss]);
+    }
+    expect((await s.run('cat /proc/$$/cmdline /proc/1/comm')).stdoutPlain).toBe('-vesh\0init');
+    // /proc/self is the command reading it: running, a child of the shell, and gone once it ends.
+    const self = (await s.run('cat /proc/self/status')).stdoutPlain;
+    expect(self).toMatch(/^Name:\tcat\nState:\tR \(running\)\nPid:\t(\d+)\nPPid:\t4242\n/);
+    const pid = /^Pid:\t(\d+)$/m.exec(self)?.[1] ?? '';
+    expect(await s.run(`ls /proc/${pid}`)).toMatchObject({ status: 2, stderrPlain: `ls: cannot access '/proc/${pid}': No such file or directory` });
+    expect(await s.run(`ps -p ${pid}`)).toMatchObject({ status: 1 });
+    // ls sees itself in /proc as ps sees itself in its table; the rest of the line too.
+    const listed = (await s.run('ls -l /proc | cat')).stdoutPlain.split('\n');
+    const reader = /self -> (\d+)$/.exec(listed.find((row) => row.includes(' self -> ')) ?? '')?.[1] ?? '';
+    const folders = listed.filter((row) => /^dr-xr-xr-x .* \d+$/.test(row)).map((row) => row.split(' ').pop());
+    // init, the shell, ls and cat, the pipeline's two stages given pids one apart.
+    expect(folders.slice(0, 2)).toEqual(['1', '4242']);
+    expect(folders).toHaveLength(4);
+    expect(folders).toContain(reader);
+    expect(Math.abs(Number(folders[2]) - Number(folders[3]))).toBe(1);
+    const rows = (await s.run('ps -e -o pid= -o comm= | cat')).stdoutPlain.split('\n').map((row) => row.trim());
+    expect(rows.slice(0, 2)).toEqual(['1 init', '4242 vesh']);
+    expect(rows.slice(2).map((row) => row.split(' ')[1]).sort()).toEqual(['cat', 'ps']);
+    expect((await s.run('pgrep -x vesh; pgrep -x init')).stdoutPlain).toBe('4242\n1');
+    expect((await s.run('cat /proc/loadavg')).stdoutPlain).toMatch(/ 1\/3 \d+$/);
+    s.stop();
+  });
+
+  it("puts tty's terminal in /dev, as ps names it", async () => {
+    expect(await runLine('tty')).toMatchObject({ status: 0, stdoutPlain: '/dev/pts/0' });
+    const s = await session({ tty: false });
+    expect((await s.run('ls -l /dev/pts')).stdoutPlain).toBe('total 0\ncrw--w---- 1 guest tty 136, 0 Oct  6 11:00 0');
+    expect((await s.run('test -c /dev/pts/0 && echo a terminal')).stdoutPlain).toBe('a terminal');
+    expect((await s.run('ps -o tty= -p $$')).stdoutPlain).toBe('pts/0');
+    expect((await s.run('echo hidden > /dev/pts/0; echo $?')).stdoutPlain).toBe('0');
+    s.stop();
+  });
+
   it('pkill ends the line its process is part of, as ^C would', async () => {
     const result = await runLine('sleep 5 | pkill -e sleep; echo not reached');
     expect(result.status).toBe(130);

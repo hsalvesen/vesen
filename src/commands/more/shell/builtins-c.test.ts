@@ -162,6 +162,17 @@ describe('timeout', () => {
     expect((await runLine('timeout -s NOPE 5 true', { tty: false })).status).toBe(125);
     expect((await runLine('timeout 5', { tty: false })).stderrPlain).toBe("timeout: missing operand\nTry 'timeout --help' for more information.");
   });
+
+  it("says it failed to run a command that is not there (127) or cannot be run (126), as GNU's does, not the shell's command not found", async () => {
+    expect(await runLine('timeout 1 nosuchcmd', { tty: false })).toMatchObject({ status: 127, stderrPlain: "timeout: failed to run command 'nosuchcmd': No such file or directory" });
+    const s = await session({ tty: false });
+    expect(await s.run('touch plain; timeout 1 ./plain')).toMatchObject({ status: 126, stderrPlain: "timeout: failed to run command './plain': Permission denied" });
+    expect(await s.run('timeout 1 /etc')).toMatchObject({ status: 126, stderrPlain: "timeout: failed to run command '/etc': Permission denied" });
+    // A command by path, its /usr/bin stub, and a script on $PATH all run.
+    expect(await s.run('timeout 1 /bin/echo by path')).toMatchObject({ status: 0, stdoutPlain: 'by path' });
+    expect(await s.run("mkdir -p ~/bin; printf 'echo from bin\\n' > ~/bin/hello; chmod +x ~/bin/hello; timeout 1 hello")).toMatchObject({ status: 0, stdoutPlain: 'from bin' });
+    s.stop();
+  });
 });
 
 describe('watch', () => {
@@ -192,6 +203,14 @@ describe('nohup', () => {
     const result = await runLine('nohup echo hi');
     expect(result.stdoutPlain).toBe('nohup: ignoring input; the output stays on the screen, as vesen never hangs up\nhi');
     expect(await runLine('nohup false', { tty: false })).toMatchObject({ status: 1, stdoutPlain: '', stderrPlain: '' });
+  });
+
+  it("says it failed to run a command that is not there (127) or cannot be run (126), as GNU's does", async () => {
+    expect(await runLine('nohup nosuchcmd', { tty: false })).toMatchObject({ status: 127, stderrPlain: "nohup: failed to run command 'nosuchcmd': No such file or directory" });
+    expect(await runLine('nohup /tmp', { tty: false })).toMatchObject({ status: 126, stderrPlain: "nohup: failed to run command '/tmp': Permission denied" });
+    // At the prompt, the note comes first, then the failure, and no 'command not found'.
+    const typed = await runLine('nohup nosuchcmd');
+    expect(typed.screen).toEqual(['nohup: ignoring input; the output stays on the screen, as vesen never hangs up', "! nohup: failed to run command 'nosuchcmd': No such file or directory"]);
   });
 });
 

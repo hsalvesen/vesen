@@ -15,7 +15,7 @@ const spec: CommandSpec & RawArgsSpec & RunnerChoice = {
   name: 'ip',
   category: 'network',
   summary: 'show addresses, routes and network devices',
-  synopsis: ['ip [-4 | -6 | -br] addr|route|link [show [dev] [NAME]]'],
+  synopsis: ['ip [-4 | -6 | -br] addr|route|link [show [dev] [NAME]]', 'ip route get ADDRESS'],
   rawArgs: true,
   flags: [
     { short: '4', description: 'IPv4 only' },
@@ -24,7 +24,7 @@ const spec: CommandSpec & RawArgsSpec & RunnerChoice = {
   ],
   args: [
     { name: 'OBJECT', source: { kind: 'enum', values: () => OBJECTS } },
-    { name: 'COMMAND', source: { kind: 'enum', values: () => [{ value: 'show' }] }, optional: true },
+    { name: 'COMMAND', source: { kind: 'enum', values: () => [{ value: 'show' }, { value: 'get', summary: 'the route to an address (ip route get)' }] }, optional: true },
     { name: 'DEV', source: { kind: 'enum', values: () => [{ value: 'lo' }, { value: 'eth0' }] }, optional: true },
   ],
   loadingLabel: (argv) => (/^a/.test(argv.slice(1).find((word) => !word.startsWith('-')) ?? '') ? 'ip: asking Cloudflare for your public address…' : 'ip'),
@@ -32,6 +32,7 @@ const spec: CommandSpec & RawArgsSpec & RunnerChoice = {
     { line: 'ip addr', note: 'the addresses, and your public one' },
     { line: 'ip -br link', note: 'one line a device', offline: true },
     { line: 'ip route', note: 'the routing table', offline: true },
+    { line: 'ip route get 1.1.1.1', note: 'which route, device and address reach a host', offline: true },
     { line: 'ip a s lo', note: 'one device, abbreviated', offline: true },
   ],
   seeAlso: ['ifconfig', 'ping', 'privacy'],

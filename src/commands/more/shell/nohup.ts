@@ -3,6 +3,7 @@
 
 import { out } from '../../../output/model';
 import { defineCommand } from '../../../shell/types';
+import { cannotRun } from '../../lib/runnable';
 import { shellQuote } from '../../shell/alias';
 
 export default defineCommand({
@@ -12,7 +13,7 @@ export default defineCommand({
   synopsis: ['nohup COMMAND [ARG]...'],
   description:
     "Runs COMMAND with its ARGs so that a hangup cannot stop it. vesen never sends one, and runs one line at a time in the foreground, so COMMAND runs as it would without nohup, and its output stays on the screen rather than going to nohup.out. When standard input is the terminal, nohup says it is ignoring it, as coreutils' does.",
-  man: [{ heading: 'EXIT STATUS', body: "COMMAND's status; 125 when nohup itself failed; 127 when COMMAND is not found." }],
+  man: [{ heading: 'EXIT STATUS', body: "COMMAND's status; 125 when nohup itself failed; 126 when COMMAND is found but cannot be run; 127 when it is not found." }],
   posixArgs: true,
   usageStatus: 125,
   args: [{ name: 'COMMAND', source: { kind: 'commandLine' }, variadic: true }],
@@ -26,6 +27,9 @@ export default defineCommand({
       if (ctx.stdout.isTTY && ctx.stderr.isTTY) await ctx.stdout.block(out.text(note, { fg: 'muted' }));
       else await ctx.stderr.write(`${note}\n`);
     }
+    const name = ctx.args[0] ?? '';
+    const problem = await cannotRun(ctx, name);
+    if (problem !== null) return ctx.fail(`failed to run command '${name}': ${problem.reason}`, problem.status);
     return ctx.shell.exec(ctx.args.map(shellQuote).join(' '), { stdout: ctx.stdout, stderr: ctx.stderr });
   },
 });

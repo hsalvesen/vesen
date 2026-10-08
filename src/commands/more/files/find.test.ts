@@ -38,7 +38,7 @@ describe('find', () => {
   });
 
   it('tests types, sizes, emptiness, owners, modes and times', async () => {
-    expect(await lines('find /dev -type c')).toEqual(['/dev/null', '/dev/zero', '/dev/random', '/dev/urandom', '/dev/tty']);
+    expect(await lines('find /dev -type c')).toEqual(['/dev/null', '/dev/zero', '/dev/random', '/dev/urandom', '/dev/tty', '/dev/pts/0']);
     expect(await lines('find / -maxdepth 1 -type l')).toEqual(['/bin']);
     expect(await lines('find ~/bin ~/src -type f,d')).toEqual(['/home/guest/bin', '/home/guest/bin/my-script', '/home/guest/bin/deploy', '/home/guest/src', '/home/guest/src/main.c']);
     expect(await lines('find ~ -type f -size +1k')).toEqual(['/home/guest/history.txt', '/home/guest/documents/linux.txt']);
