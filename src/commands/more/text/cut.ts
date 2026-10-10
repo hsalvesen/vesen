@@ -8,7 +8,6 @@ export default defineCommand({
   name: 'cut',
   category: 'text',
   summary: 'remove sections from each line of files',
-  helpRank: 8,
   synopsis: ['cut OPTION... [FILE]...'],
   flags: [
     { short: 'b', long: 'bytes', description: 'select only these bytes', value: LIST },

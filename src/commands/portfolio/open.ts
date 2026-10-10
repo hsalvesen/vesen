@@ -18,7 +18,7 @@ export default defineCommand({
     { line: 'open https://www.vesen.app', offline: true },
     { line: 'open --external vesen.app', offline: true },
   ],
-  seeAlso: ['repo', 'linkedin'],
+  seeAlso: ['repo', 'whoami'],
   opens: (argv) => autoOpenUrl(argv),
   load: () => import('./links.run').then((m) => ({ run: m.open })),
 });

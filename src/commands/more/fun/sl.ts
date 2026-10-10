@@ -7,7 +7,6 @@ export default defineCommand({
   name: 'sl',
   category: 'fun',
   summary: 'a steam train crosses the screen',
-  helpRank: 3,
   synopsis: ['sl'],
   featured: false,
   examples: [

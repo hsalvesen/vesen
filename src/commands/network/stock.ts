@@ -42,7 +42,6 @@ export default defineCommand({
   name: 'stock',
   category: 'network',
   summary: 'show the price of a stock',
-  helpRank: 2,
   synopsis: ['stock [-r RANGE] [-f] [--plain | --json] SYMBOL...', 'stock -s QUERY...'],
   flags: [
     {

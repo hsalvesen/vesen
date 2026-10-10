@@ -8,7 +8,7 @@ Every session runs six times: with stdout on the terminal and into a pipe, at 40
 
 - `$ <line>` is the line typed.
 - The rows after it are what reached the screen, or the pipe: stderr rows start with `! `.
-  - On the terminal, a grid (ls) is laid out as CSS lays it out at that width, in columns of its widest name plus two; panels show their title in brackets.
+  - On the terminal, a grid (ls) is laid out as CSS lays it out at that width, in columns of its widest name plus two; the titled lists of the help index are packed left to right, each as wide as its longest name with two cells between, and start a new band, after a blank row, where the next would not fit; panels show their title in brackets.
   - In a pipe, stdout and stderr are interleaved in the order they were written.
 - `? N` is the exit status.
 - Control characters are written in caret notation (`^[` is ESC) and trailing spaces are trimmed.

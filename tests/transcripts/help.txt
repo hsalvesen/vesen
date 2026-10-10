@@ -5,28 +5,89 @@
 $ help
 [terminal at 40 columns]
 Portfolio
-about     about the developer
-banner    show the welcome banner
-cathode   trial a retro CRT display
-          effect
-contact   email the developer
-linkedin  open the developer's
-          LinkedIn profile
-qr        draw a QR code for a URL or
-          text
-repo      open this terminal's source
-          code
-theme     change the colour theme
-whoami    meet the developer; in a
-          pipe, your user name
+about    about the developer
+banner   show the welcome banner
+cathode  trial a retro CRT display
+         effect
+contact  email the developer
+qr       draw a QR code for a URL or
+         text
+repo     open this terminal's source
+         code
+theme    change the colour theme
+whoami   meet the developer; in a
+         pipe, your user name
 
-Files: ls cd cat cp find tree +21 more
-Text: echo grep sed sort head +22 more
-Shell: help man history clear +33 more
-System: fastfetch uname ps top +26 more
-Network: weather stock curl +11 more
-Fun: cowsay fortune sl figlet +4 more
-Editor: less more nano
+Files     Text       Shell
+basename  base64     alias
+cat       bc         apropos
+cd        column     bg
+chgrp     cut        clear
+chmod     diff       command
+chown     echo       env
+cp        expr       exit
+df        fold       export
+dirname   grep       fail
+du        head       false
+file      md5sum     fg
+find      nl         hang
+ln        printf     help
+ls        rev        history
+mkdir     sed        jobs
+mktemp    seq        kill
+mv        sha1sum    late
+pwd       sha256sum  man
+readlink  sha512sum  nohup
+realpath  sort       printenv
+rm        tail       read
+rmdir     tee        reset
+stat      tr         set
+sync      uniq       sleep
+touch     wc         source
+tree      xargs      sudo
+truncate  yes        test
+                     time
+                     timeout
+                     true
+                     type
+                     unalias
+                     unset
+                     wait
+                     watch
+                     whatis
+                     which
+
+System       Network    Fun       Editor
+arch         curl       cmatrix   less
+cal          dig        cowsay    more
+date         fetch      cowthink  nano
+debug        git        factor
+dmesg        host       figlet
+fastfetch    ifconfig   fortune
+finger       ip         lolcat
+free         nslookup   sl
+groups       ping
+hostname     speedtest
+id           stock
+keys         weather
+locale       wget
+lsb_release  whois
+lscpu
+nproc
+open
+pgrep
+pkill
+poweroff
+privacy
+ps
+reboot
+shutdown
+top
+tty
+uname
+uptime
+w
+who
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
@@ -34,23 +95,52 @@ privacy says what vesen sends, and where.
 ? 0
 [terminal at 80 columns]
 Portfolio
-about     about the developer           banner    show the welcome banner
-cathode   trial a retro CRT display     contact   email the developer
-          effect
-linkedin  open the developer's          qr        draw a QR code for a URL or
-          LinkedIn profile                        text
-repo      open this terminal's source   theme     change the colour theme
-          code
-whoami    meet the developer; in a
-          pipe, your user name
+about    about the developer            banner   show the welcome banner
+cathode  trial a retro CRT display      contact  email the developer
+         effect
+qr       draw a QR code for a URL or    repo     open this terminal's source
+         text                                    code
+theme    change the colour theme        whoami   meet the developer; in a
+                                                 pipe, your user name
 
-Files: ls cd cat basename chgrp chmod chown cp df dirname du file find ln mkdir mktemp mv pwd readlink realpath rm rmdir stat sync touch tree truncate
-Text: echo grep sed sort head tail wc cut tr uniq diff xargs printf base64 bc column expr fold md5sum nl rev seq sha1sum sha256sum sha512sum tee yes
-Shell: help man history clear alias apropos command env exit export fail false hang late printenv reset set sleep source sudo test true type unalias +13 more
-System: fastfetch uname ps top date arch cal debug dmesg finger free groups hostname id keys locale open poweroff privacy reboot shutdown +9 more
-Network: weather stock curl dig fetch git host ifconfig ip nslookup ping speedtest wget whois
-Fun: cowsay fortune sl figlet cmatrix cowthink factor lolcat
-Editor: less more nano
+Files     Text       Shell     System       Network    Fun       Editor
+basename  base64     alias     arch         curl       cmatrix   less
+cat       bc         apropos   cal          dig        cowsay    more
+cd        column     bg        date         fetch      cowthink  nano
+chgrp     cut        clear     debug        git        factor
+chmod     diff       command   dmesg        host       figlet
+chown     echo       env       fastfetch    ifconfig   fortune
+cp        expr       exit      finger       ip         lolcat
+df        fold       export    free         nslookup   sl
+dirname   grep       fail      groups       ping
+du        head       false     hostname     speedtest
+file      md5sum     fg        id           stock
+find      nl         hang      keys         weather
+ln        printf     help      locale       wget
+ls        rev        history   lsb_release  whois
+mkdir     sed        jobs      lscpu
+mktemp    seq        kill      nproc
+mv        sha1sum    late      open
+pwd       sha256sum  man       pgrep
+readlink  sha512sum  nohup     pkill
+realpath  sort       printenv  poweroff
+rm        tail       read      privacy
+rmdir     tee        reset     ps
+stat      tr         set       reboot
+sync      uniq       sleep     shutdown
+touch     wc         source    top
+tree      xargs      sudo      tty
+truncate  yes        test      uname
+                     time      uptime
+                     timeout   w
+                     true      who
+                     type
+                     unalias
+                     unset
+                     wait
+                     watch
+                     whatis
+                     which
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
@@ -58,20 +148,51 @@ privacy says what vesen sends, and where.
 ? 0
 [terminal at 120 columns]
 Portfolio
-about     about the developer           banner    show the welcome banner       cathode   trial a retro CRT display
-                                                                                          effect
-contact   email the developer           linkedin  open the developer's          qr        draw a QR code for a URL or
-                                                  LinkedIn profile                        text
-repo      open this terminal's source   theme     change the colour theme       whoami    meet the developer; in a
-          code                                                                            pipe, your user name
+about    about the developer            banner   show the welcome banner        cathode  trial a retro CRT display
+                                                                                         effect
+contact  email the developer            qr       draw a QR code for a URL or    repo     open this terminal's source
+                                                 text                                    code
+theme    change the colour theme        whoami   meet the developer; in a
+                                                 pipe, your user name
 
-Files: ls cd cat basename chgrp chmod chown cp df dirname du file find ln mkdir mktemp mv pwd readlink realpath rm rmdir stat sync touch tree truncate
-Text: echo grep sed sort head tail wc cut tr uniq diff xargs printf base64 bc column expr fold md5sum nl rev seq sha1sum sha256sum sha512sum tee yes
-Shell: help man history clear alias apropos bg command env exit export fail false fg hang jobs kill late nohup printenv read reset set sleep source sudo test time timeout true type unalias unset wait watch whatis which
-System: fastfetch uname ps top date arch cal debug dmesg finger free groups hostname id keys locale lsb_release lscpu nproc open pgrep pkill poweroff privacy reboot shutdown tty uptime w who
-Network: weather stock curl dig fetch git host ifconfig ip nslookup ping speedtest wget whois
-Fun: cowsay fortune sl figlet cmatrix cowthink factor lolcat
-Editor: less more nano
+Files     Text       Shell     System       Network    Fun       Editor
+basename  base64     alias     arch         curl       cmatrix   less
+cat       bc         apropos   cal          dig        cowsay    more
+cd        column     bg        date         fetch      cowthink  nano
+chgrp     cut        clear     debug        git        factor
+chmod     diff       command   dmesg        host       figlet
+chown     echo       env       fastfetch    ifconfig   fortune
+cp        expr       exit      finger       ip         lolcat
+df        fold       export    free         nslookup   sl
+dirname   grep       fail      groups       ping
+du        head       false     hostname     speedtest
+file      md5sum     fg        id           stock
+find      nl         hang      keys         weather
+ln        printf     help      locale       wget
+ls        rev        history   lsb_release  whois
+mkdir     sed        jobs      lscpu
+mktemp    seq        kill      nproc
+mv        sha1sum    late      open
+pwd       sha256sum  man       pgrep
+readlink  sha512sum  nohup     pkill
+realpath  sort       printenv  poweroff
+rm        tail       read      privacy
+rmdir     tee        reset     ps
+stat      tr         set       reboot
+sync      uniq       sleep     shutdown
+touch     wc         source    top
+tree      xargs      sudo      tty
+truncate  yes        test      uname
+                     time      uptime
+                     timeout   w
+                     true      who
+                     type
+                     unalias
+                     unset
+                     wait
+                     watch
+                     whatis
+                     which
 
 help --all lists every command with what it does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
@@ -79,22 +200,21 @@ privacy says what vesen sends, and where.
 ? 0
 [pipe]
 Portfolio
-about     about the developer
-banner    show the welcome banner
-cathode   trial a retro CRT display effect
-contact   email the developer
-linkedin  open the developer's LinkedIn profile
-qr        draw a QR code for a URL or text
-repo      open this terminal's source code
-theme     change the colour theme
-whoami    meet the developer; in a pipe, your user name
+about    about the developer
+banner   show the welcome banner
+cathode  trial a retro CRT display effect
+contact  email the developer
+qr       draw a QR code for a URL or text
+repo     open this terminal's source code
+theme    change the colour theme
+whoami   meet the developer; in a pipe, your user name
 
-Files: ls cd cat basename chgrp chmod chown cp df dirname du file find ln mkdir mktemp mv pwd readlink realpath rm rmdir stat sync touch tree truncate
-Text: echo grep sed sort head tail wc cut tr uniq diff xargs printf base64 bc column expr fold md5sum nl rev seq sha1sum sha256sum sha512sum tee yes
-Shell: help man history clear alias apropos bg command env exit export fail false fg hang jobs kill late nohup printenv read reset set sleep source sudo test time timeout true type unalias unset wait watch whatis which
-System: fastfetch uname ps top date arch cal debug dmesg finger free groups hostname id keys locale lsb_release lscpu nproc open pgrep pkill poweroff privacy reboot shutdown tty uptime w who
-Network: weather stock curl dig fetch git host ifconfig ip nslookup ping speedtest wget whois
-Fun: cowsay fortune sl figlet cmatrix cowthink factor lolcat
+Files: basename cat cd chgrp chmod chown cp df dirname du file find ln ls mkdir mktemp mv pwd readlink realpath rm rmdir stat sync touch tree truncate
+Text: base64 bc column cut diff echo expr fold grep head md5sum nl printf rev sed seq sha1sum sha256sum sha512sum sort tail tee tr uniq wc xargs yes
+Shell: alias apropos bg clear command env exit export fail false fg hang help history jobs kill late man nohup printenv read reset set sleep source sudo test time timeout true type unalias unset wait watch whatis which
+System: arch cal date debug dmesg fastfetch finger free groups hostname id keys locale lsb_release lscpu nproc open pgrep pkill poweroff privacy ps reboot shutdown top tty uname uptime w who
+Network: curl dig fetch git host ifconfig ip nslookup ping speedtest stock weather wget whois
+Fun: cmatrix cowsay cowthink factor figlet fortune lolcat sl
 Editor: less more nano
 
 help --all lists every command with what it does.

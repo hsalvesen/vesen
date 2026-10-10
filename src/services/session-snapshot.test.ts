@@ -168,6 +168,23 @@ describe('restoring', () => {
     expect(restored[1]).not.toHaveProperty('leftCh');
   });
 
+  it('brings a lists block back with its columns, the names as text', () => {
+    const title = out.span('Files', { fg: 'accent', bold: true });
+    const lists = out.lists([{ title, items: [out.insert('cat', 'cat '), out.span('ls')] }]);
+    const restored = reviveSnapshot(snapshotJson(source([lists]), NOW), NOW)?.entries[0]?.blocks ?? [];
+    expect(restored).toEqual([out.lists([{ title, items: [out.span('cat'), out.span('ls')] }])]);
+    // A column without a title goes, and items that are not a list read as none.
+    const forged = JSON.stringify({
+      v: 1,
+      savedAt: NOW,
+      line: '',
+      cwd: '/home/guest',
+      scroll: { top: 0, atBottom: true },
+      entries: [{ prompt: null, line: 'help', blocks: [{ type: 'lists', columns: [{ items: [{ text: 'x' }] }, 'junk', { title: { text: 'Text' }, items: 'nope' }] }] }],
+    });
+    expect(reviveSnapshot(forged, NOW)?.entries[0]?.blocks).toEqual([out.lists([{ title: out.span('Text'), items: [] }])]);
+  });
+
   it('turns tap actions into text, and a rich card into its plain text', () => {
     const blocks = [out.lines([[out.run('help', 'help')]]), out.component('weather-card', {}, 'Oslo: 9 °C', 'Weather')];
     const restored = reviveSnapshot(snapshotJson(source(blocks), NOW), NOW)?.entries[0]?.blocks ?? [];

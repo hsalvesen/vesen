@@ -42,7 +42,6 @@ export default defineCommand({
   name: 'cowsay',
   category: 'fun',
   summary: 'an animal says something in a speech bubble',
-  helpRank: 1,
   synopsis: ['cowsay [-bdgpstwy] [-e EYES] [-T TONGUE] [-W WIDTH] [-n] [-f ANIMAL | -r] [MESSAGE]...', 'cowsay -l'],
   featured: false,
   flags: COW_FLAGS,

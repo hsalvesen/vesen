@@ -63,6 +63,9 @@ export function plain(block: Block): string {
     case 'card':
       // The link as it would be pasted: the address for mail, the whole URL for the web.
       return asLines([block.title, block.copy ?? block.href, ...(block.detail === undefined ? [] : [block.detail])]);
+    case 'lists':
+      // Column after column: its title, then one item per line.
+      return asLines(block.columns.flatMap((column) => [column.title.text, ...column.items.map((item) => item.text)]));
     case 'columns':
       return [...block.left, ...block.right].map(plain).join('');
     case 'component':

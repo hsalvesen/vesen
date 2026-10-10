@@ -546,8 +546,9 @@ describe('preflight', () => {
     };
   }
 
-  const linkedin = defineCommand({
-    name: 'linkedin',
+  // A stand-in for whoami, which opens the developer's LinkedIn profile on a desktop browser.
+  const whoami = defineCommand({
+    name: 'whoami',
     category: 'portfolio',
     summary: 'x',
     opens: () => 'https://www.linkedin.com/in/harrysalvesen/',
@@ -559,20 +560,20 @@ describe('preflight', () => {
 
   it('opens the URL synchronously, once, and the job hears that it opened', async () => {
     const opener = recordingOpener();
-    const { shell } = harness({ specs: [linkedin], opener });
-    const found = shell.preflight('linkedin');
-    expect(found).toMatchObject({ argv: ['linkedin'], opened: 'opened' });
+    const { shell } = harness({ specs: [whoami], opener });
+    const found = shell.preflight('whoami');
+    expect(found).toMatchObject({ argv: ['whoami'], opened: 'opened' });
     expect(opener.opened).toEqual(['https://www.linkedin.com/in/harrysalvesen/']);
-    const result = await shell.run('linkedin');
+    const result = await shell.run('whoami');
     expect(spans(result.blocks).map((span) => span.text)).toEqual(['opened']);
     expect(opener.opened).toHaveLength(1);
   });
 
   it('opens nothing inside an in-app browser, and the command offers a card instead', async () => {
     const opener = recordingOpener(false);
-    const { shell } = harness({ specs: [linkedin], opener });
-    expect(shell.preflight('linkedin')?.opened).toBe('skipped');
-    expect(spans((await shell.run('linkedin')).blocks).map((span) => span.text)).toEqual(['card']);
+    const { shell } = harness({ specs: [whoami], opener });
+    expect(shell.preflight('whoami')?.opened).toBe('skipped');
+    expect(spans((await shell.run('whoami')).blocks).map((span) => span.text)).toEqual(['card']);
     expect(opener.opened).toEqual([]);
   });
 

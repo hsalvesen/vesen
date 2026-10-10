@@ -6,7 +6,6 @@ export default defineCommand({
   name: 'tail',
   category: 'text',
   summary: 'output the last part of files',
-  helpRank: 6,
   synopsis: ['tail [OPTION]... [FILE]...'],
   numericShortcut: 'lines',
   flags: [

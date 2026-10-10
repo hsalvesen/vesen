@@ -9,7 +9,6 @@ const spec: CommandSpec & RawArgsSpec & RunnerChoice = {
   name: 'ps',
   category: 'system',
   summary: 'report a snapshot of the current processes',
-  helpRank: 3,
   synopsis: ['ps [-e] [-f] [-p PID[,PID]...] [-u USER] [-o FORMAT]', 'ps [a][u][x]'],
   rawArgs: true,
   flags: [

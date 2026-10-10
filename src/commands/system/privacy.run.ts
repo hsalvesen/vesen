@@ -52,7 +52,7 @@ const NOTES: readonly string[] = [
   "Only weather --here asks the browser for this device's location. It is rounded to about a kilometre before it is used, and no location is ever saved; OpenStreetMap's name for it is kept until the page closes. The last five places you looked up, and the answers to up to 50 place searches for 30 days, are kept in this browser until weather --forget or reset.",
   "curl and wget fetch the address you give them, and ping times requests to the host you name, straight from your browser; curl --via-proxy, where this site has a proxy of its own, sends the address through that proxy.",
   'qr makes its codes in your browser: nothing you encode is sent anywhere.',
-  'Links open only when you tap them, or in a desktop browser when whoami, linkedin, repo or open opens one.',
+  'Links open only when you tap them, or in a desktop browser when whoami, repo or open opens one.',
   "This browser keeps the theme, your settings, history, your files under ~, nano's unsaved changes for up to 30 days (should Back or closing the page cut it short), recent weather places and place searches, and the last quotes and tickers stock showed (local storage), and a snapshot of the screen for Back for 30 minutes and the commits git log showed for 10 (session storage). What you type at sudo is never kept.",
   'No analytics, and no cookies.',
 ];

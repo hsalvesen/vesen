@@ -169,8 +169,15 @@ describe('banner', () => {
     expect(lines[0]).toMatch(/^vesen v.+ · a terminal by Has\u00a0Salvesen$/);
     expect(lines[1]).toBe('Tab completes · ↑ history · help <cmd> for details');
     expect(lines).toContain('Type help to see all available commands.');
-    const help = rows(blocks).flat().find((span) => span.text === 'help');
-    expect(help?.action).toMatchObject({ kind: 'run', line: 'help' });
+    expect(lines).toContain('Type cat README.md to learn more about this terminal.');
+    // The third step says there is a file system, and where to start exploring it.
+    expect(lines).toContain('Type tree to explore the virtual file system.');
+    const spans = rows(blocks).flat();
+    expect(spans.find((span) => span.text === 'help')?.action).toMatchObject({ kind: 'run', line: 'help' });
+    expect(spans.find((span) => span.text === 'cat README.md')?.action).toMatchObject({ kind: 'run', line: 'cat ~/README.md' });
+    const tree = spans.find((span) => span.text === 'tree');
+    expect(tree?.action).toMatchObject({ kind: 'run', line: 'tree' });
+    expect(tree?.style).toEqual(spans.find((span) => span.text === 'help')?.style);
   });
 
   it('is compact under 50 columns, with the same words', async () => {

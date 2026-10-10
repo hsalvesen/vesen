@@ -94,6 +94,18 @@ export function cleanBlock(block: unknown): Block | null {
         if (escapeUrl !== undefined && safeHref(escapeUrl) !== null) card.escape = hint === undefined ? { url: escapeUrl } : { url: escapeUrl, hint };
         return out.card(card);
       }
+      case 'lists': {
+        // Each column with its title and items as text; a column with no title goes.
+        const columns = Array.isArray(raw.columns)
+          ? raw.columns.flatMap((column: unknown) => {
+              if (typeof column !== 'object' || column === null) return [];
+              const { title, items } = column as { title?: unknown; items?: unknown };
+              const clean = cleanSpan(title);
+              return clean === null ? [] : [{ title: clean, items: cleanLine(items) }];
+            })
+          : [];
+        return out.lists(columns);
+      }
       case 'columns': {
         const side = (blocks: unknown): Block[] => (Array.isArray(blocks) ? blocks.map(cleanBlock).filter((b): b is Block => b !== null) : []);
         const at = typeof raw.stackBelowCols === 'number' ? raw.stackBelowCols : 60;

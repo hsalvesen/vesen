@@ -42,7 +42,6 @@ export default defineCommand({
   // A usage error exits 2, as GNU ls does.
   usageStatus: 2,
   summary: 'list directory contents',
-  helpRank: 1,
   synopsis: ['ls [OPTION]... [FILE]...'],
   flags: [
     { short: 'a', long: 'all', description: 'do not hide entries starting with ., and list . and ..' },

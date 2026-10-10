@@ -11,7 +11,6 @@ export default defineCommand({
   name: 'date',
   category: 'system',
   summary: 'print the date and time',
-  helpRank: 5,
   synopsis: ['date [-u] [-d STRING] [-I[FMT] | -R | +FORMAT]'],
   flags: [
     { short: 'u', long: 'utc', description: 'print Coordinated Universal Time (UTC)' },

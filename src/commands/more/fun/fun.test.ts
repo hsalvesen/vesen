@@ -2,7 +2,7 @@
 // print a still frame anywhere else; all of them stay out of the first Tab list but are in help
 // under Fun; and the two easter eggs, `sudo make me a sandwich` and `rm -rf /`.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { runLine } from '../../../../tests/harness';
+import { renderScreen, runLine } from '../../../../tests/harness';
 import type { FullscreenView } from '../../../shell/types';
 import { complete } from '../../../shell/complete/engine';
 import { keepsQuiet } from '../../../shell/complete/sources';
@@ -128,22 +128,23 @@ describe('the first Tab list', () => {
 });
 
 describe('help', () => {
-  it('lists the fun commands under Fun', async () => {
+  it('lists the fun commands under Fun, by name, in a pipe', async () => {
     const result = await runLine('help', { tty: false, cols: 120 });
     const row = /^Fun: (.*)$/m.exec(result.stdoutPlain)?.[1]?.split(' ') ?? [];
-    expect([...row].sort()).toEqual([...FUN].sort());
-    // The ones a visitor knows best first.
-    expect(row.slice(0, 4)).toEqual(['cowsay', 'fortune', 'sl', 'figlet']);
+    expect(row).toEqual(FUN);
     const all = await runLine('help --all', { tty: false, cols: 120 });
     expect(all.stdoutPlain).toMatch(/^Fun$/m);
     for (const name of FUN) expect(all.stdoutPlain).toMatch(new RegExp(`^${name} `, 'm'));
   });
 
-  it('keeps them to one line on a phone, the best known first, with +N more for help --all', async () => {
+  it('gives them a column of their own on a terminal, a phone included, with every one of them', async () => {
     const phone = await runLine('help', { cols: 44, touch: true });
-    const row = /^Fun: .*$/m.exec(phone.stdoutPlain)?.[0] ?? '';
-    expect(row).toMatch(/^Fun: cowsay fortune sl figlet( \S+)* \+\d+ more$/);
-    expect(row.length).toBeLessThanOrEqual(44);
+    const lists = phone.blocks.filter((block) => block.type === 'lists');
+    const fun = lists[0]?.type === 'lists' ? lists[0].columns.find((column) => column.title.text === 'Fun') : undefined;
+    expect(fun?.items.map((item) => item.text)).toEqual(FUN);
+    // The columns fit the screen's width, in bands.
+    for (const row of renderScreen(lists, 44)) expect(row.length, row).toBeLessThanOrEqual(44);
+    expect(phone.stdoutPlain).not.toMatch(/\+\d+ more/);
     expect(phone.stdoutPlain).toContain('help --all lists every command with what it does.');
     expect((await runLine('help --all', { cols: 44 })).stdoutPlain).toMatch(/^Fun$/m);
   });

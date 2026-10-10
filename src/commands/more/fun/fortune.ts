@@ -7,7 +7,6 @@ export default defineCommand({
   name: 'fortune',
   category: 'fun',
   summary: 'print a random saying',
-  helpRank: 2,
   synopsis: ['fortune [-s]'],
   featured: false,
   flags: [{ short: 's', long: 'short', description: 'only short ones: a single line of 60 characters or fewer' }],

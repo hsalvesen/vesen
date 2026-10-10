@@ -13,7 +13,6 @@ export default defineCommand({
   name: 'figlet',
   category: 'fun',
   summary: 'write text in big block letters',
-  helpRank: 4,
   synopsis: ['figlet [-f FONT] [-c | -l | -r] [-w WIDTH] [TEXT]...'],
   featured: false,
   flags: [

@@ -6,7 +6,6 @@ export default defineCommand({
   name: 'tr',
   category: 'text',
   summary: 'translate or delete characters',
-  helpRank: 9,
   synopsis: ['tr [OPTION]... STRING1 [STRING2]'],
   flags: [
     { short: 'c', long: 'complement', key: 'complement', description: 'use the complement of STRING1' },

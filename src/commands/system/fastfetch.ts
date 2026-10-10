@@ -8,7 +8,6 @@ export default defineCommand({
   aliases: ['neofetch'],
   category: 'system',
   summary: 'show information about this system',
-  helpRank: 1,
   synopsis: ['fastfetch [--net]'],
   featured: true,
   budgetMs: 10_000,
