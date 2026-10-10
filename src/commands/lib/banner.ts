@@ -1,6 +1,6 @@
 // The welcome banner: the VESEN logo as art (screen readers hear "Vesen logo"), the version and
-// author, how to start (the keys on a keyboard, the chips on touch), and two tappable first steps
-// (F074). `banner` prints it, the app shows it at boot
+// author, how to start (the keys on a keyboard, the chips on touch), and three tappable first
+// steps (F074): help, the README and the file system. `banner` prints it, the app shows it at boot
 // before the shell has loaded, and `reset` and `login` put it back, so it lives here, small and
 // DOM-free, for the initial chunk to import.
 
@@ -56,6 +56,8 @@ export function bannerBlocks({ version, columns, touch }: BannerOptions): Block[
     [out.span('Type ', STRONG), out.run('help', 'help', ACCENT), out.span(' to see all available commands.', STRONG)],
     // From home, so the link works from whatever folder it is tapped in.
     [out.span('Type ', STRONG), out.run('cat README.md', 'cat ~/README.md', ACCENT), out.span(' to learn more about this terminal.', STRONG)],
+    // Says that there is a file system to explore, and where to start.
+    [out.span('Type ', STRONG), out.run('tree', 'tree', ACCENT), out.span(' to explore the virtual file system.', STRONG)],
   ];
   return [out.art(compact ? BANNER_ART_COMPACT : BANNER_ART, 'Vesen logo'), out.lines(lines)];
 }

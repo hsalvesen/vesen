@@ -77,8 +77,8 @@ describe('the catalogue in the app', () => {
 
   it.each([
     ['help --all', /^rev +reverse the characters of each line$/m],
-    // In a pipe the short index names every command, the catalogue's rev too.
-    ['help', /^Text: echo grep sed\b.* rev\b/m],
+    // In a pipe the index names every command on one line per category, the catalogue's rev too.
+    ['help', /^Text: base64 bc\b.* rev\b/m],
     ['help rev', /^rev - reverse the characters of each line$/m],
     ['man rev', /^REV\(1\) +User Commands +REV\(1\)$/m],
     ['whatis rev', /^rev \(1\) +- reverse the characters of each line$/m],

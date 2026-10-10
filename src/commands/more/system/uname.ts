@@ -7,7 +7,6 @@ export default defineCommand({
   name: 'uname',
   category: 'system',
   summary: 'print system information',
-  helpRank: 2,
   synopsis: ['uname [OPTION]...'],
   flags: [
     { short: 'a', long: 'all', description: 'print all information, leaving out -p and -i if unknown' },

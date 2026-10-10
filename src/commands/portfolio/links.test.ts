@@ -1,6 +1,6 @@
 // The openers (docs/plan/04-phone-and-instagram.md, "Inside Instagram's browser"; F051): whoami,
-// linkedin, about, contact and email, repo, open and xdg-open print link cards everywhere, open a
-// tab only on a desktop browser through the spec's opens(), and never open a mail app by itself.
+// about, contact and email, repo, open and xdg-open print link cards everywhere, open a tab only
+// on a desktop browser through the spec's opens(), and never open a mail app by itself.
 import { describe, expect, it, vi } from 'vitest';
 import { session, type RunOptions } from '../../../tests/harness';
 import type { Block, CardBlock } from '../../output/model';
@@ -88,21 +88,23 @@ describe('whoami', () => {
   });
 });
 
-describe('linkedin and repo', () => {
-  it('print one card, and open it on a desktop', async () => {
+describe('repo', () => {
+  it('prints one card, and opens it on a desktop', async () => {
     const { opened, opener } = desktop();
-    const linkedin = await typed('linkedin', { opener });
-    expect(cards(linkedin.blocks).map((card) => card.href)).toEqual(['https://www.linkedin.com/in/harrysalvesen/']);
     const repo = await typed('repo', { opener });
     expect(cards(repo.blocks).map((card) => [card.title, card.href])).toEqual([['vesen on GitHub', 'https://github.com/hsalvesen/vesen']]);
-    expect(opened).toEqual(['https://www.linkedin.com/in/harrysalvesen/', 'https://github.com/hsalvesen/vesen']);
+    expect(opened).toEqual(['https://github.com/hsalvesen/vesen']);
   });
 
-  it('print the URL in a pipe', async () => {
+  it('prints the URL in a pipe', async () => {
     const s = await session({ tty: false });
     expect((await s.run('repo')).stdoutPlain).toBe('https://github.com/hsalvesen/vesen');
-    expect((await s.run('linkedin')).stdoutPlain).toBe('https://www.linkedin.com/in/harrysalvesen/');
     s.stop();
+  });
+
+  it('is the only way to LinkedIn besides whoami and about: there is no linkedin command', async () => {
+    // whoami shows the LinkedIn card and opens it on a desktop, so a command of its own went.
+    expect(await typed('linkedin')).toMatchObject({ status: 127, stderrPlain: expect.stringContaining('linkedin: command not found') });
   });
 });
 

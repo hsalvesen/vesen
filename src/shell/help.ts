@@ -1,9 +1,9 @@
 // Help generated from command specs (docs/plan/02-architecture-and-contracts.md, section 11):
 //
-// - the help index: the portfolio commands with their summaries in a grid that reflows, then a
-//   row of names for each other category, as many as fit in a line on a phone or two elsewhere
-//   (spec.helpRank first, then featured ones, then the kernel's), then `+N more`; with --all,
-//   every category's grid. Each name is tappable (it inserts itself at the prompt);
+// - the help index: the portfolio commands with their summaries in a grid that reflows, then
+//   every other category as a column of its names, side by side as many as fit (a lists block,
+//   which reflows on its own); with --all, every category's grid. Each name is tappable (it
+//   inserts itself at the prompt). In a pipe, a line of names per category;
 // - the `<cmd> --help` panels as callouts (what it does, Usage, Options, Examples as run chips,
 //   See also);
 // - man pages: NAME, SYNOPSIS, DESCRIPTION, OPTIONS, EXAMPLES and SEE ALSO, laid out to the width
@@ -15,10 +15,10 @@
 // body loads lazily keeps its long help with the body; withDoc() fetches it first.
 
 import { parseMarkup } from '../output/markup';
-import { out, textWidth, type Block, type Line, type Span, type SpanStyle } from '../output/model';
+import { out, textWidth, type Block, type Line, type ListColumn, type Span, type SpanStyle } from '../output/model';
 import { flagKey } from './flags';
 import { KEY_BINDINGS, TOUCH_BINDINGS, type KeyBinding } from './keys';
-import { CATEGORY_ORDER, fromCatalogue } from './registry';
+import { CATEGORY_ORDER } from './registry';
 import type { ArgSpec, Category, CommandDoc, CommandSpec, FlagSpec, Registry } from './types';
 
 export const CATEGORY_TITLES: Readonly<Record<Category, string>> = {
@@ -42,79 +42,17 @@ const SUMMARY_CH = 26;
 
 // ── The index ──────────────────────────────────────────────────────────────────────────────
 
-/** Below this many columns (a phone), each row of the short index keeps to one line. */
-export const ONE_LINE_BELOW_COLS = 80;
-
-/** Lines a row of the short index may take on a wider terminal. */
-const WIDE_ROW_LINES = 2;
-
-/** The order a long row gives up its names in: ranked, featured, the kernel's, the catalogue's. */
-function priority(spec: CommandSpec): [number, number] {
-  const tier = spec.featured === true ? 0 : fromCatalogue(spec) ? 2 : 1;
-  return [spec.helpRank ?? Number.MAX_SAFE_INTEGER, tier];
+/** A category as a column of the lists block: its title over every one of its names, each tappable. */
+function categoryColumn(category: Category, specs: readonly CommandSpec[]): ListColumn {
+  return {
+    title: out.span(CATEGORY_TITLES[category], HEADING),
+    items: specs.map((spec) => out.insert(spec.name, `${spec.name} `, STRONG)),
+  };
 }
 
-/** Ranked names first, by rank, then the rest in the registry's order (by name). */
-function displayOrder(specs: readonly CommandSpec[]): CommandSpec[] {
-  const rank = (spec: CommandSpec): number => spec.helpRank ?? Number.MAX_SAFE_INTEGER;
-  // Array sort is stable, so names of the same rank keep the registry's order.
-  return [...specs].sort((a, b) => rank(a) - rank(b));
-}
-
-/** How many lines words take when wrapped whole at `columns`, one space between them. */
-function wrappedLines(words: readonly string[], columns: number): number {
-  let lines = 1;
-  let x = 0;
-  for (const word of words) {
-    const width = textWidth(word);
-    if (x === 0) x = width;
-    else if (x + 1 + width <= columns) x += 1 + width;
-    else {
-      lines += 1;
-      x = width;
-    }
-  }
-  return lines;
-}
-
-/**
- * A category's commands as one row: its title, then each name, tappable. Given a terminal's
- * width (`fit`), a row that would take more than one line on a phone, or two elsewhere, keeps the
- * names a visitor reaches for first (spec.helpRank, then featured, then the kernel's before the
- * catalogue's) and ends with `+N more`, which runs help --all, so the index still fits a phone's
- * screen however many commands the catalogue brings. Ranked names come first, the rest by name.
- * In a pipe (no `fit`) a row names every command.
- */
-function namesRow(category: Category, specs: readonly CommandSpec[], fit?: { readonly columns: number; readonly lines: number }): Span[] {
-  const title = `${CATEGORY_TITLES[category]}:`;
-  let named: readonly CommandSpec[] = displayOrder(specs);
-  if (fit !== undefined && wrappedLines([title, ...named.map((spec) => spec.name)], fit.columns) > fit.lines) {
-    const byPriority = [...specs].sort((a, b) => {
-      const [rankA, tierA] = priority(a);
-      const [rankB, tierB] = priority(b);
-      return rankA - rankB || tierA - tierB;
-    });
-    // The most names that fit with the count of the rest, at least one.
-    let count = 1;
-    for (let n = specs.length - 1; n > 1; n -= 1) {
-      const chosen = new Set(byPriority.slice(0, n));
-      const words = displayOrder(specs.filter((spec) => chosen.has(spec))).map((spec) => spec.name);
-      if (wrappedLines([title, ...words, `+${specs.length - n} more`], fit.columns) <= fit.lines) {
-        count = n;
-        break;
-      }
-    }
-    const chosen = new Set(byPriority.slice(0, count));
-    named = displayOrder(specs.filter((spec) => chosen.has(spec)));
-  }
-  const row: Span[] = [out.span(CATEGORY_TITLES[category], HEADING), out.span(': ', HEADING)];
-  named.forEach((spec, i) => {
-    if (i > 0) row.push(out.span(' '));
-    row.push(out.insert(spec.name, `${spec.name} `, STRONG));
-  });
-  const more = specs.length - named.length;
-  if (more > 0) row.push(out.span(' '), out.run(`+${more} more`, 'help --all', MUTED));
-  return row;
+/** A category's names on one line, for a pipe: `Files: basename cat cd …`. */
+function categoryLine(category: Category, specs: readonly CommandSpec[]): Line {
+  return [out.span(`${CATEGORY_TITLES[category]}: ${specs.map((spec) => spec.name).join(' ')}`)];
 }
 
 /** A category's heading and a grid of its names, each with its summary beside it. */
@@ -134,27 +72,38 @@ const MORE_HELP: Line = [
   out.span("and 'help keys' for the keys.", MUTED),
 ];
 
+export interface IndexOptions {
+  /** Every category as a grid of names with their summaries. */
+  readonly all?: boolean;
+  /** On a terminal the categories are columns that reflow with the width; in a pipe, the default, lines of names. */
+  readonly tty?: boolean;
+}
+
 /**
- * The help index. By default it is short enough to read on a phone without scrolling: the
- * portfolio commands, the reason the site exists, each with its summary, then one row of names
- * for every other category, cut to fit a terminal of `columns` (see namesRow). With `all`, every
- * category gets the table. A name inserts itself at the prompt when tapped; in a pipe the index
- * is plain text, with every name.
+ * The help index: the portfolio commands, the reason the site exists, each with its summary in
+ * a grid, then every other category as a column of all its names, by name, side by side as many
+ * as fit and the rest in a band below (one lists block, which reflows on its own: a desktop shows
+ * the seven at once, a phone three or four a band). With `all`, every category gets the grid. A
+ * name inserts itself at the prompt when tapped. In a pipe the index is plain text: the portfolio
+ * with its summaries, then one `Category: a b c` line per category, naming every command.
  */
-export function helpIndex(registry: Registry, options: { readonly all?: boolean; readonly columns?: number } = {}): Block[] {
-  const fit = options.columns === undefined ? undefined : { columns: options.columns, lines: options.columns < ONE_LINE_BELOW_COLS ? 1 : WIDE_ROW_LINES };
+export function helpIndex(registry: Registry, options: IndexOptions = {}): Block[] {
   const blocks: Block[] = [];
   const widest = Math.max(1, ...registry.list().map((spec) => textWidth(spec.name)));
   // One column on a phone, two at 80 columns, three at 120.
   const minCh = widest + 2 + SUMMARY_CH;
-  const rows: Line[] = [];
+  const columns: ListColumn[] = [];
+  const lines: Line[] = [];
   for (const category of CATEGORY_ORDER) {
+    // The registry lists by name.
     const specs = registry.list({ category });
     if (specs.length === 0) continue;
     if (options.all === true || category === 'portfolio') blocks.push(...categoryTable(category, specs, minCh));
-    else rows.push(namesRow(category, specs, fit));
+    else if (options.tty === true) columns.push(categoryColumn(category, specs));
+    else lines.push(categoryLine(category, specs));
   }
-  if (rows.length > 0) blocks.push(out.lines([[], ...rows]));
+  if (columns.length > 0) blocks.push(out.lines([[]]), out.lists(columns));
+  if (lines.length > 0) blocks.push(out.lines([[], ...lines]));
   const more: Line[] = [[]];
   if (options.all !== true) {
     more.push([out.run('help --all', 'help --all', STRONG), out.span(' lists every command with what it does.', MUTED)]);

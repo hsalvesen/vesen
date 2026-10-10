@@ -228,6 +228,22 @@ export interface CardBlock {
   readonly escape?: { readonly url: SafeHref; readonly hint?: string };
 }
 
+/** One column of a lists block: a title over its items. */
+export interface ListColumn {
+  readonly title: Span;
+  readonly items: readonly Span[];
+}
+
+/**
+ * Titled lists side by side: as many columns as fit the width, each as wide as its longest cell,
+ * and the rest in a band below, so the block reflows on its own: the help index's categories. A
+ * pipe receives each title, then its items one per line.
+ */
+export interface ListsBlock {
+  readonly type: 'lists';
+  readonly columns: readonly ListColumn[];
+}
+
 /** Two stacks side by side, stacked vertically on narrow terminals: fastfetch, stock. */
 export interface ColumnsBlock {
   readonly type: 'columns';
@@ -261,6 +277,7 @@ export type Block =
   | PanelBlock
   | ChipsBlock
   | CardBlock
+  | ListsBlock
   | ColumnsBlock
   | ComponentBlock;
 export type BlockType = Block['type'];
@@ -461,6 +478,9 @@ export const out = {
     const url = requireHref('card', escape.url);
     return { ...block, escape: escape.hint === undefined ? { url } : { url, hint: escape.hint } };
   },
+
+  /** Titled lists laid out side by side as the width allows; see ListsBlock. */
+  lists: (columns: readonly ListColumn[]): ListsBlock => ({ type: 'lists', columns }),
 
   columns: (left: readonly Block[], right: readonly Block[], stackBelowCols: number, leftCh?: number): ColumnsBlock => ({
     type: 'columns',

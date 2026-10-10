@@ -9,7 +9,6 @@ export default defineCommand({
   name: 'grep',
   category: 'text',
   summary: 'print lines that match patterns',
-  helpRank: 2,
   synopsis: ['grep [OPTION]... PATTERNS [FILE]...', 'grep [OPTION]... -e PATTERNS ... [FILE]...'],
   usageStatus: 2,
   numericShortcut: 'context',

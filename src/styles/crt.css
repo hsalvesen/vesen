@@ -35,6 +35,12 @@ html.crt-vintage .scrollback {
   filter: saturate(1.15) contrast(1.05);
 }
 
+/* The glow is inherited, and the browsers' own stylesheets turn it off on buttons (`text-shadow:
+   none`), so every tappable name (a button) and link in the output takes its parent's again. */
+:is(html.crt-phosphor, html.crt-vintage) .scrollback :is(button, a) {
+  text-shadow: inherit;
+}
+
 /* --- Overlay scaffold ----------------------------------------------------- */
 
 .crt-overlay {

@@ -1,9 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 
 // help, theme and the shell built-ins as specs (docs/plan/08-shell-and-commands.md, step 2.3b):
-// help lists the commands by category, and a tapped name goes to the prompt; theme set recolours
-// what is already on the screen and moves the marker in an earlier theme ls; exit offers a new
-// session. Checked on a desktop and in Instagram's in-app browser on an iPhone.
+// help lists the commands by category, in columns that reflow with the screen, and a tapped name
+// goes to the prompt; theme set recolours what is already on the screen and moves the marker in
+// an earlier theme ls; exit offers a new session. The index is checked on every project, the
+// rest on a desktop and in Instagram's in-app browser on an iPhone.
 
 const prompt = (page: Page) => page.getByRole('combobox', { name: 'Terminal command' });
 const lastEntry = (page: Page) => page.locator('[role="log"] .entry').last();
@@ -18,34 +19,98 @@ async function run(page: Page, line: string): Promise<void> {
   await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
 }
 
-test.describe('help and theme', { tag: '@smoke' }, () => {
-  test.beforeEach(() => {
-    test.skip(!['desktop-chrome', 'iphone-instagram'].includes(test.info().project.name), 'a desktop and Instagram on an iPhone');
-  });
+/** The categories of the help index, in its order: the portfolio as a grid, the rest as columns. */
+const CATEGORIES = ['Portfolio', 'Files', 'Text', 'Shell', 'System', 'Network', 'Fun', 'Editor'];
 
-  test('help shows grouped rows, and tapping a name puts it at the prompt', async ({ page, hasTouch }) => {
+test.describe('the help index', { tag: '@smoke' }, () => {
+  test('shows every category, the commands in columns that fit the screen, and a tapped name goes to the prompt', async ({ page, hasTouch }) => {
     await page.goto('/');
     await run(page, 'help');
     const output = lastEntry(page).locator('.command-output');
-    for (const heading of ['Portfolio', 'Files', 'Shell', 'Network']) {
+    for (const heading of CATEGORIES) {
       await expect(output.getByText(heading, { exact: true })).toBeVisible();
     }
-    // Each row is a name and what it does.
-    const row = output.locator('.grid .cell').filter({ hasText: 'change the colour theme' });
-    await expect(row).toHaveCount(1);
-    const name = row.getByRole('button', { name: 'theme', exact: true });
+    // The portfolio is a grid of names and what they do...
+    await expect(output.locator('.grid .cell').filter({ hasText: 'change the colour theme' })).toHaveCount(1);
+    // ...and every other category a column: its title over every one of its commands, by name,
+    // nothing cut and nothing counted.
+    const columns = output.locator('.lists .list');
+    await expect(columns).toHaveCount(CATEGORIES.length - 1);
+    const shape = await columns.evaluateAll((lists) =>
+      lists.map((list) => ({
+        title: list.querySelector('.list-title')?.textContent ?? '',
+        names: Array.from(list.querySelectorAll('[role="listitem"] button'), (button) => button.textContent ?? ''),
+        top: Math.round(list.getBoundingClientRect().top),
+        right: list.getBoundingClientRect().right,
+      })),
+    );
+    expect(shape.map((column) => column.title)).toEqual(CATEGORIES.slice(1));
+    for (const column of shape) {
+      expect(column.names.length, column.title).toBeGreaterThan(0);
+      expect(column.names, column.title).toEqual([...column.names].sort((a, b) => a.localeCompare(b)));
+    }
+    expect(shape.find((column) => column.title === 'Files')?.names).toEqual(expect.arrayContaining(['cat', 'cd', 'find', 'ls', 'tree']));
+    expect(shape.find((column) => column.title === 'Editor')?.names).toEqual(['less', 'more', 'nano']);
+    expect(await output.getByText(/\+\d+ more/).count()).toBe(0);
+    // A desktop shows the seven side by side; a phone three or four a band.
+    const bands = new Set(shape.map((column) => column.top)).size;
+    if (test.info().project.name === 'desktop-chrome') expect(bands).toBe(1);
+    else expect(bands).toBeGreaterThanOrEqual(2);
+
+    // Nothing is wider than the screen.
+    const main = await page.locator('main').evaluate((element) => ({ overflow: element.scrollWidth - element.clientWidth, right: element.getBoundingClientRect().right }));
+    expect(main.overflow).toBeLessThanOrEqual(0);
+    for (const column of shape) expect(column.right, column.title).toBeLessThanOrEqual(main.right);
+
+    // A name is a tap that puts it at the prompt.
+    const name = output.getByRole('button', { name: 'nano', exact: true });
     await expect(name).toBeVisible();
-
-    // No row is wider than the screen.
-    const overflow = await page.evaluate(() => {
-      const main = document.querySelector('main');
-      return main ? main.scrollWidth - main.clientWidth : Infinity;
-    });
-    expect(overflow).toBeLessThanOrEqual(0);
-
     if (hasTouch) await name.tap();
     else await name.click();
-    await expect(prompt(page)).toHaveValue('theme ');
+    await expect(prompt(page)).toHaveValue('nano ');
+  });
+
+  test('in cathode phosphor, a tappable name glows like the text beside it', async ({ page }) => {
+    // Chromium's own stylesheet gives a button no text shadow, so the glow has to be put back;
+    // happy-dom applies no browser stylesheet, so only a browser can show it.
+    test.skip(test.info().project.name !== 'desktop-chrome', 'desktop Chrome');
+    await page.goto('/');
+    await run(page, 'cathode phosphor');
+    await expect(page.locator('html')).toHaveClass(/\bcrt-phosphor\b/);
+    await run(page, 'help');
+    const output = lastEntry(page).locator('.command-output');
+    await expect(output.getByRole('button', { name: 'nano', exact: true })).toBeVisible();
+    const shadows = await output.evaluate((element) => {
+      // The glow is drawn in each element's own colour, so the shape is compared with the
+      // colour, the element's own, written as the keyword.
+      const shape = (node: Element | null | undefined): string | null => {
+        if (!node) return null;
+        const style = getComputedStyle(node);
+        return style.textShadow.split(style.color).join('currentcolor');
+      };
+      // The hint line: the tappable `help --all`, then plain text, on one line.
+      const hint = Array.from(element.querySelectorAll('.lines .text')).find((line) => line.textContent?.startsWith('help --all lists'));
+      const button = hint?.querySelector('button.action');
+      const span = hint?.querySelector('span');
+      const buttons = Array.from(element.querySelectorAll('button.action'));
+      const named = ['about', 'contact', 'banner', 'less', 'more', 'nano'].map((name) => buttons.find((candidate) => candidate.textContent === name));
+      return {
+        raw: button ? getComputedStyle(button).textShadow : null,
+        button: shape(button),
+        span: shape(span),
+        names: named.map(shape),
+      };
+    });
+    expect(shadows.raw).not.toBeNull();
+    expect(shadows.raw).not.toBe('none');
+    expect(shadows.button).toBe(shadows.span);
+    for (const name of shadows.names) expect(name).toBe(shadows.span);
+  });
+});
+
+test.describe('help and theme', { tag: '@smoke' }, () => {
+  test.beforeEach(() => {
+    test.skip(!['desktop-chrome', 'iphone-instagram'].includes(test.info().project.name), 'a desktop and Instagram on an iPhone');
   });
 
   test('help shows the portfolio heading, and a tapped name brings the prompt into view', async ({ page, hasTouch }) => {
@@ -63,13 +128,19 @@ test.describe('help and theme', { tag: '@smoke' }, () => {
       await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
     } else await run(page, 'help');
     const output = lastEntry(page).locator('.command-output');
-    // The portfolio comes first, and stays on screen rather than scrolled off.
+    // The portfolio comes first. A phone shows a long output from its start, so its heading is in
+    // view; a desktop follows the prompt, and the index, every command in columns, is taller than
+    // its screen now, so there the heading is in view once the output is scrolled to its start.
     const heading = output.getByText('Portfolio', { exact: true });
-    await expect(heading).toBeInViewport();
+    await expect(heading).toBeVisible();
+    await expect(output.locator('.text').first()).toHaveText('Portfolio');
+    if (hasTouch) await expect(heading).toBeInViewport();
     await expect(output.getByRole('button', { name: 'help --all', exact: true })).toBeVisible();
 
-    // Scroll the prompt out of sight, then tap a name: the prompt comes back with the name in it.
+    // Scroll the prompt out of sight, to the start of the output, then tap a name: the prompt
+    // comes back with the name in it.
     await page.locator('main').evaluate((main) => main.scrollTo({ top: 0 }));
+    await expect(heading).toBeInViewport();
     const name = output.getByRole('button', { name: 'ls', exact: true });
     if (hasTouch) await name.tap();
     else await name.click();

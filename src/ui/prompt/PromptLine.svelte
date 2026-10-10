@@ -14,6 +14,7 @@
   import type { ShellPort } from '../../shell/index';
   import Prompt from '../Prompt.svelte';
   import { PS2 } from '../../shell/editor/continuation';
+  import { tapTarget } from '../actions/tapTarget';
   import LineEditor from './LineEditor.svelte';
   import { READ_HINT_ID, type PromptController } from './promptController.svelte';
 
@@ -23,7 +24,8 @@
   const busy = $derived(controller.running !== null && read === null);
 </script>
 
-<div class="prompt-line">
+<!-- A tap anywhere on the row is the row's, never a tappable name's on the line above (actions/tapTarget.ts). -->
+<div class="prompt-line" use:tapTarget>
   {#if controller.ps2}
     {#each controller.ps2.lines as typed, index (index)}
       <div class="frozen">

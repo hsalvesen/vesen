@@ -212,6 +212,29 @@ describe('OutputView: layout blocks', () => {
     expect(Array.from(panel?.querySelectorAll('.text') ?? [], (row) => row.textContent)).toEqual(['stock', 'Request cancelled']);
   });
 
+  it('lays titled lists out as columns, each a list a screen reader hears with its title', async () => {
+    const block = out.lists([
+      { title: out.span('Files', { bold: true }), items: [out.insert('cat', 'cat '), out.insert('ls', 'ls ')] },
+      { title: out.span('Text'), items: [out.span('echo')] },
+    ]);
+    const root = await view([block], () => {});
+    const columns = Array.from(root.querySelectorAll('.lists > .list'));
+    expect(columns).toHaveLength(2);
+    const [files] = columns;
+    const title = files?.querySelector('.list-title');
+    const list = files?.querySelector('[role="list"]');
+    expect(title?.textContent).toBe('Files');
+    expect(title?.querySelector('span')?.classList.contains('b')).toBe(true);
+    expect(title?.id).toBeTruthy();
+    expect(list?.getAttribute('aria-labelledby')).toBe(title?.id);
+    expect(Array.from(list?.querySelectorAll('[role="listitem"]') ?? [], (item) => item.textContent)).toEqual(['cat', 'ls']);
+    expect(Array.from(files?.querySelectorAll('button') ?? [], (button) => button.textContent)).toEqual(['cat', 'ls']);
+    expect(columns[1]?.querySelector('[role="list"]')?.getAttribute('aria-labelledby')).toBe(columns[1]?.querySelector('.list-title')?.id);
+    // Each block's ids are its own, so two indexes on one page never share one.
+    const ids = Array.from((await view([block, block])).querySelectorAll('.list-title'), (element) => element.id);
+    expect(new Set(ids).size).toBe(4);
+  });
+
   it('nests columns', async () => {
     const columns = (await view([out.columns([out.text('left')], [out.text('right')], 60)])).querySelector('.columns');
     expect(styleOf(columns)).toBe('--stack-at: 60ch');

@@ -105,6 +105,9 @@
     text-underline-offset: 2px;
   }
 
+  /* A tappable name reads as the text around it: no underline until the pointer or the focus is
+     on it. Chromium's own stylesheet gives a button no text shadow, which would leave the name
+     without the cathode glow the text beside it has (styles/crt.css), so it inherits it. */
   .action {
     display: inline;
     padding: 0;
@@ -113,8 +116,13 @@
     font: inherit;
     color: inherit;
     text-align: inherit;
-    text-decoration: underline dotted;
-    text-underline-offset: 3px;
+    text-shadow: inherit;
     cursor: pointer;
+  }
+
+  .action:hover,
+  .action:focus-visible {
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 </style>

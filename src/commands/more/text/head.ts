@@ -6,7 +6,6 @@ export default defineCommand({
   name: 'head',
   category: 'text',
   summary: 'output the first part of files',
-  helpRank: 5,
   synopsis: ['head [OPTION]... [FILE]...'],
   numericShortcut: 'lines',
   flags: [

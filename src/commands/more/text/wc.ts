@@ -6,7 +6,6 @@ export default defineCommand({
   name: 'wc',
   category: 'text',
   summary: 'print newline, word, and byte counts',
-  helpRank: 7,
   synopsis: ['wc [OPTION]... [FILE]...'],
   flags: [
     { short: 'l', long: 'lines', description: 'print the newline counts' },

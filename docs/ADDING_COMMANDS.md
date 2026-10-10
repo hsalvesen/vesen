@@ -88,9 +88,8 @@ The file's default export is the spec, made with `defineCommand`, which insists 
 | `subcommands` | `theme ls`, `theme set`: each with its own summary, flags and arguments. |
 | `examples` | Lines that show the command at work; see below. |
 | `seeAlso` | Related commands, for `man`. |
-| `helpRank` | Its place in its category's row of the short `help` index, lowest first. A row keeps to one line on a phone and two elsewhere, then says how many more there are, so in a long category rank the few a visitor reaches for first; the rest follow by name. |
 | `hidden` | Left out of `help`, Tab and the chips; it still runs when typed. |
-| `featured` | Kept in `help`'s short index, after the ranked commands, when its category's row is too long to name everything; the kernel's commands come next and the catalogue's last, and the rest are counted in `+N more` (`help --all` lists them all). |
+| `featured` | Whether Tab's lists of command names offer it: a spec with `featured: false`, and every `fun` spec unless it says `featured: true`, is listed only when the word typed is its whole name or nothing else matches. `help` lists every visible command by category whatever it says: the portfolio with summaries, then a column of names per category, which reflow with the width. |
 | `builtin` | Changes the session (`cd`, `export`): runs in the shell itself, and a usage error exits 2. |
 | `network` | Fails fast offline, and gets a 15 s budget for the whole command (`budgetMs` to change it) on top of the 8 s per request. |
 | `loadingLabel` | The status line while it runs, such as `fetching forecast for Oslo`. |

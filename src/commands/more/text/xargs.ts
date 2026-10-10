@@ -6,7 +6,6 @@ export default defineCommand({
   name: 'xargs',
   category: 'text',
   summary: 'build and run command lines from standard input',
-  helpRank: 12,
   synopsis: ['xargs [OPTION]... [COMMAND [INITIAL-ARGS]...]'],
   posixArgs: true,
   flags: [

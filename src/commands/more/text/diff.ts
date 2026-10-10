@@ -6,7 +6,6 @@ export default defineCommand({
   name: 'diff',
   category: 'text',
   summary: 'compare files line by line',
-  helpRank: 11,
   synopsis: ['diff [OPTION]... FILE1 FILE2'],
   usageStatus: 2,
   flags: [

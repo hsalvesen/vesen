@@ -10,7 +10,6 @@ export default defineCommand({
   // A usage error exits 2, as bash builtins do.
   usageStatus: 2,
   summary: 'list the commands, or explain one',
-  helpRank: 1,
   synopsis: ['help [-a]', 'help COMMAND...', 'help keys'],
   featured: true,
   flags: [{ short: 'a', long: 'all', description: 'list every command, each with what it does' }],

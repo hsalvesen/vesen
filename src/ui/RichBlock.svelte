@@ -1,7 +1,7 @@
 <!--
-  The layout blocks: grid, table, panel, chips, card, columns and component. OutputView loads
-  this the first time it draws one, so the initial chunk carries only what plain lines and art
-  (the boot banner) need. Everything is drawn with text interpolation only.
+  The layout blocks: grid, table, panel, chips, card, lists, columns and component. OutputView
+  loads this the first time it draws one, so the initial chunk carries only what plain lines and
+  art (the boot banner) need. Everything is drawn with text interpolation only.
 
   Markup inside text containers is written without whitespace between tags on purpose: those
   containers preserve whitespace, so any space Svelte kept there would show. A press on a chip
@@ -17,6 +17,9 @@
   import { cssColour } from './span-style';
 
   let { block, onaction }: { block: Block; onaction?: (action: Action) => void } = $props();
+
+  /** This block's own prefix for the ids that label each list by its title. */
+  const uid = $props.id();
 
   /** Table stacking thresholds with a rule in the stylesheet below; a threshold rounds up to one. */
   const STACK_COLUMNS = [20, 30, 40, 50, 60, 70, 80, 100, 120] as const;
@@ -104,6 +107,19 @@
   </div>
 {:else if block.type === 'card'}
   <LinkCard card={block} />
+{:else if block.type === 'lists'}
+  <!-- Columns packed left to right, each as wide as its longest cell, into a new band when the
+       width runs out; each is a list a screen reader hears with its title. -->
+  <div class="lists">
+    {#each block.columns as column, i}
+      <div class="list">
+        <div class="text list-title" id="{uid}-{i}"><LineView line={[column.title]} {onaction} /></div>
+        <div class="list-items" role="list" aria-labelledby="{uid}-{i}">
+          {#each column.items as item}<div class="text" role="listitem"><LineView line={[item]} {onaction} /></div>{/each}
+        </div>
+      </div>
+    {/each}
+  </div>
 {:else if block.type === 'columns'}
   <div
     class="columns"
@@ -276,6 +292,22 @@
       min-width: 44px;
       padding: 0 1.5ch;
     }
+  }
+
+  /* Titled lists side by side: each column as wide as its longest cell, packed left to right with
+     two cells between, and into a new band a line below when the next would not fit. A desktop
+     shows the help index's seven at once; a phone three or four a band. */
+  .lists {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    column-gap: 2ch;
+    row-gap: calc(1em * var(--term-lh, 1.35));
+  }
+
+  .list {
+    flex: none;
+    max-width: 100%;
   }
 
   /* Side by side until the row is narrower than --stack-at, then stacked, without a query. */

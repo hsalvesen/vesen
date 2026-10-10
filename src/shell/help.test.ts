@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isTrustedAction, lineText, type Block, type Line } from '../output/model';
+import { isTrustedAction, lineText, type Block } from '../output/model';
 import { plain } from '../output/plain';
 import {
   apropos,
@@ -45,16 +45,56 @@ describe('the help index', () => {
     { name: 'whoami', category: 'portfolio', summary: 'about the developer', run: () => 0 },
     { name: 'sl', category: 'fun', summary: 'a train', hidden: true, run: () => 0 },
     { name: 'ls', category: 'files', summary: 'list a folder', run: () => 0 },
+    { name: 'cd', category: 'files', summary: 'change folder', run: () => 0 },
   ]);
 
-  it('is short: the portfolio with summaries, then a row of names for each other category', () => {
+  /** The lists block's columns as text: each title, then its items. */
+  const columnsOf = (blocks: readonly Block[]): string[][] => {
+    const lists = blocks.find((block) => block.type === 'lists');
+    return lists?.type === 'lists' ? lists.columns.map((column) => [column.title.text, ...column.items.map((item) => item.text)]) : [];
+  };
+
+  it('is, on a terminal, the portfolio with summaries, then a column of names for each other category', () => {
+    const blocks = helpIndex(registry, { tty: true });
+    expect(text(blocks)).toBe(
+      [
+        'Portfolio',
+        'theme   change the theme',
+        'whoami  about the developer',
+        '',
+        'Files',
+        'cd',
+        'ls',
+        'Text',
+        'head',
+        '',
+        'help --all lists every command with what it does.',
+        "Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.",
+        '',
+      ].join('\n'),
+    );
+    // One lists block, a column per category in the categories' order, the names by name; a
+    // hidden command and an empty category are left out.
+    expect(blocks.filter((block) => block.type === 'lists')).toHaveLength(1);
+    expect(columnsOf(blocks)).toEqual([
+      ['Files', 'cd', 'ls'],
+      ['Text', 'head'],
+    ]);
+    const lists = blocks.find((block) => block.type === 'lists');
+    const files = lists?.type === 'lists' ? lists.columns[0] : undefined;
+    expect(files?.title).toMatchObject({ text: 'Files', style: { fg: 'accent', bold: true } });
+    expect(files?.items[1]).toMatchObject({ text: 'ls', action: { kind: 'insert', text: 'ls ' } });
+    expect(isTrustedAction(files?.items[1]?.action)).toBe(true);
+  });
+
+  it('is plain text in a pipe: one line of names per category', () => {
     expect(text(helpIndex(registry))).toBe(
       [
         'Portfolio',
         'theme   change the theme',
         'whoami  about the developer',
         '',
-        'Files: ls',
+        'Files: cd ls',
         'Text: head',
         '',
         'help --all lists every command with what it does.',
@@ -62,45 +102,21 @@ describe('the help index', () => {
         '',
       ].join('\n'),
     );
-    const rows = helpIndex(registry).flatMap((block) => (block.type === 'lines' ? block.lines : []));
-    const files = rows.find((row) => row[0]?.text === 'Files');
-    expect(files?.[2]).toMatchObject({ text: 'ls', action: { kind: 'insert', text: 'ls ' } });
-    expect(isTrustedAction(files?.[2]?.action)).toBe(true);
+    expect(helpIndex(registry).some((block) => block.type === 'lists')).toBe(false);
   });
 
-  it('cuts a long row to fit the terminal, ranked and featured names kept, with +N more for help --all', () => {
+  it('names every command of a long category, by name, with nothing cut', () => {
     const many: CommandSpec[] = Array.from({ length: 30 }, (_, i) => ({
       name: `cmd${String(i).padStart(2, '0')}`,
       category: 'text',
       summary: 'a command',
       run: () => 0,
     }));
-    const kept: CommandSpec[] = [
-      { name: 'zeta', category: 'text', summary: 'ranked second', helpRank: 2, run: () => 0 },
-      { name: 'yak', category: 'text', summary: 'ranked first', helpRank: 1, run: () => 0 },
-      { name: 'xylo', category: 'text', summary: 'featured', featured: true, run: () => 0 },
-    ];
-    const big = new CommandRegistry([...many, ...kept]);
-    const rowAt = (columns?: number): Line =>
-      helpIndex(big, columns === undefined ? {} : { columns })
-        .flatMap((block) => (block.type === 'lines' ? block.lines : []))
-        .find((row) => row[0]?.text === 'Text') ?? [];
-    // One line on a phone: the ranked names, then the featured one, then the rest by priority,
-    // shown ranked first and then by name.
-    const phone = rowAt(40);
-    expect(lineText(phone)).toBe('Text: yak zeta cmd00 cmd01 xylo +28 more');
-    expect(phone[phone.length - 1]).toMatchObject({ text: '+28 more', action: { kind: 'run', line: 'help --all' } });
-    expect(isTrustedAction(phone[phone.length - 1]?.action)).toBe(true);
-    // Two lines elsewhere, wrapped as words.
-    const desk = lineText(rowAt(80));
-    expect(desk).toMatch(/^Text: yak zeta cmd00 .* xylo \+\d+ more$/);
-    expect(desk.length).toBeGreaterThan(80);
-    expect(desk.length).toBeLessThanOrEqual(160);
-    expect(lineText(rowAt(120))).toMatch(/ cmd29 xylo$/);
-    // In a pipe, every name.
-    expect(lineText(rowAt())).toMatch(/^Text: yak zeta cmd00 .* cmd29 xylo$/);
-    // A short row is whole, with no count.
-    expect(text(helpIndex(registry, { columns: 40 }))).toContain('Files: ls\n');
+    const big = new CommandRegistry([...many, { name: 'aardvark', category: 'text', summary: 'first by name', featured: true, run: () => 0 }]);
+    const names = ['aardvark', ...many.map((spec) => spec.name)];
+    expect(columnsOf(helpIndex(big, { tty: true }))).toEqual([['Text', ...names]]);
+    expect(text(helpIndex(big, { tty: true }))).not.toMatch(/\+\d+ more/);
+    expect(text(helpIndex(big))).toContain(`\nText: ${names.join(' ')}\n`);
   });
 
   it('groups every visible command by category with --all, the portfolio first, each with its summary', () => {
@@ -111,6 +127,7 @@ describe('the help index', () => {
         'theme   change the theme',
         'whoami  about the developer',
         'Files',
+        'cd  change folder',
         'ls  list a folder',
         'Text',
         'head  output the first part of files',

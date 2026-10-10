@@ -178,14 +178,12 @@ export interface CommandSpec {
   readonly subcommands?: Readonly<Record<string, SubcommandSpec>>;
   readonly examples?: readonly Example[];
   readonly seeAlso?: readonly string[];
-  /** Named first in its row of the short help index, which keeps to one line on a phone. */
-  readonly featured?: boolean;
   /**
-   * Its place in its category's row of the short help index, lowest first; unranked commands
-   * follow by name. A row holds only so many names (`help --all` lists them all), so the commands
-   * a visitor reaches for first in a long category get one.
+   * Whether Tab's lists of command names offer it: a spec with `featured: false`, and every `fun`
+   * spec unless it says `featured: true`, is listed only when the word typed is its whole name or
+   * nothing else matches (shell/complete/sources.ts). `help` lists them all the same.
    */
-  readonly helpRank?: number;
+  readonly featured?: boolean;
   readonly hidden?: boolean;
 
   /** May change session state: cd, export, alias. */

@@ -8,7 +8,6 @@ export default defineCommand({
   name: 'uniq',
   category: 'text',
   summary: 'report or omit repeated lines',
-  helpRank: 10,
   synopsis: ['uniq [OPTION]... [INPUT [OUTPUT]]'],
   flags: [
     { short: 'c', long: 'count', description: 'prefix lines by the number of occurrences' },

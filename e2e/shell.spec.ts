@@ -245,8 +245,12 @@ test.describe('focus', { tag: '@smoke' }, () => {
     await banner.tap();
     await expect(prompt(page)).not.toBeFocused();
 
+    // The row is the tap's target wherever on it the finger lands, never the tappable name on
+    // the banner's last line just above it, which iOS WebKit would otherwise send the tap to and
+    // so run (ui/actions/tapTarget.ts): nothing runs, and the keyboard opens.
     await page.locator('.prompt-area .prompt').first().tap();
     await expect(prompt(page)).toBeFocused();
+    await expect(page.locator('[role="log"] .command-input-display')).toHaveCount(1);
 
     // A command keeps the keyboard open when it was open at submit.
     await prompt(page).fill('help');

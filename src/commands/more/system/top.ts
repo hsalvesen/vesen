@@ -7,7 +7,6 @@ export default defineCommand({
   name: 'top',
   category: 'system',
   summary: 'display processes, as one snapshot',
-  helpRank: 4,
   synopsis: ['top [-b] [-n NUMBER] [-d SECONDS]'],
   flags: [
     { short: 'b', description: 'batch mode: print and exit, as vesen always does' },

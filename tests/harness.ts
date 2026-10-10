@@ -250,8 +250,39 @@ function gridRows(names: readonly string[], cols: number, minCh?: number, notes?
 }
 
 /**
+ * A lists block as RichBlock lays it out at `cols`: each column (its title, then its items) as
+ * wide as its longest cell, packed left to right with two cells between, and into a new band,
+ * a blank row below, once the next would not fit. A column wider than the terminal gets a band
+ * of its own.
+ */
+function listsRows(columns: readonly (readonly string[])[], cols: number): string[] {
+  const rows: string[] = [];
+  let band: { cells: readonly string[]; width: number }[] = [];
+  let used = 0;
+  const flush = (): void => {
+    if (band.length === 0) return;
+    if (rows.length > 0) rows.push('');
+    const height = Math.max(...band.map((column) => column.cells.length));
+    for (let r = 0; r < height; r += 1) {
+      rows.push(band.map((column) => (column.cells[r] ?? '').padEnd(column.width)).join('  ').trimEnd());
+    }
+    band = [];
+    used = 0;
+  };
+  for (const cells of columns) {
+    const width = Math.max(1, ...cells.map(widthOf));
+    if (band.length > 0 && used + 2 + width > cols) flush();
+    used += (band.length > 0 ? 2 : 0) + width;
+    band.push({ cells, width });
+  }
+  flush();
+  return rows;
+}
+
+/**
  * What the terminal shows for some blocks at `cols` columns, as text: stderr lines marked with
- * `! `, grids laid out in columns, panels as their title and body, everything else as plain().
+ * `! `, grids and lists laid out in columns, panels as their title and body, everything else as
+ * plain().
  */
 export function renderScreen(blocks: readonly Block[], cols: number): string[] {
   const rows: string[] = [];
@@ -263,6 +294,9 @@ export function renderScreen(blocks: readonly Block[], cols: number): string[] {
         break;
       case 'grid':
         rows.push(...gridRows(block.items.map((item) => item.text), cols, block.minCh, block.notes?.map(text), block.order === 'columns'));
+        break;
+      case 'lists':
+        rows.push(...listsRows(block.columns.map((column) => [column.title.text, ...column.items.map((item) => item.text)]), cols));
         break;
       case 'panel':
         if (block.title !== undefined) rows.push(`[${block.title}]`);

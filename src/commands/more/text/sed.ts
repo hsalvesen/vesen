@@ -6,7 +6,6 @@ export default defineCommand({
   name: 'sed',
   category: 'text',
   summary: 'stream editor for filtering and transforming text',
-  helpRank: 3,
   synopsis: ['sed [OPTION]... {script-only-if-no-other-script} [FILE]...'],
   flags: [
     { short: 'n', long: 'quiet', key: 'quiet', description: 'suppress automatic printing of pattern space' },

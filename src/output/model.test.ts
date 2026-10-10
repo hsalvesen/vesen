@@ -194,6 +194,7 @@ describe('block builders', () => {
       title: 'Note',
       body: [[{ text: 'b' }]],
     });
+    expect(out.lists([{ title: out.span('Files'), items: [out.span('ls')] }])).toEqual({ type: 'lists', columns: [{ title: { text: 'Files' }, items: [{ text: 'ls' }] }] });
     expect(out.columns([], [], 60)).toEqual({ type: 'columns', left: [], right: [], stackBelowCols: 60 });
     expect(out.component('qr-card', { size: 21 }, 'qr', 'A QR code')).toEqual({
       type: 'component',
@@ -246,6 +247,10 @@ describe('plain', () => {
     panel: out.panel('accent', [[out.span('  -a, --all   do not ignore entries starting with .')]], 'ls'),
     chips: out.chips([{ label: 'ls', action: out.action.run('ls') }], 'Try'),
     card: out.card({ title: 'LinkedIn', href: 'https://www.linkedin.com/in/example', detail: 'Opens in a new tab' }),
+    lists: out.lists([
+      { title: out.span('Files', { bold: true }), items: [out.insert('cat', 'cat '), out.insert('ls', 'ls ')] },
+      { title: out.span('Text'), items: [out.span('echo')] },
+    ]),
     columns: out.columns([out.art('logo', 'logo')], [out.text('OS: macOS\nHost: Mac')], 60),
     component: out.component('weather-card', { place: 'Oslo' }, 'Oslo: 9 °C, light rain', 'Weather for Oslo'),
   };
@@ -317,6 +322,11 @@ describe('plain', () => {
   it('card prints its title, the link as it would be pasted, and detail', () => {
     expect(plain(samples.card)).toBe('LinkedIn\nhttps://www.linkedin.com/in/example\nOpens in a new tab\n');
     expect(plain(out.card({ title: 'Email', href: 'mailto:has@salvesen.app', copy: 'has@salvesen.app' }))).toBe('Email\nhas@salvesen.app\n');
+  });
+
+  it('lists print each column after the last: its title, then one item per line', () => {
+    expect(plain(samples.lists)).toBe('Files\ncat\nls\nText\necho\n');
+    expect(plain(out.lists([]))).toBe('');
   });
 
   it('columns stack the left side above the right, recursively', () => {

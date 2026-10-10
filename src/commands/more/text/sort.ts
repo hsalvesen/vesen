@@ -6,7 +6,6 @@ export default defineCommand({
   name: 'sort',
   category: 'text',
   summary: 'sort lines of text files',
-  helpRank: 4,
   synopsis: ['sort [OPTION]... [FILE]...'],
   usageStatus: 2,
   flags: [

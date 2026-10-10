@@ -11,7 +11,6 @@ export default defineCommand({
   name: 'clear',
   category: 'shell',
   summary: 'clear the terminal screen',
-  helpRank: 4,
   synopsis: ['clear'],
   description: 'Clears the screen, leaving the prompt at the top. What was there is gone; history keeps the lines that made it. Ctrl+L does the same without losing what you are typing.',
   examples: [{ line: 'clear', offline: true }],

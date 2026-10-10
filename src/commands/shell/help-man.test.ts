@@ -1,18 +1,21 @@
 // help, man, whatis and apropos, generated from the specs (F042, F043): help lists every visible
 // command, and --help and man render for every spec.
 import { describe, expect, it } from 'vitest';
-import { runLine, session } from '../../../tests/harness';
+import { renderScreen, runLine, session } from '../../../tests/harness';
 import { isTrustedAction, type Block } from '../../output/model';
 import { plain } from '../../output/plain';
-import { withDoc } from '../../shell/help';
-import { fromCatalogue } from '../../shell/registry';
+import { CATEGORY_TITLES, withDoc } from '../../shell/help';
+import { CATEGORY_ORDER } from '../../shell/registry';
 import { allSpecFiles } from '../index';
 
 const text = (blocks: readonly Block[]): string => blocks.map(plain).join('');
 const literal = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/** The categories the index gives a column: every one but the portfolio. */
+const COLUMNS = CATEGORY_ORDER.filter((category) => category !== 'portfolio');
+
 describe('help', () => {
-  it('is short: the portfolio commands with their summaries, then one row of names for each other category', async () => {
+  it('is the portfolio commands with their summaries, then a column of every name for each other category', async () => {
     const s = await session({ cols: 40 });
     const result = await s.run('help');
     expect(result.status).toBe(0);
@@ -21,52 +24,45 @@ describe('help', () => {
     for (const spec of s.app.shell.registry.list({ category: 'portfolio' })) {
       expect(listed, spec.name).toMatch(new RegExp(`^${literal(spec.name)} +${literal(spec.summary)}$`, 'm'));
     }
-    // On a phone each other row keeps to one line: the ranked names (ls, cd, cat), the featured
-    // ones (find, tree), then the kernel's before the catalogue's, and +N more for help --all.
-    const files = s.app.shell.registry.list({ category: 'files' });
-    const row = listed.split('\n').find((line) => line.startsWith('Files: ')) ?? '';
-    expect(row.length).toBeLessThanOrEqual(40);
-    const words = row.slice('Files: '.length).split(' ');
-    const shown = words.slice(0, -2);
-    expect(words.slice(-2)).toEqual([`+${files.length - shown.length}`, 'more']);
-    expect(shown.slice(0, 3)).toEqual(['ls', 'cd', 'cat']);
-    expect(shown).toEqual(expect.arrayContaining(['find', 'tree']));
-    const waiting = new Set(files.filter((spec) => fromCatalogue(spec) && spec.featured !== true).map((spec) => spec.name));
-    expect(shown.filter((name) => waiting.has(name))).toEqual([]);
-    const count = result.blocks.flatMap((block) => (block.type === 'lines' ? block.lines.flat() : [])).find((span) => span.text.endsWith(' more'));
-    expect(count?.action).toMatchObject({ kind: 'run', line: 'help --all' });
-    for (const line of listed.split('\n').filter((line) => /^(Files|Text|Shell|System|Network|Editor): /.test(line))) {
-      expect(line.length, line).toBeLessThanOrEqual(40);
-    }
-    // Featured commands are kept in a row cut short: weather and stock among the network's.
-    const network = listed.split('\n').find((line) => line.startsWith('Network: ')) ?? '';
-    expect(network.split(' ')).toEqual(expect.arrayContaining(['stock', 'weather']));
+    // One lists block: a column per category, headed by its name, with every one of its
+    // commands under it by name and nothing cut, each a tap that puts it at the prompt.
+    const lists = result.blocks.filter((block) => block.type === 'lists');
+    expect(lists).toHaveLength(1);
+    const columns = lists[0]?.type === 'lists' ? lists[0].columns : [];
+    expect(columns.map((column) => column.title.text)).toEqual(COLUMNS.map((category) => CATEGORY_TITLES[category]));
+    COLUMNS.forEach((category, i) => {
+      const names = s.app.shell.registry.list({ category }).map((spec) => spec.name);
+      expect(names.length, category).toBeGreaterThan(0);
+      expect(names, category).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+      expect(columns[i]?.items.map((item) => item.text), category).toEqual(names);
+      for (const item of columns[i]?.items ?? []) {
+        expect(item.action, item.text).toMatchObject({ kind: 'insert', text: `${item.text} ` });
+        expect(isTrustedAction(item.action), item.text).toBe(true);
+      }
+    });
+    expect(listed).not.toMatch(/\+\d+ more/);
     expect(listed).not.toContain('list directory contents');
     expect(listed).toContain('help --all lists every command with what it does.');
-    // It fits a phone's screen: the portfolio is never scrolled out of sight by the rest.
-    expect(result.screen.length).toBeLessThan(40);
     const more = result.blocks.flatMap((block) => (block.type === 'lines' ? block.lines.flat() : [])).find((span) => span.text === 'help --all');
     expect(more?.action).toMatchObject({ kind: 'run', line: 'help --all' });
+    // On a 40-column screen the columns come in bands of three or four, each as wide as its
+    // longest name, and no row of them is wider than the screen.
+    const screen = renderScreen(lists, 40);
+    for (const row of screen) expect(row.length, row).toBeLessThanOrEqual(40);
+    const titles = screen.filter((row) => /^(Files|System)\b/.test(row));
+    expect(titles[0]).toMatch(/^Files +Text +Shell$/);
+    expect(titles[1]).toMatch(/^System +Network +Fun +Editor$/);
     s.stop();
   });
 
-  it('names more of each category on a wider terminal, and every command in a pipe', async () => {
-    const wide = await session({ cols: 120 });
-    const rows = text((await wide.run('help')).blocks).split('\n');
-    for (const category of ['files', 'network'] as const) {
-      const names = wide.app.shell.registry.list({ category }).map((spec) => spec.name);
-      const row = rows.find((line) => line.startsWith(`${category === 'files' ? 'Files' : 'Network'}: `)) ?? '';
-      // Two lines of 120 columns at most.
-      expect(row.length).toBeLessThanOrEqual(240);
-      expect(row.split(' ').length - 1).toBeGreaterThanOrEqual(Math.min(names.length, 10));
-    }
-    wide.stop();
+  it('names every command on one line per category in a pipe', async () => {
     const piped = await session({ cols: 40, tty: false });
     const listed = (await piped.run('help')).stdoutPlain;
-    for (const category of ['files', 'text', 'shell'] as const) {
+    for (const category of COLUMNS) {
       const names = piped.app.shell.registry.list({ category }).map((spec) => spec.name);
-      for (const name of names) expect(listed, name).toMatch(new RegExp(`^\\w+: (.* )?${literal(name)}( |$)`, 'm'));
+      expect(listed, category).toContain(`\n${CATEGORY_TITLES[category]}: ${names.join(' ')}\n`);
     }
+    expect(listed).not.toMatch(/\+\d+ more/);
     piped.stop();
   });
 
@@ -95,7 +91,7 @@ describe('help', () => {
 
   it('is plain text in a pipe', async () => {
     expect((await runLine('help -a', { tty: false })).stdoutPlain).toMatch(/^ls +list directory contents$/m);
-    expect((await runLine('help', { tty: false })).stdoutPlain).toMatch(/^Files: ls cd cat (?:\S+ )*cp /m);
+    expect((await runLine('help', { tty: false })).stdoutPlain).toMatch(/^Files: basename cat cd chgrp (?:\S+ )*tree /m);
   });
 
   it("shows a command's panels for help NAME, and says so for a topic it does not know", async () => {

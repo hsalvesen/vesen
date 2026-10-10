@@ -1,6 +1,6 @@
 // The bodies of the portfolio's link commands, loaded the first time one runs (or when the page is
-// idle): whoami, linkedin, about, contact and email, repo, open and xdg-open. Each prints link
-// cards (commands/lib/cards.ts); in a pipe or a file each prints plain text instead.
+// idle): whoami, about, contact and email, repo, open and xdg-open. Each prints link cards
+// (commands/lib/cards.ts); in a pipe or a file each prints plain text instead.
 
 import { out } from '../../output/model';
 import type { CommandContext, ExitCode } from '../../shell/types';
@@ -26,14 +26,6 @@ export async function whoami(ctx: CommandContext): Promise<ExitCode> {
   await openerCard(ctx, webCard('LinkedIn', LINKEDIN_URL));
   await ctx.stdout.block(webCard('GitHub', GITHUB_URL));
   await ctx.stdout.block(emailCard(ctx));
-  return 0;
-}
-
-export async function linkedin(ctx: CommandContext): Promise<ExitCode> {
-  const extra = await noOperands(ctx);
-  if (extra !== null) return extra;
-  if (!ctx.stdout.isTTY) await ctx.stdout.write(`${LINKEDIN_URL}\n`);
-  else await openerCard(ctx, webCard('LinkedIn', LINKEDIN_URL));
   return 0;
 }
 
