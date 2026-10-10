@@ -2,7 +2,7 @@
 // The codes are the 28 that Open-Meteo documents for `weather_code`; any other value in 0-99
 // falls back to 'Unknown'.
 
-import type { ArtKey, ArtRow, IconKey, WmoInfo } from './types';
+import type { ArtKey, ArtRow, IconKey, WeatherRole, WmoInfo } from './types';
 
 /** Each art row is exactly this many columns, so the text beside it lines up. */
 export const ART_WIDTH = 13;
@@ -55,69 +55,94 @@ export function wmo(code: number | null | undefined): WmoInfo {
 }
 
 // ── Art ────────────────────────────────────────────────────────────────────────────────────
-// Original, pure ASCII, 13 columns by 5 rows. Segments carry the role that colours them.
+// Original pictograms, 13 columns by 5 rows, drawn in the block, quadrant and box-drawing
+// characters of the terminal's font. Each segment carries the role that colours it, and an art
+// row carries only the art roles below, never a text role: the weather card draws the lines
+// that start with one at line height 1, so the blocks of one row meet the blocks of the next. A
+// blank row is a cloud row of spaces, and the unknown mark is drawn in fog, which is muted like
+// dim.
 
-const C1: ArtRow = [['cloud', '     .--.    ']];
-const C2: ArtRow = [['cloud', '  .-(    ).  ']];
-const C3: ArtRow = [['cloud', ' (___.__)__) ']];
-const BLANK: ArtRow = [['dim', '             ']];
+/** The roles the art is drawn in; no text line starts with one (view.ts). */
+export const ART_ROLES: ReadonlySet<WeatherRole> = new Set<WeatherRole>(['sun', 'moon', 'cloud', 'rain', 'snow', 'bolt', 'fog']);
+
+/** Whether a segment's role is one the art is drawn in. */
+export function isArtRole(role: unknown): boolean {
+  return typeof role === 'string' && (ART_ROLES as ReadonlySet<string>).has(role);
+}
+
+/** The cloud, three rows: two bumps and a flat base; the rain, snow and bolt fall from it. */
+const CLOUD: readonly ArtRow[] = [
+  [['cloud', '     ▄███▄   ']],
+  [['cloud', '  ▄███████▙  ']],
+  [['cloud', '  ▀█████████▘']],
+];
+const BLANK: ArtRow = [['cloud', '             ']];
 
 export const ART: Readonly<Record<ArtKey, readonly ArtRow[]>> = {
+  // The sun's disc with eight rays, a gap between them.
   clear: [
-    [['sun', '    \\ | /    ']],
-    [['sun', '   - .-. -   ']],
-    [['sun', '  -- (   ) --']],
-    [['sun', "   - `-' -   "]],
-    [['sun', '    / | \\    ']],
+    [['sun', '  ╲   ╵   ╱  ']],
+    [['sun', '    ▟███▙    ']],
+    [['sun', '  ─ █████ ─  ']],
+    [['sun', '    ▜███▛    ']],
+    [['sun', '  ╱   ╷   ╲  ']],
   ],
+  // A crescent and two stars.
   clearNight: [
-    [['moon', '     _..     ']],
-    [['moon', "   .' .'     "]],
-    [['moon', '  :  :       ']],
-    [['moon', "   '. '.     "]],
-    [['moon', "     `''     "]],
+    [['moon', '     ▄██▄  · ']],
+    [['moon', '    ███▀     ']],
+    [['moon', '    ██    ·  ']],
+    [['moon', '    ███▄     ']],
+    [['moon', '     ▀██▀    ']],
   ],
+  // The sun above a cloud in front of it, its lower half behind the cloud's edge.
   partly: [
-    [['sun', '  \\ | /      ']],
-    [['sun', ' -  O  '], ['cloud', '.--.  ']],
-    [['sun', '  / | '], ['cloud', '(    ).']],
-    [['dim', '     '], ['cloud', '(___(__)']],
-    BLANK,
+    [['sun', '   ╲ ╵ ╱     ']],
+    [['sun', '  ─ ▟█▙ ─    ']],
+    [['sun', '    ███ '], ['cloud', '▗██▖ ']],
+    [['cloud', '  ▗▄▄▄▄▟████▙']],
+    [['cloud', '  ▀█████████▘']],
   ],
   partlyNight: [
-    [['moon', '   _..       ']],
-    [['moon', " .' .' "], ['cloud', '.--.  ']],
-    [['moon', ' :  : '], ['cloud', '(    ).']],
-    [['moon', "  '. "], ['cloud', '(___(__)']],
+    [['moon', '   ▄█▄    ·  ']],
+    [['moon', '  ██▀        ']],
+    [['moon', '  ▀█▄   '], ['cloud', '▗██▖ ']],
+    [['cloud', '  ▗▄▄▄▄▟████▙']],
+    [['cloud', '  ▀█████████▘']],
+  ],
+  cloudy: [BLANK, ...CLOUD, BLANK],
+  // Layers of haze.
+  fog: [
     BLANK,
+    [['fog', ' ─── ─── ─── ']],
+    [['fog', '   ───── ─── ']],
+    [['fog', ' ─── ─── ─── ']],
+    [['fog', '   ─── ───── ']],
   ],
-  cloudy: [BLANK, C1, C2, C3, BLANK],
-  fog: [BLANK, [['fog', ' _ - _ - _ - ']], [['fog', '  _ - _ - _  ']], [['fog', ' _ - _ - _ - ']], BLANK],
-  drizzle: [C1, C2, C3, [['rain', "   '   '   ' "]], [['rain', "  '   '   '  "]]],
-  rain: [C1, C2, C3, [['rain', "  ' ' ' ' '  "]], [['rain', " ' ' ' ' '   "]]],
-  heavyRain: [C1, C2, C3, [['rain', " ,',',',','  "]], [['rain', " ,',',',','  "]]],
+  // Rain by intensity: short ticks, lines, then heavy lines.
+  drizzle: [...CLOUD, [['rain', '    ╷   ╷    ']], [['rain', '  ╷   ╷   ╷  ']]],
+  rain: [...CLOUD, [['rain', '   │  │  │   ']], [['rain', '  │  │  │    ']]],
+  heavyRain: [...CLOUD, [['rain', '  ┃ ┃ ┃ ┃ ┃  ']], [['rain', ' ┃ ┃ ┃ ┃ ┃   ']]],
   sleet: [
-    C1,
-    C2,
-    C3,
-    [['rain', "  ' "], ['snow', '*'], ['rain', " ' "], ['snow', '*'], ['rain', " '  "]],
-    [['snow', ' * '], ['rain', "' "], ['snow', '* '], ['rain', "' "], ['snow', '*   ']],
+    ...CLOUD,
+    [['rain', '   │ '], ['snow', '• '], ['rain', '│ '], ['snow', '•   ']],
+    [['snow', '  • '], ['rain', '│ '], ['snow', '• '], ['rain', '│    ']],
   ],
-  snow: [C1, C2, C3, [['snow', '  *   *   *  ']], [['snow', '    *   *    ']]],
-  heavySnow: [C1, C2, C3, [['snow', ' * * * * * * ']], [['snow', '  * * * * *  ']]],
+  snow: [...CLOUD, [['snow', '   •   •   • ']], [['snow', '  •   •   •  ']]],
+  heavySnow: [...CLOUD, [['snow', '  • • • • •  ']], [['snow', ' • • • • • • ']]],
+  // A bolt with a kink and a tip, rain either side of it.
   thunder: [
-    C1,
-    C2,
-    C3,
-    [['bolt', '   _/  _/    ']],
-    [['rain', "  ' "], ['bolt', '/'], ['rain', " ' "], ['bolt', '/'], ['rain', " '  "]],
+    ...CLOUD,
+    [['rain', '  │  '], ['bolt', '▄█▛  '], ['rain', '│  ']],
+    [['rain', '   │ '], ['bolt', '▜▛  '], ['rain', '│   ']],
   ],
+  // A question mark.
   unknown: [
-    [['dim', '     .-.     ']],
-    [['dim', '    (   )    ']],
-    [['dim', "      .'     "]],
-    [['dim', '      |      ']],
-    [['dim', '      .      ']],
+    [['fog', '    ▗███▖    ']],
+    [['fog', '    ▝▘ ▐▌    ']],
+    [['fog', '      ▗▛     ']],
+    [['fog', '      █      ']],
+    [['fog', '      ▄      ']],
   ],
 };
 

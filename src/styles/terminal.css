@@ -25,25 +25,37 @@ textarea,
   touch-action: manipulation;
 }
 
-/* Art (the banner, OS logos, colour blocks, charts, QR codes) keeps its shape: rows touch, cells
-   line up, and it never wraps. When it is wider than its box it scrolls inside itself. At line
-   height 1 a glyph stands about 0.08em above and below its row; the padding keeps the first and
-   last rows whole, and overflow-y stops that sliver from making the art scroll up and down. */
+/* Art (the banner, OS logos, colour blocks, charts, QR codes, cowsay) keeps its shape: cells
+   line up, and it never wraps. When it is wider than its box it scrolls inside itself. The
+   renderer (ui/art-class.ts) adds one of the two classes below for the line height. */
 .art {
   display: block;
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  padding-block: 0.1em;
   white-space: pre;
   overflow-wrap: normal;
   word-break: normal;
-  line-height: 1;
   letter-spacing: 0;
   font-variant-ligatures: none;
   /* Vesen Mono has one weight. WebKit draws a synthetic bold wider than the regular glyph, which
      would push every cell after a bold span out of line; bold art stays regular instead. */
   font-synthesis: none;
+}
+
+/* Art drawn with box-drawing, block or braille characters: its rows touch, so a block in one row
+   meets the block below it. At line height 1 a glyph stands about 0.08em above and below its
+   row; the padding keeps the first and last rows whole, and overflow-y (above) stops that sliver
+   from making the art scroll up and down. */
+.art-block {
+  line-height: 1;
+  padding-block: 0.1em;
+}
+
+/* Art drawn with letters and punctuation (cowsay's animals, sl's train): text, which line height
+   1 would squash, so it keeps the terminal's line height. */
+.art-glyph {
+  line-height: var(--term-lh);
 }
 
 /* A glyph the terminal's font lacks, drawn from a fallback font, held to one cell so the columns

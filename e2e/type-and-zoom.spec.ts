@@ -212,7 +212,7 @@ test.describe('zoom and the touch input', { tag: '@smoke' }, () => {
 
     // Under 50 columns the banner is the compact logo.
     const banner = page.locator('.art-fit').first();
-    await expect(banner).toContainText('▀▄ ▄▀');
+    await expect(banner).toContainText('▟▀▀▀');
     const fit = await banner.evaluate((art) => ({
       overflow: art.scrollWidth - art.clientWidth,
       css: Array.from(document.styleSheets).some((sheet) => {
@@ -233,9 +233,9 @@ test.describe('zoom and the touch input', { tag: '@smoke' }, () => {
       await page.goto('/');
       await fontLoaded(page);
 
-      // Under 50 columns the banner is the compact logo, three rows of half blocks.
+      // Under 50 columns the banner is the compact logo, three rows of the wordmark.
       const banner = page.locator('.art-fit').first();
-      await expect(banner).toContainText('▀▄ ▄▀');
+      await expect(banner).toContainText('▟▀▀▀');
       const fit = await banner.evaluate((art) => {
         const style = getComputedStyle(art);
         return {

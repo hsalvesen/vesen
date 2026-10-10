@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import themes from '../../themes.json';
 import { detailLines, fastfetchRows, STACK_BELOW_COLS } from '../commands/system/fastfetch.run';
 import { logoFor } from '../commands/system/fastfetch.logos';
-import { out } from '../output/model';
+import { out, textWidth } from '../output/model';
 import { createSysInfo } from '../services/sysinfo';
 import { theme } from '../stores/theme';
 import OutputView from './OutputView.svelte';
@@ -38,15 +38,20 @@ describe('fastfetch on the page', () => {
       timeZone: 'UTC',
     });
     const logo = logoFor('macOS');
-    const block = out.columns([out.art(logo.art, logo.alt, 'scale', { fg: logo.colour, bold: true })], [out.lines(detailLines('guest', rows))], STACK_BELOW_COLS, 30);
+    // The logo's widest row, as fastfetch's run measures it.
+    const logoCh = Math.max(...logo.art.split('\n').map(textWidth));
+    const block = out.columns([out.art(logo.art, logo.alt, 'scale', { fg: logo.colour, bold: true })], [out.lines(detailLines('guest', rows))], STACK_BELOW_COLS, logoCh);
     const { container } = render(OutputView, { blocks: [block] });
     await vi.dynamicImportSettled();
     for (let i = 0; i < 5; i += 1) await tick();
 
     const columns = container.querySelector('.columns');
-    expect(columns?.getAttribute('style')).toContain('--stack-at: 60ch; --left: 30ch');
+    expect(logoCh).toBe(19);
+    expect(columns?.getAttribute('style')).toContain('--stack-at: 60ch; --left: 19ch');
     expect(columns?.classList.contains('sized')).toBe(true);
     expect(columns?.querySelectorAll(':scope > .column')).toHaveLength(2);
+    // Block art: drawn with its rows touching.
+    expect(container.querySelector('.art')?.classList.contains('art-block')).toBe(true);
     expect(container.querySelector('.art')?.getAttribute('aria-hidden')).toBe('true');
     expect(container.querySelector('.sr-only')?.textContent).toBe('macOS logo');
 

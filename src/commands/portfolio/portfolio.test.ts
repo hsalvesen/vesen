@@ -4,7 +4,7 @@
 import { get } from 'svelte/store';
 import { afterEach, describe, expect, it } from 'vitest';
 import { runLine, session } from '../../../tests/harness';
-import { lineText, type Block, type Line } from '../../output/model';
+import { lineText, textWidth, type Block, type Line } from '../../output/model';
 import { plain } from '../../output/plain';
 import { createStorage } from '../../services/storage';
 import { STORAGE_KEYS } from '../../services/storage-keys';
@@ -157,7 +157,18 @@ describe('banner', () => {
     const { blocks } = await runLine('banner', { cols: 46 });
     expect(blocks[0]).toMatchObject({ type: 'art', text: BANNER_ART_COMPACT });
     expect(lineText(rows(blocks)[0] ?? [])).toMatch(/^vesen v.+ · a terminal by Has\u00a0Salvesen$/);
-    for (const row of BANNER_ART_COMPACT.split('\n')) expect(Array.from(row)).toHaveLength(26);
+  });
+
+  it('draws both logos in block and quadrant characters, within their sizes', () => {
+    const widest = (art: string) => Math.max(...art.split('\n').map(textWidth));
+    // Block elements (U+2580–259F) and spaces only, so the rows line up in the terminal's font.
+    const BLOCKS = /^[ ▀-▟]+$/u;
+    expect(BANNER_ART.split('\n')).toHaveLength(6);
+    expect(widest(BANNER_ART)).toBeLessThanOrEqual(46);
+    expect(BANNER_ART_COMPACT.split('\n')).toHaveLength(3);
+    expect(widest(BANNER_ART_COMPACT)).toBeLessThanOrEqual(30);
+    for (const row of [...BANNER_ART.split('\n'), ...BANNER_ART_COMPACT.split('\n')]) expect(row).toMatch(BLOCKS);
+    expect(widest(BANNER_ART)).toBeGreaterThan(widest(BANNER_ART_COMPACT));
   });
 
   it('points a touch screen at the chips, where a keyboard gets the keys (F074)', () => {

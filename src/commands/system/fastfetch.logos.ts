@@ -1,5 +1,8 @@
 // fastfetch's logos: art for the visitor's system, loaded only when fastfetch draws one, so they
-// stay out of every other chunk. Each is one colour, as the art block draws it.
+// stay out of every other chunk. Each is one colour, as the art block draws it, in block and
+// quadrant characters for line height 1 (ui/art-class.ts), where the rows touch: every cell is
+// two pixels by two of a bitmap, and the shades ░ and ▒ are the lighter tones of the one colour.
+// Each is drawn for vesen from simple shapes, about 20 columns by 11 to 13 rows.
 
 import type { Colour } from '../../output/model';
 
@@ -12,92 +15,67 @@ export interface Logo {
 
 const art = (rows: readonly string[]): string => rows.join('\n');
 
+/** An apple: its leaf above the dent, a bite out of the right side, two bumps at the foot. */
 const APPLE = art([
-  "                    'c.",
-  "                 ,xNMM.",
-  "               .OMMMMo",
-  "               OMMM0,",
-  "     .;loddo:' loolloddol;.",
-  "   cKMMMMMMMMMMNWMMMMMMMMMM0:",
-  " .KMMMMMMMMMMMMMMMMMMMMMMMWd.",
-  " XMMMMMMMMMMMMMMMMMMMMMMMX.",
-  ";MMMMMMMMMMMMMMMMMMMMMMMM:",
-  ":MMMMMMMMMMMMMMMMMMMMMMMM:",
-  ".MMMMMMMMMMMMMMMMMMMMMMMMX.",
-  " kMMMMMMMMMMMMMMMMMMMMMMMMWd.",
-  " .XMMMMMMMMMMMMMMMMMMMMMMMMMMk",
-  "  .XMMMMMMMMMMMMMMMMMMMMMMMMK.",
-  "    kMMMMMMMMMMMMMMMMMMMMMMd",
-  "     ;KMMMMMMMWXXWMMMMMMMk.",
-  "       .cooc,.    .,coo:.",
+  '            ▄▖',
+  '          ▗██▘',
+  '         ▗█▛',
+  '   ▗▄▄▄▄▄  ▄▄▄▄▄▖',
+  '  ▟█████████████▛',
+  ' ▟██████████████',
+  ' ███████████████',
+  ' ███████████████▙',
+  ' █████████████████▙',
+  ' ▜████████████████▛',
+  '  ▀██████████████▀',
+  '    ▀▜████████▛▀',
+  '        ▀  ▀',
 ]);
 
+/** A bugdroid's head: the dome, two antennae and two eyes. */
 const ANDROID = art([
-  "           -o        o-",
-  "           +hydNNNNdyh+",
-  "         +mMMMMMMMMMMMMm+",
-  "       `dM{  }mMMMMm{  }Md`",
-  "       hMMMMMMMMMMMMMMMMMMh",
-  "   ..  yyyyyyyyyyyyyyyyyyyy  ..",
-  " .mMMm`MMMMMMMMMMMMMMMMMMMM`mMMm.",
-  " :MMMM-MMMMMMMMMMMMMMMMMMMM-MMMM:",
-  " :MMMM-MMMMMMMMMMMMMMMMMMMM-MMMM:",
-  " :MMMM-MMMMMMMMMMMMMMMMMMMM-MMMM:",
-  " :MMMM-MMMMMMMMMMMMMMMMMMMM-MMMM:",
-  " -MMMM-MMMMMMMMMMMMMMMMMMMM-MMMM-",
-  "  +yy+ MMMMMMMMMMMMMMMMMMMM +yy+",
-  "       mMMMMMMMMMMMMMMMMMMm",
-  "        `++MMMMh+++hMMMM++`",
-  "           MMMMo   oMMMM",
-  "           MMMMo   oMMMM",
-  "           oNMm-   -mMNo",
+  '   ▖            ▗',
+  '   ▜▖          ▗▛',
+  '    ▙          ▟',
+  '    ▝▌▗▄████▄▖▐▘',
+  '    ▗██████████▖',
+  '   ▗████████████▖',
+  '  ▗██▛▀██████▀▜██▖',
+  '  ▟██▙▄██████▄▟██▙',
+  ' ▗████████████████▖',
+  ' ▐████████████████▌',
 ]);
 
+/** Four window panes seen in perspective, the left edge nearer and shorter, with a gap between them. */
 const WINDOWS = art([
-  "###############   ###############",
-  "###############   ###############",
-  "###############   ###############",
-  "###############   ###############",
-  "###############   ###############",
-  "###############   ###############",
-  "###############   ###############",
-  "",
-  "###############   ###############",
-  "###############   ###############",
-  "###############   ###############",
-  "###############   ###############",
-  "###############   ###############",
-  "###############   ###############",
-  "###############   ###############",
+  '             ▄▄▄▄▟██',
+  '    ▄▄▄▄▖▐██████████',
+  '████████▌▐██████████',
+  '████████▌▐██████████',
+  '████████▌▐██████████',
+  '▄▄▄▄▄▄▄▄▖▗▄▄▄▄▄▄▄▄▄▄',
+  '████████▌▐██████████',
+  '████████▌▐██████████',
+  '████████▌▐██████████',
+  '    ▀▀▀▀▘▐██████████',
+  '             ▀▀▀▀▜██',
 ]);
 
+/** A penguin: a round body with a light belly, two eyes, a mid-toned beak and feet. */
 const LINUX = art([
-  "                 .88888888:.",
-  "                88888888.88888.",
-  "              .8888888888888888.",
-  "              888888888888888888",
-  "              88' _`88'_  `88888",
-  "              88 88 88 88  88888",
-  "              88_88_::_88_:88888",
-  "              88:::,::,:::::8888",
-  "              88`:::::::::'`8888",
-  "             .88  `::::'    8:88.",
-  "            8888            `8:888.",
-  "          .8888'             `888888.",
-  "         .8888:..  .::.  ...:'8888888:.",
-  "        .8888.'     :'     `'::`88:88888",
-  "       .8888        '         `.888:8888.",
-  "      888:8         .           888:88888",
-  "    .888:88        .:           888:88888:",
-  "    8888888.       ::           88:888888",
-  "    `.::.888.      ::          .88888888",
-  "   .::::::.888.    ::         :::`8888'.:.",
-  "  ::::::::::.888   '         .::::::::::::",
-  "  ::::::::::::.8    '      .:8::::::::::::",
-  " .::::::::::::::.        .:888:::::::::::",
-  " :::::::::::::::88:.__..:88888::::::::::",
-  "  `'.:::::::::::88888888888.88:::::::::",
-  "       `':::_:' -- '' -'-' `':_::::'`",
+  '      ▗▄▟██▙▄▖',
+  '     ▟██▀██▀██▙',
+  '    ▐██▙ ▟▙ ▟██▌',
+  '    ▝███▒▒▒▒███▘',
+  '    ▟████▒▒████▙',
+  ' ▗█████▛▀▀▀▀▜█████▖',
+  '▐████▛░░░░░░░░▜████▌',
+  '█████░░░░░░░░░░█████',
+  '████▌░░░░░░░░░░▐████',
+  '████▙░░░░░░░░░░▟████',
+  '▀▀ ▜█▙░░░░░░░░▟█▛ ▀▀',
+  '    ▝▀▀░░░░░░▀▀▘',
+  '   ▒▒▒▒▒    ▒▒▒▒▒',
 ]);
 
 /** The logo for an OS as SysSnapshot names it; Linux's for anything else. */

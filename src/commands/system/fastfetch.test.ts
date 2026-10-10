@@ -4,9 +4,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { runLine } from '../../../tests/harness';
 import { ANDROID_PHONE, APPLE_SILICON_MAC, IPHONE_SAFARI, WINDOWS_PC, type System } from '../../../tests/support/systems';
-import { lineText, type Block, type ColumnsBlock, type LinesBlock } from '../../output/model';
+import { lineText, textWidth, type Block, type ColumnsBlock, type LinesBlock } from '../../output/model';
 import { memo } from '../../services/net';
 import { createSysInfo } from '../../services/sysinfo';
+import { logoFor } from './fastfetch.logos';
 import { fastfetchRows, sizeText, uptimeText, type Facts } from './fastfetch.run';
 
 afterEach(() => {
@@ -124,8 +125,8 @@ describe('fastfetch on the terminal', () => {
     expect(status).toBe(0);
     const columns = columnsOf(blocks);
     expect(columns.stackBelowCols).toBe(60);
-    // The details start just past the logo: the Apple logo's widest row.
-    expect(columns.leftCh).toBe(30);
+    // The details start just past the logo: the apple's widest row, 19 cells.
+    expect(columns.leftCh).toBe(19);
     expect(columns.left).toEqual([expect.objectContaining({ type: 'art', alt: 'macOS logo', fit: 'scale' })]);
     const details = columns.right[0] as LinesBlock;
     const text = details.lines.map(lineText);
@@ -139,6 +140,26 @@ describe('fastfetch on the terminal', () => {
     const row = details.lines.find((line) => line[0]?.text === 'WM Theme');
     expect(row?.[2]).toEqual({ text: 'swamphen', live: { kind: 'currentThemeName' } });
     expect(columnsOf(blocks).left).toEqual([expect.objectContaining({ alt: 'Windows logo', style: { fg: 'blue', bold: true } })]);
+  });
+
+  it('draws every logo in block and quadrant characters, about 20 columns wide and 10 to 13 rows tall', () => {
+    const BLOCKS = /^[ ▀-▟]*$/u;
+    for (const [os, alt, colour, width, height] of [
+      ['macOS', 'macOS logo', 'green', 19, 13],
+      ['iOS', 'iOS logo', 'green', 19, 13],
+      ['Android', 'Android logo', 'green', 19, 10],
+      ['Windows', 'Windows logo', 'blue', 20, 11],
+      ['Linux', 'Linux logo', 'yellow', 20, 13],
+      ['unknown', 'Linux logo', 'yellow', 20, 13],
+    ] as const) {
+      const logo = logoFor(os);
+      const rows = logo.art.split('\n');
+      expect(logo.alt, os).toBe(alt);
+      expect(logo.colour, os).toBe(colour);
+      expect(rows, os).toHaveLength(height);
+      expect(Math.max(...rows.map(textWidth)), os).toBe(width);
+      for (const row of rows) expect(row, os).toMatch(BLOCKS);
+    }
   });
 
   it("ends with the theme's sixteen colours as coloured spaces, which a screen reader passes over", async () => {
