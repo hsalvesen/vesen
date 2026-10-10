@@ -33,12 +33,12 @@ async function list(ctx: CommandContext): Promise<ExitCode> {
     return [
       out.live(isCurrent ? CURRENT_MARK : ' '.repeat(CURRENT_MARK.length), { kind: 'isCurrentTheme', theme: theme.name, marker: CURRENT_MARK }, { fg: 'accent' }),
       // A tap switches to it.
-      { ...out.run(theme.name, `theme set ${theme.name}`, STRONG), live: { kind: 'isCurrentTheme', theme: theme.name } },
+      { ...out.run(theme.name, `theme ${theme.name}`, STRONG), live: { kind: 'isCurrentTheme', theme: theme.name } },
       out.span(' '.repeat(width - theme.name.length + 2)),
       out.swatches(theme.background, theme.swatches),
     ];
   });
-  rows.push([], [out.span(`Try one with: theme set NAME, or ${ctx.tty.touch ? 'tap' : 'click'} a name.`, MUTED)]);
+  rows.push([], [out.span(`Try one with: theme NAME, or ${ctx.tty.touch ? 'tap' : 'click'} a name.`, MUTED)]);
   await ctx.stdout.block(out.lines(rows));
   return 0;
 }
@@ -57,19 +57,18 @@ export default defineCommand({
   name: 'theme',
   category: 'portfolio',
   summary: 'change the colour theme',
-  synopsis: ['theme ls', 'theme set NAME', 'theme NAME'],
+  synopsis: ['theme ls', 'theme NAME'],
   description:
     "Switches the terminal to the theme NAME, in any case, and remembers it. 'theme ls' lists the themes, each with a preview of its colours; the current one is marked. Everything on the screen takes the new colours.",
   featured: true,
   subcommands: {
     ls: { summary: 'list the themes, each with its colours' },
-    set: { summary: 'switch to the theme NAME', args: [NAME] },
   },
   args: [{ ...NAME, optional: true }],
   examples: [
     { line: 'theme ls', note: 'every theme, with its colours', offline: true, starter: 5 },
-    { line: 'theme set cockatoo', note: 'the light one', offline: true },
-    { line: 'theme swamphen', note: 'the default, without set', offline: true },
+    { line: 'theme cockatoo', note: 'the light one', offline: true },
+    { line: 'theme swamphen', note: 'the default', offline: true },
   ],
   seeAlso: ['cathode', 'reset'],
   // After the list, every theme is one tap away.
@@ -78,18 +77,12 @@ export default defineCommand({
     return (context?.appearance?.themes() ?? [])
       .map((theme) => theme.name.toLowerCase())
       .filter((name) => PLAIN_ARG.test(name))
-      .map((name) => `theme set ${name}`);
+      .map((name) => `theme ${name}`);
   },
   async run(ctx) {
     if (ctx.sub === 'ls') {
       if (ctx.args.length > 0) return ctx.usage(`ls: extra operand '${ctx.args[0] ?? ''}'`);
       return list(ctx);
-    }
-    if (ctx.sub === 'set') {
-      const [name, extra] = ctx.args;
-      if (name === undefined) return ctx.usage('set: missing theme name');
-      if (extra !== undefined) return ctx.usage(`set: extra operand '${extra}'`);
-      return set(ctx, name);
     }
     const [name, extra] = ctx.args;
     if (name === undefined) {
@@ -98,7 +91,6 @@ export default defineCommand({
       return 0;
     }
     if (extra !== undefined) return ctx.usage(`extra operand '${extra}'`);
-    // The shortcut: `theme wombat` is `theme set wombat`.
     return set(ctx, name);
   },
 });

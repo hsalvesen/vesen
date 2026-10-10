@@ -101,7 +101,7 @@ describe('OutputView: links and actions', () => {
 
   it('never takes focus from the prompt when an action or a chip is pressed, so a phone keyboard stays up', async () => {
     const chips = out.chips([{ label: 'help', action: out.action.run('help') }], 'Try');
-    const root = await view([out.lines([[out.run('wombat', 'theme set wombat')]]), chips], vi.fn());
+    const root = await view([out.lines([[out.run('wombat', 'theme wombat')]]), chips], vi.fn());
     const input = document.body.appendChild(document.createElement('input'));
     input.focus();
     for (const button of Array.from(root.querySelectorAll('button'))) {

@@ -85,7 +85,7 @@ The file's default export is the spec, made with `defineCommand`, which insists 
 | `synopsis` | The usage lines, such as `rev [FILE]...`; generated from the flags and arguments when left out. |
 | `flags` | Each with `short` and/or `long`, a `description`, and `value` when it takes one. `-la`, `-n5`, `--lines=5` and `--` are parsed for you, and the values arrive in `ctx.opts`. |
 | `args` | The operands, with a `source` that completion reads: `path`, `command`, `enum`, `examples`, `free` and others. Only the last may be `variadic`. `marks` names the characters that start an argument's words wherever they stand, as `+` and `@` start dig's `+short` and `@google`, so completion never takes them for another operand. An `enum` value may carry `args` of its own, which follow it instead of the rest of the list, and `aliases`, other words that choose it: ip's `route` takes a COMMAND whose `get` takes an ADDRESS, and `r` is `route` (`src/commands/more/network/ip.ts`). |
-| `subcommands` | `theme ls`, `theme set`: each with its own summary, flags and arguments. |
+| `subcommands` | `cathode ls`, `cathode set`: each with its own summary, flags and arguments. Where a subcommand goes, the command's first operand may stand instead (`theme NAME` beside `theme ls`), and completion offers its values after the subcommands. |
 | `examples` | Lines that show the command at work; see below. |
 | `seeAlso` | Related commands, for `man`. |
 | `helpRank` | Its place in its category's row of the short `help` index, lowest first. A row keeps to one line on a phone and two elsewhere, then says how many more there are, so in a long category rank the few a visitor reaches for first; the rest follow by name. |

@@ -133,7 +133,7 @@ const SESSIONS: Readonly<Record<string, readonly string[]>> = {
   // read them; setting them is in src/commands/portfolio/portfolio.test.ts.
   help: ['help', 'help pwd cd', 'help keys', 'help nope'],
   man: ['man pwd', 'man 1 nope', 'whatis ls cd', 'apropos theme', 'man -k zzz'],
-  theme: ['theme ls', 'theme set nope', 'theme set', 'theme a b'],
+  theme: ['theme ls', 'theme nope', 'theme set', 'theme a b'],
   cathode: ['cathode ls', 'cathode set neon', 'cathode quality', 'cathode quality ultra'],
   banner: ['banner'],
   builtins: [

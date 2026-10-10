@@ -64,23 +64,23 @@ test.describe('Tab completion', { tag: '@smoke' }, () => {
 
   test('Enter in the menu takes the choice without running it', async ({ page }) => {
     await open(page);
-    await page.keyboard.type('theme set k');
+    await page.keyboard.type('theme k');
     await page.keyboard.press('Tab');
     await expect(page.getByRole('listbox', { name: 'Completions' }).getByRole('option')).toHaveCount(2);
     await page.keyboard.press('Tab');
     await page.keyboard.press('Tab');
-    await expect(prompt(page)).toHaveValue('theme set kookaburra');
+    await expect(prompt(page)).toHaveValue('theme kookaburra');
     await page.keyboard.press('Enter');
-    await expect(prompt(page)).toHaveValue('theme set kookaburra ');
+    await expect(prompt(page)).toHaveValue('theme kookaburra ');
     await expect(page.locator('[role="log"] .command-input-display')).toHaveCount(1);
   });
 
   test('clicking a chip puts it on the line and keeps focus in the prompt', async ({ page }) => {
     await open(page);
-    await page.keyboard.type('theme set w');
+    await page.keyboard.type('theme w');
     const chip = page.getByRole('listbox', { name: 'Suggestions' }).getByRole('option', { name: 'wombat' });
     await chip.click();
-    await expect(prompt(page)).toHaveValue('theme set wombat ');
+    await expect(prompt(page)).toHaveValue('theme wombat ');
     await expect(prompt(page)).toBeFocused();
   });
 });

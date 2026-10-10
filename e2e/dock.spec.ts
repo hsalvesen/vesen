@@ -92,21 +92,21 @@ for (const size of [
       await noSidewaysScroll(page);
     });
 
-    test("builds and runs theme set wombat by tapping chips after typing 'the'", async ({ page }) => {
+    test("builds and runs theme wombat by tapping chips after typing 'the'", async ({ page }) => {
       await open(page);
       await focusPrompt(page);
       await prompt(page).fill('the');
       await chip(page, 'Insert: theme').tap();
       await expect(prompt(page)).toHaveValue('theme ');
       await expect(prompt(page)).toBeFocused();
-      await chip(page, 'Insert: set').tap();
-      await expect(prompt(page)).toHaveValue('theme set ');
-      // Labelled with the word only, named with the whole line.
-      const wombat = chip(page, 'Run: theme set wombat');
+      // After `theme `: ls, then every theme, each labelled with the word only and named with the whole line.
+      await expect(chip(page, 'Run: theme ls')).toBeVisible();
+      await expect(dock(page).getByRole('option', { name: /^Run: theme (?!ls$)/ })).toHaveCount(15);
+      const wombat = chip(page, 'Run: theme wombat');
       await expect(wombat).toContainText('wombat');
       await expect(wombat).not.toContainText('theme');
       await wombat.tap();
-      await expect(lastEntry(page)).toContainText('theme set wombat');
+      await expect(lastEntry(page)).toContainText('theme wombat');
       await expect(lastEntry(page)).toContainText(/Theme set to wombat\./i);
       await expect(prompt(page)).toHaveValue('');
       // The keyboard stayed open throughout.
@@ -309,9 +309,9 @@ test.describe('the dock on a desktop', { tag: '@smoke' }, () => {
     await expect(chip(page, 'Run: help')).toBeVisible();
     // A click on a key keeps the focus, and the line, in the prompt.
     await expect(prompt(page)).toBeFocused();
-    await page.keyboard.type('theme s');
+    await page.keyboard.type('theme sw');
     await key(page, 'Tab: complete').click();
-    await expect(prompt(page)).toHaveValue('theme set ');
+    await expect(prompt(page)).toHaveValue('theme swamphen ');
     await expect(prompt(page)).toBeFocused();
   });
 });

@@ -35,17 +35,19 @@ describe('chipsFor', () => {
 
   it('marks the typed part of a path by its last name, and carries swatches', () => {
     expect(chipsFor(input('cat documents/li')).chips.map((c) => [c.label, c.matchLen])).toEqual([['linux.txt', 2]]);
-    const themes = chipsFor(input('theme set k')).chips;
+    const themes = chipsFor(input('theme k')).chips;
     expect(themes.map((c) => [c.label, c.swatch])).toEqual([
       ['kangaroo', '#262626'],
       ['kookaburra', '#222222'],
     ]);
   });
 
-  it("offers what comes next after a word typed in full: 'theme' gives ls and set", () => {
-    const { chips } = chipsFor(input('theme'));
-    expect(chips.map((c) => c.label)).toEqual(['ls', 'set']);
-    expect(applyChip(chips[1] ?? chips[0]!)?.text).toBe('theme set ');
+  it("offers what comes next after a word typed in full: 'theme' gives ls and the themes, the quiet row cut to max under a desktop prompt", () => {
+    const { chips, more } = chipsFor(input('theme', { max: 4 }));
+    expect(chips.map((c) => c.label)).toEqual(['ls', 'cassowary', 'cockatoo', 'crocodile']);
+    expect(more).toBe(12);
+    expect(applyChip(chips[0]!)?.text).toBe('theme ls ');
+    expect(applyChip(chips[1]!)?.text).toBe('theme cassowary ');
   });
 
   it('shows the whole list after Tab, and marks the menu choice', () => {
@@ -118,7 +120,7 @@ describe('a chip and the Tab menu make the same line', () => {
     return menuKey(tab, 'enter').effect.edit;
   }
 
-  it.each(['c', 'theme ', 'theme set k', 'cd ', 'ls --al', 'cat "documents/', 'cat documents/m', 'echo $HO', 'cathode quality ', 'weather '])(
+  it.each(['c', 'theme ', 'theme k', 'cd ', 'ls --al', 'cat "documents/', 'cat documents/m', 'echo $HO', 'cathode quality ', 'weather '])(
     'for %j',
     (line) => {
       // The line the list is shown for: after any extension Tab makes first.
@@ -147,15 +149,16 @@ function thumb(line: string, extra: Partial<ChipInput> = {}): ChipInput {
 const runs = (chips: readonly { line?: string }[]) => chips.map((chip) => chip.line);
 
 describe('the dock: follow-ups after a run', () => {
-  it('offers every theme after theme ls, each run in one tap, then the starters', () => {
-    const { chips } = chipsFor(thumb('', { last: { line: 'theme ls', argv: ['theme', 'ls'], status: 0 } }));
+  it('offers every one of the fifteen themes after theme ls, each run in one tap, then the starters, whatever max says', () => {
+    const { chips, more } = chipsFor(thumb('', { max: 4, last: { line: 'theme ls', argv: ['theme', 'ls'], status: 0 } }));
     const followups = chips.filter((chip) => chip.kind === 'followup');
-    const themes = env.appearance?.themes().map((theme) => `theme set ${theme.name.toLowerCase()}`) ?? [];
-    expect(themes.length).toBeGreaterThan(5);
-    expect(followups.map((chip) => chip.label)).toEqual(themes.slice(0, 12));
+    const themes = env.appearance?.themes().map((theme) => `theme ${theme.name.toLowerCase()}`) ?? [];
+    expect(themes).toHaveLength(15);
+    expect(followups.map((chip) => chip.label)).toEqual(themes);
     expect(followups.every((chip) => chip.action.kind === 'run' && chip.line === chip.label)).toBe(true);
-    // The starters follow, without a line already offered.
-    expect(chips.slice(followups.length).map((chip) => chip.kind)).toContain('starter');
+    expect(more).toBe(0);
+    // The starters follow, every one of them, without a line already offered.
+    expect(chips.slice(followups.length).map((chip) => chip.kind)).toEqual(['starter', 'starter', 'starter', 'starter', 'starter', 'starter']);
     expect(new Set(runs(chips)).size).toBe(chips.length);
   });
 
@@ -218,23 +221,35 @@ describe('the dock: follow-ups after a run', () => {
 });
 
 describe('the dock: building a line by tapping', () => {
-  it("runs a candidate that finishes the line in one tap, labelled with its word only: 'theme set w' and wombat", () => {
-    const { chips } = chipsFor(thumb('theme set w'));
+  it("runs a candidate that finishes the line in one tap, labelled with its word only: 'theme w' and wombat", () => {
+    const { chips } = chipsFor(thumb('theme w'));
     const wombat = chips.find((chip) => chip.label === 'wombat');
     expect(wombat?.action).toMatchObject({ kind: 'apply', run: true });
-    expect(wombat?.line).toBe('theme set wombat');
+    expect(wombat?.line).toBe('theme wombat');
     // Exactly what Tab would put on the line.
-    expect(wombat === undefined ? null : applyChip(wombat)).toEqual({ text: 'theme set wombat ', cursor: 17 });
+    expect(wombat === undefined ? null : applyChip(wombat)).toEqual({ text: 'theme wombat ', cursor: 13 });
   });
 
-  it("offers ls to run and set to go on with after 'theme ', and the line itself first", () => {
-    const { chips } = chipsFor(thumb('theme '));
+  it("offers ls and every one of the fifteen themes to run after 'theme ', the line itself first, whatever max says", () => {
+    const { chips, more } = chipsFor(thumb('theme ', { max: 4 }));
+    const themes = env.appearance?.themes().map((theme) => theme.name.toLowerCase()) ?? [];
+    expect(themes).toHaveLength(15);
     expect(chips.map((chip) => [chip.kind, chip.label, chip.line ?? null])).toEqual([
       ['current', 'theme', 'theme '.trimEnd()],
       ['subcommand', 'ls', 'theme ls'],
-      ['subcommand', 'set', null],
+      ...themes.map((name) => ['value', name, `theme ${name}`]),
     ]);
+    expect(more).toBe(0);
+    // Typed whole, the word looks ahead to the same list.
+    expect(chipsFor(thumb('theme', { max: 4 })).chips.map((chip) => chip.label)).toEqual(['theme', 'ls', ...themes]);
     expect(chipsFor(thumb('the')).chips.map((chip) => [chip.label, chip.line ?? null])).toEqual([['theme', null]]);
+  });
+
+  it('still cuts an open-ended list to max in the dock, where Tab lists the rest', () => {
+    const { chips, more } = chipsFor(thumb('cat ', { max: 4 }));
+    expect(chips[0]?.kind).toBe('current');
+    expect(chips).toHaveLength(4);
+    expect(more).toBeGreaterThan(0);
   });
 
   it('inserts a folder, and offers what is inside it next', () => {
@@ -254,7 +269,7 @@ describe('the dock: building a line by tapping', () => {
   });
 
   it('marks nothing to run on a desktop, where a click only completes', () => {
-    expect(chipsFor(input('theme set w', { env })).chips.every((chip) => chip.line === undefined)).toBe(true);
+    expect(chipsFor(input('theme w', { env })).chips.every((chip) => chip.line === undefined)).toBe(true);
   });
 });
 
@@ -267,7 +282,7 @@ describe('the dock: the line ready to run', () => {
   });
 
   it('waits for the rest of a line: a missing operand, a word still being typed, an open quote, a dangling pipe', () => {
-    for (const line of ['theme set ', 'theme set wom', 'cat READ', 'echo "hi', 'ls |', 'ls >', 'nosuchcommand', 'mkdir ', 'cathode quality x y |']) {
+    for (const line of ['cathode set ', 'theme wom', 'cat READ', 'echo "hi', 'ls |', 'ls >', 'nosuchcommand', 'mkdir ', 'cathode quality x y |']) {
       expect(chipsFor(thumb(line)).chips.some((chip) => chip.kind === 'current'), line).toBe(false);
     }
   });
@@ -283,10 +298,10 @@ describe('readyToRun', () => {
     ['ls -la ~', true],
     ['X=1 ls', true],
     ['ls 2>&1 | cat', true],
-    ['theme set wombat', true],
+    ['theme wombat', true],
     ['', false],
     ['   ', false],
-    ['theme set', false],
+    ['cathode set', false],
     ['ls &&', false],
     ['| ls', false],
     ['ls > ', false],

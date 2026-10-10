@@ -150,7 +150,7 @@ test.describe('the QR card', { tag: '@smoke' }, () => {
   for (const theme of ['cockatoo', 'swamphen', 'treefrog']) {
     test(`a screenshot of the card scans in ${theme}, with the scanlines on and under it`, async ({ page }) => {
       await open(page);
-      await run(page, `theme set ${theme}`);
+      await run(page, `theme ${theme}`);
       await run(page, 'cathode set scanlines');
       expect(await page.evaluate(() => document.documentElement.classList.contains('crt-scanlines'))).toBe(true);
       await run(page, 'qr vesen.app');
@@ -278,7 +278,7 @@ test.describe('the QR card', { tag: '@smoke' }, () => {
 
   test('utf8 art on a light theme ends in paper, not a band of ink, and a screenshot of it scans', async ({ page }) => {
     await open(page);
-    await run(page, 'theme set cockatoo');
+    await run(page, 'theme cockatoo');
     await run(page, 'qr -t utf8 vesen.app');
     const art = lastEntry(page).locator('[data-qr-text]');
     await expect(art).toBeVisible();

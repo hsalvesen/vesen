@@ -7,35 +7,45 @@ $ theme ls
   cassowary    ████████████████
   cockatoo     ████████████████
   crocodile    ████████████████
+  galah        ████████████████
   kangaroo     ████████████████
   kookaburra   ████████████████
+  lorikeet     ████████████████
+  magpie       ████████████████
   petroica     ████████████████
+  platypus     ████████████████
+  quokka       ████████████████
 › swamphen     ████████████████
   treefrog     ████████████████
   wallaby      ████████████████
   wombat       ████████████████
 
-Try one with: theme set NAME, or click a name.
+Try one with: theme NAME, or click a name.
 ? 0
 [pipe]
 cassowary
 cockatoo
 crocodile
+galah
 kangaroo
 kookaburra
+lorikeet
+magpie
 petroica
+platypus
+quokka
 swamphen
 treefrog
 wallaby
 wombat
 ? 0
-$ theme set nope
+$ theme nope
 ! theme: nope: no such theme
 ! Try 'theme ls' to see all available themes.
 ? 1
 $ theme set
-! theme: set: missing theme name
-! Try 'theme --help' for more information.
+! theme: set: no such theme
+! Try 'theme ls' to see all available themes.
 ? 1
 $ theme a b
 ! theme: extra operand 'b'

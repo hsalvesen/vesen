@@ -264,22 +264,22 @@ describe('Tab completion and the completion row', () => {
 
   it('Enter in the menu takes the choice without running it', async () => {
     await ready();
-    await type('theme set k');
+    await type('theme k');
     await press('Tab');
     await press('Tab');
     await press('Tab');
     await settle();
-    expect(promptBox().value).toBe('theme set kookaburra');
+    expect(promptBox().value).toBe('theme kookaburra');
     await press('Enter');
     await settle();
-    expect(promptBox().value).toBe('theme set kookaburra ');
+    expect(promptBox().value).toBe('theme kookaburra ');
     expect(transcript.entries()).toEqual([]);
   });
 
   it('shows chips while typing; a click puts the choice on the line as Tab would and keeps focus', async () => {
     await ready();
     promptBox().focus();
-    await type('theme set k');
+    await type('theme k');
     await settle();
     const options = screen.getAllByRole('option');
     expect(options.map((o) => o.textContent)).toEqual(['kangaroo', 'kookaburra']);
@@ -287,7 +287,7 @@ describe('Tab completion and the completion row', () => {
     expect(await fireEvent.mouseDown(options[1] as HTMLElement)).toBe(false);
     await fireEvent.click(options[1] as HTMLElement);
     await settle();
-    expect(promptBox().value).toBe('theme set kookaburra ');
+    expect(promptBox().value).toBe('theme kookaburra ');
     expect(document.activeElement).toBe(promptBox());
   });
 

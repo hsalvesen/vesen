@@ -43,7 +43,7 @@ test.describe('head, icons and manifest', { tag: '@smoke' }, () => {
     }
   });
 
-  test('theme set cockatoo retints the browser bars, the page and the favicon, and the boot script restores them', async ({
+  test('theme cockatoo retints the browser bars, the page and the favicon, and the boot script restores them', async ({
     page,
   }) => {
     await page.goto('/');
@@ -51,7 +51,7 @@ test.describe('head, icons and manifest', { tag: '@smoke' }, () => {
     await expect(themeColor(page)).toHaveAttribute('content', '#222235');
     expect(await pageColours(page)).toEqual({ background: 'rgb(34, 34, 53)', scheme: 'dark' });
 
-    await run(page, 'theme set cockatoo');
+    await run(page, 'theme cockatoo');
 
     await expect(themeColor(page)).toHaveAttribute('content', '#e8ddd0');
     await expect(svgIcon(page)).toHaveAttribute('href', '/icons/theme/cockatoo.svg');
@@ -90,7 +90,7 @@ test.describe('head, icons and manifest', { tag: '@smoke' }, () => {
     expect(blocked, 'storage is blocked in this engine').toBe(true);
 
     await expect(page.getByText('to see all available commands.')).toBeVisible();
-    await run(page, 'theme set cockatoo');
+    await run(page, 'theme cockatoo');
     await expect(themeColor(page)).toHaveAttribute('content', '#e8ddd0');
     expect(errors).toEqual([]);
   });

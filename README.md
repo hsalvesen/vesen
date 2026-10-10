@@ -12,7 +12,7 @@ vesen is Has Salvesen's portfolio, in the shape of a Linux terminal. It runs ent
 - **A file system.** `/home/guest` is yours, with permissions, symlinks, `/proc` and `/dev`; what you change under `~` is still there when you come back. `/home/has` holds the owner's documents.
 - **About 160 commands.** Coreutils and text tools (`grep`, `sed`, `sort`, `diff`, `bc`), file tools (`find`, `tree`, `chmod`), system tools (`ps`, `top`, `uname`), network tools that say what a browser can and cannot do (`dig`, `ping`, `whois`, `wget`), a pager and an editor (`less`, `man`, `nano`), and some fun (`cowsay`, `fortune`, `figlet`, `sl`).
 - **Cards.** `weather`, `stock` and `qr` draw live cards; `whoami`, `about` and `contact` give link cards with Copy.
-- **Ten themes** named for Australian animals, every one checked for contrast, with an optional CRT effect.
+- **Fifteen themes** named for Australian animals, every one checked for contrast, with an optional CRT effect.
 
 Version 2.0.0 is a rewrite of the whole app; [CHANGELOG.md](CHANGELOG.md) says what changed.
 
@@ -29,7 +29,7 @@ qr https://www.vesen.app  # a scannable QR card; tap it to present it full scree
 dig vesen.app +short      # DNS over HTTPS, and it says so
 man ls | less             # the pager; nano notes.txt is the editor
 fortune | cowsay          # the fun ones are under Fun in help --all
-theme ls                  # every theme with its colours; theme set wombat switches
+theme ls                  # every theme with its colours; theme wombat switches
 privacy                   # every service a command talks to, and what it is sent
 ```
 
@@ -114,7 +114,7 @@ src/
 public/                            # 404.html, fonts/ (Vesen Mono and OFL.txt), icons/, og.png,
                                    # manifest.webmanifest, probe/ (the device probe, not linked)
 assets-src/fonts/                  # The source Vesen Mono is built from (not served)
-themes.json                        # The ten themes: palettes and any role colours a theme sets
+themes.json                        # The fifteen themes: palettes and any role colours a theme sets
 worker/stock/                      # vesen-stock, the Cloudflare Worker for quotes (its own README)
 tests/                             # The command harness, transcripts, XSS tests, hosting checks,
                                    # recorded network fixtures

@@ -106,7 +106,7 @@ test.describe('accessibility', { tag: '@smoke' }, () => {
 
     await run(page, 'theme ls');
     const swatches = page.locator('.swatches');
-    await expect(swatches).toHaveCount(10);
+    await expect(swatches).toHaveCount(15);
     for (const row of await swatches.all()) await expect(row).toHaveAttribute('aria-hidden', 'true');
   });
 
@@ -155,7 +155,7 @@ test.describe('theming', { tag: '@smoke' }, () => {
     const fileColour = () =>
       page.locator('[role="log"] .grid span', { hasText: /^README\.md$/ }).first().evaluate((el) => getComputedStyle(el).color);
     const before = await fileColour();
-    await run(page, 'theme set cockatoo');
+    await run(page, 'theme cockatoo');
     const after = await fileColour();
     expect(after).not.toBe(before);
     // Cockatoo's strong text is its near-black ink.

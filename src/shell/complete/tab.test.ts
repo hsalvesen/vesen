@@ -47,16 +47,26 @@ describe('pressTab', () => {
   });
 
   it('lists at once when nothing can extend, and Shift+Tab opens the menu at the end', () => {
-    const run = presses(at('theme set k'), ['tab', 'shift']);
+    const run = presses(at('theme k'), ['tab', 'shift']);
     expect(run.steps[0]?.tab.phase).toBe('listed');
-    expect(run.state.text).toBe('theme set kookaburra');
+    expect(run.state.text).toBe('theme kookaburra');
+  });
+
+  it("lists ls and every one of the fifteen themes after 'theme '", () => {
+    const step = pressTab(TAB_IDLE, at('theme '), env);
+    expect(step.tab.phase).toBe('listed');
+    const listed = step.tab.phase === 'listed' ? step.tab.result.candidates.map((c) => c.value) : [];
+    const themes = env.appearance?.themes().map((theme) => theme.name.toLowerCase()) ?? [];
+    expect(themes).toHaveLength(15);
+    expect(listed).toEqual(['ls', ...themes]);
+    expect(step.tab.phase === 'listed' && step.tab.result.total).toBe(16);
   });
 
   it('Escape in the menu puts back the line from before it', () => {
-    const run = presses(at('theme set k'), ['tab', 'tab', 'tab']);
-    expect(run.state.text).toBe('theme set kookaburra');
+    const run = presses(at('theme k'), ['tab', 'tab', 'tab']);
+    expect(run.state.text).toBe('theme kookaburra');
     const escaped = menuKey(run.tab, 'escape');
-    expect(escaped.effect.edit).toEqual({ text: 'theme set k', cursor: 11 });
+    expect(escaped.effect.edit).toEqual({ text: 'theme k', cursor: 7 });
     expect(escaped.tab).toEqual(TAB_IDLE);
     expect(escaped.effect.list).toBe('hide');
   });
@@ -108,10 +118,10 @@ describe('pressTab', () => {
   });
 
   it('starts again when the line changed since the last press', () => {
-    const listed = pressTab(TAB_IDLE, at('theme set k'), env);
+    const listed = pressTab(TAB_IDLE, at('theme k'), env);
     // The visitor typed 'a' in between: Tab completes the new line instead of opening the menu.
-    const step = pressTab(listed.tab, at('theme set ka'), env);
-    expect(step.effect.edit?.text).toBe('theme set kangaroo ');
+    const step = pressTab(listed.tab, at('theme ka'), env);
+    expect(step.effect.edit?.text).toBe('theme kangaroo ');
   });
 
   it("asks 'Display all N possibilities? (y or n)' over 100, then lists on yes", async () => {
@@ -134,7 +144,7 @@ describe('pressTab', () => {
   });
 
   it('shows the list and the menu choice through tabView', () => {
-    const run = presses(at('theme set k'), ['tab', 'tab']);
+    const run = presses(at('theme k'), ['tab', 'tab']);
     expect(tabView(run.tab)).toMatchObject({ highlight: 0, question: null });
     expect(tabView(run.tab).result?.candidates.map((c) => c.value)).toEqual(['kangaroo', 'kookaburra']);
     expect(tabView(TAB_IDLE)).toEqual({ result: null, highlight: null, question: null });

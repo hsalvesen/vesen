@@ -13,14 +13,39 @@ Every theme passes the contrast check (`npm run check:contrast -- --strict`): te
 ## Crocodile
 ![crocodile](screenshots/crocodile.png)
 
+## Galah
+The pink-and-grey cockatoo: a slate-grey background, pink and rose accents, soft white text.
+
+![galah](screenshots/galah.png)
+
 ## Kangaroo
 ![kangaroo](screenshots/kangaroo.png)
 
 ## Kookaburra
 ![kookaburra](screenshots/kookaburra.png)
 
+## Lorikeet
+The rainbow lorikeet: a deep indigo background with vivid red, green, yellow, blue, purple and cyan.
+
+![lorikeet](screenshots/lorikeet.png)
+
+## Magpie
+Near-black, white text and a blue-black sheen for the accent, in crisp high contrast; red stays red for errors.
+
+![magpie](screenshots/magpie.png)
+
 ## Petroica
 ![petroica](screenshots/petroica.png)
+
+## Platypus
+A dark river-teal background, sand text, bill-orange and brown accents and a duck-egg blue.
+
+![platypus](screenshots/platypus.png)
+
+## Quokka
+The second light theme, after cockatoo: a warm sand background, dark brown text and cheerful accents dark enough to read.
+
+![quokka](screenshots/quokka.png)
 
 ## Swamphen
 ![swamphen](screenshots/swamphen.png)
@@ -37,13 +62,13 @@ Every theme passes the contrast check (`npm run check:contrast -- --strict`): te
 
 ## Usage
 
-List the themes, each with its colours, with `theme ls`. Switch themes with the `theme set` command:
+List the themes, each with its colours, with `theme ls`. Switch with the theme's name:
 ```bash
-theme set <theme-name>
+theme <theme-name>
 ```
 
 For example:
 ```bash
-theme set cassowary
-theme set wombat
+theme cassowary
+theme wombat
 ```

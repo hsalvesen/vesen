@@ -184,19 +184,19 @@ describe('--help panels', () => {
   });
 
   it('list subcommands, and use a synopsis when the spec has one', () => {
-    const theme: CommandSpec = {
-      name: 'theme',
+    const cathode: CommandSpec = {
+      name: 'cathode',
       category: 'portfolio',
-      summary: 'change the theme',
-      subcommands: { ls: { summary: 'list the themes' }, set: { summary: 'switch theme' }, secret: { summary: 'x', hidden: true } },
+      summary: 'trial a CRT effect',
+      subcommands: { ls: { summary: 'list the variations' }, off: { summary: 'turn it off' }, secret: { summary: 'x', hidden: true } },
       run: () => 0,
     };
-    expect(usageLines(theme)).toEqual(['theme {ls|set}']);
-    const usage = commandHelp(theme)[1];
-    expect(usage?.type === 'panel' && usage.body.map(lineText)).toContain('  ls   list the themes');
+    expect(usageLines(cathode)).toEqual(['cathode {ls|off}']);
+    const usage = commandHelp(cathode)[1];
+    expect(usage?.type === 'panel' && usage.body.map(lineText)).toContain('  ls   list the variations');
     // The summaries line up, as the options' descriptions do.
-    expect(usage?.type === 'panel' && usage.body.map(lineText)).toContain('  set  switch theme');
-    expect(usageLines({ ...theme, synopsis: ['theme ls', 'theme set NAME'] })).toEqual(['theme ls', 'theme set NAME']);
+    expect(usage?.type === 'panel' && usage.body.map(lineText)).toContain('  off  turn it off');
+    expect(usageLines({ ...cathode, synopsis: ['cathode ls', 'cathode VARIATION'] })).toEqual(['cathode ls', 'cathode VARIATION']);
   });
 
   it('label flags as coreutils does', () => {
