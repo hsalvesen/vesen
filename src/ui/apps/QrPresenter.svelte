@@ -2,12 +2,13 @@
   Present mode (docs/plan/06-qr.md; designs/qr.md, "Phone and Instagram in-app browser"): a white
   sheet over everything with the code as large as fits, so a visitor can hold the phone up for a
   friend to scan, or save it. The code is a PNG, black on white, which a long press saves; Save,
-  Share and Copy show where they work. It closes with ✕, Esc, q or Enter, a tap outside the code,
+  Share and Copy show where they work. It closes with the close button (a cross drawn as inline
+  SVG, since the terminal's font has no glyph for one), Esc, q or Enter, a tap outside the code,
   and Back (Android's button, iOS's swipe): whatever shows it holds a history entry for it
   (history-entry.ts), and going back from it closes it. The screen stays awake while it shows,
   where it can.
 
-  It is a modal dialog: focus starts on ✕ and Tab stays inside. `qr -f` shows it through AppHost,
+  It is a modal dialog: focus starts on Close and Tab stays inside. `qr -f` shows it through AppHost,
   which puts focus back afterwards; a tapped card draws it in a layer on <body> (qr-present.ts)
   and puts focus back itself. Each holds the history entry.
 -->
@@ -159,7 +160,7 @@
   onMount(() => {
     void stayAwake();
     document.addEventListener('visibilitychange', onVisibility);
-    // After AppHost has focused itself, so ✕ ends up with focus either way.
+    // After AppHost has focused itself, so Close ends up with focus either way.
     focusTimer = setTimeout(() => closeButton?.focus({ preventScroll: true }), 0);
     return () => document.removeEventListener('visibilitychange', onVisibility);
   });
@@ -187,7 +188,9 @@
   bind:this={sheet}
   onclick={onSheetClick}
 >
-  <button type="button" class="close" aria-label="Close" bind:this={closeButton} onclick={() => finish()}>✕</button>
+  <button type="button" class="close" aria-label="Close" bind:this={closeButton} onclick={() => finish()}
+    ><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg></button
+  >
   {#if view === null}
     <p id="qr-present-title" class="payload">This code could not be shown.</p>
   {:else}
@@ -258,6 +261,9 @@
     position: absolute;
     top: max(8px, env(safe-area-inset-top));
     right: max(8px, env(safe-area-inset-right));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-width: 44px;
     min-height: 44px;
     border: 0;
@@ -267,6 +273,15 @@
     font: inherit;
     font-size: 24px;
     cursor: pointer;
+  }
+
+  .icon {
+    width: 1em;
+    height: 1em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
   }
 
   /* As large as fits: the whole width less the margins, or the height less the text below it. */

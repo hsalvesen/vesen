@@ -12,16 +12,22 @@ What it does:
   3. Drops hinting and every layout feature that changes spacing or substitutes glyphs (kerning,
      ligatures, contextual alternates), so each character keeps one fixed-width cell.
   4. Renames the family and keeps the copyright and licence records.
-  5. Writes WOFF2.
+  5. Writes WOFF2, then the list of code points it holds (scripts/fonts/glyphs.json), which
+     `npm run check:glyphs` reads to find any character in the source the font would not draw.
 
 Needs the pinned fontTools and brotli (pip install -r scripts/fonts/requirements.txt). Paths
 default to the repository, so `python3 scripts/fonts/build-vesen-mono.py` works from any directory.
 It stops if the source lacks any code point in REQUIRED, and lists the rest of RANGES it lacks.
+
+`--list` writes only the list, from the font already built: the cmap of public/fonts/VesenMono.woff2
+as inclusive ranges, with the font's SHA-256 so the check can tell when the list is out of date.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import sys
 from pathlib import Path
 
@@ -32,6 +38,7 @@ from fontTools.varLib import instancer
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "assets-src" / "fonts" / "CascadiaCode.ttf"
 OUTPUT = ROOT / "public" / "fonts" / "VesenMono.woff2"
+GLYPHS = ROOT / "scripts" / "fonts" / "glyphs.json"
 
 FAMILY = "Vesen Mono"
 FULL_NAME = "Vesen Mono Regular"
@@ -178,18 +185,55 @@ def build(source: Path, output: Path) -> int:
     return output.stat().st_size
 
 
+def ranges_of(code_points: list[int]) -> list[list[int]]:
+    """Sorted code points as inclusive [start, end] ranges."""
+    ranges: list[list[int]] = []
+    for cp in sorted(set(code_points)):
+        if ranges and ranges[-1][1] == cp - 1:
+            ranges[-1][1] = cp
+        else:
+            ranges.append([cp, cp])
+    return ranges
+
+
+def shown_path(path: Path) -> str:
+    """A path as the repository names it, with forward slashes; the path itself when outside."""
+    try:
+        return path.resolve().relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def list_glyphs(font_path: Path, output: Path) -> int:
+    """Writes the code points `font_path` maps to a glyph, as ranges, and returns how many."""
+    code_points = sorted(TTFont(font_path).getBestCmap())
+    listing = {
+        "font": shown_path(font_path),
+        "sha256": hashlib.sha256(font_path.read_bytes()).hexdigest(),
+        "count": len(code_points),
+        "ranges": ranges_of(code_points),
+    }
+    text = json.dumps(listing, indent=2)
+    # One range a line is enough; indent=2 would put each number on its own.
+    text = text.replace("[\n      ", "[").replace(",\n      ", ", ").replace("\n    ]", "]")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(text + "\n", encoding="utf-8")
+    return len(code_points)
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--source", type=Path, default=SOURCE)
     parser.add_argument("--output", type=Path, default=OUTPUT)
+    parser.add_argument("--glyphs", type=Path, default=GLYPHS, help="where the list of code points goes")
+    parser.add_argument("--list", action="store_true", help="only list the code points of the font at --output")
     args = parser.parse_args(argv)
 
-    size = build(args.source, args.output)
-    try:
-        shown = args.output.resolve().relative_to(ROOT)
-    except ValueError:
-        shown = args.output
-    print(f"vesen-mono: wrote {shown} ({size:,} bytes, {size / 1000:.1f} kB)")
+    if not args.list:
+        size = build(args.source, args.output)
+        print(f"vesen-mono: wrote {shown_path(args.output)} ({size:,} bytes, {size / 1000:.1f} kB)")
+    count = list_glyphs(args.output, args.glyphs)
+    print(f"vesen-mono: listed {count:,} code points of {shown_path(args.output)} in {shown_path(args.glyphs)}")
     return 0
 
 

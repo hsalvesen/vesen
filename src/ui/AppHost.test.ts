@@ -45,7 +45,7 @@ describe('AppHost and the Shutdown app', () => {
     await settle();
     expect(screen.getByRole('status').textContent).toContain('vesen is off');
     expect(screen.getByText('or press any key')).toBeInTheDocument();
-    expect(screen.queryByText('Close this page with ✕')).toBeNull();
+    expect(screen.queryByText('Close this page with ×')).toBeNull();
     await fireEvent.click(screen.getByRole('button', { name: /Power on/ }));
     expect(onclose).toHaveBeenCalledWith(7, POWER_ON);
     expect(close).not.toHaveBeenCalled();
@@ -68,7 +68,7 @@ describe('AppHost and the Shutdown app', () => {
     const onclose = vi.fn();
     render(AppHost, { props: { request: { id: 4, view: 'shutdown', props: view({ inApp: true, touch: true }) }, onclose } });
     await settle();
-    expect(screen.getByText('Close this page with ✕')).toBeInTheDocument();
+    expect(screen.getByText('Close this page with ×')).toBeInTheDocument();
     expect(screen.queryByText('or press any key')).toBeNull();
     await fireEvent.click(screen.getByRole('button', { name: /Power on/ }));
     expect(onclose).toHaveBeenCalledTimes(1);

@@ -20,6 +20,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "check:strict": "tsc -p tsconfig.strict.json --noEmit && tsc -p tsconfig.strict.node.json --noEmit",
     "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:glyphs": "node scripts/check-glyphs.mjs",
     "check:bundle": "node scripts/check-bundle.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "test": "vitest run",

@@ -7,6 +7,10 @@
   two seconds and says so politely; if copying fails, the text is selected and the card says to
   press and hold. Inside an in-app browser a card may also offer the real browser, always beside
   the manual instruction; that only ever happens on a tap.
+
+  Everything is drawn in the terminal's font, so the only marks are glyphs it has: → before a
+  link and after a button that leaves the page, ✓ once copied. The buttons are the chips every
+  card uses, with words on them.
 -->
 <script lang="ts">
   import { onDestroy, tick } from 'svelte';
@@ -28,7 +32,7 @@
   const escape = $derived(card.escape !== undefined && links.inApp !== null ? card.escape : null);
   const escapeHref = $derived(escape === null ? null : links.escapeHref(escape.url));
   const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform ?? '');
-  const failHint = $derived(links.touch ? 'Press and hold to copy' : `Press ${isMac ? '⌘C' : 'Ctrl+C'} to copy`);
+  const failHint = $derived(links.touch ? 'Press and hold to copy' : `Press ${isMac ? 'Cmd+C' : 'Ctrl+C'} to copy`);
 
   let copied = $state(false);
   let failed = $state(false);
@@ -73,20 +77,21 @@
 <div class="card" role="group" aria-label={card.title}>
   <div class="card-title">{card.title}</div>
   {#if card.openLabel !== undefined || href === null}
-    <div class="card-label"><span aria-hidden="true">{mail ? '✉ ' : '↗ '}</span>{label}</div>
+    <div class="card-label">{label}</div>
   {:else}
-    <a class="card-url" {href} {target} rel="noopener noreferrer"><span aria-hidden="true">{'↗ '}</span>{label}</a>
+    <a class="card-url" {href} {target} rel="noopener noreferrer"><span aria-hidden="true">{'→ '}</span>{label}</a>
   {/if}
   {#if card.detail !== undefined}
     <div class="card-detail">{card.detail}</div>
   {/if}
   <div class="card-actions">
     {#if card.openLabel !== undefined && href !== null}
-      <a class="chip card-open" {href} {target} rel="noopener noreferrer">{card.openLabel}</a>
+      <!-- A plain anchor, so a tap is the browser's own navigation: nothing cancels it. -->
+      <a class="chip card-open" {href} {target} rel="noopener noreferrer">{card.openLabel}<span class="arrow" aria-hidden="true">{' →'}</span></a>
     {/if}
     <!-- mousedown is cancelled so a click does not take focus, and the keyboard, from the prompt. -->
     <button type="button" class="chip card-copy" onmousedown={(event) => event.preventDefault()} onclick={copy}>
-      {copied ? '✓ Copied' : (card.copyLabel ?? '⧉ Copy')}
+      {copied ? '✓ Copied' : (card.copyLabel ?? 'Copy')}
     </button>
   </div>
   {#if failed}
@@ -99,7 +104,7 @@
     <div class="card-escape">
       <span class="muted">{links.inApp.menuHint}</span>
       {#if escapeHref !== null}
-        <button type="button" class="chip card-external" onclick={() => links.openExternal(escape.url)}>Open in {links.inApp.browser} ↗</button>
+        <button type="button" class="chip card-external" onclick={() => links.openExternal(escape.url)}>Open in {links.inApp.browser}<span class="arrow" aria-hidden="true">{' →'}</span></button>
       {/if}
     </div>
   {/if}
@@ -173,6 +178,11 @@
   .chip:active {
     background: var(--role-chip-fg, var(--theme-foreground));
     color: var(--theme-background);
+  }
+
+  /* The arrow is a flex item of its own, so its leading space would collapse without this. */
+  .arrow {
+    white-space: pre;
   }
 
   /* A thumb's target on a touch screen. */

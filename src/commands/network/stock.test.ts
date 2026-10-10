@@ -281,7 +281,7 @@ describe('failures, in plain words', () => {
     expect(status).toBe(1);
     expect(stderrPlain).toBe(message);
     const retry = code === 'timeout' || code === 'upstream_unavailable' || code === 'network' || code === 'internal';
-    expect(chipLabels(blocks)).toEqual(retry ? ['|↻ try again'] : []);
+    expect(chipLabels(blocks)).toEqual(retry ? ['|try again'] : []);
     if (retry) expect(runLines(blocks)).toEqual(['stock -f AAPL']);
   });
 

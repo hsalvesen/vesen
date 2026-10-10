@@ -30,6 +30,7 @@ jobs:
       - run: npm run check
       - run: npm run check:strict
       - run: npm run check:boundaries
+      - run: npm run check:glyphs
       - run: npm test
       # The stock Worker's address; an unset repository variable is an empty string, which the
       # app takes to mean the interim proxy (src/services/market/port.ts). The fetch proxy for

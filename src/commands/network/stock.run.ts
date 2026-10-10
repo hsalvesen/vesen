@@ -338,10 +338,10 @@ async function notAvailable(ctx: CommandContext): Promise<ExitCode> {
   return 1;
 }
 
-/** [↻ try again], which asks afresh. */
+/** [try again], which asks afresh. */
 async function tryAgain(ctx: CommandContext, symbol: string, range: Range): Promise<void> {
   const line = stockLine(symbol, { range, force: true });
-  if (line !== null) await ctx.stdout.block(out.chips([{ label: '↻ try again', action: out.action.run(line) }]));
+  if (line !== null) await ctx.stdout.block(out.chips([{ label: 'try again', action: out.action.run(line) }]));
 }
 
 async function failure(ctx: CommandContext, error: MarketFailure, wanted: Wanted, range: Range): Promise<ExitCode> {

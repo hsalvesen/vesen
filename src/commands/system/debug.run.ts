@@ -57,7 +57,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
     await ctx.stdout.line(out.span('✓ Copied. Paste it into an issue: ', { fg: 'ok' }), out.link('github.com/hsalvesen/vesen/issues', ISSUES));
   } else {
     await ctx.stdout.line(out.span('Could not copy without a tap here: tap Copy report, or select the text above.', { fg: 'warn' }));
-    await ctx.stdout.block(out.chips([{ label: '⧉ Copy report', action: out.action.copy(report, 'Copy report') }]));
+    await ctx.stdout.block(out.chips([{ label: 'Copy report', action: out.action.copy(report, 'Copy report') }]));
   }
   return 0;
 }

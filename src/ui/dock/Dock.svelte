@@ -10,7 +10,7 @@
   - compact, 300 to 459px: one 44px row, tab ↑ ^C and then the chips;
   - minimal, under 300px: the keys only, except while Tab's list is open: then the compact row,
     since on touch the list is only ever chips (02, section 5, Tab rule 3).
-  With the keyboard put away: the chip row, then ⌨ Type a command… ↑ clear.
+  With the keyboard put away: the chip row, then Type a command… (with a keyboard icon) ↑ clear.
 
   Where the chips are not drawn (minimal), they are still there for screen readers, visually
   hidden, so the input's aria-controls and aria-activedescendant always name a listbox that is.

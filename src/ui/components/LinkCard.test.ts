@@ -32,20 +32,20 @@ const email = out.card({
   href: 'mailto:has@salvesen.app?subject=Hi',
   label: 'has@salvesen.app',
   copy: 'has@salvesen.app',
-  copyLabel: '⧉ Copy address',
-  openLabel: '✉ Open mail app',
+  copyLabel: 'Copy address',
+  openLabel: 'Open mail app',
   escape: { url: 'https://www.vesen.app/', hint: "If the mail app doesn't open, copy the address, or open vesen.app in the browser:" },
 });
 
 describe('LinkCard', () => {
-  it('is a titled group with the link as a real anchor', () => {
+  it('is a titled group with the link as a real anchor, marked with an arrow the font has', () => {
     show(linkedin, policy());
     expect(screen.getByRole('group', { name: 'LinkedIn' })).toBeInTheDocument();
-    const link = screen.getByRole('link');
+    const link = screen.getByRole('link', { name: 'linkedin.com/in/harrysalvesen' });
     expect(link.getAttribute('href')).toBe('https://www.linkedin.com/in/harrysalvesen/');
     expect(link.getAttribute('target')).toBe('_blank');
     expect(link.getAttribute('rel')).toBe('noopener noreferrer');
-    expect(link.textContent).toBe('↗ linkedin.com/in/harrysalvesen');
+    expect(link.textContent).toBe('→ linkedin.com/in/harrysalvesen');
   });
 
   it('opens in the same view inside an in-app browser, so Back returns', () => {
@@ -57,7 +57,7 @@ describe('LinkCard', () => {
     vi.useFakeTimers();
     const links = policy();
     show(linkedin, links);
-    const button = screen.getByRole('button', { name: '⧉ Copy' });
+    const button = screen.getByRole('button', { name: 'Copy' });
     await fireEvent.click(button);
     await tick();
     expect(links.copy).toHaveBeenCalledWith('https://www.linkedin.com/in/harrysalvesen/');
@@ -65,13 +65,13 @@ describe('LinkCard', () => {
     expect(screen.getByRole('status').textContent).toBe('Copied');
     vi.advanceTimersByTime(2000);
     await tick();
-    expect(button.textContent?.trim()).toBe('⧉ Copy');
+    expect(button.textContent?.trim()).toBe('Copy');
     expect(screen.getByRole('status').textContent).toBe('');
   });
 
   it("selects the text and says 'Press and hold to copy' when copying fails", async () => {
     show(email, policy({ copy: async () => false }));
-    await fireEvent.click(screen.getByRole('button', { name: '⧉ Copy address' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Copy address' }));
     await tick();
     await tick();
     expect(screen.getByText('has@salvesen.app', { selector: '.card-copy-text' })).toBeInTheDocument();
@@ -82,12 +82,37 @@ describe('LinkCard', () => {
 
   it('gives mail an Open mail app anchor and Copy address, and opens nothing by itself', () => {
     show(email, policy());
-    const open = screen.getByRole('link', { name: '✉ Open mail app' });
+    const open = screen.getByRole('link', { name: 'Open mail app' });
     expect(open.getAttribute('href')).toBe('mailto:has@salvesen.app?subject=Hi');
     expect(open.hasAttribute('target')).toBe(false);
+    // The arrow after the words is the font's own, and not part of the name.
+    expect(open.textContent).toBe('Open mail app →');
     expect(screen.getByText('has@salvesen.app')).toBeInTheDocument();
     // Not in an in-app browser: no way out to offer.
     expect(screen.queryByText(/Open in browser/)).toBeNull();
+  });
+
+  it('leaves a tap on Open mail app to the browser: nothing cancels it', async () => {
+    show(email, policy());
+    const open = screen.getByRole('link', { name: 'Open mail app' });
+    let prevented: boolean | null = null;
+    // After every handler on the way up: what the browser would see before it navigates.
+    const seen = (event: Event): void => {
+      prevented = event.defaultPrevented;
+      event.preventDefault();
+    };
+    window.addEventListener('click', seen);
+    try {
+      await fireEvent.click(open);
+    } finally {
+      window.removeEventListener('click', seen);
+    }
+    expect(prevented).toBe(false);
+  });
+
+  it('draws only glyphs the terminal font has', () => {
+    const { container } = show(email, policy({ target: '_self', inApp: { label: 'Instagram', browser: 'Safari', menuHint: '••• → Open in browser' }, escapeHref: () => 'instagram://extbrowser/' }));
+    expect(container.textContent).not.toMatch(/[✉⧉↗✕⌘]/u);
   });
 
   it('offers the real browser inside an in-app one, only beside the manual instruction, and only on a tap', async () => {
@@ -100,7 +125,9 @@ describe('LinkCard', () => {
     expect(screen.getByText(/mail app doesn't open/)).toBeInTheDocument();
     expect(screen.getByText('••• → Open in browser')).toBeInTheDocument();
     expect(links.openExternal).not.toHaveBeenCalled();
-    await fireEvent.click(screen.getByRole('button', { name: 'Open in Safari ↗' }));
+    const external = screen.getByRole('button', { name: 'Open in Safari' });
+    expect(external.textContent).toBe('Open in Safari →');
+    await fireEvent.click(external);
     expect(links.openExternal).toHaveBeenCalledWith('https://www.vesen.app/');
   });
 

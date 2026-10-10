@@ -795,7 +795,7 @@ export class PromptController {
     this.write(replaceRange(this.state, from, to, text), { force: true });
   }
 
-  /** Puts the keyboard away: the ⌄ key. */
+  /** Puts the keyboard away: the dock's hide key (the ▾ of `help keys`). */
   blur(): void {
     this.input?.blur();
   }

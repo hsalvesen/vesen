@@ -45,7 +45,7 @@ describe('ChipRow', () => {
     const { rerender } = render(ChipRow, { props: { chips: [stop] } });
     const option = screen.getByRole('option', { name: 'Cancel the running command (Control C)' });
     expect(option.classList.contains('emphasis')).toBe(true);
-    expect(option.textContent).toBe('✕cancel ^C');
+    expect(option.textContent).toBe('×cancel ^C');
     rerender({ chips: [{ id: 'control:cancel', label: 'Cancel', matchLen: 0, kind: 'control', action: { kind: 'cancel' } }] });
     expect(screen.getByRole('option', { name: 'Cancel the password prompt' })).toBeInTheDocument();
   });

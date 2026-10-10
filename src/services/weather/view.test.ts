@@ -106,14 +106,15 @@ describe('cards', () => {
       compact: 'Gadigal Country · Sydney, AU',
       wide: 'Gadigal Country · Sydney, New South Wales, Australia',
     });
-    expect(toPlain(view.compact).split('\n')[0]).toBe('Gadigal Country · Sydney, AU');
-    expect(toPlain(view.wide).split('\n')[0]).toBe('Weather for Gadigal Country · Sydney, New South Wales, Australia');
+    // The units in force follow the place, so the chip that switches them reads as a switch.
+    expect(toPlain(view.compact).split('\n')[0]).toBe('Gadigal Country · Sydney, AU (°C)');
+    expect(toPlain(view.wide).split('\n')[0]).toBe('Weather for Gadigal Country · Sydney, New South Wales, Australia (°C)');
   });
 
-  it('cuts a long title with an ellipsis', () => {
+  it('cuts a long title with an ellipsis, keeping the units', () => {
     const view = buildView(sydney, longPlace, UNIT_PRESETS.metric, NOW);
     const title = toPlain(view.compact).split('\n')[0] ?? '';
-    expect(title).toMatch(/…$/);
+    expect(title).toMatch(/… \(°C\)$/);
     expect(textWidth(title)).toBeLessThanOrEqual(COMPACT_COLS);
   });
 
@@ -219,17 +220,18 @@ describe('range bars', () => {
     const view = buildView(sydney, gadigal, UNIT_PRESETS.metric, NOW, { days: 7 });
     expect(view.days.filter((d) => d.bar?.now !== undefined).map((d) => d.label)).toEqual(['Today']);
     for (const layout of [view.compact, view.wide]) {
-      const markers = layout.flatMap((line) => line.filter((s) => s[0] === 'bar' && s[1].includes('|')));
+      const markers = layout.flatMap((line) => line.filter((s) => s[0] === 'bar' && s[1].includes('┃')));
       expect(markers).toHaveLength(1);
     }
   });
 
-  it('draws ASCII bars of the exact width', () => {
-    expect(barText({ lo: 0, hi: 100 }, 10)).toBe('==========');
-    expect(barText({ lo: 20, hi: 60 }, 10)).toBe('--====----');
-    expect(barText({ lo: 50, hi: 50 }, 5)).toBe('--=--');
-    expect(barText({ lo: 0, hi: 100, now: 100 }, 5)).toBe('====|');
-    expect(barText({ lo: 0, hi: 40, now: 0 }, 5)).toBe('|=---');
+  it('draws bars of the exact width from box-drawing glyphs, one cell each', () => {
+    expect(barText({ lo: 0, hi: 100 }, 10)).toBe('━━━━━━━━━━');
+    expect(barText({ lo: 20, hi: 60 }, 10)).toBe('──━━━━────');
+    expect(barText({ lo: 50, hi: 50 }, 5)).toBe('──━──');
+    expect(barText({ lo: 0, hi: 100, now: 100 }, 5)).toBe('━━━━┃');
+    expect(barText({ lo: 0, hi: 40, now: 0 }, 5)).toBe('┃━───');
+    expect(textWidth(barText({ lo: 20, hi: 60, now: 40 }, 10))).toBe(10);
   });
 });
 
@@ -258,10 +260,46 @@ describe('notes and credits', () => {
     expect(noteText({ kind: 'device-fallback', reason: 'insecure', app: 'Instagram' })).toBe(
       'The location needs a secure (https) page, so this uses an approximate network location.',
     );
-    expect(noteText({ kind: 'last-place' })).toBe('Last place you looked up · weather --forget to clear');
+    expect(noteText({ kind: 'last-place' })).toBe('Showing the last place you looked up. weather --forget clears it.');
     expect(noteText({ kind: 'alternatives', places: springfields.slice(1, 3) })).toBe(
-      'Also: Springfield, Illinois, US · Springfield, Massachusetts, US',
+      'Other matches: Springfield, Illinois, US; Springfield, Massachusetts, US.',
     );
+  });
+
+  it('lists the same-named places under the one shown, which is marked', () => {
+    const [shown, ...others] = springfields;
+    const view = buildView(oslo, shown as Place, UNIT_PRESETS.metric, NOW, { notes: [{ kind: 'alternatives', places: others.slice(0, 2) }] });
+    const text = (lines: readonly Line[]): string[] => lines.map((line) => line.map((s) => s[1]).join(''));
+    for (const layout of [view.compact, view.wide]) {
+      const at = text(layout).indexOf('Matches:');
+      expect(at).toBeGreaterThan(0);
+      expect(text(layout).slice(at, at + 4)).toEqual([
+        'Matches:',
+        '› Springfield, Missouri, US',
+        '  Springfield, Illinois, US',
+        '  Springfield, Massachusetts, US',
+      ]);
+      // The one shown in the text role, the others dim: the choice is plain without the mark too.
+      const roles = layout.slice(at, at + 4).map((line) => line[0]?.[0]);
+      expect(roles).toEqual(['dim', 'text', 'dim', 'dim']);
+    }
+    // The sentence form, for --json and screen readers, keeps the others only.
+    expect(view.notes).toEqual(['Other matches: Springfield, Illinois, US; Springfield, Massachusetts, US.']);
+  });
+
+  it('states the units in the title, so the chip that switches them reads as a switch', () => {
+    const metric = buildView(oslo, osloPlace, UNIT_PRESETS.metric, NOW);
+    expect(metric.wide[0]?.map((s) => s[1]).join('')).toBe('Weather for Oslo, Norway (°C)');
+    expect(metric.wide[0]?.[2]).toEqual(['dim', ' (°C)']);
+    expect(metric.compact[0]?.map((s) => s[1]).join('')).toBe('Oslo, NO (°C)');
+    const imperial = buildView(oslo, osloPlace, UNIT_PRESETS.imperial, NOW);
+    expect(imperial.wide[0]?.map((s) => s[1]).join('')).toBe('Weather for Oslo, Norway (°F)');
+    expect(imperial.compact[0]?.map((s) => s[1]).join('')).toBe('Oslo, NO (°F)');
+    // A long name gives way to the units, never the other way round.
+    const long: Place = { ...osloPlace, name: 'A place with a very long name indeed' };
+    const line = buildView(oslo, long, UNIT_PRESETS.metric, NOW).compact[0] ?? [];
+    expect(lineWidth(line)).toBeLessThanOrEqual(COMPACT_COLS);
+    expect(line[line.length - 1]).toEqual(['dim', ' (°C)']);
   });
 
   it('adds the country-level and approximate notes from the place itself, once', () => {

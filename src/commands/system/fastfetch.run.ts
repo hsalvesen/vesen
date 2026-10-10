@@ -210,7 +210,7 @@ export function detailLines(user: string, rows: readonly Row[]): Line[] {
   const strong = { fg: 'green', bold: true } as const;
   const lines: Line[] = [
     [out.span(user, strong), out.span('@'), out.span(PROMPT_HOST, strong)],
-    [out.span('-'.repeat(title.length))],
+    [out.span('─'.repeat(title.length))],
     ...rows.map((entry): Line => [
       out.span(entry.label, { fg: 'cyan', bold: true }),
       out.span(': '),
@@ -254,7 +254,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   if (!ctx.stdout.isTTY) {
     // In a pipe, the details alone, one `Label: value` a line, for grep.
     const title = `${ctx.user.name}@${PROMPT_HOST}`;
-    await ctx.stdout.write([title, '-'.repeat(title.length), ...rows.map((entry) => `${entry.label}: ${entry.value}`)].join('\n') + '\n');
+    await ctx.stdout.write([title, '─'.repeat(title.length), ...rows.map((entry) => `${entry.label}: ${entry.value}`)].join('\n') + '\n');
     if (note !== null) await ctx.stderr.line(out.span(note, { fg: 'muted' }));
     return 0;
   }

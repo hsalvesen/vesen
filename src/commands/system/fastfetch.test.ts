@@ -130,7 +130,7 @@ describe('fastfetch on the terminal', () => {
     expect(columns.left).toEqual([expect.objectContaining({ type: 'art', alt: 'macOS logo', fit: 'scale' })]);
     const details = columns.right[0] as LinesBlock;
     const text = details.lines.map(lineText);
-    expect(text.slice(0, 3)).toEqual(['guest@vesen', '-----------', 'OS: macOS Sequoia 15.6 arm64']);
+    expect(text.slice(0, 3)).toEqual(['guest@vesen', '───────────', 'OS: macOS Sequoia 15.6 arm64']);
     expect(text).toContain('WM Theme: swamphen');
   });
 
@@ -190,7 +190,7 @@ describe('fastfetch in a pipe', () => {
   it('writes the details alone, a Label: value a line, for grep', async () => {
     const { stdoutPlain } = await runLine('fastfetch', { tty: false, sys: createSysInfo(ANDROID_PHONE().host) });
     const lines = stdoutPlain.split('\n');
-    expect(lines.slice(0, 3)).toEqual(['guest@vesen', '-----------', 'OS: Android 14']);
+    expect(lines.slice(0, 3)).toEqual(['guest@vesen', '───────────', 'OS: Android 14']);
     expect(lines).toContain('Host (approximate): Pixel 7');
     expect(stdoutPlain).not.toContain('MMMM');
   });

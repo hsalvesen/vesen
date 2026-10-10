@@ -33,8 +33,9 @@ export function webCard(title: string, url: string): CardBlock {
 }
 
 /**
- * The email card: [✉ Open mail app] as a real mailto link and [⧉ Copy address]. Inside an
- * in-app browser, where the mail app may not open, a hint and the way out to the real browser.
+ * The email card: [Open mail app →] as a real mailto link and [Copy address]. Inside an in-app
+ * browser, where the mail app may not open, a hint and the way out to the real browser. The
+ * labels are words only: the card draws them in the terminal's font, which has no envelope.
  */
 export function emailCard(ctx: Pick<CommandContext, 'clock' | 'tty'>): CardBlock {
   return out.card({
@@ -42,8 +43,8 @@ export function emailCard(ctx: Pick<CommandContext, 'clock' | 'tty'>): CardBlock
     href: mailHref(ctx.clock.now()),
     label: EMAIL_ADDRESS,
     copy: EMAIL_ADDRESS,
-    copyLabel: '⧉ Copy address',
-    openLabel: '✉ Open mail app',
+    copyLabel: 'Copy address',
+    openLabel: 'Open mail app',
     ...(ctx.tty.inApp === null
       ? {}
       : { escape: { url: OWNER_LINKS.site, hint: "If the mail app doesn't open, copy the address, or open vesen.app in the browser:" } }),

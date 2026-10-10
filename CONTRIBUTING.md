@@ -27,6 +27,7 @@ House rules, which the gates enforce where they can:
 - No HTML output and no `{@html}`. Commands write text and blocks; tap actions come only from the `out` builders.
 - Avoid `AbortSignal.any`, `AbortSignal.timeout`, `Array.prototype.at`, `Object.hasOwn`, `Object.groupBy` and `Promise.withResolvers`: Instagram's browser on older iPhones lacks them.
 - Every regular expression a visitor types goes through `src/commands/lib/regex.ts`.
+- Output uses only glyphs the terminal's font has (`public/fonts/VesenMono.woff2`; `scripts/fonts/glyphs.json` lists its code points): → × ▾ ● ○ ▣ … and the box-drawing, block and braille ranges, never ✉ ⧉ ↗ ↻ ✕ ⌄ ⌨ ⏻ ⋮ or an emoji, which fall back to another font. A piece of UI chrome that needs a symbol the font lacks draws a small inline SVG instead.
 - Linux behaviour: GNU's wording and exit codes, and coreutils silent on success with `-v` to confirm.
 - Content (cows, fortunes, fonts, art) is written for vesen, not copied from elsewhere.
 - No new dependencies without discussing it in an issue first.
@@ -40,6 +41,7 @@ CI runs these on every pull request; run them before you push.
 npm run check                         # svelte-check, 0 errors
 npm run check:strict                  # strict TypeScript
 npm run check:boundaries              # DOM-free folders, no {@html}, the catalogue kept out of the kernel
+npm run check:glyphs                  # every character in the source is one Vesen Mono draws (scripts/fonts/glyphs.json)
 npm test                              # Vitest
 npm run build
 npm run check:bundle                  # initial JS 60 kB, kernel 75 kB in at most 4 files, catalogue 40 kB, stock's first quote 19 kB (gzip)

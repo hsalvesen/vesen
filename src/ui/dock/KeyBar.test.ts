@@ -18,7 +18,12 @@ function target(): KeyTarget & { calls: string[] } {
   };
 }
 
-const labels = () => screen.getAllByRole('button').map((key) => key.textContent);
+/** Each key's text, after its icon's name in angle brackets where it has one. */
+const labels = () =>
+  screen.getAllByRole('button').map((key) => {
+    const icon = key.querySelector('svg[data-icon]')?.getAttribute('data-icon');
+    return `${icon ? `<${icon}>` : ''}${key.textContent}`;
+  });
 const tap = async (name: string) => {
   const key = screen.getByRole('button', { name });
   await fireEvent.pointerDown(key, { pointerType: 'touch' });
@@ -46,11 +51,15 @@ describe('the keys', () => {
 });
 
 describe('KeyBar', () => {
-  it('is a toolbar of tab ↑ ↓ ^C clear ••• ⌄, each driving the controller as the hardware key does', async () => {
+  it('is a toolbar of tab ↑ ↓ ^C clear ••• and a chevron, each driving the controller as the hardware key does', async () => {
     const t = target();
     render(KeyBar, { props: { target: t } });
     expect(screen.getByRole('toolbar', { name: 'Terminal keys' })).toBeInTheDocument();
-    expect(labels()).toEqual(['tab', '↑', '↓', '^C', 'clear', '•••', '⌄']);
+    expect(labels()).toEqual(['tab', '↑', '↓', '^C', 'clear', '•••', '<chevron-down>']);
+    // The chevron is an inline SVG in the key's own colour, hidden from screen readers, which hear the key's name.
+    const chevron = screen.getByRole('button', { name: 'Hide the keyboard' }).querySelector('svg');
+    expect(chevron?.getAttribute('aria-hidden')).toBe('true');
+    expect(chevron?.classList.contains('icon')).toBe(true);
     for (const name of ['Tab: complete', 'Previous command (hold for history)', 'Next command', 'Control C: cancel', 'Clear the screen', 'Hide the keyboard']) {
       await tap(name);
     }
@@ -81,7 +90,7 @@ describe('KeyBar', () => {
     await tap('Cursor left');
     expect(t.calls).toEqual(['insert:|', 'key:Escape', 'key:ArrowLeft']);
     await tap('Symbols');
-    expect(labels()).toEqual(['tab', '↑', '↓', '^C', 'clear', '•••', '⌄']);
+    expect(labels()).toEqual(['tab', '↑', '↓', '^C', 'clear', '•••', '<chevron-down>']);
   });
 
   it('repeats ← and → while held', async () => {
@@ -118,7 +127,7 @@ describe('KeyBar', () => {
     rerender({ variant: 'compact' });
     expect(labels()).toEqual(['tab', '↑', '^C']);
     rerender({ variant: 'closed', busy: false });
-    expect(labels()).toEqual(['⌨ Type a command…', '↑', 'clear']);
+    expect(labels()).toEqual(['<keyboard>Type a command…', '↑', 'clear']);
     await tap('Type a command');
     // The keyboard opens, and the prompt comes into view however far up the visitor had read.
     expect(t.calls).toEqual(['focus:keyboard', 'reveal']);

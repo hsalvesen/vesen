@@ -116,7 +116,7 @@ export const TOUCH_BINDINGS: readonly KeyBinding[] = [
   { keys: '^C', does: 'stop the running command, or abandon the line' },
   { keys: 'clear', does: 'clear the screen, keeping the line' },
   { keys: '•••', does: 'symbols: esc | > / - ~ * " $, and ← → to move' },
-  { keys: '⌄', does: 'put the keyboard away' },
+  { keys: '▾', does: 'put the keyboard away' },
   { keys: 'a name in help', does: 'tap it to put it at the prompt' },
   { keys: 'a status line', does: 'tap it to stop the running command' },
 ];

@@ -1,4 +1,4 @@
-// GF(2^8) over the primitive polynomial x^8 + x^4 + x^3 + x^2 + 1 (0x11D), generator α = 2,
+// GF(2^8) over the primitive polynomial x^8 + x^4 + x^3 + x^2 + 1 (0x11D), generator alpha = 2,
 // and the Reed-Solomon encoder QR codes use (ISO 18004 section 7.5.2).
 
 const EXP = new Uint8Array(512);
@@ -18,7 +18,7 @@ export function gfMul(a: number, b: number): number {
   return a === 0 || b === 0 ? 0 : EXP[LOG[a]! + LOG[b]!]!;
 }
 
-/** α^i for any integer i ≥ 0. */
+/** alpha^i for any integer i ≥ 0. */
 export function gfExp(i: number): number {
   return EXP[i % 255]!;
 }
@@ -32,7 +32,7 @@ export function gfLog(a: number): number {
 const generators = new Map<number, Uint8Array>();
 
 /**
- * Coefficients of ∏(x - α^i) for i < degree, highest power first, without the leading 1.
+ * Coefficients of ∏(x - alpha^i) for i < degree, highest power first, without the leading 1.
  * Cached, because a symbol uses one or two block lengths.
  */
 export function rsGenerator(degree: number): Uint8Array {

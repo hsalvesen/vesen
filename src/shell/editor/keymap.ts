@@ -10,7 +10,7 @@
 // them (Ctrl+W closes the tab) or they mean something people rely on. Cmd shortcuts on a Mac are
 // always the browser's. A Ctrl or Alt letter is the letter the layout types, as a terminal reads
 // it (Ctrl+Y on a German keyboard is Ctrl+Y); only when the key types something else (Option+B
-// on a Mac types ∫, and Ctrl+Ф on a Russian layout) is it the physical key's letter. A key
+// on a Mac types ∫, and Ctrl with a Cyrillic letter on a Russian layout) is it the physical key's letter. A key
 // pressed while an input method is composing is the IME's. On a Mac, where Cmd+C copies, Ctrl+C
 // always interrupts, as in Terminal; elsewhere it copies while text is selected.
 
@@ -228,7 +228,7 @@ const NAMED: Readonly<Record<string, string>> = {
  * The chord for a key press: modifiers as `Cmd-`, `C-` (Ctrl), `M-` (Alt or Option) and `S-`
  * (Shift, with a named key or another modifier), then the key. A letter or `.` held with Ctrl
  * or Alt is the one the layout types (Ctrl+Y on QWERTZ is C-y, Ctrl+A on AZERTY is C-a); when
- * the key types anything else (Option+B's ∫ on a Mac, Ctrl+Ф on a Russian layout), it is named
+ * the key types anything else (Option+B's ∫ on a Mac, a Cyrillic letter on a Russian layout), it is named
  * by its physical key.
  */
 export function chordOf(e: KeyChord): string {
