@@ -101,7 +101,7 @@ This merges the shell design's spec (category, man, `opens`, `next`, `run`/`load
 Commands never return HTML strings. They write to `ctx.stdout`:
 
 - **Text with an SGR subset** (bold, dim, the 16 palette colours, OSC 8 links for `http`, `https` and `mailto` only). Through a pipe or into a file the bytes pass unchanged, so `ls | cat` behaves like Linux.
-- **Blocks** for layout: `lines`, `grid`, `table`, `art`, `panel`, `chips`, `card` and `columns`, from the shell design. Every block has a `plain()` fallback for pipes.
+- **Blocks** for layout: `lines`, `grid`, `table`, `art`, `panel`, `chips`, `card` and `columns`, from the shell design, and `lists`, added after the release for the help index: titled columns of items laid side by side, as many as fit, the rest wrapping below. Every block has a `plain()` fallback for pipes.
 - **A trusted `component` block**, added by this plan:
 
 ```ts
@@ -260,7 +260,7 @@ The catch-all rewrite to `index.html` is replaced by a terminal-styled `404.html
 
 ## 15. One identity
 
-The visitor is `guest`, uid 1000, with `HOME=/home/guest`. `/home/user` remains as a symlink so existing examples keep working. The prompt host is the brand, `vesen`, rather than `window.location.hostname`, so it is the same on every domain (pending the owner's decision). `/home/has` holds the owner's read-only portfolio files for `finger has` and exploration. `whoami` prints `guest` in pipes; `linkedin` and `about` are the portfolio entry points.
+The visitor is `guest`, uid 1000, with `HOME=/home/guest`. `/home/user` remains as a symlink so existing examples keep working. The prompt host is the brand, `vesen`, rather than `window.location.hostname`, so it is the same on every domain (pending the owner's decision). `/home/has` holds the owner's read-only portfolio files for `finger has` and exploration. `whoami` prints `guest` in pipes; `whoami` and `about` are the portfolio entry points (a separate `linkedin` command was removed after the release, as `whoami` already shows and opens the profile).
 
 ## Migration rules
 
