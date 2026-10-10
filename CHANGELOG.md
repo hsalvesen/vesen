@@ -30,6 +30,7 @@ A rewrite of the whole app, built from the audit and plan in [docs/plan](docs/pl
 
 - Every command is one spec that drives running, options, `--help`, `man`, `whatis`, `apropos`, Tab completion, the phone's chips, its `/usr/bin` stub and its man page; every command that is not a builtin answers `--version`.
 - About 160 commands. New: the text tools (`grep`, `sed`, `sort`, `uniq`, `cut`, `tr`, `head`, `tail`, `wc`, `nl`, `diff`, `xargs`, `column`, `bc`, `expr`, `base64`, the checksums and more), the file tools (`find`, `tree`, `chmod`, `chown`, `du`, `df`, `realpath`, `file` and more), the system tools (`ps`, `top`, `kill`, `uname`, `free`, `cal`, `id`, `uptime` and more), job builtins (`read`, `time`, `timeout`, `watch`), network tools over HTTPS (`dig`, `host`, `nslookup`, `ping`, `ip`, `ifconfig`, `whois`, `wget`, `git log`), the pager and editor (`less`, `more`, `man` in the pager, `nano`), and fun (`cowsay`, `fortune`, `figlet`, `lolcat`, `sl`, `cmatrix`, `factor`) with art written for vesen.
+- After the owner's review: `help` lists the terminal commands in columns, one per category (Files, Text, Shell, System, Network, Fun, Editor), every command named in alphabetical order with nothing cut; the columns reflow with the width, so a desktop shows all seven side by side and a phone three or four to a band, and in a pipe there is one line of names per category. `theme NAME` switches the theme and `theme set` is gone. The `linkedin` command is gone too, as `whoami` shows and, on a desktop, opens the profile: 157 commands, 60 in the core and 97 in the catalogue.
 - Coreutils are silent on success with `-v` to confirm, and use GNU's wording and exit codes.
 - `less` opens at `+G`, `+F`, `+NUMBER` or `+/text`, and into a pipe copies like `cat`; `date -d` and `--date` read a date as `touch -d` does, days of the week (`monday`, `next friday`, `last tuesday`) and `9am` or `9:30 pm` included, and refuse a day the month lacks (`2024-02-30`) or a time out of range, in GNU's words; `ip route get ADDRESS` shows the route it would take; `timeout`, `nohup` and `xargs` say `No such file or directory` (127) or `Permission denied` (126) for a command they cannot run; `figlet -f` knows its font's names.
 - One process table: `ps`, `top`, `kill`, `pgrep`, `$$` and `/proc` agree, each process has a `/proc/PID` folder, `/proc/self` is the command reading it, and `/dev/pts/0`, which `tty` names, exists.
@@ -47,6 +48,7 @@ A rewrite of the whole app, built from the audit and plan in [docs/plan](docs/pl
 
 - The shell is sized to the visible screen above the keyboard, with one scroll owner and no sideways scrolling; pinch zoom is back, with a 16 px touch input that never zooms the page.
 - A phone dock: starter and follow-up chips, a key bar (tab, ↑, ↓, ^C, clear, symbols, hide keyboard), a history sheet, and `keys on|off|auto`.
+- A tap on the prompt row, or on the space below the last entry, always opens the keyboard: both are tap targets of their own, so iOS WebKit's touch adjustment cannot hand the tap to a tappable name just above them.
 - Links open only on a tap inside in-app browsers, in the same view, and Back restores the terminal as it was; link cards with Copy everywhere.
 - Back (Android's button, iOS's edge swipe) closes `man`, `less`, `nano`, `cmatrix`, `sl`, the Shutdown screen and QR Present mode and stays in vesen, even while the app is still loading on a slow connection; `nano` asks to save changes first, and asks again at each Back until it is answered. A reload or a return with an app open leaves no step behind, so one Back still leaves.
 - `nano` keeps unsaved changes in this browser while Back asks about them and whenever the page is put away, so a Back that leaves vesen anyway loses nothing: the next `nano` of that file offers to restore them.
@@ -56,6 +58,7 @@ A rewrite of the whole app, built from the audit and plan in [docs/plan](docs/pl
 ### Prompt and completion
 
 - One completion engine for Tab (extend, list, cycle), ghost text and the chips, from the specs. It never offers a flag's value, `--` or `dig`'s `+option` and `@server` words as an operand, and it follows a command's words where they decide what comes next: only `ip route` offers `get`, which offers addresses rather than devices.
+- Follow-up chips, the starters and closed lists (a command's subcommands, a value such as a theme name) are never cut short: after `theme ls` every theme is a chip on a phone, `theme ` offers ls and every theme under a desktop prompt too, and `theme l` offers ls and lorikeet. Only open-ended lists (files, command names, history) keep a cap before Tab.
 - A first Tab before the catalogue of commands has arrived waits for it rather than ringing the bell.
 - A line editor with a block cursor on desktop, readline keys, the kill ring, reverse search, history prefix search and type-ahead while a command runs.
 - A status line while a command runs, and each line's output streams into its entry. `^C` shows where it was pressed: at the end of an unfinished line, and above what the command prints on its way out, such as `ping`'s statistics.
@@ -64,6 +67,12 @@ A rewrite of the whole app, built from the audit and plan in [docs/plan](docs/pl
 
 - Role colours (`--role-*`) over each theme's palette, with every theme passing WCAG contrast; cockatoo and swamphen adjusted to pass.
 - Vesen Mono, a self-hosted subset of Cascadia Code under the SIL OFL.
+- A new VESEN wordmark in the banner, bold and italic in block characters, with a compact one on phones; the link preview matches. The banner also says this is a virtual file system and points at `tree`.
+- Fifteen themes: five new ones named for Australian animals, galah, lorikeet, magpie, platypus and quokka (the second light theme), with every palette slot readable at 4.5:1.
+- Tappable names carry no underline until hovered or focused, and under `cathode phosphor` and `vintage` they glow like the text beside them (browsers give buttons no text shadow of their own).
+- Every glyph on the page comes from Vesen Mono, checked by `npm run check:glyphs`: the mail card's and link cards' icons, the dock's keys, the Shutdown screen and the stock card no longer fall back to another font, and vesen's own output uses the font's rules, arrows and bullets instead of ASCII stand-ins (fastfetch's underline, weather's plain-text range bar).
+- `fastfetch`'s Apple, Android, Windows and Linux logos and `weather`'s pictograms (sun, moon, clouds, rain by intensity, sleet, snow, fog, thunder) are redrawn in block and box-drawing characters for the terminal's tight line spacing; art drawn with letters, such as `cowsay`'s animals, keeps the terminal's normal line height instead of being squashed.
+- `weather` names the other matches for an ambiguous place as tappable chips with the chosen one marked, and its header states the units in use.
 - CRT tiers: full on desktop, a lighter static effect on phones and in-app browsers, off under reduced motion, more contrast or forced colours.
 - Link preview, icons and a web manifest.
 
