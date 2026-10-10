@@ -4,7 +4,7 @@ import type { Chip, CompletionResult } from '../../shell/complete/types';
 import ChipRow from './ChipRow.svelte';
 import { LONG_PRESS_MS } from './press';
 
-const result = { state: { text: 'theme set w', cursor: 11 } } as CompletionResult;
+const result = { state: { text: 'theme w', cursor: 7 } } as CompletionResult;
 const apply = (label: string, extra: Partial<Chip> = {}): Chip => ({
   id: `value:${label}`,
   label,
@@ -19,16 +19,25 @@ afterEach(() => vi.useRealTimers());
 
 describe('ChipRow', () => {
   it('is a listbox of chips labelled with their word and named by what a tap does', () => {
-    const wombat = apply('wombat', { swatch: '#1c1814', line: 'theme set wombat', action: { ...apply('w').action, run: true } as Chip['action'] });
+    const wombat = apply('wombat', { swatch: '#1c1814', line: 'theme wombat', action: { ...apply('w').action, run: true } as Chip['action'] });
     render(ChipRow, { props: { chips: [run('theme', 'current'), wombat, apply('documents/', { kind: 'dir' }), run('help')], more: 2 } });
     const list = screen.getByRole('listbox', { name: 'Suggestions' });
     expect(list.id).toBe('completion-list');
     const options = screen.getAllByRole('option');
-    expect(options.map((o) => o.getAttribute('aria-label'))).toEqual(['Run: theme', 'Run: theme set wombat', 'Insert: documents/', 'Run: help']);
+    expect(options.map((o) => o.getAttribute('aria-label'))).toEqual(['Run: theme', 'Run: theme wombat', 'Insert: documents/', 'Run: help']);
     expect(options.map((o) => o.textContent)).toEqual(['⏎theme', 'wombat⏎', 'documents/', 'help⏎']);
     expect(options[1]?.querySelector('b')?.textContent).toBe('w');
     expect(options.every((o) => o.getAttribute('tabindex') === '-1')).toBe(true);
     expect(list.textContent).toContain('+2');
+  });
+
+  it('draws every chip it is given, fifteen themes included, with no count of more when there are none', () => {
+    const themes = ['cassowary', 'cockatoo', 'crocodile', 'galah', 'kangaroo', 'kookaburra', 'lorikeet', 'magpie', 'petroica', 'platypus', 'quokka', 'swamphen', 'treefrog', 'wallaby', 'wombat'];
+    render(ChipRow, { props: { chips: themes.map((name) => run(`theme ${name}`, 'followup')), more: 0 } });
+    const options = screen.getAllByRole('option');
+    expect(options).toHaveLength(15);
+    expect(options.map((o) => o.getAttribute('aria-label'))).toEqual(themes.map((name) => `Run: theme ${name}`));
+    expect(screen.getByRole('listbox').querySelector('.more')).toBeNull();
   });
 
   it('shows one large cancel chip while a command runs, and Cancel at a password', () => {

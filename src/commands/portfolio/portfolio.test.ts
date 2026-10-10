@@ -22,58 +22,78 @@ afterEach(() => {
 const text = (blocks: readonly Block[]): string => blocks.map(plain).join('');
 const rows = (blocks: readonly Block[]): readonly Line[] => blocks.flatMap((block) => (block.type === 'lines' ? block.lines : []));
 
+/** Every theme in themes.json, in its order: alphabetical. */
+const THEME_NAMES = ['cassowary', 'cockatoo', 'crocodile', 'galah', 'kangaroo', 'kookaburra', 'lorikeet', 'magpie', 'petroica', 'platypus', 'quokka', 'swamphen', 'treefrog', 'wallaby', 'wombat'];
+
 describe('theme ls', () => {
   it('draws one row per theme: a live marker, the name as a tap, and eight swatches in its own hex', async () => {
     const { status, blocks } = await runLine('theme ls');
     expect(status).toBe(0);
     const themeRows = rows(blocks).filter((line) => line.some((span) => span.swatches !== undefined));
-    expect(themeRows).toHaveLength(10);
+    expect(themeRows).toHaveLength(15);
     const swamphen = themeRows.find((line) => line[1]?.text === 'swamphen') ?? [];
     expect(swamphen[0]).toMatchObject({ text: '› ', live: { kind: 'isCurrentTheme', theme: 'swamphen', marker: '› ' } });
-    expect(swamphen[1]).toMatchObject({ live: { kind: 'isCurrentTheme', theme: 'swamphen' }, action: { kind: 'run', line: 'theme set swamphen' } });
+    expect(swamphen[1]).toMatchObject({ live: { kind: 'isCurrentTheme', theme: 'swamphen' }, action: { kind: 'run', line: 'theme swamphen' } });
     expect(swamphen[3]?.swatches?.background).toBe('#222235');
     expect(swamphen[3]?.swatches?.colours).toHaveLength(8);
     expect(swamphen[3]?.swatches?.colours).toContain('#f60055');
     const wombat = themeRows.find((line) => line[1]?.text === 'wombat') ?? [];
     expect(wombat[0]?.text).toBe('  ');
+    // Every name is a tap that switches, `theme NAME`, and the hint says so.
+    expect(themeRows.map((line) => line[1]?.action)).toEqual(themeRows.map((line) => ({ kind: 'run', line: `theme ${line[1]?.text ?? ''}` })));
+    expect(text(blocks)).toContain('Try one with: theme NAME, or click a name.');
     // No hex anywhere else: every other colour is a token.
     for (const line of rows(blocks)) for (const span of line) if (span.swatches === undefined) expect(JSON.stringify(span.style ?? {})).not.toMatch(/#/);
   });
 
   it('lists the names alone in a pipe', async () => {
     const { stdoutPlain } = await runLine('theme ls', { tty: false });
-    expect(stdoutPlain.split('\n')).toEqual(['cassowary', 'cockatoo', 'crocodile', 'kangaroo', 'kookaburra', 'petroica', 'swamphen', 'treefrog', 'wallaby', 'wombat']);
+    expect(stdoutPlain.split('\n')).toEqual(THEME_NAMES);
+  });
+
+  it('draws the five newest themes with their own backgrounds', async () => {
+    const { blocks } = await runLine('theme ls');
+    const backgrounds = Object.fromEntries(rows(blocks).filter((line) => line[3]?.swatches !== undefined).map((line) => [line[1]?.text, line[3]?.swatches?.background]));
+    expect(backgrounds).toMatchObject({ galah: '#3a4150', lorikeet: '#1b1150', magpie: '#0b0b0d', platypus: '#0f3538', quokka: '#f4e2bc' });
   });
 });
 
-describe('theme set', () => {
+describe('theme NAME', () => {
   it('switches by name in any case, and confirms in one line', async () => {
     const s = await session();
-    expect(await s.run('theme set WOMBAT')).toMatchObject({ status: 0, stdoutPlain: 'Theme set to wombat.' });
+    expect(await s.run('theme WOMBAT')).toMatchObject({ status: 0, stdoutPlain: 'Theme set to wombat.' });
     expect(get(theme).name).toBe('wombat');
     expect(await s.run('theme Cockatoo')).toMatchObject({ status: 0, stdoutPlain: 'Theme set to cockatoo.' });
     expect(get(theme).name).toBe('cockatoo');
     s.stop();
   });
 
-  it('says when there is no such theme, or no name', async () => {
-    expect(await runLine('theme set nope')).toMatchObject({
+  it.each(['galah', 'lorikeet', 'magpie', 'platypus', 'quokka'])('switches to %s', async (name) => {
+    const s = await session();
+    expect(await s.run(`theme ${name}`)).toMatchObject({ status: 0, stdoutPlain: `Theme set to ${name}.` });
+    expect(get(theme).name).toBe(name);
+    s.stop();
+  });
+
+  it('says when there is no such theme, set included, and shows its help with no name', async () => {
+    expect(await runLine('theme nope')).toMatchObject({
       status: 1,
       stderrPlain: "theme: nope: no such theme\nTry 'theme ls' to see all available themes.",
     });
-    expect(await runLine('theme nope')).toMatchObject({ status: 1 });
-    expect(await runLine('theme set')).toMatchObject({ status: 1, stderrPlain: "theme: set: missing theme name\nTry 'theme --help' for more information." });
+    // `theme set NAME` is gone: set is read as a theme name.
+    expect(await runLine('theme set')).toMatchObject({ status: 1, stderrPlain: "theme: set: no such theme\nTry 'theme ls' to see all available themes." });
+    expect(await runLine('theme set wombat')).toMatchObject({ status: 1, stderrPlain: "theme: extra operand 'wombat'\nTry 'theme --help' for more information." });
     expect(get(theme).name).toBe('swamphen');
-  });
-
-  it('shows its help with no arguments', async () => {
-    expect((await runLine('theme')).stdoutPlain).toContain('theme - change the colour theme');
+    const help = (await runLine('theme')).stdoutPlain;
+    expect(help).toContain('theme - change the colour theme');
+    expect(help).toContain('theme NAME');
+    expect(help).not.toContain('theme set');
   });
 
   it('is remembered by name, and restored by name after a reload', async () => {
     const storage = createStorage(null).local;
     const stop = persistTheme(storage);
-    await runLine('theme set wombat');
+    await runLine('theme wombat');
     expect(storage.get(STORAGE_KEYS.theme.key)).toBe('wombat');
     stop();
     // A reload: the default first, then the saved name.

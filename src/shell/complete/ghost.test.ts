@@ -20,7 +20,7 @@ const ghost = (line: string, history: readonly string[] = [], options = {}) => {
 
 describe('ghostFor', () => {
   it('offers the rest of the newest history line that starts with the whole line', () => {
-    expect(ghost('the', ['theme ls', 'theme set wombat'])).toEqual({ text: 'me set wombat', source: 'history', acceptable: true });
+    expect(ghost('the', ['theme ls', 'theme wombat'])).toEqual({ text: 'me wombat', source: 'history', acceptable: true });
   });
 
   it('skips a history line with a line break, which the one-line prompt cannot hold', () => {
@@ -57,9 +57,9 @@ describe('ghostFor', () => {
   });
 
   it('accepts all of a ghost, or one word of it', () => {
-    const history = ghost('the', ['theme set wombat']);
+    const history = ghost('the', ['theme wombat']);
     if (history === null) throw new Error('no ghost');
-    expect(applyGhost(at('the'), history)).toEqual({ text: 'theme set wombat', cursor: 16 });
+    expect(applyGhost(at('the'), history)).toEqual({ text: 'theme wombat', cursor: 12 });
     expect(applyGhost(at('the'), history, 'word')).toEqual({ text: 'theme', cursor: 5 });
     const path = { text: 'uments/linux.txt', source: 'history', acceptable: true } as const;
     expect(applyGhost(at('cat doc'), path, 'word').text).toBe('cat documents/');

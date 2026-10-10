@@ -106,7 +106,7 @@ describe('the XSS corpus typed at the prompt', () => {
   it('stays inert in the history listing and in theme and cathode errors', async () => {
     const session = await boot();
     for (const payload of xssCorpus()) {
-      await session.run(`theme set ${payload}`);
+      await session.run(`theme ${payload}`);
       await session.run(`cathode set ${payload}`);
       await session.run(`${payload} --help`);
     }

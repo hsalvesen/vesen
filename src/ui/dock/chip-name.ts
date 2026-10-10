@@ -1,5 +1,5 @@
 // What a dock chip says to a screen reader, and the glyph it shows. A chip's label is only the
-// word it completes ('wombat'); its name says the whole of what a tap does ('Run: theme set
+// word it completes ('wombat'); its name says the whole of what a tap does ('Run: theme
 // wombat'), as designs/phone-and-instagram.md, "B. Exploring by tapping", asks.
 
 import type { Chip } from '../../shell/complete/types';

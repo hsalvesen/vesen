@@ -72,9 +72,9 @@ describe('colour', () => {
     expect(colorSchemeFor('not a colour')).toBe('dark');
   });
 
-  it('makes cockatoo the one light theme', () => {
+  it('makes cockatoo and quokka the two light themes', () => {
     const light = themes.filter((t) => colorSchemeFor(t.background) === 'light').map((t) => t.name);
-    expect(light).toEqual(['cockatoo']);
+    expect(light).toEqual(['cockatoo', 'quokka']);
   });
 });
 

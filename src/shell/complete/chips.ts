@@ -2,13 +2,19 @@
 // chips.ts; designs/phone-and-instagram.md, "B. Exploring by tapping"; 02, sections 5 and 6).
 //
 // - While typing: the completions, or what comes next after an exact word ('theme' offers ls
-//   and set). On a touch screen a candidate that finishes the line runs it in one tap (wombat
-//   after `theme set `), and a line ready to run gets a first [⏎ line] chip.
+//   and every theme). On a touch screen a candidate that finishes the line runs it in one tap
+//   (wombat after `theme `), and a line ready to run gets a first [⏎ line] chip.
 // - After Tab: the whole list, with the menu's choice marked.
 // - On an empty line: after a command was not found, what it probably meant; on a touch screen,
 //   then the follow-ups the last command's spec offers (every theme after `theme ls`), then the
 //   starter commands, which run in one tap.
 // - While a command runs: cancel; at a secret prompt: Cancel.
+//
+// Only an open-ended list (files, command names, history) is cut to `max` while typing, with the
+// rest counted; Tab lists it all. A closed list a spec declares (its subcommands, an enum such as
+// the theme names) is shown whole in the dock, where the row scrolls sideways, and so are the
+// follow-ups and the starters on an empty line. Under a desktop prompt, where the row wraps,
+// `max` still keeps the quiet row short.
 //
 // Every action is made here from specs, files and history, never from text a command printed,
 // and a line a tap runs is made only of plain words.
@@ -32,8 +38,10 @@ const NO_TARGET: ReadonlySet<RedirOp> = new Set(['2>&1', '>&2', '>&1']);
 /** Candidates whose choice can finish a line: a subcommand, or a value such as a theme name. */
 const FINISHING: ReadonlySet<ChipKind> = new Set(['subcommand', 'value']);
 
-/** How many follow-up lines one command may offer. */
-export const MAX_FOLLOWUPS = 12;
+/** True when every candidate comes from a closed list the spec declared: subcommands and enum values. */
+export function closedList(result: CompletionResult): boolean {
+  return result.candidates.length > 0 && result.candidates.every((candidate) => FINISHING.has(candidate.kind));
+}
 
 /** How many letters of a candidate's label the typed text covers, shown bold. */
 function matchLength(result: CompletionResult, candidate: Candidate): number {
@@ -118,8 +126,8 @@ export function readyToRun(text: string, env: CompletionEnv): boolean {
 }
 
 /**
- * The line a candidate finishes, when choosing it leaves nothing more to give: `theme set w` and
- * wombat make `theme set wombat`. Null when the line goes on (a folder, a flag, a command that
+ * The line a candidate finishes, when choosing it leaves nothing more to give: `theme w` and
+ * wombat make `theme wombat`. Null when the line goes on (a folder, a flag, a command that
  * takes more) or the candidate lands before other text.
  */
 function finishedLine(result: CompletionResult, candidate: Candidate, env: CompletionEnv): string | null {
@@ -131,8 +139,9 @@ function finishedLine(result: CompletionResult, candidate: Candidate, env: Compl
   return at.slot === 'none' ? after.text.trimEnd() : null;
 }
 
-function completionChips(result: CompletionResult, max: number, highlight: number | null, input: ChipInput): ChipList {
-  const shown = result.candidates.slice(0, Math.max(0, max));
+/** The candidates as chips: the first `max` of them, or all of them when `max` is null. */
+function completionChips(result: CompletionResult, max: number | null, highlight: number | null, input: ChipInput): ChipList {
+  const shown = max === null ? result.candidates : result.candidates.slice(0, Math.max(0, max));
   const env = input.touch ? input.env : undefined;
   const chips = shown.map((candidate, i): Chip => {
     const runs = env === undefined ? null : finishedLine(result, candidate, env);
@@ -227,6 +236,8 @@ function followUps(input: ChipInput): Chip[] {
   } catch {
     return [];
   }
+  // Every line the spec offers, so a list such as the themes is never cut short: a spec that
+  // reads a folder bounds its own list (ls's NEXT_MAX).
   const seen = new Set<string>();
   const chips: Chip[] = [];
   for (const raw of Array.isArray(lines) ? lines : []) {
@@ -235,7 +246,6 @@ function followUps(input: ChipInput): Chip[] {
     if (seen.has(line) || !plainLine(line)) continue;
     seen.add(line);
     chips.push({ id: `followup:${line}`, label: line, matchLen: 0, kind: 'followup', action: { kind: 'run', line }, line });
-    if (chips.length >= MAX_FOLLOWUPS) break;
   }
   return chips;
 }
@@ -280,11 +290,6 @@ function currentChip(input: ChipInput, env: CompletionEnv): Chip | null {
   return { id: 'current', label: line.trim(), matchLen: 0, kind: 'current', action: { kind: 'run', line }, line, summary: 'run this line' };
 }
 
-function capped(chips: readonly Chip[], max: number): ChipList {
-  const shown = chips.slice(0, Math.max(0, max));
-  return { chips: shown, more: chips.length - shown.length };
-}
-
 /** Drops chips that run a line an earlier chip already runs. */
 function distinct(chips: readonly Chip[]): Chip[] {
   const seen = new Set<string>();
@@ -317,20 +322,23 @@ export function chipsFor(input: ChipInput): ChipList {
   if (tab.phase === 'asking') return NONE;
 
   if (input.state.text.trim() === '') {
+    // Whole: the did-you-mean, every follow-up the last command offers and every starter.
     const starting = input.touch ? starters(input) : [];
     const chips = [...afterNotFound(input), ...(input.touch ? [...labelledLike(followUps(input), starting), ...starting] : [])];
-    return capped(distinct(chips), input.max);
+    return { chips: distinct(chips), more: 0 };
   }
 
   const current = input.touch && input.env !== undefined ? currentChip(input, input.env) : null;
   const room = current === null ? input.max : input.max - 1;
+  /** How many of a result's candidates to show: all of a closed list in the dock, else `room`. */
+  const limit = (of: CompletionResult): number | null => (input.touch && closedList(of) ? null : room);
   let list: ChipList = NONE;
   if (result === null) list = NONE;
   else if (result.total === 0) list = nearChips(result, room);
-  else if (result.next !== undefined) list = completionChips(result.next, room, null, input);
+  else if (result.next !== undefined) list = completionChips(result.next, limit(result.next), null, input);
   // A word already typed in full has nothing to offer: `pwd` is not followed by [pwd].
   else if (result.total === 1 && result.candidates[0]?.value === result.prefix) list = NONE;
-  else list = completionChips(result, room, null, input);
+  else list = completionChips(result, limit(result), null, input);
   return current === null ? list : { chips: [current, ...list.chips], more: list.more };
 }
 

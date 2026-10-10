@@ -86,7 +86,7 @@ test.describe('the shell kernel', { tag: '@smoke' }, () => {
 
   test('reset restores the banner, the default theme, the files and an empty history', async ({ page }) => {
     await page.goto('/');
-    await run(page, 'theme set wombat');
+    await run(page, 'theme wombat');
     await run(page, 'touch made.txt');
     await prompt(page).fill('reset');
     await prompt(page).press('Enter');

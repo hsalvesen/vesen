@@ -146,8 +146,8 @@ describe('Dock', () => {
     expect(document.activeElement).not.toBe(input);
   });
 
-  it("builds a line by tapping: 'the', then theme, set and wombat, which runs it", async () => {
-    const { h, input, controller } = await setup();
+  it("builds a line by tapping: 'the', then theme, then wombat, which runs it", async () => {
+    const { h, input, controller, dock } = await setup();
     input.focus();
     input.value = 'the';
     input.setSelectionRange(3, 3);
@@ -155,10 +155,10 @@ describe('Dock', () => {
     await tick();
     await tap(screen.getByRole('option', { name: 'Insert: theme' }));
     expect(input.value).toBe('theme ');
-    await tap(screen.getByRole('option', { name: 'Insert: set' }));
-    expect(input.value).toBe('theme set ');
-    await tap(screen.getByRole('option', { name: 'Run: theme set wombat' }));
-    await vi.waitFor(() => expect(h.commits.map((c) => c.line)).toContain('theme set wombat'));
+    // After `theme `: the line itself, ls, then every theme, each a line to run.
+    expect(chipLabels(dock)).toEqual(['theme', 'ls', 'swamphen', 'wombat']);
+    await tap(screen.getByRole('option', { name: 'Run: theme wombat' }));
+    await vi.waitFor(() => expect(h.commits.map((c) => c.line)).toContain('theme wombat'));
     expect(h.appearance.currentTheme()).toBe('wombat');
     expect(document.activeElement).toBe(input);
     expect(controller.text).toBe('');
@@ -167,8 +167,8 @@ describe('Dock', () => {
   it('offers what follows a run, and a did-you-mean after a command was not found', async () => {
     const { dock, controller } = await setup();
     controller.submit('theme ls', 'chip');
-    await vi.waitFor(() => expect(chipLabels(dock)[0]).toBe('theme set swamphen'));
-    expect(chipLabels(dock)).toContain('theme set wombat');
+    await vi.waitFor(() => expect(chipLabels(dock)[0]).toBe('theme swamphen'));
+    expect(chipLabels(dock)).toContain('theme wombat');
     controller.submit('hlep', 'chip');
     await vi.waitFor(() => expect(chipLabels(dock)[0]).toBe('help'));
     expect(dock.querySelector('.chip')?.getAttribute('aria-label')).toBe('Run: help');

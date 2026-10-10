@@ -293,7 +293,7 @@ test.describe('forced colours', { tag: '@smoke' }, () => {
     test.skip(isPhone(), 'the desktop list');
     await page.emulateMedia({ forcedColors: 'active' });
     await open(page);
-    await prompt(page).fill('theme set ');
+    await prompt(page).fill('theme ');
     for (let i = 0; i < 3; i += 1) await prompt(page).press('Tab');
     const selected = page.locator('.completion-row .chip.selected');
     await expect(selected).toHaveCount(1);
@@ -303,7 +303,7 @@ test.describe('forced colours', { tag: '@smoke' }, () => {
     // In the dock too.
     await page.goto('/?dock=1');
     await expect(page.locator('[data-completion="ready"]')).toHaveCount(1);
-    await prompt(page).fill('theme set ');
+    await prompt(page).fill('theme ');
     for (let i = 0; i < 3; i += 1) await page.locator('.dock .key[data-key="tab"]').click();
     const docked = page.locator('.dock .chip.selected');
     await expect(docked).toHaveCount(1);

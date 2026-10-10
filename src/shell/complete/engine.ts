@@ -59,23 +59,28 @@ function matchPool(pool: Pool, prefix: string): { matched: Candidate[]; caseFold
 
 function resolve(state: EditState, env: CompletionEnv): Resolved {
   const context = cursorContext(state, env);
-  let pool = gather(context, env);
-  let kind: string | undefined = context.source?.kind;
+  const pool = gather(context, env);
+  const kind: string | undefined = context.source?.kind;
   let { matched, caseFolded } = matchPool(pool, context.prefix);
 
-  // `theme sw`: no subcommand starts so, but the command's own first argument may.
+  // Where a subcommand goes, the command's own first operand may stand instead (`theme NAME`
+  // beside `theme ls`), so its values are offered after the subcommands, in name order: `theme `
+  // lists ls and every theme, and `theme l` ls and lorikeet.
   const first = context.spec?.args?.[0];
-  if (context.slot === 'subcommand' && matched.length === 0 && context.prefix !== '' && first !== undefined) {
-    pool = valuePool({ ...context, slot: 'arg', source: first.source, valueName: first.name }, env);
-    kind = first.source.kind;
-    ({ matched, caseFolded } = matchPool(pool, context.prefix));
+  let values: Candidate[] = [];
+  if (context.slot === 'subcommand' && first !== undefined) {
+    const own = valuePool({ ...context, slot: 'arg', source: first.source, valueName: first.name }, env);
+    const found = matchPool(own, context.prefix);
+    const taken = new Set(matched.map((c) => c.value));
+    values = sortCandidates(dedupe(found.matched, own.caseInsensitive === true)).filter((c) => !taken.has(c.value));
+    if (values.length > 0) caseFolded = caseFolded || found.caseFolded;
   }
 
   // The fun commands keep out of a list of names until they are all that matches.
   const names = context.slot === 'command' || context.source?.kind === 'command' || context.source?.kind === 'commandLine';
   if (names && context.slot !== 'subcommand') matched = withoutQuiet(matched, context.prefix, env);
   const unique = dedupe(matched, pool.caseInsensitive === true);
-  const ordered = pool.ordered === true ? unique : sortCandidates(unique);
+  const ordered = [...(pool.ordered === true ? unique : sortCandidates(unique)), ...values];
   const placeholder = placeholderFor(context);
   const near =
     context.slot === 'command' && ordered.length === 0 && context.prefix !== ''

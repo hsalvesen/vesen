@@ -170,7 +170,7 @@ export type ChipKind = CandidateKind | 'starter' | 'followup' | 'didyoumean' | '
 export type ChipAction =
   /**
    * Puts the candidate on the line exactly as Tab would. With `run`, a thumb's tap then runs the
-   * line, because the candidate finishes it: `theme set w` and wombat. A long press only edits.
+   * line, because the candidate finishes it: `theme w` and wombat. A long press only edits.
    */
   | { readonly kind: 'apply'; readonly result: CompletionResult; readonly candidate: Candidate; readonly run?: boolean }
   /** Runs a line in one tap. */
@@ -217,7 +217,11 @@ export interface ChipInput {
   readonly registry: Pick<Registry, 'get' | 'list' | 'suggest'>;
   /** Command history, oldest first. */
   readonly history: readonly string[];
-  /** The most chips to show while typing; a Tab list shows them all. */
+  /**
+   * The most chips to show while typing from an open-ended list (files, command names); a
+   * closed list in the dock (subcommands, the theme names), the follow-ups and the starters on
+   * an empty line, and a Tab list are shown whole.
+   */
   readonly max: number;
   /** The status of the last line, for a did-you-mean after 127. */
   readonly lastStatus?: ExitCode;

@@ -157,7 +157,7 @@ describe('action trust', () => {
   });
 
   it('chips accept the action from a builder span', () => {
-    const { text, action } = out.insert('theme set ', 'theme set ');
+    const { text, action } = out.insert('theme ', 'theme ');
     if (action === undefined) throw new Error('missing action');
     expect(() => out.chips([{ label: text, action }])).not.toThrow();
   });
@@ -341,7 +341,7 @@ describe('plain', () => {
   });
 
   it('uses span text for live bindings', () => {
-    const live = { ...out.run('swamphen', 'theme set swamphen'), live: { kind: 'isCurrentTheme', theme: 'swamphen' } } as const;
+    const live = { ...out.run('swamphen', 'theme swamphen'), live: { kind: 'isCurrentTheme', theme: 'swamphen' } } as const;
     expect(plain(out.grid([live]))).toBe('swamphen\n');
   });
 });

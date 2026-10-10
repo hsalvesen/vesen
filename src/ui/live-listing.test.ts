@@ -55,7 +55,7 @@ describe('theme ls on the screen', () => {
   it("draws each theme's swatches in its own hex, hidden from screen readers", async () => {
     const root = await view((await runLine('theme ls')).blocks);
     const strips = root.querySelectorAll('.swatches');
-    expect(strips).toHaveLength(10);
+    expect(strips).toHaveLength(15);
     const cockatoo = strips[1];
     expect(cockatoo?.getAttribute('aria-hidden')).toBe('true');
     expect(cockatoo?.getAttribute('style')).toMatch(/background-color: #e8ddd0/);

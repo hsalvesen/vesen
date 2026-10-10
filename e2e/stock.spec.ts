@@ -135,7 +135,7 @@ test.describe('stock', { tag: '@smoke' }, () => {
       await page.setViewportSize({ width: 375, height: 720 });
       await routeQuotes(page);
       await page.goto('/');
-      await run(page, `theme set ${theme}`);
+      await run(page, `theme ${theme}`);
       await run(page, 'stock AAPL');
       const selected = lastEntry(page).locator('.quote .chip[aria-pressed="true"]');
       await expect(selected).toHaveText('1d');

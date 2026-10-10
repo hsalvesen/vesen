@@ -474,15 +474,15 @@ describe('the dock', () => {
   it('runs a candidate that finishes the line, and a long press only puts it there', async () => {
     const { input, controller, h } = setup({ touch: true, dock: true });
     await engineReady(controller);
-    await type(input, 'theme set w');
+    await type(input, 'theme w');
     const wombat = controller.chipList.chips.find((chip) => chip.label === 'wombat');
     if (wombat === undefined) throw new Error('no wombat chip');
     controller.choose(wombat, { insert: true });
-    expect(input.value).toBe('theme set wombat ');
+    expect(input.value).toBe('theme wombat ');
     expect(h.commits).toHaveLength(0);
-    await type(input, 'theme set w');
+    await type(input, 'theme w');
     controller.choose(wombat);
-    await vi.waitFor(() => expect(h.commits.map((c) => c.line)).toEqual(['theme set wombat']));
+    await vi.waitFor(() => expect(h.commits.map((c) => c.line)).toEqual(['theme wombat']));
     expect(input.value).toBe('');
   });
 
@@ -491,7 +491,7 @@ describe('the dock', () => {
     await engineReady(controller);
     controller.submit('theme ls', 'chip');
     await vi.waitFor(() => expect(controller.last).toEqual({ line: 'theme ls', argv: ['theme', 'ls'], status: 0 }));
-    expect(controller.chipList.chips.slice(0, 2).map((chip) => chip.line)).toEqual(['theme set swamphen', 'theme set wombat']);
+    expect(controller.chipList.chips.slice(0, 2).map((chip) => chip.line)).toEqual(['theme swamphen', 'theme wombat']);
     controller.submit('nosuch', 'chip');
     await vi.waitFor(() => expect(controller.last?.status).toBe(127));
   });
@@ -1081,13 +1081,13 @@ describe('composition', () => {
   it('drops a Tab edit made while composing when a chip runs a line first', async () => {
     const { input, controller, h } = setup({ touch: true, dock: true });
     await engineReady(controller);
-    await type(input, 'theme set wo');
+    await type(input, 'theme wo');
     input.dispatchEvent(new CompositionEvent('compositionstart'));
     controller.pressKey('Tab');
     const wombat = controller.chipList.chips.find((chip) => chip.label === 'wombat');
     if (wombat === undefined) throw new Error('no wombat chip');
     controller.choose(wombat);
-    await vi.waitFor(() => expect(h.commits.map((c) => c.line)).toEqual(['theme set wombat']));
+    await vi.waitFor(() => expect(h.commits.map((c) => c.line)).toEqual(['theme wombat']));
     input.dispatchEvent(new CompositionEvent('compositionend'));
     expect(input.value).toBe('');
   });

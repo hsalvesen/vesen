@@ -69,13 +69,13 @@ test.describe('fastfetch', { tag: '@smoke' }, () => {
     });
   }
 
-  test("names the theme in a row that follows 'theme set', without running fastfetch again", async ({ page }) => {
+  test("names the theme in a row that follows 'theme NAME', without running fastfetch again", async ({ page }) => {
     await page.goto('/');
     if (isPhone()) await prompt(page).tap();
     await run(page, 'fastfetch');
     const entry = entryOf(page, 'fastfetch');
     await expect(entry).toContainText('WM Theme: swamphen');
-    await run(page, 'theme set wombat');
+    await run(page, 'theme wombat');
     await expect(entry).toContainText('WM Theme: wombat');
     await expect(entry).not.toContainText('WM Theme: swamphen');
     await expect(echoes(page).filter({ hasText: /^fastfetch$/ })).toHaveCount(1);

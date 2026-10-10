@@ -77,7 +77,7 @@ describe('command names', () => {
     expect(tab('env FOO=1 he')).toBe('env FOO=1 help ');
     expect(tab('command he')).toBe('command help ');
     expect(tab('FOO=1 he')).toBe('FOO=1 help ');
-    expect(tab('sudo theme set k')).toEqual(['kangaroo', 'kookaburra']);
+    expect(tab('sudo theme k')).toEqual(['kangaroo', 'kookaburra']);
   });
 
   it('lists every command, with its summary, on an empty line', () => {
@@ -97,20 +97,26 @@ describe('command names', () => {
 
 describe('subcommands and enums', () => {
   it.each([
-    ['theme ', ['ls', 'set']],
-    ['theme s', 'theme set '],
-    ['theme l', 'theme ls '],
+    // Where a subcommand goes, the first operand may stand instead: the subcommands, then the themes by name.
+    ['theme ', ['ls', 'cassowary', 'cockatoo', 'crocodile', 'galah', 'kangaroo', 'kookaburra', 'lorikeet', 'magpie', 'petroica', 'platypus', 'quokka', 'swamphen', 'treefrog', 'wallaby', 'wombat']],
+    ['theme s', 'theme swamphen '],
+    ['theme l', ['ls', 'lorikeet']],
+    ['theme ls', 'theme ls '],
+    ['theme lo', 'theme lorikeet '],
     ['theme sw', 'theme swamphen '],
-    ['cathode ', ['ls', 'set', 'off', 'quality']],
+    ['theme SW', 'theme swamphen '],
+    ['theme k', ['kangaroo', 'kookaburra']],
+    ['theme w', ['wallaby', 'wombat']],
+    ['theme wa', 'theme wallaby '],
+    ['theme zz', 'BELL'],
+    // `set` is no subcommand and no theme.
+    ['theme set', 'BELL'],
+    ['theme set w', 'BELL'],
+    ['cathode ', ['ls', 'set', 'off', 'quality', 'phosphor', 'scanlines', 'vintage']],
     ['cathode q', 'cathode quality '],
     ['cathode o', 'cathode off '],
+    ['cathode s', ['set', 'scanlines']],
     ['cathode v', 'cathode vintage '],
-    ['theme set sw', 'theme set swamphen '],
-    ['theme set SW', 'theme set swamphen '],
-    ['theme set k', ['kangaroo', 'kookaburra']],
-    ['theme set w', ['wallaby', 'wombat']],
-    ['theme set wa', 'theme set wallaby '],
-    ['theme set zz', 'BELL'],
     ['cathode quality ', ['auto', 'full', 'lite', 'off']],
     ['cathode quality l', 'cathode quality lite '],
     ['cathode set p', 'cathode set phosphor '],
@@ -123,15 +129,19 @@ describe('subcommands and enums', () => {
   });
 
   it('gives theme names their background as a swatch', () => {
-    const result = complete(at('theme set k'), env);
+    const result = complete(at('theme k'), env);
     expect(result.candidates.map((c) => c.swatch)).toEqual(['#262626', '#222222']);
+    const all = complete(at('theme '), env);
+    expect(all.candidates.filter((c) => c.kind === 'value').map((c) => c.swatch)).toEqual(env.appearance?.themes().map((theme) => theme.background));
   });
 
-  it("looks ahead when the word is typed in full: 'theme' still offers ls and set", () => {
+  it("looks ahead when the word is typed in full: 'theme' still offers ls and every theme", () => {
     const result = complete(at('theme'), env);
     expect(result.candidates.map((c) => c.value)).toEqual(['theme']);
-    expect(result.next?.candidates.map((c) => c.value)).toEqual(['ls', 'set']);
-    expect(complete(at('theme set'), env).next?.total).toBe(10);
+    const themes = env.appearance?.themes().map((theme) => theme.name.toLowerCase()) ?? [];
+    expect(themes).toHaveLength(15);
+    expect(result.next?.candidates.map((c) => c.value)).toEqual(['ls', ...themes]);
+    expect(result.next?.total).toBe(16);
     // A word with nothing enumerable after it has no lookahead.
     expect(complete(at('pwd'), env).next).toBeUndefined();
   });
@@ -348,7 +358,7 @@ describe('examples and history', () => {
 });
 
 describe('never throws', () => {
-  const alphabet = fc.constantFrom(...'aZ.~/-_ =$"\'\\|&;<>(){}`#!*?[]0\n\t'.split(''), 'cat ', 'theme set ', 'sudo ', '$(', '${', '--', 'é', '😀');
+  const alphabet = fc.constantFrom(...'aZ.~/-_ =$"\'\\|&;<>(){}`#!*?[]0\n\t'.split(''), 'cat ', 'theme ', 'sudo ', '$(', '${', '--', 'é', '😀');
   const line = fc.array(alphabet, { maxLength: 30 }).map((parts) => parts.join(''));
 
   it('on any line and any cursor', () => {
