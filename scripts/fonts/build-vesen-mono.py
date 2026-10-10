@@ -67,13 +67,15 @@ RANGES: list[tuple[int, int]] = [
 REQUIRED: list[tuple[int, int]] = [
     (0x0020, 0x007E),  # Basic Latin
     (0x00A0, 0x017F),  # Latin-1 and Latin Extended-A
-    (0x2013, 0x2015),  # – — ― (dashes; ― draws wind in weather art)
-    (0x2018, 0x201D),  # ‘ ’ ‚ ‛ “ ” (‘ draws rain in weather art)
-    (0x2022, 0x2022),  # Bullet
+    (0x2013, 0x2015),  # – — ― (dashes)
+    (0x2018, 0x201D),  # ‘ ’ ‚ ‛ “ ” (quotes)
+    (0x2022, 0x2022),  # Bullet (snow in the weather art; · U+00B7 above draws its stars)
     (0x2026, 0x2026),  # Ellipsis
     (0x2190, 0x2195),  # ← ↑ → ↓ ↔ ↕
     (0x23CE, 0x23CE),  # Return symbol
-    (0x2500, 0x25FF),  # Box Drawing, Block Elements, Geometric Shapes
+    (0x2500, 0x25FF),  # Box Drawing (the sun's rays, rain and fog in the weather art), Block Elements
+                       # (the VESEN logo, fastfetch's OS logos and the weather art's discs, clouds and
+                       # bolt), Geometric Shapes
     (0x2713, 0x2713),  # Check mark
     (0x2800, 0x28FF),  # Braille Patterns
     (0xFFFD, 0xFFFD),  # Replacement character

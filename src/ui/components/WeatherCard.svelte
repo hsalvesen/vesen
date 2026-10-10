@@ -18,6 +18,7 @@
   import { colourVar, isTrustedAction, type Action, type ChipItem } from '../../output/model';
   import type { Line, RangeBar, WeatherCardProps } from '../../services/weather/types';
   import { ROLE_COLOUR } from '../../services/weather/view';
+  import { isArtRole } from '../../services/weather/wmo';
   import type { ComponentBlockProps } from './registry';
 
   let { view, alt, onaction }: ComponentBlockProps = $props();
@@ -59,13 +60,20 @@
     return `color: ${colourVar(token)}`;
   }
 
+  /**
+   * A line that starts with the pictogram: its art rows carry only the art roles (wmo.ts), which
+   * no text line starts with. Such a line is drawn at line height 1, so the blocks of one row
+   * meet the blocks of the next, as the terminal draws block art.
+   */
+  const artLine = (row: Line): boolean => row.length > 0 && isArtRole(row[0]?.[0]);
+
   function run(action: Action): void {
     if (isTrustedAction(action)) onaction?.(action);
   }
 </script>
 
 <!-- One line per row; no whitespace between tags, which the pre-formatted blocks would show. -->
-{#snippet lines(rows: readonly Line[])}{#each rows as row}<div class="wx-line">{#if row.length === 0}<br />{:else}{#each row as segment}{#if segment[0] === 'bar'}<span class="wx-bar" style={barStyle(segment[2])}><span class="wx-track"></span><span class="wx-fill"></span>{#if segment[2].now !== undefined}<span class="wx-now"></span>{/if}<span class="wx-bar-text">{segment[1]}</span></span>{:else}<span style={colour(segment[0])}>{segment[1]}</span>{/if}{/each}{/if}</div>{/each}{/snippet}
+{#snippet lines(rows: readonly Line[])}{#each rows as row}<div class="wx-line" class:wx-art={artLine(row)}>{#if row.length === 0}<br />{:else}{#each row as segment}{#if segment[0] === 'bar'}<span class="wx-bar" style={barStyle(segment[2])}><span class="wx-track"></span><span class="wx-fill"></span>{#if segment[2].now !== undefined}<span class="wx-now"></span>{/if}<span class="wx-bar-text">{segment[1]}</span></span>{:else}<span style={colour(segment[0])}>{segment[1]}</span>{/if}{/each}{/if}</div>{/each}{/snippet}
 
 {#snippet chip(item: ChipItem)}
   {#if onaction && isTrustedAction(item.action)}
@@ -113,6 +121,12 @@
 
   .wx-wide {
     display: none;
+  }
+
+  /* The five lines beside the pictogram: block rows touch, as in the terminal's block art
+     (styles/terminal.css, .art-block). The text beside them is set tighter for those lines. */
+  .wx-art {
+    line-height: 1;
   }
 
   @container wx (min-width: 74ch) {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { ArtKey, IconKey } from './types';
-import { ART, ART_HEIGHT, ART_WIDTH, MEDIUM_MAX, SHORT_MAX, WMO, WMO_CODES, artFor, compass16, wmo } from './wmo';
+import { textWidth } from '../../output/model';
+import type { ArtKey, IconKey, WeatherRole } from './types';
+import { ROLE_COLOUR } from './view';
+import { ART, ART_HEIGHT, ART_ROLES, ART_WIDTH, MEDIUM_MAX, SHORT_MAX, WMO, WMO_CODES, artFor, compass16, isArtRole, wmo } from './wmo';
 
 /** Every weather_code Open-Meteo documents (https://open-meteo.com/en/docs, "WMO Weather interpretation codes"). */
 const DOCUMENTED = [0, 1, 2, 3, 45, 48, 51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99];
@@ -53,14 +55,69 @@ describe('art', () => {
     expect(Object.keys(ART).sort()).toEqual([...ART_KEYS].sort());
   });
 
-  it.each(ART_KEYS)('%s is 5 rows of exactly 13 printable ASCII columns', (key) => {
+  /**
+   * What the art may be drawn with: spaces, the middle dot and bullet, box drawing (rays, rain,
+   * fog), block elements (discs, clouds, the bolt) and geometric shapes, all in the terminal's
+   * font (scripts/fonts/build-vesen-mono.py, REQUIRED).
+   */
+  const ART_CHARS = /^[ ·•─-◿]*$/u;
+
+  it.each(ART_KEYS)('%s is 5 rows of exactly 13 columns, in characters the font has', (key) => {
     const rows = ART[key];
     expect(rows).toHaveLength(ART_HEIGHT);
     for (const row of rows) {
       const text = row.map(([, s]) => s).join('');
-      expect(text).toHaveLength(ART_WIDTH);
-      expect(text).toMatch(/^[\x20-\x7E]*$/);
+      expect(textWidth(text)).toBe(ART_WIDTH);
+      expect(text).toMatch(ART_CHARS);
+      for (const [, piece] of row) expect(piece.length, 'no segment is empty').toBeGreaterThan(0);
     }
+  });
+
+  it('draws something in every pictogram, with block or box characters', () => {
+    for (const key of ART_KEYS) {
+      const text = ART[key].map((row) => row.map(([, s]) => s).join('')).join('\n');
+      expect(text, key).toMatch(/[─-▟]/u);
+    }
+  });
+
+  it('carries only art roles, which no text role shares, so the card can tell the art lines apart', () => {
+    const textRoles: readonly WeatherRole[] = ['text', 'head', 'place', 'cond', 'temp', 'cold', 'hot', 'wind', 'pct', 'mm', 'dim', 'warn'];
+    for (const role of textRoles) expect(isArtRole(role), role).toBe(false);
+    for (const role of ART_ROLES) {
+      expect(isArtRole(role), role).toBe(true);
+      expect(ROLE_COLOUR[role]).toBeDefined();
+    }
+    expect(isArtRole('bar')).toBe(false);
+    expect(isArtRole(undefined)).toBe(false);
+    for (const key of ART_KEYS) {
+      for (const row of ART[key]) for (const [role] of row) expect(isArtRole(role), `${key}: ${role}`).toBe(true);
+    }
+    // The unknown mark and the blank rows read as muted and empty, as they did in dim.
+    expect(ROLE_COLOUR.fog).toBe(ROLE_COLOUR.dim);
+  });
+
+  it('colours the sun, the cloud and the rain in their own roles, and the night sky in the moon', () => {
+    const roles = (key: ArtKey) => new Set(ART[key].flatMap((row) => row.map(([role]) => role)));
+    expect(roles('clear')).toEqual(new Set(['sun']));
+    expect(roles('clearNight')).toEqual(new Set(['moon']));
+    expect(roles('partly')).toEqual(new Set(['sun', 'cloud']));
+    expect(roles('partlyNight')).toEqual(new Set(['moon', 'cloud']));
+    expect(roles('rain')).toEqual(new Set(['cloud', 'rain']));
+    expect(roles('sleet')).toEqual(new Set(['cloud', 'rain', 'snow']));
+    expect(roles('thunder')).toEqual(new Set(['cloud', 'rain', 'bolt']));
+    expect(roles('fog')).toEqual(new Set(['cloud', 'fog']));
+    expect(roles('unknown')).toEqual(new Set(['fog']));
+  });
+
+  it('draws the rain heavier from drizzle to heavy rain, and the snow thicker', () => {
+    const fall = (key: ArtKey) => ART[key].slice(3).map((row) => row.map(([, s]) => s).join(''));
+    expect(fall('drizzle').join('')).toMatch(/^[ ╷]+$/u);
+    expect(fall('rain').join('')).toMatch(/^[ │]+$/u);
+    expect(fall('heavyRain').join('')).toMatch(/^[ ┃]+$/u);
+    const marks = (key: ArtKey) => fall(key).join('').replace(/ /g, '').length;
+    expect(marks('drizzle')).toBeLessThan(marks('rain'));
+    expect(marks('rain')).toBeLessThan(marks('heavyRain'));
+    expect(marks('snow')).toBeLessThan(marks('heavySnow'));
   });
 
   it('draws the moon at night for clear and partly cloudy skies only', () => {

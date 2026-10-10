@@ -191,7 +191,10 @@ export type BarSegment = readonly ['bar', string, RangeBar];
 export type Segment = TextSegment | BarSegment;
 export type Line = readonly Segment[];
 
-/** An art row: segments whose text totals exactly 13 printable ASCII columns. */
+/**
+ * An art row: segments whose text totals exactly 13 columns, in the block and box-drawing
+ * characters of the terminal's font, each with one of the art roles (ART_ROLES in wmo.ts).
+ */
 export type ArtRow = readonly TextSegment[];
 
 export interface CurrentView {

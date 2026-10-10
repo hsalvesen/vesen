@@ -199,10 +199,25 @@ describe('OutputView: layout blocks', () => {
     const art = root.querySelector('.art');
     expect(art?.getAttribute('aria-hidden')).toBe('true');
     expect(art?.textContent).toBe('██\n██');
-    // The global art classes (styles/terminal.css): rows touch, and the font shrinks to fit.
+    // The global art classes (styles/terminal.css): block rows touch, and the font shrinks to fit.
     expect(art?.classList.contains('art-fit')).toBe(true);
+    expect(art?.classList.contains('art-block')).toBe(true);
+    expect(art?.classList.contains('art-glyph')).toBe(false);
     expect(styleOf(art)).toBe('--art-cols: 2');
     expect(root.querySelector('.sr-only')?.textContent).toBe('The vesen logo');
+  });
+
+  it('draws art made of letters at the terminal line height, and still fits it to the width', async () => {
+    const cow = ' /\\_/\\\n( o.o )\n > ^ <';
+    const art = (await view([out.art(cow, 'A cat')])).querySelector('.art');
+    expect(art?.classList.contains('art-glyph')).toBe(true);
+    expect(art?.classList.contains('art-block')).toBe(false);
+    expect(art?.classList.contains('art-fit')).toBe(true);
+    expect(styleOf(art)).toBe('--art-cols: 7');
+    // Scrolling art keeps its class and its kind without the fit.
+    const wide = (await view([out.art('├── a\n└── b', 'A tree', 'scroll')])).querySelector('.art');
+    expect(wide?.classList.contains('art-fit')).toBe(false);
+    expect(wide?.classList.contains('art-block')).toBe(true);
   });
 
   it('draws a panel in its tone with a title', async () => {

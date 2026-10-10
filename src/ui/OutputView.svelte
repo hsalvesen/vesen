@@ -10,6 +10,7 @@
 <script lang="ts">
   import { textWidth, type Action, type Block } from '../output/model';
   import LineView from './LineView.svelte';
+  import { artClass } from './art-class';
   import { hangingIndent } from './hang';
   import { loadRichBlock } from './rich-block';
   import { spanClasses, spanCss } from './span-style';
@@ -33,10 +34,12 @@
         {/each}
       </div>
     {:else if block.type === 'art'}
-      <!-- Hidden from screen readers, which hear the alternative text instead of the glyphs. -->
+      <!-- Hidden from screen readers, which hear the alternative text instead of the glyphs. Block
+           art (the banner, logos, figlet) is drawn with its rows touching; art drawn with letters
+           (cowsay, sl) at the terminal's line height. -->
       <div class="art-wrap">
         <div
-          class="art {spanClasses(block.style)}"
+          class="art {artClass(block.text)} {spanClasses(block.style)}"
           class:art-fit={block.fit === 'scale'}
           aria-hidden="true"
           style="--art-cols: {artColumns(block.text)}; {spanCss(block.style) ?? ''}"

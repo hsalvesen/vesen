@@ -48,6 +48,21 @@ describe('WeatherCard', () => {
     expect(rows.join('\n')).toBe(toPlain(view.compact));
   });
 
+  it('draws the five lines beside the pictogram with their rows touching, and the rest at the terminal line height', () => {
+    const view = card();
+    const { root } = show(view);
+    for (const [layout, lines] of [['.wx-compact', view.compact], ['.wx-wide', view.wide]] as const) {
+      const rows = Array.from(root.querySelectorAll(`${layout} > .wx-line`));
+      const art = rows.map((row, i) => (row.classList.contains('wx-art') ? i : -1)).filter((i) => i >= 0);
+      expect(art, layout).toHaveLength(view.current.art.length);
+      // Consecutive lines, each starting with an art row, and no other.
+      expect(art, layout).toEqual(art.map((_, i) => (art[0] ?? 0) + i));
+      for (const [i, line] of lines.entries()) {
+        expect(art.includes(i), `${layout} line ${i}`).toBe(line[0] !== undefined && line[0][0] !== 'bar' && ['sun', 'moon', 'cloud', 'rain', 'snow', 'bolt', 'fog'].includes(line[0][0]));
+      }
+    }
+  });
+
   it('gives screen readers one summary, with the notes and the credit', () => {
     const { root } = show(card());
     const spoken = root.querySelector('.sr-only')?.textContent ?? '';
