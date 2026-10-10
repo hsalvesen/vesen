@@ -62,7 +62,7 @@ test.describe('links and the in-app policy', { tag: '@smoke' }, () => {
     await expect(cards.nth(0)).toContainText('linkedin.com/in/harrysalvesen');
     await expect(cards.nth(1)).toContainText('github.com/hsalvesen');
     await expect(cards.nth(2)).toContainText('has@salvesen.app');
-    await expect(cards.nth(2).getByRole('link', { name: '✉ Open mail app' })).toHaveAttribute('href', /^mailto:has@salvesen\.app\?subject=/);
+    await expect(cards.nth(2).getByRole('link', { name: 'Open mail app' })).toHaveAttribute('href', /^mailto:has@salvesen\.app\?subject=/);
 
     const calls = await opens(page);
     const linkedin = cards.nth(0).getByRole('link');
@@ -89,15 +89,43 @@ test.describe('links and the in-app policy', { tag: '@smoke' }, () => {
     await open(page);
     await run(page, 'contact');
     const card = page.locator('[role="log"] .card').last();
-    await expect(card.getByRole('link', { name: '✉ Open mail app' })).toBeVisible();
-    await expect(card.getByRole('button', { name: '⧉ Copy address' })).toBeVisible();
+    const mail = card.getByRole('link', { name: 'Open mail app' });
+    await expect(mail).toBeVisible();
+    await expect(mail).toHaveAttribute('href', /^mailto:has@salvesen\.app\?subject=Terminal%20Contact%20-%20/);
+    await expect(card.getByRole('button', { name: 'Copy address' })).toBeVisible();
+    // Only glyphs the terminal's font draws: no envelope, no copy or arrow symbol from a fallback font.
+    await expect(card).not.toContainText(/[✉⧉↗✕]/);
     if (isInstagram()) {
       await expect(card).toContainText("If the mail app doesn't open");
       await expect(card).toContainText('••• → Open in browser');
-      await expect(card.getByRole('button', { name: 'Open in Safari ↗' })).toBeVisible();
+      await expect(card.getByRole('button', { name: 'Open in Safari' })).toBeVisible();
     } else {
       await expect(card).not.toContainText('Open in browser');
     }
+    expect(await opens(page)).toEqual([]);
+  });
+
+  test('a tap on Open mail app is the browser\'s own navigation to the mailto link: nothing cancels it', async ({ page }) => {
+    await spyOnWindow(page);
+    await open(page);
+    await run(page, 'contact');
+    const mail = page.locator('[role="log"] .card').last().getByRole('link', { name: 'Open mail app' });
+    // The last listener on the way up records what the browser would see, then holds the
+    // navigation itself so the test's page stays put.
+    await page.evaluate(() => {
+      const spied = window as Window & { __mailClick?: { prevented: boolean; href: string | null } };
+      window.addEventListener('click', (event) => {
+        const anchor = event.target instanceof Element ? event.target.closest('a') : null;
+        if (anchor === null || !/^mailto:/.test(anchor.href)) return;
+        spied.__mailClick = { prevented: event.defaultPrevented, href: anchor.getAttribute('href') };
+        event.preventDefault();
+      });
+    });
+    if (isPhone()) await mail.tap();
+    else await mail.click();
+    const seen = await page.evaluate(() => (window as Window & { __mailClick?: { prevented: boolean; href: string | null } }).__mailClick ?? null);
+    expect(seen?.prevented).toBe(false);
+    expect(seen?.href).toMatch(/^mailto:has@salvesen\.app\?subject=/);
     expect(await opens(page)).toEqual([]);
   });
 
@@ -105,7 +133,7 @@ test.describe('links and the in-app policy', { tag: '@smoke' }, () => {
     if (browserName === 'chromium') await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await open(page);
     await run(page, 'contact');
-    const copy = page.locator('[role="log"] .card').last().getByRole('button', { name: '⧉ Copy address' });
+    const copy = page.locator('[role="log"] .card').last().getByRole('button', { name: 'Copy address' });
     if (isPhone()) await copy.tap();
     else await copy.click();
     if (browserName === 'chromium') {
@@ -130,7 +158,7 @@ test.describe('poweroff', { tag: '@smoke' }, () => {
     await expect(page.getByText('Reached target System Power Off.')).toBeVisible();
     await expect(page.getByText('vesen is off')).toBeVisible();
     await expect(page.locator('.shell')).toHaveAttribute('inert', '');
-    if (isInstagram()) await expect(page.getByText('Close this page with ✕')).toBeVisible();
+    if (isInstagram()) await expect(page.getByText('Close this page with ×')).toBeVisible();
     const power = page.getByRole('button', { name: /Power on/ });
     if (isPhone()) await power.tap();
     else await power.click();

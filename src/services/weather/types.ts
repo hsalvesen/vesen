@@ -261,8 +261,10 @@ export interface WeatherView {
 export interface WeatherCardProps extends WeatherView {
   /** Follow-ups: [°F] or [°C], [7 days], [my location] or [use precise location]. */
   readonly chips: readonly ChipItem[];
-  /** Same-named places elsewhere, after 'Also:'. */
+  /** Same-named places elsewhere, as chips under 'Matches:', after the one shown. */
   readonly also: readonly ChipItem[];
+  /** The place shown, as the list of matches names it, marked › at the head of `also`; set when `also` has places. */
+  readonly chosen?: string;
 }
 
 // ── Results ────────────────────────────────────────────────────────────────────────────────

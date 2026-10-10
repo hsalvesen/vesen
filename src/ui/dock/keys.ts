@@ -21,16 +21,25 @@ export type KeyAction =
   /** Open the keyboard at the prompt, inside the tap, and bring the prompt into view. */
   | { readonly type: 'type' };
 
+/**
+ * An icon the key bar draws as a small inline SVG, in place of a glyph the terminal's font
+ * lacks: a chevron for putting the keyboard away, a keyboard for bringing it back.
+ */
+export type KeyIcon = 'chevron-down' | 'keyboard';
+
 export interface KeyDef {
   readonly id: string;
+  /** The text on the key, from the terminal's font; empty when the icon says it all. */
   readonly label: string;
   readonly ariaLabel: string;
   readonly action: KeyAction;
+  /** Drawn before the label. */
+  readonly icon?: KeyIcon;
   /** Held, it opens the history sheet: ↑. */
   readonly holdForHistory?: boolean;
   /** Held, it repeats: ← and →. */
   readonly repeat?: boolean;
-  /** Takes the room the others leave: ⌨ Type a command…. */
+  /** Takes the room the others leave: the Type a command… bar. */
   readonly wide?: boolean;
 }
 
@@ -46,9 +55,9 @@ const DOWN: KeyDef = { id: 'down', label: '↓', ariaLabel: 'Next command', acti
 const INTERRUPT: KeyDef = { id: 'interrupt', label: '^C', ariaLabel: 'Control C: cancel', action: { type: 'interrupt' } };
 const CLEAR: KeyDef = { id: 'clear', label: 'clear', ariaLabel: 'Clear the screen', action: { type: 'clear' } };
 export const SYMBOLS_KEY: KeyDef = { id: 'symbols', label: '•••', ariaLabel: 'Symbols', action: { type: 'symbols' } };
-const HIDE: KeyDef = { id: 'hide', label: '⌄', ariaLabel: 'Hide the keyboard', action: { type: 'hide' } };
+const HIDE: KeyDef = { id: 'hide', label: '', icon: 'chevron-down', ariaLabel: 'Hide the keyboard', action: { type: 'hide' } };
 
-/** With the keyboard open: tab ↑ ↓ ^C clear ••• ⌄. */
+/** With the keyboard open: tab ↑ ↓ ^C clear •••, then a chevron that puts the keyboard away. */
 export const FULL_KEYS: readonly KeyDef[] = [TAB, UP, DOWN, INTERRUPT, CLEAR, SYMBOLS_KEY, HIDE];
 
 /** On a short screen, before the chips in the one row: tab ↑ ^C. */
@@ -77,9 +86,9 @@ export const SYMBOL_KEYS: readonly KeyDef[] = [
 /** The symbols page as drawn: ••• (back to the keys) first, then the cursor keys and symbols. */
 export const SYMBOLS_PAGE: readonly KeyDef[] = [SYMBOLS_KEY, ...SYMBOL_KEYS];
 
-/** With the keyboard put away: a bar to bring it back, ↑ and clear. */
+/** With the keyboard put away: a bar to bring it back (a keyboard icon and the words), ↑ and clear. */
 export const CLOSED_KEYS: readonly KeyDef[] = [
-  { id: 'type', label: '⌨ Type a command…', ariaLabel: 'Type a command', action: { type: 'type' }, wide: true },
+  { id: 'type', label: 'Type a command…', icon: 'keyboard', ariaLabel: 'Type a command', action: { type: 'type' }, wide: true },
   UP,
   CLEAR,
 ];

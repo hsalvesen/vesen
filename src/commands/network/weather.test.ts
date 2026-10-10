@@ -273,7 +273,7 @@ describe('a curated place', () => {
   it('gives pipes and files the compact or the wide layout as plain text, by width', async () => {
     const narrow = rig({ cols: 40 });
     const compact = (await narrow.run('weather Gadigal')).card?.plain ?? '';
-    expect(compact.split('\n')[0]).toBe('Gadigal Country · Sydney, AU');
+    expect(compact.split('\n')[0]).toBe('Gadigal Country · Sydney, AU (°C)');
     expect(Math.max(...compact.trimEnd().split('\n').map((row) => [...row].length))).toBeLessThanOrEqual(COMPACT_COLS);
     expect(compact).toContain('Weather data by Open-Meteo.com');
     narrow.stop();
@@ -281,7 +281,7 @@ describe('a curated place', () => {
     const wide = rig({ cols: 80 });
     const result = await wide.run('weather Gadigal');
     const text = result.card?.plain ?? '';
-    expect(text.split('\n')[0]).toBe('Weather for Gadigal Country · Sydney, New South Wales, Australia');
+    expect(text.split('\n')[0]).toBe('Weather for Gadigal Country · Sydney, New South Wales, Australia (°C)');
     expect(Math.max(...text.trimEnd().split('\n').map((row) => [...row].length))).toBeLessThanOrEqual(WIDE_COLS);
     expect(result.card?.props.compact.every((row) => lineWidth(row) <= COMPACT_COLS)).toBe(true);
     expect(result.card?.props.wide.every((row) => lineWidth(row) <= WIDE_COLS)).toBe(true);
@@ -343,14 +343,15 @@ describe('a searched place', () => {
     r.stop();
   });
 
-  it('offers same-named places of a similar size, as chips after Also:', async () => {
+  it('offers same-named places of a similar size, as chips under Matches: after the one shown', async () => {
     const r = rig();
     const result = await r.run('weather Springfield');
     expect(result.card?.props.place.region).toBe('Missouri');
-    // Chips on the card; the note in the text a pipe gets.
-    expect(result.card?.props.notes.join(' ')).not.toContain('Also:');
-    expect(result.card?.plain).toContain('Also: Springfield, Illinois, US · Springfield, Massachusetts, US');
-    expect((await r.run('weather Springfield | cat')).stdout).toContain('Also: Springfield, Illinois, US');
+    // Chips on the card, the one shown named first; the list in the text a pipe gets.
+    expect(result.card?.props.notes.join(' ')).not.toContain('matches');
+    expect(result.card?.props.chosen).toBe('Springfield, Missouri, US');
+    expect(result.card?.plain).toContain('Matches:\n› Springfield, Missouri, US\n  Springfield, Illinois, US\n  Springfield, Massachusetts, US');
+    expect((await r.run('weather Springfield | cat')).stdout).toContain('› Springfield, Missouri, US\n  Springfield, Illinois, US');
     expect(labelled(result.card?.props.also ?? [])).toEqual({
       'Springfield, Illinois, US': 'weather Springfield, Illinois',
       'Springfield, Massachusetts, US': 'weather Springfield, Massachusetts',
@@ -444,7 +445,7 @@ describe('location', () => {
     await fresh.run('weather Oslo');
     const last = await fresh.run('weather');
     expect(last.card?.props.place.name).toBe('Oslo');
-    expect(last.card?.props.notes).toContain('Last place you looked up · weather --forget to clear');
+    expect(last.card?.props.notes).toContain('Showing the last place you looked up. weather --forget clears it.');
     fresh.stop();
   });
 

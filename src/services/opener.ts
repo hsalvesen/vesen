@@ -53,8 +53,9 @@ export function escapeHref(url: string, env: LinkEnv): string | null {
 export function inAppInfo(env: LinkEnv): InAppInfo | null {
   if (env.inApp === null) return null;
   const browser = env.os === 'ios' ? 'Safari' : env.os === 'android' ? 'Chrome' : 'your browser';
-  // Instagram's menu is ••• on iOS and ⋮ on Android.
-  const menu = env.os === 'android' ? '⋮' : '•••';
+  // Instagram's menu is ••• on iOS and three dots one above the other on Android, which the
+  // terminal's font has no glyph for, so it is named instead.
+  const menu = env.os === 'android' ? 'Menu' : '•••';
   return { label: IN_APP_LABELS[env.inApp], browser, menuHint: `${menu} → Open in browser` };
 }
 

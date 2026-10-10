@@ -83,11 +83,24 @@ describe('WeatherCard', () => {
     expect(Array.from(root.querySelectorAll('span.wx-chip'), (chip) => chip.textContent)).toEqual(['forged']);
   });
 
-  it('puts same-named places after Also:', () => {
+  it('lists same-named places under Matches:, the one shown first, marked and not a button', () => {
+    const also = [{ label: 'Springfield, Illinois, US', action: out.action.run('weather Springfield, Illinois') }];
+    const { root } = show({ ...card(springfields[0] as Place, [], also), chosen: 'Springfield, Missouri, US' });
+    const row = root.querySelectorAll('.wx-chips')[0];
+    expect(row?.getAttribute('role')).toBe('group');
+    expect(row?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Matches: › Springfield, Missouri, US Springfield, Illinois, US');
+    const chosen = row?.querySelector('.wx-chosen');
+    expect(chosen?.tagName).toBe('SPAN');
+    expect(chosen?.getAttribute('aria-current')).toBe('true');
+    expect(Array.from(row?.querySelectorAll('button') ?? [], (button) => button.textContent)).toEqual(['Springfield, Illinois, US']);
+  });
+
+  it('keeps the list to the chips when no chosen place is named', () => {
     const also = [{ label: 'Springfield, Illinois, US', action: out.action.run('weather Springfield, Illinois') }];
     const { root } = show(card(springfields[0] as Place, [], also));
     const row = root.querySelectorAll('.wx-chips')[0];
-    expect(row?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Also: Springfield, Illinois, US');
+    expect(row?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Matches: Springfield, Illinois, US');
+    expect(row?.querySelector('.wx-chosen')).toBeNull();
   });
 
   it('draws names from the data as text, never as markup', () => {

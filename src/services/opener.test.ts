@@ -66,7 +66,8 @@ describe('escapeHref', () => {
 
   it('names the real browser and the menu by system', () => {
     expect(inAppInfo(env(UA.iosInstagram))).toEqual({ label: 'Instagram', browser: 'Safari', menuHint: '••• → Open in browser' });
-    expect(inAppInfo(env(UA.androidInstagram))).toEqual({ label: 'Instagram', browser: 'Chrome', menuHint: '⋮ → Open in browser' });
+    // Android's menu is three dots one above the other, which the terminal's font lacks: named instead.
+    expect(inAppInfo(env(UA.androidInstagram))).toEqual({ label: 'Instagram', browser: 'Chrome', menuHint: 'Menu → Open in browser' });
     expect(inAppInfo(env(UA.androidChrome))).toBeNull();
   });
 });

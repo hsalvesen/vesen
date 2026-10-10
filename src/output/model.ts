@@ -214,16 +214,18 @@ export interface CardBlock {
   readonly detail?: string;
   /** What Copy puts on the clipboard; defaults to the href. */
   readonly copy?: string;
-  /** Copy's label: 'Copy' unless given, such as 'Copy address'. */
+  /** Copy's label: 'Copy' unless given, such as 'Copy address'. Words only: the card draws it in the terminal's font. */
   readonly copyLabel?: string;
   /**
-   * The link as a button-like anchor with this label, such as '✉ Open mail app', and the label
-   * shown as text beside it; without it the label itself is the anchor.
+   * The link as a button-like anchor with this label, such as 'Open mail app' (the card adds
+   * the → after it), and the label shown as text beside it; without it the label itself is the
+   * anchor.
    */
   readonly openLabel?: string;
   /**
-   * Inside an in-app browser: a dim `hint`, then the manual '••• → Open in browser' and a tap
-   * that opens `url` in the real browser where the device has a way to. Ignored elsewhere.
+   * Inside an in-app browser: a dim `hint`, then the manual '••• → Open in browser' (or 'Menu →'
+   * on Android) and a tap that opens `url` in the real browser where the device has a way to.
+   * Ignored elsewhere.
    */
   readonly escape?: { readonly url: SafeHref; readonly hint?: string };
 }

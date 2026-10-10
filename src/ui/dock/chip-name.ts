@@ -24,9 +24,9 @@ export function chipName(chip: Chip): string {
   return `Insert: ${chip.label}`;
 }
 
-/** A glyph before the label: ✕ to stop, ⏎ for the line itself. */
+/** A glyph before the label, from the terminal's font: × to stop, ⏎ for the line itself. */
 export function leadGlyph(chip: Chip): string | null {
-  if (chip.action.kind === 'interrupt') return '✕';
+  if (chip.action.kind === 'interrupt') return '×';
   if (chip.kind === 'current') return '⏎';
   return null;
 }

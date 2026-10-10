@@ -1,21 +1,21 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`cards > draws the Gadigal card 1`] = `
-"Gadigal Country · Sydney, AU
+"Gadigal Country · Sydney, AU (°C)
     \\ | /     Clear sky
    - .-. -    24°C feels 26°
   -- (   ) -- W 6 km/h g 25
    - \`-' -    Hum 51% · 0.0 mm
     / | \\     UV 7.6 · 06:26-19:01
-Today  16° -===|  26°  98% T-storm
-Wed    14° ==---  17°  96% Drizzle
-Thu    12° ==---  17°  54% Drizzle
+Today  16° ─━━━┃  26°  98% T-storm
+Wed    14° ━━───  17°  96% Drizzle
+Thu    12° ━━───  17°  54% Drizzle
 Weather data by Open-Meteo.com
 (CC BY 4.0) · Updated 14:15 GMT+11"
 `;
 
 exports[`cards > draws the Gadigal card 2`] = `
-"Weather for Gadigal Country · Sydney, New South Wales, Australia
+"Weather for Gadigal Country · Sydney, New South Wales, Australia (°C)
 
     \\ | /       Clear sky
    - .-. -      24 °C (feels like 26 °C)
@@ -24,33 +24,33 @@ exports[`cards > draws the Gadigal card 2`] = `
     / | \\       UV 7.6 · Sunrise 06:26 · Sunset 19:01
 
 Day     Low Range      High  Rain         Wind     Conditions
-Today   16° --======|=  26°   98% 4.1mm   23 km/h  Thunderstorm
-Wed 07  14° -===------  17°   96% 1.7mm   28 km/h  Drizzle
-Thu 08  12° ====------  17°   54% 1.9mm   13 km/h  Light drizzle
+Today   16° ──━━━━━━┃━  26°   98% 4.1mm   23 km/h  Thunderstorm
+Wed 07  14° ─━━━──────  17°   96% 1.7mm   28 km/h  Drizzle
+Thu 08  12° ━━━━──────  17°   54% 1.9mm   13 km/h  Light drizzle
 
 Updated 14:15 GMT+11 · Weather data by Open-Meteo.com (CC BY 4.0)"
 `;
 
 exports[`cards > draws the Oslo card at night in imperial units over seven days 1`] = `
-"Oslo, NO
+"Oslo, NO (°F)
      _..      Clear sky
    .' .'      53°F feels 47°
   :  :        SSW 8 mph g 15
    '. '.      Hum 65% · 0.00 in
      \`''      UV 2.3 · 07:34-18:34
-Today  50° --=|=  63°   0% Pt cloudy
-Wed    42° ====-  58°  35% Overcast
-Thu    42° ===--  51°  93% Showers
-Fri    39° ==---  47°  63% Drizzle
-Sat    40° ===--  49°  61% Drizzle
-Sun    42° ==---  47°  28% Showers
-Mon    38° ===--  49°  46% Drizzle
+Today  50° ──━┃━  63°   0% Pt cloudy
+Wed    42° ━━━━─  58°  35% Overcast
+Thu    42° ━━━──  51°  93% Showers
+Fri    39° ━━───  47°  63% Drizzle
+Sat    40° ━━━──  49°  61% Drizzle
+Sun    42° ━━───  47°  28% Showers
+Mon    38° ━━━──  49°  46% Drizzle
 Weather data by Open-Meteo.com
 (CC BY 4.0) · Updated 05:15 GMT+2"
 `;
 
 exports[`cards > draws the Oslo card at night in imperial units over seven days 2`] = `
-"Weather for Oslo, Norway
+"Weather for Oslo, Norway (°F)
 
      _..        Clear sky
    .' .'        53 °F (feels like 47 °F)
@@ -59,13 +59,13 @@ exports[`cards > draws the Oslo card at night in imperial units over seven days 
      \`''        UV 2.3 · Sunrise 07:34 · Sunset 18:34
 
 Day     Low Range      High  Rain         Wind     Conditions
-Today   50° ----==|===  63°    0% 0.00in  18 mph   Partly cloudy
-Wed 07  42° -=======--  58°   35% 0.00in  6 mph    Overcast
-Thu 08  42° -=====----  51°   93% 0.82in  14 mph   Light showers
-Fri 09  39° ====------  47°   63% 0.15in  12 mph   Drizzle
-Sat 10  40° =====-----  49°   61% 0.19in  9 mph    Dense drizzle
-Sun 11  42° -===------  47°   28% 0.59in  11 mph   Light showers
-Mon 12  38° =====-----  49°   46% 0.04in  10 mph   Light drizzle
+Today   50° ────━━┃━━━  63°    0% 0.00in  18 mph   Partly cloudy
+Wed 07  42° ─━━━━━━━──  58°   35% 0.00in  6 mph    Overcast
+Thu 08  42° ─━━━━━────  51°   93% 0.82in  14 mph   Light showers
+Fri 09  39° ━━━━──────  47°   63% 0.15in  12 mph   Drizzle
+Sat 10  40° ━━━━━─────  49°   61% 0.19in  9 mph    Dense drizzle
+Sun 11  42° ─━━━──────  47°   28% 0.59in  11 mph   Light showers
+Mon 12  38° ━━━━━─────  49°   46% 0.04in  10 mph   Light drizzle
 
 Updated 05:15 GMT+2 · Weather data by Open-Meteo.com (CC BY 4.0)"
 `;

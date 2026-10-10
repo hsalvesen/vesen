@@ -200,7 +200,7 @@ Escape, Tab                              leave the terminal for the rest of the 
 !! runs the last line again, and !n line n of history.
 
   keys - show or hide the key bar on touch screens
-  On a touch screen, a bar of keys rides above the keyboard: tab, ↑ and ↓ for history (hold ↑ for the list), ^C, clear, ••• for symbols, and ⌄ to put the keyboard away. With 'auto', the default, it goes once a hardware keyboard is used, and the suggestion chips stay; 'on' always shows it and 'off' never does. The setting is remembered. With no argument, says which is in force.
+  On a touch screen, a bar of keys rides above the keyboard: tab, ↑ and ↓ for history (hold ↑ for the list), ^C, clear, ••• for symbols, and ▾ to put the keyboard away. With 'auto', the default, it goes once a hardware keyboard is used, and the suggestion chips stay; 'on' always shows it and 'off' never does. The setting is remembered. With no argument, says which is in force.
 [Usage:]
   keys
   keys auto|on|off
@@ -252,7 +252,7 @@ Escape, Tab                              leave the terminal for the rest of the 
 !! runs the last line again, and !n line n of history.
 
 keys - show or hide the key bar on touch screens
-On a touch screen, a bar of keys rides above the keyboard: tab, ↑ and ↓ for history (hold ↑ for the list), ^C, clear, ••• for symbols, and ⌄ to put the keyboard away. With 'auto', the default, it goes once a hardware keyboard is used, and the suggestion chips stay; 'on' always shows it and 'off' never does. The setting is remembered. With no argument, says which is in force.
+On a touch screen, a bar of keys rides above the keyboard: tab, ↑ and ↓ for history (hold ↑ for the list), ^C, clear, ••• for symbols, and ▾ to put the keyboard away. With 'auto', the default, it goes once a hardware keyboard is used, and the suggestion chips stay; 'on' always shows it and 'off' never does. The setting is remembered. With no argument, says which is in force.
 Usage:
 keys
 keys auto|on|off

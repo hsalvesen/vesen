@@ -220,6 +220,13 @@ Inside `run`:
   now, as `ps` and `/proc` show them; `ctx.shell.kill(pid)` ends only a running command.
 - **Original content.** Cows, fortunes, fonts and art are written for vesen, not copied, and
   credit no other project.
+- **Only glyphs the font draws.** Messages, chip labels, cards and art use characters Vesen Mono
+  has (`scripts/fonts/glyphs.json` lists them; `npm run check:glyphs` fails on any other): → for
+  "opens" or "external", × to close, ▾ to hide, ● ○ for state, … for an ellipsis, ─ ━ ┃ and the
+  box-drawing range for rules and bars, braille for a spinner, and a word where no glyph fits
+  (`refresh`, `Copy`, `Menu`). ✉ ⧉ ↗ ↻ ✕ ⌄ ⌨ ⏻ ⋮ and emoji are not in the font and fall back to
+  another, which looks wrong. ASCII stand-ins (`->`, `...`, `--`, `-` rules, `*` bullets) are for
+  a command that imitates a real tool's output; vesen's own words use → … — ─ •.
 - **Honest network commands.** A browser cannot send ICMP or raw DNS: say what is done instead
   (DNS over HTTPS, an HTTPS round trip for `ping`), in the output itself.
 - **No new dependencies.**

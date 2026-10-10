@@ -8,7 +8,7 @@ exports[`the quote card > draws ^AXJO 1d 1`] = `
   "chart: 10:00 AMprev close 8,682.104:12 PM",
   "bars: Day 8,686.40 8,753.0052w 8,262.40 9,296.70",
   "footer: Yahoo Finance · may be delayed · updated 18 min ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -20,7 +20,7 @@ exports[`the quote card > draws ^GSPC 1d 1`] = `
   "chart: 9:30 AMprev close 7,722.724:00 PM",
   "bars: Day 7,727.59 7,794.3552w 6,316.91 7,816.70",
   "footer: Yahoo Finance · may be delayed · updated 8 h ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -33,7 +33,7 @@ exports[`the quote card > draws AAPL 1d 1`] = `
   "bars: Day 331.65 336.1952w 243.42 345.34",
   "stats: First trade 332.80Vol 34.3MExch NasdaqGS",
   "footer: Yahoo Finance · may be delayed · updated 8 h ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -46,7 +46,7 @@ exports[`the quote card > draws AAPL 5d 1`] = `
   "bars: Day 331.65 336.1952w 243.42 345.34",
   "stats: First trade 332.80Vol 34.3MExch NasdaqGS",
   "footer: Yahoo Finance · may be delayed · updated 8 h ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -58,7 +58,7 @@ exports[`the quote card > draws AUDUSD=X 1d 1`] = `
   "chart: 12:00 AMprev close 0.697411:59 PM",
   "bars: Day 0.6966 0.697852w 0.6422 0.7277",
   "footer: Yahoo Finance · may be delayed · updated 3 min ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -71,7 +71,7 @@ exports[`the quote card > draws BHP.AX 1d 1`] = `
   "bars: Day 62.06 62.7352w 40.17 68.77",
   "stats: First trade 62.25Vol 2.4MExch ASX",
   "footer: Yahoo Finance · may be delayed · updated 17 min ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -84,7 +84,7 @@ exports[`the quote card > draws BTC-USD 1d 1`] = `
   "bars: Day 85,453.82 86,054.3952w 57,747.77 125,184.02",
   "stats: First trade 85,766.77Vol 28.2BExch CCC",
   "footer: Yahoo Finance · may be delayed · updated 2 min ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -97,7 +97,7 @@ exports[`the quote card > draws CBA.AX 1d 1`] = `
   "bars: Day 150.50 152.2952w 146.98 185.59",
   "stats: First trade 152.23Vol 647.8KExch ASX",
   "footer: Yahoo Finance · may be delayed · updated 22 min ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -109,7 +109,7 @@ exports[`the quote card > draws Cboe, 15 minutes delayed 1`] = `
   "bars: Day 331.65 336.19",
   "stats: Open 332.80Vol 34.3MExch NasdaqGS",
   "footer: Cboe · 15-min delayed · 4:00 PM EDT",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -122,7 +122,7 @@ exports[`the quote card > draws London pence 1`] = `
   "bars: Day 62.06 62.7352w 40.17 68.77",
   "stats: First trade 62.25Vol 2.4MExch LSE",
   "footer: Yahoo Finance · may be delayed · updated 17 min ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -135,7 +135,7 @@ exports[`the quote card > draws MSFT 1d 1`] = `
   "bars: Day 521.53 532.3552w 349.20 553.72",
   "stats: First trade 521.82Vol 26.3MExch NasdaqGS",
   "footer: Yahoo Finance · may be delayed · updated 8 h ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -148,7 +148,7 @@ exports[`the quote card > draws NVDA 1d 1`] = `
   "bars: Day 235.15 240.1052w 164.27 240.10",
   "stats: First trade 236.07Vol 126.4MExch NasdaqGS",
   "footer: Yahoo Finance · may be delayed · updated 8 h ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -161,7 +161,7 @@ exports[`the quote card > draws TEAM 1d 1`] = `
   "bars: Day 186.50 197.5052w 56.01 200.00",
   "stats: First trade 187.88Vol 3MExch NasdaqGS",
   "footer: Yahoo Finance · may be delayed · updated 8 h ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -173,7 +173,7 @@ exports[`the quote card > draws a currency pair 1`] = `
   "chart: 12:00 AMprev close 0.697411:59 PM",
   "bars: Day 0.6966 0.697852w 0.6422 0.7277",
   "footer: Yahoo Finance · may be delayed · updated 3 min ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -186,7 +186,7 @@ exports[`the quote card > draws a hostile name 1`] = `
   "bars: Day 331.65 336.1952w 243.42 345.34",
   "stats: First trade 332.80Vol 34.3MExch <b>NMS</b>",
   "footer: Yahoo Finance · may be delayed · updated 8 h ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -199,7 +199,7 @@ exports[`the quote card > draws a resolved name 1`] = `
   "bars: Day 150.50 152.2952w 146.98 185.59",
   "stats: First trade 152.23Vol 647.8KExch ASX",
   "footer: Yahoo Finance · may be delayed · updated 22 min ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -211,7 +211,7 @@ exports[`the quote card > draws a snapshot 1`] = `
   "bars: Day 186.50 197.5052w 56.01 200.00",
   "stats: First trade 187.88Vol 3MExch NasdaqGS",
   "footer: Yahoo Finance · snapshot as of 11:30 PM EDT",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -223,7 +223,7 @@ exports[`the quote card > draws an index 1`] = `
   "chart: 10:00 AMprev close 8,682.104:12 PM",
   "bars: Day 8,686.40 8,753.0052w 8,262.40 9,296.70",
   "footer: Yahoo Finance · may be delayed · updated 18 min ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -236,7 +236,7 @@ exports[`the quote card > draws crypto over 24 hours 1`] = `
   "bars: Day 85,453.82 86,054.3952w 57,747.77 125,184.02",
   "stats: First trade 85,766.77Vol 28.2BExch CCC",
   "footer: Yahoo Finance · may be delayed · updated 2 min ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -249,7 +249,7 @@ exports[`the quote card > draws five days 1`] = `
   "bars: Day 331.65 336.1952w 243.42 345.34",
   "stats: First trade 332.80Vol 34.3MExch NasdaqGS",
   "footer: Yahoo Finance · may be delayed · updated 8 h ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -262,7 +262,7 @@ exports[`the quote card > draws from memory 1`] = `
   "bars: Day 331.65 336.1952w 243.42 345.34",
   "stats: First trade 332.80Vol 34.3MExch NasdaqGS",
   "footer: Yahoo Finance · may be delayed · updated 8 h ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -275,7 +275,7 @@ exports[`the quote card > draws live from the Worker 1`] = `
   "bars: Day 331.65 336.1952w 243.42 345.34",
   "stats: First trade 332.80Vol 34.3MExch NasdaqGS",
   "footer: Yahoo Finance · may be delayed · updated 8 h ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -288,7 +288,7 @@ exports[`the quote card > draws live through the interim proxy 1`] = `
   "bars: Day 331.65 336.1952w 243.42 345.34",
   "stats: First trade 332.80Vol 34.3MExch NasdaqGS",
   "footer: Yahoo Finance via public proxy, may be slow · may be delayed · updated 8 h ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -301,7 +301,7 @@ exports[`the quote card > draws no periods, no change 1`] = `
   "bars: Day 331.65 336.1952w 243.42 345.34",
   "stats: First trade 332.80Vol 34.3MExch NasdaqGS",
   "footer: Yahoo Finance · may be delayed · updated 8 h ago",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -314,7 +314,7 @@ exports[`the quote card > draws saved copy after a timeout 1`] = `
   "bars: Day 331.65 336.1952w 243.42 345.34",
   "stats: First trade 332.80Vol 34.3MExch NasdaqGS",
   "footer: Saved copy from 2 h ago · live data unavailable (timed out)",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -327,7 +327,7 @@ exports[`the quote card > draws saved copy while offline 1`] = `
   "bars: Day 331.65 336.1952w 243.42 345.34",
   "stats: First trade 332.80Vol 34.3MExch NasdaqGS",
   "footer: Saved copy from 2 h ago · live data unavailable (you're offline)",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 
@@ -340,7 +340,7 @@ exports[`the quote card > draws stale from the Worker 1`] = `
   "bars: Day 331.65 336.1952w 243.42 345.34",
   "stats: First trade 332.80Vol 34.3MExch NasdaqGS",
   "footer: Saved copy from 2 h ago · live data unavailable (service unavailable)",
-  "chips: ↻ refresh1d5d1mo1y",
+  "chips: refresh1d5d1mo1y",
 ]
 `;
 

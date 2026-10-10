@@ -99,7 +99,7 @@ describe('the card in every state', () => {
   it('outlines the range shown, and refreshes that range', () => {
     const chips = cardChips('CBA.AX', '5d');
     expect(chips.map((chip) => [chip.label, chip.active, chip.action.kind === 'run' ? chip.action.line : ''])).toEqual([
-      ['↻ refresh', false, 'stock -f -r 5d CBA.AX'],
+      ['refresh', false, 'stock -f -r 5d CBA.AX'],
       ['1d', false, 'stock CBA.AX'],
       ['5d', true, 'stock -r 5d CBA.AX'],
       ['1mo', false, 'stock -r 1mo CBA.AX'],

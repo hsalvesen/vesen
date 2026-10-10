@@ -59,10 +59,10 @@ const RANGE_WORDS: Readonly<Record<Range, string>> = {
   '5y': 'over 5 years',
 };
 
-/** [↻ refresh] [1d] [5d] [1mo] [1y] for a card. */
+/** [refresh] [1d] [5d] [1mo] [1y] for a card. */
 export function cardChips(symbol: string, range: Range): ChipView[] {
   return [
-    chip('↻ refresh', `Refresh ${symbol}`, stockLine(symbol, { range, force: true })),
+    chip('refresh', `Refresh ${symbol}`, stockLine(symbol, { range, force: true })),
     ...RANGE_CHIPS.map((r) => chip(r, `Show ${symbol} ${RANGE_WORDS[r]}`, stockLine(symbol, { range: r }), r === range)),
   ].filter(isChip);
 }

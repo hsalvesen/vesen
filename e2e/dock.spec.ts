@@ -207,7 +207,7 @@ test.describe('the dock on a short screen', { tag: '@smoke' }, () => {
       const check = async (minWidth: number) => {
         for (const box of await keyBoxes(page)) {
           expect(box.height, box.label).toBeGreaterThanOrEqual(44);
-          // A key the screen cuts off cannot be found: ⌄, the way back from the symbols, ← →.
+          // A key the screen cuts off cannot be found: the hide key, the way back from the symbols, ← →.
           expect(box.left, box.label).toBeGreaterThanOrEqual(0);
           expect(box.right, box.label).toBeLessThanOrEqual(box.view);
           expect(box.width, box.label).toBeGreaterThanOrEqual(minWidth);

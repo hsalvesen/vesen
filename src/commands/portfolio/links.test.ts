@@ -47,7 +47,7 @@ describe('whoami', () => {
       ['Email', expect.stringMatching(/^mailto:has@salvesen\.app\?subject=Terminal%20Contact%20-%20/)],
     ]);
     const email = cards(blocks)[2];
-    expect(email).toMatchObject({ label: 'has@salvesen.app', copy: 'has@salvesen.app', openLabel: '✉ Open mail app', copyLabel: '⧉ Copy address' });
+    expect(email).toMatchObject({ label: 'has@salvesen.app', copy: 'has@salvesen.app', openLabel: 'Open mail app', copyLabel: 'Copy address' });
     // Outside an in-app browser there is no way out to offer.
     expect(email?.escape).toBeUndefined();
     expect(stdoutPlain).not.toContain('opened in a new tab');

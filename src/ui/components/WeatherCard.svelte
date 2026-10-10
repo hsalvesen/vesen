@@ -7,9 +7,11 @@
 
   Everything is drawn with text interpolation from the view model, which comes only from the
   weather command. Colours are role and palette tokens; a range bar is a CSS strip shaded from
-  the cold role to the hot one, with a tick at the current temperature, laid over its ASCII
-  drawing, which keeps it exactly as wide as its columns and is what a copy picks up. Screen
-  readers hear one summary, not the art. The chips are the command's trusted actions only.
+  the cold role to the hot one, with a tick at the current temperature, laid over its text
+  drawing (box-drawing glyphs from the terminal's font), which keeps it exactly as wide as its
+  columns and is what a copy picks up. Screen readers hear one summary, not the art. The chips
+  are the command's trusted actions only; under 'Matches:' the place shown comes first, marked ›
+  and outlined, so which of the same-named places this is stays plain.
 
   Markup inside the text blocks is written without whitespace between tags on purpose: they
   preserve whitespace, so any space Svelte kept there would show.
@@ -17,7 +19,7 @@
 <script lang="ts">
   import { colourVar, isTrustedAction, type Action, type ChipItem } from '../../output/model';
   import type { Line, RangeBar, WeatherCardProps } from '../../services/weather/types';
-  import { ROLE_COLOUR } from '../../services/weather/view';
+  import { MATCHES_LABEL, ROLE_COLOUR } from '../../services/weather/view';
   import type { ComponentBlockProps } from './registry';
 
   let { view, alt, onaction }: ComponentBlockProps = $props();
@@ -32,6 +34,7 @@
   const card = $derived(asCard(view));
   const chips = $derived(card !== null && Array.isArray(card.chips) ? card.chips : []);
   const also = $derived(card !== null && Array.isArray(card.also) ? card.also : []);
+  const chosen = $derived(card !== null && typeof card.chosen === 'string' && card.chosen !== '' ? card.chosen : null);
   /** What a screen reader hears: the summary, then the notes and the credit. */
   const spoken = $derived(
     [alt || card?.summary || 'Weather', ...(card?.notes ?? []), card?.attribution.openMeteo ?? '', card?.attribution.osm ?? '']
@@ -86,8 +89,9 @@
       </div>
     {/if}
     {#if also.length > 0}
-      <div class="wx-chips">
-        <span class="wx-also">Also:</span>
+      <div class="wx-chips" role="group" aria-label="Places with this name">
+        <span class="wx-also">{MATCHES_LABEL}</span>
+        {#if chosen !== null}<span class="wx-chip wx-chosen" aria-current="true"><span class="wx-mark" aria-hidden="true">{'› '}</span>{chosen}</span>{/if}
         {#each also as item}{@render chip(item)}{/each}
       </div>
     {/if}
@@ -211,6 +215,18 @@
 
   button.wx-chip {
     cursor: pointer;
+  }
+
+  /* The place shown, among its namesakes: outlined in the accent and bold, as stock's current
+     range is; the accent reaches 3:1 on the chip in every theme (lib/roles.ts checks it). */
+  .wx-chosen {
+    border-color: var(--role-accent, var(--theme-green));
+    font-weight: bold;
+  }
+
+  /* The mark is a flex item of its own, so its trailing space would collapse without this. */
+  .wx-mark {
+    white-space: pre;
   }
 
   button.wx-chip:active {

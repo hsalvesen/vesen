@@ -27,7 +27,7 @@ import {
   type WeatherView,
 } from '../../services/weather/types';
 import { UNIT_PRESETS, defaultUnits, isUnitSystem } from '../../services/weather/units';
-import { DEFAULT_DAYS, MAX_DAYS, ROLE_COLOUR, WIDE_COLS, buildView, renderOneLine, renderPlain } from '../../services/weather/view';
+import { DEFAULT_DAYS, MAX_DAYS, ROLE_COLOUR, WIDE_COLS, alternativeLabel, buildView, renderOneLine, renderPlain } from '../../services/weather/view';
 import { ART, wmo, WMO_CODES } from '../../services/weather/wmo';
 import type { CommandContext, CommandDoc, ExitCode, InAppBrowser } from '../../shell/types';
 import { weatherService } from '../lib/weather';
@@ -244,11 +244,6 @@ function againLine(args: WeatherArgs): string | null {
 
 function chip(label: string, run: string): ChipItem {
   return { label, action: out.action.run(run) };
-}
-
-function alternativeLabel(place: Place): string {
-  const country = place.countryCode === 'PS' ? 'Palestine' : place.countryCode ?? place.country;
-  return [place.name, place.region, country].filter((part, i, all) => part && all.indexOf(part) === i).join(', ');
 }
 
 // ── Messages ───────────────────────────────────────────────────────────────────────────────
@@ -599,8 +594,8 @@ async function forecast(ctx: CommandContext, service: WeatherService, args: Weat
   }
   const plain = `${renderPlain(view, ctx.stdout.columns >= WIDE_FROM ? 'wide' : 'compact')}\n`;
   const { chips, also } = ctx.stdout.isTTY ? cardChips(args, located, view) : { chips: [], also: [] };
-  // On the card the same-named places are chips after 'Also:', so its text leaves out the note
-  // that lists them; the plain text keeps it.
+  // On the card the same-named places are a row of chips under 'Matches:', the one shown marked
+  // first, so its text leaves out the list; the plain text keeps it.
   const shown =
     also.length > 0
       ? buildView(result.forecast, place, UNIT_PRESETS[units], ctx.clock.now(), {
@@ -608,7 +603,7 @@ async function forecast(ctx: CommandContext, service: WeatherService, args: Weat
           notes: notes.filter((note) => note.kind !== 'alternatives'),
         })
       : view;
-  const props: WeatherCardProps = { ...shown, chips, also };
+  const props: WeatherCardProps = { ...shown, chips, also, ...(also.length > 0 ? { chosen: alternativeLabel(place) } : {}) };
   await ctx.stdout.block(out.component('weather-card', props, plain, view.summary));
   return 0;
 }

@@ -124,7 +124,10 @@
     <span class="handle" aria-hidden="true"></span>
     <div class="head">
       <h2 id="history-sheet-title">History</h2>
-      <button type="button" class="close" aria-label="Close history" use:press={{ tap: () => onclose?.() }}>✕</button>
+      <!-- A cross drawn here, the size of the text: the terminal's font has no glyph for one. -->
+      <button type="button" class="close" aria-label="Close history" use:press={{ tap: () => onclose?.() }}
+        ><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg></button
+      >
     </div>
   </div>
   {#if lines.length === 0}
@@ -202,6 +205,9 @@
   }
 
   .close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 44px;
     height: 44px;
     border: 0;
@@ -210,6 +216,15 @@
     font: inherit;
     cursor: pointer;
     touch-action: manipulation;
+  }
+
+  .icon {
+    width: 1em;
+    height: 1em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
   }
 
   .lines {

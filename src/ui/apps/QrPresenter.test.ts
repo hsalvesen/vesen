@@ -1,5 +1,5 @@
 // Present mode (docs/plan/06-qr.md, "Present mode and actions"): a labelled modal dialog with the
-// code as a black-on-white PNG, closed by ✕, Esc, q, Enter, a tap outside the code and Back (the
+// code as a black-on-white PNG, closed by its Close button, Esc, q, Enter, a tap outside the code and Back (the
 // history entry AppHost or the card holds for it); focus stays inside; the screen stays awake;
 // Save is hidden in in-app browsers, which say how to save instead.
 import { fireEvent, render, screen } from '@testing-library/svelte';
@@ -50,14 +50,18 @@ describe('QrPresenter', () => {
       '17/22 B',
       `mask ${view.mask}`,
     ]);
-    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['✕', 'Save image', 'Copy link']);
+    expect(screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent)).toEqual(['Close', 'Save image', 'Copy link']);
+    // The cross is an inline SVG (the terminal's font has none), hidden from screen readers, which hear 'Close'.
+    const cross = screen.getByRole('button', { name: 'Close' }).querySelector('svg');
+    expect(cross?.getAttribute('aria-hidden')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Close' }).textContent).toBe('');
     expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
   });
 
   it('takes a card\'s request too, and inside an in-app browser says how to save instead of offering Save', () => {
     present({ view: qrView('hello'), env: { inApp: true, canShareFiles: true } });
     expect(screen.getByText('Press and hold the code to save it, or take a screenshot')).toBeInTheDocument();
-    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['✕', 'Share', 'Copy text']);
+    expect(screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent)).toEqual(['Close', 'Share', 'Copy text']);
   });
 
   it('leaves the history to whatever shows it, and closes once on Back', async () => {
@@ -84,7 +88,7 @@ describe('QrPresenter', () => {
     expect(close).not.toHaveBeenCalled();
   });
 
-  it('closes on ✕ and on a tap outside the code, but not on a tap on it', async () => {
+  it('closes on Close and on a tap outside the code, but not on a tap on it', async () => {
     const first = present();
     await fireEvent.click(screen.getByRole('img'));
     expect(first.close).not.toHaveBeenCalled();
@@ -96,7 +100,7 @@ describe('QrPresenter', () => {
     expect(second.close).toHaveBeenCalledTimes(1);
   });
 
-  it('starts with focus on ✕ and keeps Tab inside', async () => {
+  it('starts with focus on Close and keeps Tab inside', async () => {
     vi.useFakeTimers();
     present();
     await vi.advanceTimersByTimeAsync(1);

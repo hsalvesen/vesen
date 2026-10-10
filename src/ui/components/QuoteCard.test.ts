@@ -91,7 +91,7 @@ describe('the quote card', () => {
     const onaction = vi.fn();
     const { container, view } = card(live('AAPL'), onaction);
     const buttons = Array.from(container.querySelectorAll('button.chip'));
-    expect(buttons.map((button) => button.textContent)).toEqual(['↻ refresh', '1d', '5d', '1mo', '1y']);
+    expect(buttons.map((button) => button.textContent)).toEqual(['refresh', '1d', '5d', '1mo', '1y']);
     expect(buttons.map((button) => button.getAttribute('aria-pressed'))).toEqual([null, 'true', null, null, null]);
     expect(buttons[2]?.getAttribute('aria-label')).toBe('Show AAPL over 5 days');
     const fiveDays = buttons[2] as HTMLElement;

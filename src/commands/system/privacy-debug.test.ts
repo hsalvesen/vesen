@@ -97,7 +97,7 @@ describe('debug report', () => {
     expect(status).toBe(0);
     expect(stdoutPlain).toContain('Could not copy without a tap here');
     const chips = blocks.find((block) => block.type === 'chips');
-    expect(chips?.type === 'chips' ? chips.items.map((item) => [item.label, item.action.kind]) : []).toEqual([['⧉ Copy report', 'copy']]);
+    expect(chips?.type === 'chips' ? chips.items.map((item) => [item.label, item.action.kind]) : []).toEqual([['Copy report', 'copy']]);
   });
 
   it('asks for the subcommand', async () => {

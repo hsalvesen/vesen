@@ -177,10 +177,14 @@ function ageText(ms: number): string {
   return rest ? `${hours} h ${rest} min` : `${hours} h`;
 }
 
-function alternativeLabel(place: Place): string {
+/** 'Springfield, Illinois, US': a place as the list of same-named matches names it. */
+export function alternativeLabel(place: Place): string {
   const country = place.countryCode === 'PS' ? countryLabel('PS') : place.countryCode ?? place.country;
   return [place.name, place.region, country].filter((part, i, all) => part && all.indexOf(part) === i).join(', ');
 }
+
+/** The label of the list of same-named places, on the card and in its text. */
+export const MATCHES_LABEL = 'Matches:';
 
 const FALLBACK_REASON: Readonly<Record<GeoFailure, string>> = {
   denied: 'Location permission was denied',
@@ -201,7 +205,7 @@ export function noteText(note: Note): string {
       }
       return `${FALLBACK_REASON[note.reason]}, so this uses an approximate network location.`;
     case 'last-place':
-      return 'Last place you looked up · weather --forget to clear';
+      return 'Showing the last place you looked up. weather --forget clears it.';
     case 'country-point':
       return 'Country-level point. Try a city for local weather.';
     case 'stale': {
@@ -210,7 +214,9 @@ export function noteText(note: Note): string {
       return `Showing the forecast from ${ageText(note.ageMs)} ago (${why}).`;
     }
     case 'alternatives':
-      return `Also: ${note.places.map(alternativeLabel).join(' · ')}`;
+      // One sentence, for the notes a screen reader hears and --json lists; the card's lines
+      // show the same places as a list under the one shown (matchLines).
+      return `Other matches: ${note.places.map(alternativeLabel).join('; ')}.`;
   }
 }
 
@@ -299,13 +305,18 @@ function dayViews(forecast: Forecast, start: number, count: number, today: strin
   });
 }
 
-/** The bar as ASCII, `cols` wide: '-' outside the day's range, '=' inside, '|' at the current temperature. */
+/** What the bar is drawn with, one cell each: the scale, the day's range on it, and the current temperature. */
+export const BAR_TRACK = '─';
+export const BAR_RANGE = '━';
+export const BAR_NOW = '┃';
+
+/** The bar as text, `cols` wide: ─ outside the day's range, ━ inside, ┃ at the current temperature. */
 export function barText(bar: RangeBar, cols: number): string {
   const cell = (pct: number): number => Math.min(cols - 1, Math.max(0, Math.floor((pct / 100) * cols)));
   const from = cell(bar.lo);
   const to = Math.max(from, Math.min(cols - 1, Math.ceil((bar.hi / 100) * cols) - 1));
-  const chars: string[] = Array.from({ length: cols }, (_, i) => (i >= from && i <= to ? '=' : '-'));
-  if (bar.now !== undefined) chars[cell(bar.now)] = '|';
+  const chars: string[] = Array.from({ length: cols }, (_, i) => (i >= from && i <= to ? BAR_RANGE : BAR_TRACK));
+  if (bar.now !== undefined) chars[cell(bar.now)] = BAR_NOW;
   return chars.join('');
 }
 
@@ -327,16 +338,38 @@ function artLines(art: readonly ArtRow[], gap: string, right: readonly Line[]): 
   return art.map((row, i) => [...row, ['text', gap] as TextSegment, ...(right[i] ?? [])]);
 }
 
-function noteLines(notes: readonly Note[], width: number): Line[] {
+/**
+ * The same-named places as a list, the one shown first and marked with ›, the others dim, so
+ * which was chosen is plain; on the card the others are chips in the same order.
+ */
+function matchLines(place: Place, others: readonly Place[], width: number): Line[] {
+  const lines: Line[] = [[['dim', MATCHES_LABEL]]];
+  lines.push([['text', `› ${fit(alternativeLabel(place), width - 2)}`]]);
+  for (const other of others) lines.push([['dim', `  ${fit(alternativeLabel(other), width - 2)}`]]);
+  return lines;
+}
+
+function noteLines(place: Place, notes: readonly Note[], width: number): Line[] {
   return notes.flatMap((note) => {
+    if (note.kind === 'alternatives') return matchLines(place, note.places, width);
     const role: WeatherRole = note.kind === 'stale' ? 'warn' : 'dim';
     return wrap(noteText(note), width).map((text): Line => [[role, text]]);
   });
 }
 
+/**
+ * The temperature unit in force, after the place on the title line: ' (°C)' or ' (°F)', so the
+ * [°F] or [°C] chip under the card reads as the switch it is. The wind and precipitation units
+ * stand beside their values; naming them here too would cut a long place name.
+ */
+function unitsNote(units: Units): string {
+  return ` (${units.temp})`;
+}
+
 function compactLines(view: Omit<WeatherView, 'compact' | 'wide' | 'summary'>, notes: readonly Note[]): Line[] {
   const { current: c, units } = view;
   const W = COMPACT_COLS;
+  const inUnits = unitsNote(units);
   const right: Line[] = [
     [['cond', c.medium]],
     [['temp', `${num(c.temp)}${units.temp}`], ['dim', ` feels ${deg(c.feels)}`]],
@@ -367,10 +400,10 @@ function compactLines(view: Omit<WeatherView, 'compact' | 'wide' | 'summary'>, n
   if (view.attribution.osm) footer.push([['dim', '© OpenStreetMap contributors']]);
 
   const lines: Line[] = [
-    [['place', fit(view.title.compact, W)]],
+    [['place', fit(view.title.compact, W - inUnits.length)], ['dim', inUnits]],
     ...artLines(c.art, ' ', right.map((line) => fitLine(line, W - ART_WIDTH - 1))),
     ...rows,
-    ...noteLines(notes, W),
+    ...noteLines(view.place, notes, W),
     ...footer,
   ];
   return lines.map((line) => fitLine(line, W));
@@ -380,6 +413,7 @@ function wideLines(view: Omit<WeatherView, 'compact' | 'wide' | 'summary'>, note
   const { current: c, units } = view;
   const W = WIDE_COLS;
   const head = 'Weather for ';
+  const inUnits = unitsNote(units);
   const right: Line[] = [
     [['cond', c.label]],
     [['temp', `${num(c.temp)} ${units.temp}`], ['dim', ` (feels like ${num(c.feels)} ${units.temp})`]],
@@ -416,14 +450,14 @@ function wideLines(view: Omit<WeatherView, 'compact' | 'wide' | 'summary'>, note
   if (view.attribution.osm) footer.push([['dim', view.attribution.osm]]);
 
   const lines: Line[] = [
-    [['head', head], ['place', fit(view.title.wide, W - head.length)]],
+    [['head', head], ['place', fit(view.title.wide, W - head.length - inUnits.length)], ['dim', inUnits]],
     [],
     ...artLines(c.art, '   ', right.map((line) => fitLine(line, W - ART_WIDTH - 3))),
     [],
     header,
     ...rows,
     [],
-    ...noteLines(notes, W),
+    ...noteLines(view.place, notes, W),
     ...footer,
   ];
   return lines.map((line) => fitLine(line, W));

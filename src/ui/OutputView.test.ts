@@ -140,9 +140,9 @@ describe('OutputView: links and actions', () => {
     expect(link?.getAttribute('href')).toBe('https://www.linkedin.com/in/example');
     expect(link?.getAttribute('target')).toBe('_blank');
     expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
-    expect(link?.textContent).toBe('↗ linkedin.com/in/example');
+    expect(link?.textContent).toBe('→ linkedin.com/in/example');
     expect(root.querySelector('.card-detail')?.textContent).toBe('profile');
-    expect(root.querySelector('button.card-copy')?.textContent?.trim()).toBe('⧉ Copy');
+    expect(root.querySelector('button.card-copy')?.textContent?.trim()).toBe('Copy');
   });
 });
 
