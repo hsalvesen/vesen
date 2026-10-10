@@ -12,9 +12,9 @@
 //
 // Only an open-ended list (files, command names, history) is cut to `max` while typing, with the
 // rest counted; Tab lists it all. A closed list a spec declares (its subcommands, an enum such as
-// the theme names) is shown whole in the dock, where the row scrolls sideways, and so are the
-// follow-ups and the starters on an empty line. Under a desktop prompt, where the row wraps,
-// `max` still keeps the quiet row short.
+// the theme names) is shown whole everywhere: in the dock, where the row scrolls sideways, and
+// under a desktop prompt, where the row wraps (the owner wants every theme on screen at once, with
+// no `+N more`); so are the follow-ups and the starters on an empty line.
 //
 // Every action is made here from specs, files and history, never from text a command printed,
 // and a line a tap runs is made only of plain words.
@@ -330,8 +330,8 @@ export function chipsFor(input: ChipInput): ChipList {
 
   const current = input.touch && input.env !== undefined ? currentChip(input, input.env) : null;
   const room = current === null ? input.max : input.max - 1;
-  /** How many of a result's candidates to show: all of a closed list in the dock, else `room`. */
-  const limit = (of: CompletionResult): number | null => (input.touch && closedList(of) ? null : room);
+  /** How many of a result's candidates to show: all of a closed list, else `room`. */
+  const limit = (of: CompletionResult): number | null => (closedList(of) ? null : room);
   let list: ChipList = NONE;
   if (result === null) list = NONE;
   else if (result.total === 0) list = nearChips(result, room);

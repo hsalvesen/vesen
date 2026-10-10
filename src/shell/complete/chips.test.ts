@@ -42,10 +42,12 @@ describe('chipsFor', () => {
     ]);
   });
 
-  it("offers what comes next after a word typed in full: 'theme' gives ls and the themes, the quiet row cut to max under a desktop prompt", () => {
+  it("offers what comes next after a word typed in full: 'theme' gives ls and every theme, whole even under a desktop prompt", () => {
     const { chips, more } = chipsFor(input('theme', { max: 4 }));
-    expect(chips.map((c) => c.label)).toEqual(['ls', 'cassowary', 'cockatoo', 'crocodile']);
-    expect(more).toBe(12);
+    expect(chips).toHaveLength(16);
+    expect(chips.slice(0, 4).map((c) => c.label)).toEqual(['ls', 'cassowary', 'cockatoo', 'crocodile']);
+    expect(chips.at(-1)?.label).toBe('wombat');
+    expect(more).toBe(0);
     expect(applyChip(chips[0]!)?.text).toBe('theme ls ');
     expect(applyChip(chips[1]!)?.text).toBe('theme cassowary ');
   });

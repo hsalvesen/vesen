@@ -28,6 +28,7 @@
   import { PromptController } from './ui/prompt/promptController.svelte';
   import Transcript from './ui/Transcript.svelte';
   import { focusPolicy } from './ui/actions/focusPolicy';
+  import { tapTarget } from './ui/actions/tapTarget';
   import { distanceFromBottom, PIN_THRESHOLD_PX, scrollToEnd, stickToBottom } from './ui/actions/stickToBottom';
 
   let { shell, platform }: { shell: ShellPort; platform?: AppPlatform } = $props();
@@ -278,7 +279,8 @@
       </div>
 
       <!-- The empty space under the prompt: tapping it opens the keyboard. -->
-      <div class="tap-to-type" data-prompt-area aria-hidden="true"></div>
+      <!-- Its own tap target too, so a tap here never snaps to a tappable name at the end of the output (actions/tapTarget.ts). -->
+      <div class="tap-to-type" data-prompt-area aria-hidden="true" use:tapTarget></div>
     </main>
 
     {#if newOutput}
