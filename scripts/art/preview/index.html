@@ -1,0 +1,45 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>vesen art preview</title>
+<!--
+  Shows the pieces of art.txt (separated by a line "%%"; a piece's first line is its title) in
+  the terminal's real font, at the desktop size (16px) and the phone size (13px), on the swamphen
+  background. Art made of block characters is drawn at line height 1, as the app draws it; art made
+  of letters and punctuation at the terminal's 1.35. Serve the repository root and open this page:
+      python3 -m http.server 4611 --bind 127.0.0.1    then http://127.0.0.1:4611/scripts/art/preview/
+  or screenshot it without a server: node scripts/art/preview/shot.mjs --out shot.png
+-->
+<style>
+  @font-face { font-family: 'Vesen Mono'; src: url(../../../public/fonts/VesenMono.woff2) format('woff2'); }
+  body { background: #222235; color: #fff; margin: 0; padding: 24px; font: 16px/1.35 'Vesen Mono', monospace; }
+  h2 { font: 12px sans-serif; color: #8fd2e0; margin: 0 0 6px; }
+  .piece { display: flex; gap: 48px; align-items: flex-start; margin-bottom: 28px; }
+  pre { margin: 0; font: inherit; white-space: pre; font-variant-ligatures: none; }
+  pre.phone { font-size: 13px; }
+  pre.block { line-height: 1; }
+  .green { color: #06c993 } .blue { color: #5da3c1 } .yellow { color: #f4c95d } .white { color: #fff }
+</style>
+<div id="root"></div>
+<script>
+  const COLOURS = { apple: 'green', android: 'green', windows: 'blue', linux: 'yellow' };
+  const BLOCK = /[─-▟⠀-⣿]/;
+  fetch('art.txt?' + Date.now()).then((r) => r.text()).then((text) => {
+    const root = document.getElementById('root');
+    for (const part of text.replace(/\n$/, '').split('\n%%\n')) {
+      const [title, ...rows] = part.split('\n');
+      const art = rows.join('\n');
+      const colour = COLOURS[title.split(/\s/)[0]] ?? 'white';
+      const h = document.createElement('h2');
+      h.textContent = title;
+      const piece = document.createElement('div');
+      piece.className = 'piece';
+      for (const cls of ['', 'phone']) {
+        const pre = document.createElement('pre');
+        pre.className = `${cls} ${colour} ${BLOCK.test(art) ? 'block' : ''}`;
+        pre.textContent = art;
+        piece.appendChild(pre);
+      }
+      root.append(h, piece);
+    }
+  });
+</script>

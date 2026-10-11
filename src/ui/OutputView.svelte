@@ -35,8 +35,8 @@
       </div>
     {:else if block.type === 'art'}
       <!-- Hidden from screen readers, which hear the alternative text instead of the glyphs. Block
-           art (the banner, logos, figlet) is drawn with its rows touching; art drawn with letters
-           (cowsay, sl) at the terminal's line height. -->
+           art (the banner, figlet) is drawn with its rows touching; art drawn with letters
+           (cowsay, sl, fastfetch's logos) at the terminal's line height. -->
       <div class="art-wrap">
         <div
           class="art {artClass(block.text)} {spanClasses(block.style)}"

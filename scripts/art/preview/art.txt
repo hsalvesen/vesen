@@ -1,0 +1,62 @@
+apple 26x14
+               -g@.
+              gMM\
+             g@M-
+    -gggggg- .-gggggg-
+  -gMMMMMMMMggMMMMMMMM.
+  @MMMMMMMMMMMMMMMM@-
+  $MMMMMMMMMMMMMMMM@
+ .gMMMMMMMMMMMMMMMM@_
+.@MMMMMMMMMMMMMMMMMMMg,.
+JMMMMMMMMMMMMMMMMMMMMMMM@L
+ $MMMMMMMMMMMMMMMMMMMMMMM
+  -M@MMMMMMMMMMMMMMMM@M\
+     M@MMMM@MM@MMMM@M
+       -]7M-  -MM[-
+%%
+android 25x14
+       \          /
+        \ -,__,- /
+       gg@MMMMMM@gg
+     _@MMMMMMMMMMMM@_
+     @MMM MMMMMM MMM@
+     ----------------
+ @M@ MMMMMMMMMMMMMMMM @M@
+ MMM MMMMMMMMMMMMMMMM MMM
+ MMM MMMMMMMMMMMMMMMM MMM
+ ]M[ MMMMMMMMMMMMMMMM ]M[
+     %MMMMMMMMMMMMMM@
+        ]MM@  ]MM@
+        ]MM@  ]MM@
+        JWW%  JWW%
+%%
+windows 28x13
+                 -,__]######
+     .-,__J  ###############
+###########  ###############
+###########  ###############
+###########  ###############
+###########  ###############
+
+###########  ###############
+###########  ###############
+###########  ###############
+7##########  ###############
+      --]T7  ###############
+                 --[]777####
+%%
+linux 26x14
+         -g@WWW@g-
+        .@@[-.-]$@.
+        .@-O...O-@.
+       .ggg..V..ggg
+      g@@$-.....-7%@g
+    -g@\.........../$g_
+   gW@-.............-@Wy
+  qWWF...............qWW-
+  4WW@...............gWWF
+  JMWWp.............qWW%L
+    $WWg-.........-gWWM
+     ]%WWggg_,_gg@WW@[
+       -]MMW@@@WMM[-
+ .=========     =========.

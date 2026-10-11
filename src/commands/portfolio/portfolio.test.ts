@@ -199,16 +199,24 @@ describe('banner', () => {
     expect(lineText(rows(blocks)[0] ?? [])).toBe('A terminal in your browser, by Has\u00a0Salvesen.');
   });
 
-  it('draws both logos in block and quadrant characters, within their sizes', () => {
+  it('draws both logos in block and quadrant characters with a drop shadow of colons, within their sizes', () => {
     const widest = (art: string) => Math.max(...art.split('\n').map(textWidth));
-    // Block elements (U+2580–259F) and spaces only, so the rows line up in the terminal's font.
-    const BLOCKS = /^[ ▀-▟]+$/u;
-    expect(BANNER_ART.split('\n')).toHaveLength(6);
+    // Block elements (U+2580–259F), the shadow's colons and spaces only, so the rows line up in the
+    // terminal's font.
+    const BLOCKS = /^[ :▀-▟]+$/u;
+    const full = BANNER_ART.split('\n');
+    const compact = BANNER_ART_COMPACT.split('\n');
+    expect(full).toHaveLength(7);
     expect(widest(BANNER_ART)).toBeLessThanOrEqual(46);
-    expect(BANNER_ART_COMPACT.split('\n')).toHaveLength(3);
+    expect(compact).toHaveLength(4);
     expect(widest(BANNER_ART_COMPACT)).toBeLessThanOrEqual(30);
-    for (const row of [...BANNER_ART.split('\n'), ...BANNER_ART_COMPACT.split('\n')]) expect(row).toMatch(BLOCKS);
+    for (const row of [...full, ...compact]) expect(row).toMatch(BLOCKS);
     expect(widest(BANNER_ART)).toBeGreaterThan(widest(BANNER_ART_COMPACT));
+    // The shadow falls one row down and one column right: none on the first row, only shadow on the last.
+    for (const rows of [full, compact]) {
+      expect(rows[0]).not.toContain(':');
+      expect(rows[rows.length - 1]).toMatch(/^ [ :]+$/);
+    }
   });
 
   it('points a touch screen at the chips, where a keyboard gets the keys (F074)', () => {

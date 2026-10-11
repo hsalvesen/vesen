@@ -5,8 +5,9 @@
 $ banner
 [terminal at 40 columns; pipe at 40 columns]
 █   █ █▀▀▀ ▟▀▀▀ █▀▀▀ █▖  █
-█ ▗▛ ▐▛▀▀ ▝▀▀▜▖▐▛▀▀ ▐▛▙ ▐▌
-█▟▘  █▄▄▄ ▄▄▄▛ █▄▄▄ █ ▜▄█  v0.0.0-test
+█:▗▛ ▐▛▀▀:▝▀▀▜▖▐▛▀▀:▐▛▙:▐▌:
+█▟▘::█▄▄▄:▄▄▄▛:█▄▄▄:█:▜▄█::  v0.0.0-test
+ :::  :::: :::: :::: : :::
 A terminal in your browser, by Has Salvesen.
 
 New here? Type help to see all available commands.
@@ -15,11 +16,12 @@ Tab completes a command, ↑ brings the last one back, and help <cmd> explains a
 ? 0
 [terminal at 80, 120 columns; pipe at 80, 120 columns]
 ▐█▌   ▐█▌▐██████▌ ▟█████▌▐██████▌▐█▙▖   ▐█▌
-▐█▌  ▐█▌ ██      ██      ██      ██▜▙   ██
-▐█▌ ▐█▌ ▐█████▌  ▜█████▖▐█████▌ ▐█▌▝█▖ ▐█▌
-▐█▌▐█▌  ██           ██ ██      ██  ▜▙ ██
-▐███▌  ▐█▌          ▐█▌▐█▌     ▐█▌  ▝█▟█▌
-▝██▘   ███████ ██████▀ ███████ ██    ▀██  v0.0.0-test
+▐█▌: ▐█▌:██::::::██::::::██::::::██▜▙:  ██::
+▐█▌:▐█▌:▐█████▌  ▜█████▖▐█████▌ ▐█▌▝█▖ ▐█▌:
+▐█▌▐█▌::██::::::  :::██:██::::::██::▜▙:██::
+▐███▌::▐█▌:         ▐█▌▐█▌:    ▐█▌: ▝█▟█▌:
+▝██▘:: ███████ ██████▀:███████ ██::  ▀██::  v0.0.0-test
+ ::::   ::::::: ::::::: ::::::: ::    :::
 A terminal in your browser, by Has Salvesen.
 
 New here? Type help to see all available commands.

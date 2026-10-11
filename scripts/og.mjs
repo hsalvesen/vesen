@@ -32,8 +32,9 @@ const BANNER_PX = (14 * 2048) / 1200;
 const FONT_CANDIDATES = ['public/fonts/VesenMono.woff2', 'assets-src/fonts/CascadiaCode.ttf'];
 
 /**
- * The six lines of the VESEN block banner, read from BANNER_ART, which the banner command draws,
- * so the preview never drifts from what visitors see.
+ * The seven lines of the VESEN block banner (six of letters, one more for their shadow), read
+ * from BANNER_ART, which the banner command draws, so the preview never drifts from what
+ * visitors see.
  * @param {string} source the text of src/commands/lib/banner.ts
  */
 export function bannerArt(source) {
@@ -41,7 +42,7 @@ export function bannerArt(source) {
   const art = match?.[1];
   if (!art) throw new Error('og: could not find the banner art in src/commands/lib/banner.ts');
   const lines = art.split('\n').map((line) => line.trimEnd());
-  if (lines.length !== 6) throw new Error(`og: expected 6 banner lines, found ${lines.length}`);
+  if (lines.length !== 7) throw new Error(`og: expected 7 banner lines, found ${lines.length}`);
   return lines.join('\n');
 }
 
