@@ -24,9 +24,9 @@ export function chipName(chip: Chip): string {
   return `Insert: ${chip.label}`;
 }
 
-/** A glyph before the label, from the terminal's font: × to stop, ⏎ for the line itself. */
+/** The mark before a label, in ASCII: x to stop, > before a line a tap runs, as a prompt stands before one. */
 export function leadGlyph(chip: Chip): string | null {
-  if (chip.action.kind === 'interrupt') return '×';
-  if (chip.kind === 'current') return '⏎';
+  if (chip.action.kind === 'interrupt') return 'x';
+  if (runsLine(chip)) return '>';
   return null;
 }

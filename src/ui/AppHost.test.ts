@@ -1,5 +1,5 @@
 // The alternate screen and the Shutdown app (F029): systemd's lines, a fade (at once under reduced
-// motion), '● vesen is off' with Power on, and the in-app hint; never window.close. Back while an
+// motion), '* vesen is off' with Power on, and the in-app hint; never window.close. Back while an
 // app shows closes it through its own close path.
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
@@ -45,7 +45,7 @@ describe('AppHost and the Shutdown app', () => {
     await settle();
     expect(screen.getByRole('status').textContent).toContain('vesen is off');
     expect(screen.getByText('or press any key')).toBeInTheDocument();
-    expect(screen.queryByText('Close this page with ×')).toBeNull();
+    expect(screen.queryByText('Close this page with the X at the top')).toBeNull();
     await fireEvent.click(screen.getByRole('button', { name: /Power on/ }));
     expect(onclose).toHaveBeenCalledWith(7, POWER_ON);
     expect(close).not.toHaveBeenCalled();
@@ -68,7 +68,7 @@ describe('AppHost and the Shutdown app', () => {
     const onclose = vi.fn();
     render(AppHost, { props: { request: { id: 4, view: 'shutdown', props: view({ inApp: true, touch: true }) }, onclose } });
     await settle();
-    expect(screen.getByText('Close this page with ×')).toBeInTheDocument();
+    expect(screen.getByText('Close this page with the X at the top')).toBeInTheDocument();
     expect(screen.queryByText('or press any key')).toBeNull();
     await fireEvent.click(screen.getByRole('button', { name: /Power on/ }));
     expect(onclose).toHaveBeenCalledTimes(1);

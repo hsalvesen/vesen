@@ -50,7 +50,7 @@ export function cleanBlock(block: unknown): Block | null {
   try {
     switch (raw.type) {
       case 'lines':
-        return out.lines(cleanLines(raw.lines), raw.stream === 'stderr' ? 'stderr' : 'stdout');
+        return out.lines(cleanLines(raw.lines), raw.stream === 'stderr' ? 'stderr' : 'stdout', str(raw.alt));
       case 'grid': {
         const items = cleanLine(raw.items);
         const minCh = typeof raw.minCh === 'number' && Number.isFinite(raw.minCh) ? raw.minCh : undefined;

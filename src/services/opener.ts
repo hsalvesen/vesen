@@ -7,7 +7,7 @@
 //   in the same view, so Back returns to the terminal (which the session snapshot restores).
 // - On phones and tablets, and for mailto anywhere, only the card is printed.
 // - The escape to the real browser (`instagram://extbrowser/` on iOS Instagram, `intent://` on
-//   Android) is offered only behind a tap, beside the manual "••• → Open in browser".
+//   Android) is offered only behind a tap, beside the manual "... -> Open in browser".
 //
 // Every opener also prints a link card with Copy; that is the command's job, not this file's.
 
@@ -53,10 +53,10 @@ export function escapeHref(url: string, env: LinkEnv): string | null {
 export function inAppInfo(env: LinkEnv): InAppInfo | null {
   if (env.inApp === null) return null;
   const browser = env.os === 'ios' ? 'Safari' : env.os === 'android' ? 'Chrome' : 'your browser';
-  // Instagram's menu is ••• on iOS and three dots one above the other on Android, which the
-  // terminal's font has no glyph for, so it is named instead.
-  const menu = env.os === 'android' ? 'Menu' : '•••';
-  return { label: IN_APP_LABELS[env.inApp], browser, menuHint: `${menu} → Open in browser` };
+  // Instagram's menu is three dots in a row on iOS, written in ASCII, and three dots one above
+  // the other on Android, which is named instead.
+  const menu = env.os === 'android' ? 'Menu' : '...';
+  return { label: IN_APP_LABELS[env.inApp], browser, menuHint: `${menu} -> Open in browser` };
 }
 
 export interface OpenerHost {

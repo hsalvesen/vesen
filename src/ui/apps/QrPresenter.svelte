@@ -14,7 +14,7 @@
 -->
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { asQrView, displayPayload, metaLine, middleEllipsis, pngDataUrl, raisedNote, type QrView } from '../../lib/qr';
+  import { asQrView, displayPayload, META_SEP, metaLine, middleEllipsis, pngDataUrl, raisedNote, type QrView } from '../../lib/qr';
   import { browserHost, copy, pageClipboard, pngFor, qrEnv, save, share, STATUS_MS, type QrEnv } from '../../services/qr-actions';
   import { measureWidth } from '../components/qr-measure';
   import type { AppProps } from './registry';
@@ -199,7 +199,7 @@
     <div class="details">
       <p class="payload" title={view.payload} use:measureWidth={(w) => (textWidth = w)}>{shown}</p>
       <!-- Each label stays with its value ('mask 0'): the line wraps only between them. -->
-      <p class="meta" title={raisedNote(view)}>{#each metaLine(view).split(' · ') as part, i}{#if i > 0}{' · '}{/if}<span class="together">{part}</span>{/each}</p>
+      <p class="meta" title={raisedNote(view)}>{#each metaLine(view).split(META_SEP) as part, i}{#if i > 0}{META_SEP}{/if}<span class="together">{part}</span>{/each}</p>
       {#if env.inApp}
         <p class="hint">Press and hold the code to save it, or take a screenshot</p>
       {/if}

@@ -3,9 +3,9 @@
 # differ, each output is under the variants it belongs to. See README.md.
 
 $ cathode ls
-Cathode variations (current marked):
+Cathode variations (* marks the current one):
   off        No effect. A clean, modern flat display.
-› scanlines  Subtle horizontal scanlines with a slow refresh sweep.
+* scanlines  Subtle horizontal scanlines with a slow refresh sweep.
   phosphor   Glowing phosphor text, scanlines and a gentle flicker.
   vintage    The full retro set: glow, flicker, RGB fringing and a heavy vignette.
 

@@ -1,12 +1,12 @@
 <!--
   Several quotes at once (docs/plan/07-stock-and-proxy.md, "Rendering"), drawn from the
   QuoteTableView that commands/network/stock/view.ts builds: SYMBOL, LAST and CHG%, and where the
-  output is wide enough the change itself and a 64 px chart. A row that failed says so in place
+  output is wide enough the change itself and a small ASCII chart. A row that failed says so in place
   of its figures. Each ticker is a chip that opens its card; a press never takes focus from the
   prompt. Text by interpolation only; every colour a role.
 -->
 <script lang="ts">
-  import type { QuoteTableView } from '../../commands/network/stock/view';
+  import { NONE, type QuoteTableView } from '../../commands/network/stock/view';
   import { isTrustedAction, type Action } from '../../output/model';
   import Sparkline from './Sparkline.svelte';
 
@@ -30,7 +30,7 @@
         </tr>
       </thead>
       <tbody>
-        {#each table.rows as row, i}
+        {#each table.rows as row}
           <tr>
             <td class="sym">
               {#if row.action !== null && onaction && isTrustedAction(row.action)}
@@ -49,10 +49,10 @@
             {#if row.failure !== null}
               <td class="failure" colspan="4">{row.failure}</td>
             {:else}
-              <td class="num">{row.last ?? '—'}</td>
-              <td class="num {row.tone}">{row.percent ?? '—'}</td>
-              <td class="num wide {row.tone}">{row.change ?? '—'}</td>
-              <td class="wide spark">{#if row.spark !== null}<Sparkline spark={row.spark} id="{table.id}-{i}" mini />{/if}</td>
+              <td class="num">{row.last ?? NONE}</td>
+              <td class="num {row.tone}">{row.percent ?? NONE}</td>
+              <td class="num wide {row.tone}">{row.change ?? NONE}</td>
+              <td class="wide spark">{#if row.spark !== null}<Sparkline spark={row.spark} mini />{/if}</td>
             {/if}
           </tr>
         {/each}
@@ -144,9 +144,9 @@
     }
   }
 
+  /* The chart's cells set its width. */
   .spark {
-    width: 64px;
-    min-width: 64px;
+    white-space: pre;
   }
 
   .footer {

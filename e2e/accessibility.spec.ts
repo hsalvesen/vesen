@@ -103,10 +103,13 @@ test.describe('accessibility', { tag: '@smoke' }, () => {
     const logo = page.locator('[role="log"] .art[aria-hidden="true"]').nth(1);
     await expect(logo).toBeAttached();
     await expect(page.locator('.sr-only', { hasText: / logo$/ })).toHaveCount(2);
+    // fastfetch's palette is two strips of ## swatches, hidden like the logo.
+    await expect(page.locator('[role="log"] .entry').last().locator('.swatches')).toHaveCount(2);
 
     await run(page, 'theme ls');
+    await expect(page.locator('[role="log"] .entry').last().locator('.swatches')).toHaveCount(15);
     const swatches = page.locator('.swatches');
-    await expect(swatches).toHaveCount(15);
+    await expect(swatches).toHaveCount(17);
     for (const row of await swatches.all()) await expect(row).toHaveAttribute('aria-hidden', 'true');
   });
 

@@ -1,7 +1,7 @@
 <!--
   The Shutdown app (docs/plan/04-phone-and-instagram.md, "Inside Instagram's browser";
   designs/phone-and-instagram.md, "G"): systemd's lines one after another, a fade (at once under
-  reduced motion), then '● vesen is off' and [Power on] behind a power symbol (inline SVG: the
+  reduced motion), then '* vesen is off' and [Power on] behind a power symbol (inline SVG: the
   terminal's font has no glyph for one), which hands the command its result so it starts a new
   session with the files kept. A desktop also powers on at any key. Inside an in-app browser it
   says how to close the page; nothing ever calls window.close or rewrites the page, so the
@@ -106,10 +106,10 @@
       {/each}
     </div>
   {:else if view.kind === 'reboot'}
-    <p class="state" role="status">Starting vesen…</p>
+    <p class="state" role="status">Starting vesen...</p>
   {:else}
     <div class="off">
-      <p class="state" role="status"><span class="dot" aria-hidden="true">●</span> vesen is off</p>
+      <p class="state" role="status"><span class="dot" aria-hidden="true">*</span> vesen is off</p>
       <button type="button" class="power" bind:this={button} onclick={powerOn}
         ><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.25v5.5" /><path d="M5.25 4.5a4.5 4.5 0 1 0 5.5 0" /></svg>Power on</button
       >
@@ -117,7 +117,7 @@
         <p class="hint">or press any key</p>
       {/if}
       {#if view.inApp}
-        <p class="hint">Close this page with ×</p>
+        <p class="hint">Close this page with the X at the top</p>
       {/if}
     </div>
   {/if}

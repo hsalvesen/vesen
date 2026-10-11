@@ -17,7 +17,7 @@ export default defineCommand({
   ],
   args: [{ name: 'URL', source: { kind: 'url' }, variadic: true }],
   // The URL, never -O's FILE.
-  loadingLabel: (argv) => `wget: fetching ${argv.find((word, i) => i > 0 && !word.startsWith('-') && /[./:]/.test(word) && !/^(-[a-zA-Z]*O|--output-document)$/.test(argv[i - 1] ?? '')) ?? 'the page'}…`,
+  loadingLabel: (argv) => `wget: fetching ${argv.find((word, i) => i > 0 && !word.startsWith('-') && /[./:]/.test(word) && !/^(-[a-zA-Z]*O|--output-document)$/.test(argv[i - 1] ?? '')) ?? 'the page'}...`,
   examples: [
     { line: 'wget https://httpbin.org/json', note: 'saved as json' },
     { line: 'wget -O - https://httpbin.org/uuid', note: 'to the terminal' },

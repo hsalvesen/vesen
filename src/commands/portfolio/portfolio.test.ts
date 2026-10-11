@@ -32,8 +32,10 @@ describe('theme ls', () => {
     const themeRows = rows(blocks).filter((line) => line.some((span) => span.swatches !== undefined));
     expect(themeRows).toHaveLength(15);
     const swamphen = themeRows.find((line) => line[1]?.text === 'swamphen') ?? [];
-    expect(swamphen[0]).toMatchObject({ text: '› ', live: { kind: 'isCurrentTheme', theme: 'swamphen', marker: '› ' } });
+    // The marker is plain text in the terminal's foreground: no style, never the accent.
+    expect(swamphen[0]).toEqual({ text: '* ', live: { kind: 'isCurrentTheme', theme: 'swamphen', marker: '* ' } });
     expect(swamphen[1]).toMatchObject({ live: { kind: 'isCurrentTheme', theme: 'swamphen' }, action: { kind: 'run', line: 'theme swamphen' } });
+    expect(swamphen[1]?.style).toEqual({ fg: 'fg-strong' });
     expect(swamphen[3]?.swatches?.background).toBe('#222235');
     expect(swamphen[3]?.swatches?.colours).toHaveLength(8);
     expect(swamphen[3]?.swatches?.colours).toContain('#f60055');
@@ -41,7 +43,8 @@ describe('theme ls', () => {
     expect(wombat[0]?.text).toBe('  ');
     // Every name is a tap that switches, `theme NAME`, and the hint says so.
     expect(themeRows.map((line) => line[1]?.action)).toEqual(themeRows.map((line) => ({ kind: 'run', line: `theme ${line[1]?.text ?? ''}` })));
-    expect(text(blocks)).toContain('Try one with: theme NAME, or click a name.');
+    // The hint says what the mark means.
+    expect(text(blocks)).toContain('* marks the current theme. Try one with: theme NAME, or click a name.');
     // No hex anywhere else: every other colour is a token.
     for (const line of rows(blocks)) for (const span of line) if (span.swatches === undefined) expect(JSON.stringify(span.style ?? {})).not.toMatch(/#/);
   });
@@ -109,11 +112,12 @@ describe('cathode', () => {
     const { status, blocks } = await runLine('cathode ls');
     expect(status).toBe(0);
     const listing = text(blocks);
-    expect(listing).toContain('› scanlines  Subtle horizontal scanlines');
+    expect(listing).toContain('Cathode variations (* marks the current one):');
+    expect(listing).toContain('* scanlines  Subtle horizontal scanlines');
     expect(listing).toContain('  vintage    The full retro set');
     expect(listing).toContain('Quality: lite (auto: a touch screen)');
     const vintage = rows(blocks).find((line) => line[1]?.text === 'vintage') ?? [];
-    expect(vintage[0]?.live).toEqual({ kind: 'isCurrentCathode', mode: 'vintage', marker: '› ' });
+    expect(vintage[0]).toEqual({ text: '  ', live: { kind: 'isCurrentCathode', mode: 'vintage', marker: '* ' } });
     expect(vintage[1]?.action).toMatchObject({ kind: 'run', line: 'cathode set vintage' });
   });
 

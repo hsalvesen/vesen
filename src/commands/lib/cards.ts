@@ -33,7 +33,7 @@ export function webCard(title: string, url: string): CardBlock {
 }
 
 /**
- * The email card: [Open mail app →] as a real mailto link and [Copy address]. Inside an in-app
+ * The email card: [Open mail app ->] as a real mailto link and [Copy address]. Inside an in-app
  * browser, where the mail app may not open, a hint and the way out to the real browser. The
  * labels are words only: the card draws them in the terminal's font, which has no envelope.
  */

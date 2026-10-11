@@ -219,13 +219,19 @@ Inside `run`:
   now, as `ps` and `/proc` show them; `ctx.shell.kill(pid)` ends only a running command.
 - **Original content.** Cows, fortunes, fonts and art are written for vesen, not copied, and
   credit no other project.
-- **Only glyphs the font draws.** Messages, chip labels, cards and art use characters Vesen Mono
-  has (`scripts/fonts/glyphs.json` lists them; `npm run check:glyphs` fails on any other): → for
-  "opens" or "external", × to close, ▾ to hide, ● ○ for state, … for an ellipsis, ─ ━ ┃ and the
-  box-drawing range for rules and bars, braille for a spinner, and a word where no glyph fits
-  (`refresh`, `Copy`, `Menu`). ✉ ⧉ ↗ ↻ ✕ ⌄ ⌨ ⏻ ⋮ and emoji are not in the font and fall back to
-  another, which looks wrong. ASCII stand-ins (`->`, `...`, `--`, `-` rules, `*` bullets) are for
-  a command that imitates a real tool's output; vesen's own words use → … — ─ •.
+- **Drawn in ASCII, on the grid.** Anything a command or a card draws (art, bars, charts, rules,
+  connectors, spinners, markers, bullets and separators) is drawn with ASCII characters at the
+  terminal's line height, as a text-mode terminal draws them: `->` for "opens" or "external",
+  `...` for an ellipsis, `*` for a bullet or the current entry of a listing (in the foreground
+  colour, never the accent), `-` rules, ` | ` between facts on one line, `|-- ` and `` `-- `` for
+  tree's connectors, `#` for figlet's ink and a swatch, `| / - \` for a spinner, and a word where
+  no mark fits (`refresh`, `Copy`, `Menu`). Never a CSS strip, an SVG chart or Unicode block
+  shading. Box drawing and half blocks stay only where the thing is that by nature: the wordmark
+  and a scannable text-mode QR code. Prose (the owner's documents, man-page text, degrees in a
+  weather reading) keeps its typography, and a command that imitates a Linux tool keeps that
+  tool's own format. Every character must be one Vesen Mono has (`scripts/fonts/glyphs.json`
+  lists them; `npm run check:glyphs` fails on any other); UI chrome that needs a symbol draws a
+  small inline SVG.
 - **Honest network commands.** A browser cannot send ICMP or raw DNS: say what is done instead
   (DNS over HTTPS, an HTTPS round trip for `ping`), in the output itself.
 - **No new dependencies.**

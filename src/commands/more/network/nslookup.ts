@@ -27,7 +27,7 @@ const spec: CommandSpec & RawArgsSpec & RunnerChoice = {
     { name: 'NAME', source: { kind: 'examples', caseInsensitive: true, fromHistory: true } },
     { name: 'SERVER', source: { kind: 'enum', values: () => SERVERS }, optional: true },
   ],
-  loadingLabel: (argv) => `nslookup: looking up ${argv.slice(1).find((word) => !word.startsWith('-')) ?? 'the name'}…`,
+  loadingLabel: (argv) => `nslookup: looking up ${argv.slice(1).find((word) => !word.startsWith('-')) ?? 'the name'}...`,
   examples: [
     { line: 'nslookup vesen.app', note: 'its addresses' },
     { line: 'nslookup -type=MX vesen.app', note: 'its mail servers' },

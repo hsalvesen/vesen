@@ -150,9 +150,9 @@ async function connect(ctx: CommandContext): Promise<Market | ExitCode> {
 /** Tells the status line when a lookup is slow, and when it retries. */
 function phases(ctx: CommandContext, what: string): (phase: FetchPhase, attempt: number) => void {
   return (phase, attempt) => {
-    if (phase === 'slow') ctx.tty.status(`still fetching ${what}…`);
-    else if (phase === 'very-slow') ctx.tty.status('taking longer than usual — market data is slow…');
-    else ctx.tty.status(`retrying ${what} (${attempt}/2)…`);
+    if (phase === 'slow') ctx.tty.status(`still fetching ${what}...`);
+    else if (phase === 'very-slow') ctx.tty.status('taking longer than usual, market data is slow...');
+    else ctx.tty.status(`retrying ${what} (${attempt}/2)...`);
   };
 }
 
@@ -175,7 +175,7 @@ async function single(ctx: CommandContext, market: Market, wanted: Wanted, range
   const note = resolvedNote(wanted.typed, outcome.quote);
   if (note !== null) await ctx.stdout.line(out.span(note, MUTED));
   const view = cardView(outcome, range, ctx.clock.now());
-  const text = cardText(view, outcome.quote.series);
+  const text = cardText(view);
   if (mode === 'plain') await ctx.stdout.write(text);
   else await ctx.stdout.block(out.component('quote-card', view, text, cardAlt(view)));
   return 0;
@@ -333,7 +333,7 @@ async function invalid(ctx: CommandContext, typed: string): Promise<ExitCode> {
 
 async function notAvailable(ctx: CommandContext): Promise<ExitCode> {
   await ctx.stderr.line(out.span("stock: live quotes aren't available on this host.", ERROR));
-  await ctx.stderr.line(out.span("vesen's quote proxy only serves vesen.app — set VITE_STOCK_API to your own (README → Stock quotes).", MUTED));
+  await ctx.stderr.line(out.span("vesen's quote proxy only serves vesen.app — set VITE_STOCK_API to your own (README -> Stock quotes).", MUTED));
   ctx.tty.bell();
   return 1;
 }

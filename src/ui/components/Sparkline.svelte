@@ -1,113 +1,76 @@
 <!--
-  A quote's chart (commands/network/stock/view.ts, SparkView): the closes as one line across the
-  session, green above and red below the dashed comparison line (the previous close for a day),
-  with a dot on the last point. The SVG stretches to the width it is given; the stroke keeps its
-  thickness, and the dashed line and the dot are drawn over it in HTML so they never stretch.
-  Colours are roles, set through style, never through presentation attributes.
+  A quote's chart (commands/network/stock/view.ts, SparkView; chart.ts draws it): the closes
+  traced in ASCII on the character grid, each cell above the dotted comparison line (the previous
+  close for a day) in the ok role and each below it in the error role, the line itself muted, and
+  the last point marked o in the strong text role. Text only: the rows are runs of cells, one span
+  a run, at the terminal's own line height, so the chart is as wide as its columns and never
+  stretches. Colours are roles, through classes.
 -->
 <script lang="ts">
   import type { SparkView } from '../../commands/network/stock/view';
 
-  let { spark, id, mini = false }: { spark: SparkView; id: string; mini?: boolean } = $props();
+  let { spark, mini = false }: { spark: SparkView; mini?: boolean } = $props();
 
-  const gradient = $derived(`${id}-line`);
-  /** Where the colour changes, as a fraction of the height; null when there is no baseline. */
-  const split = $derived(spark.baseline === null ? null : Math.min(1, Math.max(0, spark.baseline / spark.height)));
-  const toneVar = $derived(spark.tone === 'up' ? 'var(--role-ok)' : spark.tone === 'down' ? 'var(--role-error)' : 'var(--role-muted)');
-  const stroke = $derived(split === null ? toneVar : `url(#${gradient})`);
-  const lastIsUp = $derived(spark.baseline === null ? spark.tone !== 'down' : (spark.last.y / 100) * spark.height <= spark.baseline);
-  const dotColour = $derived(spark.baseline === null ? toneVar : lastIsUp ? 'var(--role-ok)' : 'var(--role-error)');
+  /** The chart's columns: the widest row reaches the last one, where the o is. */
+  const columns = $derived(Math.max(1, ...spark.rows.map((row) => row.reduce((width, run) => width + run.text.length, 0))));
 </script>
 
 <div class="spark" class:mini role="img" aria-label={spark.label}>
-  <div class="plot">
-    <svg viewBox="0 0 {spark.width} {spark.height}" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-      {#if split !== null}
-        <defs>
-          <linearGradient id={gradient} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={spark.height}>
-            <stop offset="0" style="stop-color: var(--role-ok)" />
-            <stop offset={split} style="stop-color: var(--role-ok)" />
-            <stop offset={split} style="stop-color: var(--role-error)" />
-            <stop offset="1" style="stop-color: var(--role-error)" />
-          </linearGradient>
-        </defs>
-      {/if}
-      <path d={spark.path} style="stroke: {stroke}" />
-    </svg>
-    {#if spark.baseline !== null}
-      <span class="baseline" style="top: {(spark.baseline / spark.height) * 100}%"></span>
-    {/if}
-    <span class="dot" style="left: {spark.last.x}%; top: {spark.last.y}%; background: {dotColour}"></span>
-  </div>
+  <div class="plot" aria-hidden="true">{#each spark.rows as row, i}{#if i > 0}{'\n'}{/if}{#each row as run}<span class={run.tone}>{run.text}</span>{/each}{/each}</div>
   {#if !mini && (spark.labels.start !== '' || spark.labels.end !== '')}
-    <div class="axis" aria-hidden="true"><span>{spark.labels.start}</span><span class="middle">{spark.labels.middle}</span><span>{spark.labels.end}</span></div>
+    <!-- The start and the end under the chart's own ends; what the dotted line is, centred below. -->
+    <div class="axis" aria-hidden="true" style="width: {columns}ch">
+      <div class="ends"><span>{spark.labels.start}</span><span>{spark.labels.end}</span></div>
+      {#if spark.labels.middle !== ''}<div class="middle">{spark.labels.middle}</div>{/if}
+    </div>
   {/if}
 </div>
 
 <style>
   .spark {
-    width: 100%;
+    max-width: 100%;
     min-width: 0;
   }
 
+  /* The rows as written: cells on the grid, never wrapped, at the terminal's line height. */
   .plot {
-    position: relative;
-    height: 4.2em;
+    white-space: pre;
+    overflow-x: auto;
+    line-height: var(--term-lh, 1.35);
+    color: var(--role-fg);
   }
 
-  .mini .plot {
-    height: 1.2em;
+  .up {
+    color: var(--role-ok);
   }
 
-  svg {
-    display: block;
-    width: 100%;
-    height: 100%;
-    overflow: visible;
+  .down {
+    color: var(--role-error);
   }
 
-  path {
-    fill: none;
-    stroke-width: 1.5px;
-    stroke-linejoin: round;
-    stroke-linecap: round;
-    vector-effect: non-scaling-stroke;
+  .flat,
+  .base {
+    color: var(--role-muted);
   }
 
-  .baseline {
-    position: absolute;
-    left: 0;
-    right: 0;
-    border-top: 1px dashed var(--role-muted);
-    pointer-events: none;
+  .last {
+    color: var(--role-fg-strong);
   }
 
-  .dot {
-    position: absolute;
-    width: 0.45em;
-    height: 0.45em;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-  }
-
-  .mini .dot {
-    width: 0.3em;
-    height: 0.3em;
-  }
-
+  /* The axis is as wide as the chart's columns (set inline), so its ends sit under the chart's. */
   .axis {
+    max-width: 100%;
+    color: var(--role-muted);
+    white-space: nowrap;
+  }
+
+  .ends {
     display: flex;
     justify-content: space-between;
     gap: 1ch;
-    color: var(--role-muted);
-    white-space: nowrap;
-    overflow: hidden;
   }
 
-  .axis .middle {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .middle {
+    text-align: center;
   }
 </style>

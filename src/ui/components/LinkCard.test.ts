@@ -1,5 +1,5 @@
 // The link card (designs/phone-and-instagram.md, "G"): a real anchor that opens in a new tab in a
-// browser and in the same view in an in-app one, Copy with '✓ Copied' for two seconds, and on a
+// browser and in the same view in an in-app one, Copy with 'Copied' for two seconds, and on a
 // failed copy the text selected and 'Press and hold to copy'.
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
@@ -38,22 +38,22 @@ const email = out.card({
 });
 
 describe('LinkCard', () => {
-  it('is a titled group with the link as a real anchor, marked with an arrow the font has', () => {
+  it('is a titled group with the link as a real anchor, marked with an ASCII arrow', () => {
     show(linkedin, policy());
     expect(screen.getByRole('group', { name: 'LinkedIn' })).toBeInTheDocument();
     const link = screen.getByRole('link', { name: 'linkedin.com/in/harrysalvesen' });
     expect(link.getAttribute('href')).toBe('https://www.linkedin.com/in/harrysalvesen/');
     expect(link.getAttribute('target')).toBe('_blank');
     expect(link.getAttribute('rel')).toBe('noopener noreferrer');
-    expect(link.textContent).toBe('→ linkedin.com/in/harrysalvesen');
+    expect(link.textContent).toBe('-> linkedin.com/in/harrysalvesen');
   });
 
   it('opens in the same view inside an in-app browser, so Back returns', () => {
-    show(linkedin, policy({ target: '_self', inApp: { label: 'Instagram', browser: 'Safari', menuHint: '••• → Open in browser' } }));
+    show(linkedin, policy({ target: '_self', inApp: { label: 'Instagram', browser: 'Safari', menuHint: '... -> Open in browser' } }));
     expect(screen.getByRole('link').getAttribute('target')).toBe('_self');
   });
 
-  it("says '✓ Copied' for two seconds, politely", async () => {
+  it("says 'Copied' for two seconds, politely", async () => {
     vi.useFakeTimers();
     const links = policy();
     show(linkedin, links);
@@ -61,7 +61,7 @@ describe('LinkCard', () => {
     await fireEvent.click(button);
     await tick();
     expect(links.copy).toHaveBeenCalledWith('https://www.linkedin.com/in/harrysalvesen/');
-    expect(button.textContent?.trim()).toBe('✓ Copied');
+    expect(button.textContent?.trim()).toBe('Copied');
     expect(screen.getByRole('status').textContent).toBe('Copied');
     vi.advanceTimersByTime(2000);
     await tick();
@@ -86,7 +86,7 @@ describe('LinkCard', () => {
     expect(open.getAttribute('href')).toBe('mailto:has@salvesen.app?subject=Hi');
     expect(open.hasAttribute('target')).toBe(false);
     // The arrow after the words is the font's own, and not part of the name.
-    expect(open.textContent).toBe('Open mail app →');
+    expect(open.textContent).toBe('Open mail app ->');
     expect(screen.getByText('has@salvesen.app')).toBeInTheDocument();
     // Not in an in-app browser: no way out to offer.
     expect(screen.queryByText(/Open in browser/)).toBeNull();
@@ -111,29 +111,29 @@ describe('LinkCard', () => {
   });
 
   it('draws only glyphs the terminal font has', () => {
-    const { container } = show(email, policy({ target: '_self', inApp: { label: 'Instagram', browser: 'Safari', menuHint: '••• → Open in browser' }, escapeHref: () => 'instagram://extbrowser/' }));
+    const { container } = show(email, policy({ target: '_self', inApp: { label: 'Instagram', browser: 'Safari', menuHint: '... -> Open in browser' }, escapeHref: () => 'instagram://extbrowser/' }));
     expect(container.textContent).not.toMatch(/[✉⧉↗✕⌘]/u);
   });
 
   it('offers the real browser inside an in-app one, only beside the manual instruction, and only on a tap', async () => {
     const links = policy({
       target: '_self',
-      inApp: { label: 'Instagram', browser: 'Safari', menuHint: '••• → Open in browser' },
+      inApp: { label: 'Instagram', browser: 'Safari', menuHint: '... -> Open in browser' },
       escapeHref: (url) => `instagram://extbrowser/?url=${encodeURIComponent(url)}`,
     });
     show(email, links);
     expect(screen.getByText(/mail app doesn't open/)).toBeInTheDocument();
-    expect(screen.getByText('••• → Open in browser')).toBeInTheDocument();
+    expect(screen.getByText('... -> Open in browser')).toBeInTheDocument();
     expect(links.openExternal).not.toHaveBeenCalled();
     const external = screen.getByRole('button', { name: 'Open in Safari' });
-    expect(external.textContent).toBe('Open in Safari →');
+    expect(external.textContent).toBe('Open in Safari ->');
     await fireEvent.click(external);
     expect(links.openExternal).toHaveBeenCalledWith('https://www.vesen.app/');
   });
 
   it('keeps the instruction where there is no escape, as in Facebook on iOS', () => {
-    show(email, policy({ inApp: { label: 'Facebook', browser: 'Safari', menuHint: '••• → Open in browser' } }));
-    expect(screen.getByText('••• → Open in browser')).toBeInTheDocument();
+    show(email, policy({ inApp: { label: 'Facebook', browser: 'Safari', menuHint: '... -> Open in browser' } }));
+    expect(screen.getByText('... -> Open in browser')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Open in Safari/ })).toBeNull();
   });
 });

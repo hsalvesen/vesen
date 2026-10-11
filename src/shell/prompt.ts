@@ -7,7 +7,7 @@
 // The user, host and path take the prompt roles, the punctuation the strong text role, and the
 // `$` the error role after a non-zero status. On a narrow terminal the path is shortened to its
 // first and last folder, ~/.../src, and a path that would leave the input too little room keeps
-// only its end: …site-2026.
+// only its end: ...site-2026, written with the three dots bash's PROMPT_DIRTRIM uses.
 
 import { textWidth, type Line, type SpanStyle } from '../output/model';
 import { GUEST, HOST, tildePath } from '../vfs/identity';
@@ -23,6 +23,9 @@ export const PROMPT_SHARE = 0.6;
 
 /** The fewest cells a shortened path keeps. */
 const MIN_PATH = 6;
+
+/** What stands for the cut start of a long folder name, as in bash's PROMPT_DIRTRIM. */
+const CUT = '...';
 
 export interface PromptState {
   readonly cwd: string;
@@ -47,7 +50,7 @@ function firstAndLast(path: string): string {
  * The prompt's path: `~` for home, `~/...` inside it, and on a narrow terminal `~/.../last`.
  * `fixed` is how many cells the rest of the prompt takes (`guest@vesen:` and `$`); with it the
  * whole prompt stays within PROMPT_SHARE of the columns, keeping the end of a long folder name,
- * `…site-2026`, when even `~/.../last` is too long.
+ * `...site-2026`, when even `~/.../last` is too long.
  */
 export function promptPath(cwd: string, columns: number, home: string = GUEST.home, fixed: number = defaultFixed()): string {
   const path = tildePath(cwd, home);
@@ -55,7 +58,7 @@ export function promptPath(cwd: string, columns: number, home: string = GUEST.ho
   let shown = columns < NARROW_PROMPT_COLUMNS || textWidth(path) > budget ? firstAndLast(path) : path;
   if (textWidth(shown) > budget) {
     const chars = Array.from(shown);
-    shown = `…${chars.slice(chars.length - (budget - 1)).join('')}`;
+    shown = `${CUT}${chars.slice(chars.length - (budget - CUT.length)).join('')}`;
   }
   return shown;
 }

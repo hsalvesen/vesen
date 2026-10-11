@@ -28,7 +28,7 @@ const spec: CommandSpec & RawArgsSpec & RunnerChoice = {
     branch: { summary: 'the branch: main' },
     diff: { summary: 'changes in the working tree: none' },
   },
-  loadingLabel: (argv) => (argv.includes('log') || argv.includes('show') ? 'git: asking GitHub for the newest commits…' : 'git'),
+  loadingLabel: (argv) => (argv.includes('log') || argv.includes('show') ? 'git: asking GitHub for the newest commits...' : 'git'),
   examples: [
     { line: 'cd ~/projects/vesen && git log --oneline -n 5', note: 'the five newest commits' },
     { line: 'git -C ~/projects/vesen show', note: 'the newest commit' },

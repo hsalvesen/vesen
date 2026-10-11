@@ -1,13 +1,14 @@
 <!--
   One span of output, drawn with text interpolation only. A trusted action becomes a button, a
   checked http, https or mailto href becomes a link, and live bindings read the theme and cathode
-  stores, so old output stays true after either changes: a highlight moves to the current theme
-  or CRT mode, and so does a marker. Swatches are drawn in their own fixed colours, checked again
-  here, for the eye only. A press on an action never takes focus from the prompt, so a phone's
-  keyboard stays as it was (02, section 5), as the dock's chips do.
+  stores, so old output stays true after either changes: the marker moves to the current theme or
+  CRT mode, and the name of the current one says so to a screen reader. Swatches are `##` cells
+  drawn in their own colours (hex, checked again here, or palette tokens), for the eye only. A
+  press on an action never takes focus from the prompt, so a phone's keyboard stays as it was
+  (02, section 5), as the dock's chips do.
 -->
 <script lang="ts">
-  import { hexColour, isTrustedAction, safeHref, type Action, type HexColour, type Span } from '../output/model';
+  import { colourVar, hexColour, isPalette, isTrustedAction, safeHref, SWATCH, type Action, type HexColour, type Span } from '../output/model';
   import { theme } from '../stores/theme';
   import { cathode } from '../stores/cathode';
   import { linkPolicy } from './links';
@@ -35,28 +36,36 @@
 
   const text = $derived(span.live?.kind === 'currentThemeName' ? $theme.name : (marker ?? span.text));
 
-  /** A strip of swatches, with every colour checked; null when the span has none or one is bad. */
-  const swatches = $derived.by((): { background: HexColour; colours: HexColour[] } | null => {
+  /**
+   * A strip of swatches, each colour checked and written as CSS: a hex colour as it is, a palette
+   * token as its variable. Null when the span has none or one is bad.
+   */
+  const swatches = $derived.by((): { background: HexColour | null; colours: string[] } | null => {
     const strip = span.swatches;
     if (strip === undefined) return null;
-    const background = hexColour(strip.background);
-    const colours = strip.colours.map(hexColour);
-    if (background === null || colours.some((colour) => colour === null)) return null;
-    return { background, colours: colours as HexColour[] };
+    const background = strip.background === null ? null : hexColour(strip.background);
+    if (strip.background !== null && background === null) return null;
+    const colours: string[] = [];
+    for (const colour of strip.colours) {
+      const hex = hexColour(colour);
+      if (hex !== null) colours.push(hex);
+      else if (isPalette(colour)) colours.push(colourVar(colour));
+      else return null;
+    }
+    return { background, colours };
   });
 
-  // The current entry of a theme or cathode list is drawn in the accent, not bold, since a
-  // synthetic bold is wider in WebKit and would push the columns after it.
-  const style = $derived(current ? { ...span.style, fg: 'accent' as const } : span.style);
-  const classes = $derived(spanClasses(style) || undefined);
-  const css = $derived(spanCss(style));
+  // The current entry of a theme or cathode list keeps its own colour: the marker beside it says
+  // which it is, and aria-current says so to a screen reader.
+  const classes = $derived(spanClasses(span.style) || undefined);
+  const css = $derived(spanCss(span.style));
   // Checked again here: a span is plain data, and only a builder-made action or URL may act.
   const action = $derived(isTrustedAction(span.action) ? span.action : null);
   const href = $derived(span.href === undefined ? null : safeHref(span.href));
 </script>
 
 {#if swatches !== null}
-  <span class="swatches" aria-hidden="true" style="background-color: {swatches.background}">{' '}{#each swatches.colours as colour}<span style="color: {colour}">██</span>{/each}{' '}</span>
+  <span class="swatches" aria-hidden="true" style={swatches.background === null ? undefined : `background-color: ${swatches.background}`}>{' '}{#each swatches.colours as colour}<span style="color: {colour}">{SWATCH}</span>{/each}{' '}</span>
 {:else if action !== null && onaction}
   <button
     type="button"

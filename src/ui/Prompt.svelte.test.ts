@@ -75,13 +75,14 @@ describe('promptPath', () => {
     ['/usr/share/man/man1', 40, '/.../man1'],
     ['/usr/share', 40, '/usr/share'],
     ['/', 40, '/'],
-    // A long folder name keeps its end, so the prompt takes at most 60% of a 320 px phone.
-    ['/home/guest/my-portfolio-website-2026', 37, '…ite-2026'],
-    ['/home/guest/projects/my-awesome-project', 44, '…some-project'],
+    // A long folder name keeps its end, so the prompt takes at most 60% of a 320 px phone, cut
+    // with the three dots bash's PROMPT_DIRTRIM uses.
+    ['/home/guest/my-portfolio-website-2026', 37, '...e-2026'],
+    ['/home/guest/projects/my-awesome-project', 44, '...me-project'],
     ['/home/guest/projects/my-awesome-project', 80, '~/projects/my-awesome-project'],
     ['/home/guest/a/very/deep/folder/tree/with/many/levels/inside', 80, '~/.../inside'],
     ['/home/guest/x', 10, '~/x'],
-    ['/home/guest/abcdefghij', 10, '…fghij'],
+    ['/home/guest/abcdefghij', 10, '...hij'],
   ])('%s at %i columns is %s', (cwd, cols, expected) => {
     expect(promptPath(cwd, cols)).toBe(expected);
   });

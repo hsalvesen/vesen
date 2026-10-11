@@ -160,7 +160,7 @@ async function measureLatency(deps: MeterDeps, found: { colo: string | null; byt
   const samples: number[] = [];
   try {
     for (let i = 0; i < LATENCY_REQUESTS && !phase.over(); i += 1) {
-      deps.status(`measuring latency, ${i + 1} of ${LATENCY_REQUESTS}…`);
+      deps.status(`measuring latency, ${i + 1} of ${LATENCY_REQUESTS}...`);
       const started = deps.now();
       try {
         const stream = await deps.net.open(`${DOWN}?bytes=0`, { signal: phase.signal, timeoutMs: Math.max(1, phase.left()), cache: 'no-store' });
@@ -210,7 +210,7 @@ async function measureDownload(deps: MeterDeps, sizes: readonly number[], found:
         const at = deps.now();
         if (at - shown < STATUS_EVERY_MS) return;
         shown = at;
-        deps.status(`downloading ${megabytes(size)} MB: ${formatMbps(mbps(bytes + sofar, ms + at - started))} Mbps…`);
+        deps.status(`downloading ${megabytes(size)} MB: ${formatMbps(mbps(bytes + sofar, ms + at - started))} Mbps...`);
       });
       found.bytes += read;
       if (read === 0) break;
@@ -233,7 +233,7 @@ async function measureUpload(deps: MeterDeps, sizes: readonly number[], roundTri
   try {
     for (const size of sizes) {
       if (phase.over()) break;
-      deps.status(`uploading ${size >= 1e6 ? `${megabytes(size)} MB` : `${Math.round(size / 1024)} KB`}…`);
+      deps.status(`uploading ${size >= 1e6 ? `${megabytes(size)} MB` : `${Math.round(size / 1024)} KB`}...`);
       const started = deps.now();
       try {
         // Text, so the POST is a simple request with no preflight.

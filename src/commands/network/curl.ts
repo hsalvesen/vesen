@@ -37,7 +37,7 @@ export default defineCommand({
     { long: 'via-proxy', description: "fetch through vesen's own proxy, where it has one" },
   ],
   args: [{ name: 'URL', source: { kind: 'url' }, variadic: true }],
-  loadingLabel: (argv) => `fetching ${argv.find((word, i) => i > 0 && !word.startsWith('-') && /[./:]/.test(word)) ?? 'the page'}…`,
+  loadingLabel: (argv) => `fetching ${argv.find((word, i) => i > 0 && !word.startsWith('-') && /[./:]/.test(word)) ?? 'the page'}...`,
   examples: [
     { line: 'curl https://httpbin.org/get', note: 'a site that allows browser requests' },
     { line: 'curl -I https://www.vesen.app/', note: 'just the headers' },

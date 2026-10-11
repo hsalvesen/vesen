@@ -2,10 +2,10 @@
   The dock's key bar (designs/phone-and-instagram.md, "C. Typing"): the keys a phone keyboard
   lacks, each 44px tall, as a labelled toolbar.
 
-  - full: tab ↑ ↓ ^C clear ••• and a chevron that puts the keyboard away. ••• turns to a page of
-    symbols (••• ← → esc | > / - ~ * " $), where ••• comes back first and ← and → repeat while held.
+  - full: tab ↑ ↓ ^C clear ... and a chevron that puts the keyboard away. ... turns to a page of
+    symbols (... ← → esc | > / - ~ * " $), where ... comes back first and ← and → repeat while held.
   - compact: tab ↑ ^C, for the one-row dock on a short screen.
-  - closed: with the keyboard put away, Type a command… behind a keyboard icon (which opens it,
+  - closed: with the keyboard put away, Type a command... behind a keyboard icon (which opens it,
     inside the tap, and brings the prompt into view), ↑ and clear.
 
   The keys share the width, so all of them fit from 320px: 41px each at 320, wider above; word

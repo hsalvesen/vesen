@@ -1,6 +1,6 @@
-// theme ls and cathode ls on the screen: the marker and the highlight on the current theme or CRT
-// mode are live, so they move in a listing already on the screen when the theme or mode changes,
-// with no command run again and no DOM patching (F030). The swatches keep their own colours.
+// theme ls and cathode ls on the screen: the marker on the current theme or CRT mode is live, so
+// it moves in a listing already on the screen when the theme or mode changes, with no command run
+// again and no DOM patching (F030). The swatches are ## cells that keep their own colours.
 import { render } from '@testing-library/svelte';
 import { flushSync, tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -34,10 +34,10 @@ function listed(root: HTMLElement): { marker: string; name: string; current: boo
 }
 
 describe('theme ls on the screen', () => {
-  it('moves its marker and highlight to the new theme without running again', async () => {
+  it('moves its marker to the new theme without running again, and never paints the current name in the accent', async () => {
     const root = await view((await runLine('theme ls')).blocks);
     const before = listed(root);
-    expect(before.find((row) => row.name === 'swamphen')).toEqual({ marker: '› ', name: 'swamphen', current: true });
+    expect(before.find((row) => row.name === 'swamphen')).toEqual({ marker: '* ', name: 'swamphen', current: true });
     expect(before.find((row) => row.name === 'wombat')).toEqual({ marker: '  ', name: 'wombat', current: false });
 
     const wombat = findTheme('wombat');
@@ -47,9 +47,13 @@ describe('theme ls on the screen', () => {
 
     const after = listed(root);
     expect(after.find((row) => row.name === 'swamphen')).toEqual({ marker: '  ', name: 'swamphen', current: false });
-    expect(after.find((row) => row.name === 'wombat')).toEqual({ marker: '› ', name: 'wombat', current: true });
+    expect(after.find((row) => row.name === 'wombat')).toEqual({ marker: '* ', name: 'wombat', current: true });
     // The marker is for the eye; the button says which is current.
     expect(root.querySelector('.lines > .text > span[aria-hidden="true"]')).not.toBeNull();
+    // The marker and the current name keep the row's own colours: no accent anywhere in the row.
+    const current = root.querySelector('button[aria-current="true"]');
+    expect(current?.getAttribute('style') ?? '').not.toContain('accent');
+    expect(current?.previousElementSibling?.getAttribute('style')).toBeNull();
   });
 
   it("draws each theme's swatches in its own hex, hidden from screen readers", async () => {
@@ -60,7 +64,7 @@ describe('theme ls on the screen', () => {
     expect(cockatoo?.getAttribute('aria-hidden')).toBe('true');
     expect(cockatoo?.getAttribute('style')).toMatch(/background-color: #e8ddd0/);
     expect(cockatoo?.querySelectorAll('span')).toHaveLength(8);
-    expect(cockatoo?.textContent).toBe(` ${'██'.repeat(8)} `);
+    expect(cockatoo?.textContent).toBe(` ${'##'.repeat(8)} `);
   });
 
   it('refuses a strip with a colour that is not #rrggbb, drawing nothing for it', async () => {
@@ -79,7 +83,7 @@ describe('cathode ls on the screen', () => {
     flushSync();
     const rows = listed(root);
     expect(rows.find((row) => row.current)?.name).toBe('vintage');
-    expect(rows.find((row) => row.name === 'vintage')?.marker).toBe('› ');
+    expect(rows.find((row) => row.name === 'vintage')?.marker).toBe('* ');
     expect(rows.find((row) => row.name === 'scanlines')?.marker).toBe('  ');
   });
 });

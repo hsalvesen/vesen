@@ -1,7 +1,7 @@
 // The quote card and table (docs/plan/07-stock-and-proxy.md, "Rendering"), drawn from the view
 // models the stock command builds, for every recorded chart and every state: text by
 // interpolation only (a hostile name stays text), no <pre>, every colour a role or palette
-// variable, a gradient id of its own per card, and chips that act without taking focus.
+// variable, the chart and the range tracks as ASCII text, and chips that act without taking focus.
 import { fireEvent, render } from '@testing-library/svelte';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -70,29 +70,31 @@ describe('the quote card', () => {
     expect(container.innerHTML).toContain('&lt;img src=x onerror=alert(1)&gt;');
   });
 
-  it('gives every card its own gradient, so cards on one page never share one', () => {
-    const { container } = render(QuoteCard, { props: { view: cardView(live('CBA.AX'), '1d', RECORDED_AT_MS), alt: 'a' } });
-    const second = render(QuoteCard, { props: { view: cardView(live('CBA.AX'), '1d', RECORDED_AT_MS), alt: 'b' } });
-    const ids = [container, second.container].flatMap((root) => Array.from(root.querySelectorAll('linearGradient'), (gradient) => gradient.id));
-    expect(ids).toHaveLength(2);
-    expect(new Set(ids).size).toBe(2);
-    for (const root of [container, second.container]) {
-      const id = root.querySelector('linearGradient')?.id ?? '';
-      expect(root.querySelector('path')?.getAttribute('style')).toMatch(new RegExp(`^stroke: url\\(#${id}\\);?$`));
-    }
-    // Stops are coloured through style, never presentation attributes.
-    for (const stop of Array.from(container.querySelectorAll('stop'))) {
-      expect(stop.getAttribute('stop-color')).toBeNull();
-      expect(stop.getAttribute('style')).toMatch(/^stop-color: var\(--role-(?:ok|error)\)$/);
-    }
+  it('draws the chart and the range tracks as ASCII text, never SVG, each cell coloured by a role', () => {
+    const { container, view } = card(live('CBA.AX'));
+    expect(container.querySelector('svg')).toBeNull();
+    const plot = container.querySelector('.spark .plot');
+    expect(plot?.getAttribute('aria-hidden')).toBe('true');
+    expect(plot?.textContent).toMatch(/^[ _\-'\/\\.o\n]+$/);
+    expect(plot?.textContent?.split('\n')).toHaveLength(5);
+    expect(container.querySelector('.spark')?.getAttribute('aria-label')).toBe(view.chart?.label);
+    const tones = new Set(Array.from(plot?.querySelectorAll('span') ?? []).flatMap((span) => Array.from(span.classList)));
+    expect(tones.has('last')).toBe(true);
+    expect(tones.has('base')).toBe(true);
+    expect(tones.has('up')).toBe(true);
+    const tracks = Array.from(container.querySelectorAll('.track'), (track) => track.textContent);
+    expect(tracks).toEqual(view.bars.map((bar) => bar.track));
+    for (const track of tracks) expect(track).toMatch(/^\[-*\*-*\]$/);
+    expect(container.querySelector('.track .mark')?.textContent).toBe('*');
   });
 
-  it('runs a chip without taking focus, the range shown outlined', async () => {
+  it('runs a chip without taking focus, the range shown marked * and current', async () => {
     const onaction = vi.fn();
     const { container, view } = card(live('AAPL'), onaction);
     const buttons = Array.from(container.querySelectorAll('button.chip'));
-    expect(buttons.map((button) => button.textContent)).toEqual(['refresh', '1d', '5d', '1mo', '1y']);
-    expect(buttons.map((button) => button.getAttribute('aria-pressed'))).toEqual([null, 'true', null, null, null]);
+    expect(buttons.map((button) => button.textContent)).toEqual(['refresh', '* 1d', '5d', '1mo', '1y']);
+    expect(buttons.map((button) => button.getAttribute('aria-current'))).toEqual([null, 'true', null, null, null]);
+    expect(buttons.map((button) => button.getAttribute('aria-pressed'))).toEqual([null, null, null, null, null]);
     expect(buttons[2]?.getAttribute('aria-label')).toBe('Show AAPL over 5 days');
     const fiveDays = buttons[2] as HTMLElement;
     expect(await fireEvent.mouseDown(fiveDays)).toBe(false);
@@ -140,9 +142,11 @@ describe('the quote table', () => {
     expect(container.querySelector('img, script')).toBeNull();
     expect(container.innerHTML).not.toContain('<pre');
     expectTokenColours(container);
-    // A mini chart per row that has one, each with its own gradient.
-    const ids = Array.from(container.querySelectorAll('linearGradient'), (gradient) => gradient.id);
-    expect(new Set(ids).size).toBe(ids.length);
+    // A two-row ASCII chart per row that has one; no SVG.
+    expect(container.querySelector('svg')).toBeNull();
+    const plots = Array.from(container.querySelectorAll('.spark.mini .plot'), (plot) => plot.textContent ?? '');
+    expect(plots).toHaveLength(3);
+    for (const plot of plots) expect(plot.split('\n')).toHaveLength(2);
   });
 
   it('opens a ticker from its chip, without taking focus', async () => {

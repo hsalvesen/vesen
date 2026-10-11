@@ -97,7 +97,7 @@ test.describe('links and the in-app policy', { tag: '@smoke' }, () => {
     await expect(card).not.toContainText(/[✉⧉↗✕]/);
     if (isInstagram()) {
       await expect(card).toContainText("If the mail app doesn't open");
-      await expect(card).toContainText('••• → Open in browser');
+      await expect(card).toContainText('... -> Open in browser');
       await expect(card.getByRole('button', { name: 'Open in Safari' })).toBeVisible();
     } else {
       await expect(card).not.toContainText('Open in browser');
@@ -137,12 +137,12 @@ test.describe('links and the in-app policy', { tag: '@smoke' }, () => {
     if (isPhone()) await copy.tap();
     else await copy.click();
     if (browserName === 'chromium') {
-      await expect(page.locator('[role="log"] .card').last().getByRole('button', { name: '✓ Copied' })).toBeVisible();
+      await expect(page.locator('[role="log"] .card').last().getByRole('button', { name: 'Copied' })).toBeVisible();
       expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('has@salvesen.app');
       await expect(page.locator('[role="log"] .card').last().getByRole('status')).toHaveText('Copied');
     } else {
       // WebKit may refuse the clipboard; then the address is selected to press and hold.
-      await expect(page.locator('[role="log"] .card').last().getByText(/✓ Copied|Press and hold to copy/).first()).toBeVisible();
+      await expect(page.locator('[role="log"] .card').last().getByText(/Copied|Press and hold to copy/).first()).toBeVisible();
     }
   });
 });
@@ -158,7 +158,7 @@ test.describe('poweroff', { tag: '@smoke' }, () => {
     await expect(page.getByText('Reached target System Power Off.')).toBeVisible();
     await expect(page.getByText('vesen is off')).toBeVisible();
     await expect(page.locator('.shell')).toHaveAttribute('inert', '');
-    if (isInstagram()) await expect(page.getByText('Close this page with ×')).toBeVisible();
+    if (isInstagram()) await expect(page.getByText('Close this page with the X at the top')).toBeVisible();
     const power = page.getByRole('button', { name: /Power on/ });
     if (isPhone()) await power.tap();
     else await power.click();

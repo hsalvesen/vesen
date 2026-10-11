@@ -141,7 +141,7 @@ test.describe('the QR card', { tag: '@smoke' }, () => {
     const modulesDevicePx = await figure.evaluate((element) => (element.getBoundingClientRect().width / 33) * window.devicePixelRatio);
     expect(Math.abs(modulesDevicePx - Math.round(modulesDevicePx))).toBeLessThan(0.01);
     expect(await sideways(page)).toEqual({ page: 0, body: 0, transcript: 0 });
-    await expect(page.locator('[data-qr-card]').last()).toContainText('v2 · 25×25 · EC Q · 17/22 B');
+    await expect(page.locator('[data-qr-card]').last()).toContainText('v2 | 25x25 | EC Q | 17/22 B');
     await expect(page.locator('[data-qr-card]').last()).toContainText(
       isPhone() ? 'Tap the code for full screen, then let a friend scan it' : 'Scan with your phone camera to open the link',
     );
@@ -219,7 +219,7 @@ test.describe('the QR card', { tag: '@smoke' }, () => {
     await run(page, 'qr vesen.app');
     await tapOrClick(lastFigure(page));
     const parts = page.getByRole('dialog').locator('.meta .together');
-    await expect(parts).toHaveText(['v2', '25×25', 'EC Q', '17/22 B', 'mask 0']);
+    await expect(parts).toHaveText(['v2', '25x25', 'EC Q', '17/22 B', 'mask 0']);
     // Each part is on one line: as tall as one line of its text.
     for (const part of await parts.all()) {
       const lines = await part.evaluate((element) => element.getClientRects().length);

@@ -36,7 +36,7 @@ export function installErrorBuffer(target: ErrorTarget, now: () => number = Date
   const lines: string[] = [];
   const keep = (text: string): void => {
     const line = `${new Date(now()).toISOString().slice(11, 19)} ${text.replace(/\s+/g, ' ').trim()}`;
-    lines.push(line.length > ERROR_LINE_CHARS ? `${line.slice(0, ERROR_LINE_CHARS - 1)}…` : line);
+    lines.push(line.length > ERROR_LINE_CHARS ? `${line.slice(0, ERROR_LINE_CHARS - 3)}...` : line);
     if (lines.length > ERROR_BUFFER_SIZE) lines.shift();
   };
   const onError = (event: Event): void => {

@@ -489,7 +489,7 @@ export class TtySink {
     // told (art's alt) and a line at least, so no number of blocks, or one huge drawing, can
     // put more on the page than lines could.
     const text = plain(block);
-    const size = text.length + ('alt' in block ? block.alt.length : 0);
+    const size = text.length + ('alt' in block && block.alt !== undefined ? block.alt.length : 0);
     let rows = 1;
     for (let at = text.indexOf('\n'); at !== -1 && at < text.length - 1; at = text.indexOf('\n', at + 1)) rows += 1;
     if (!this.truncated) {

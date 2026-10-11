@@ -78,13 +78,13 @@ describe('QrCard', () => {
     const { container, view } = show(['<u>x</u>']);
     expect(container.querySelector('u')).toBeNull();
     expect(container.querySelector('.qr-payload')?.textContent).toBe('<u>x</u>');
-    expect(container.querySelector('.qr-meta')?.textContent).toBe(`v1 · 21×21 · EC ${view.ecc} · 8/${view.capacity} B · mask ${view.mask}`);
+    expect(container.querySelector('.qr-meta')?.textContent).toBe(`v1 | 21x21 | EC ${view.ecc} | 8/${view.capacity} B | mask ${view.mask}`);
     expect(screen.getByText('Scan with your phone camera to read the text')).toBeInTheDocument();
   });
 
   it('notes https:// on the head line, and that the level was raised', () => {
     const { container } = show(['vesen.app']);
-    expect(container.querySelector('.qr-head')?.textContent).toBe('qr https://vesen.app · added https:// · --text encodes exactly what you typed');
+    expect(container.querySelector('.qr-head')?.textContent).toBe('qr https://vesen.app | added https:// | --text encodes exactly what you typed');
     expect(container.querySelector('.qr-meta')?.getAttribute('title')).toBe('Error correction raised from M to Q for free; -e M keeps M.');
     expect(screen.getByText('Scan with your phone camera to open the link')).toBeInTheDocument();
   });

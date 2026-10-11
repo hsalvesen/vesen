@@ -87,7 +87,7 @@ describe('debug report', () => {
     expect(report).toMatch(/^crt: +\S+ \(.+\)$/m);
     expect(report).toMatch(/^errors: +none$/m);
     expect(stdoutPlain).toContain('vesen debug report');
-    expect(stdoutPlain).toContain('✓ Copied.');
+    expect(stdoutPlain).toContain('Copied.');
   });
 
   it('offers a Copy chip when copying needs a tap', async () => {

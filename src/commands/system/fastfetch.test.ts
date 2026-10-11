@@ -130,7 +130,7 @@ describe('fastfetch on the terminal', () => {
     expect(columns.left).toEqual([expect.objectContaining({ type: 'art', alt: 'macOS logo', fit: 'scale' })]);
     const details = columns.right[0] as LinesBlock;
     const text = details.lines.map(lineText);
-    expect(text.slice(0, 3)).toEqual(['guest@vesen', '───────────', 'OS: macOS Sequoia 15.6 arm64']);
+    expect(text.slice(0, 3)).toEqual(['guest@vesen', '-----------', 'OS: macOS Sequoia 15.6 arm64']);
     expect(text).toContain('WM Theme: swamphen');
   });
 
@@ -162,15 +162,21 @@ describe('fastfetch on the terminal', () => {
     }
   });
 
-  it("ends with the theme's sixteen colours as coloured spaces, which a screen reader passes over", async () => {
+  it("ends with the theme's sixteen colours as two strips of ## swatches in palette tokens, which a screen reader passes over", async () => {
     const { blocks } = await runLine('fastfetch');
     const lines = (columnsOf(blocks).right[0] as LinesBlock).lines;
     const palette = lines.slice(-2);
-    expect(palette.map((line) => line.map((span) => span.style?.bg))).toEqual([
-      ['black', 'red', 'green', 'yellow', 'blue', 'purple', 'cyan', 'white'],
-      ['brightBlack', 'brightRed', 'brightGreen', 'brightYellow', 'brightBlue', 'brightPurple', 'brightCyan', 'brightWhite'],
+    expect(palette.map((line) => line.map((span) => span.swatches?.colours))).toEqual([
+      [['black', 'red', 'green', 'yellow', 'blue', 'purple', 'cyan', 'white']],
+      [['brightBlack', 'brightRed', 'brightGreen', 'brightYellow', 'brightBlue', 'brightPurple', 'brightCyan', 'brightWhite']],
     ]);
-    expect(palette.flat().every((span) => span.text.trim() === '')).toBe(true);
+    // Tokens, not hex, so the strips follow the theme; on the terminal's own background.
+    for (const strip of palette.flat()) {
+      expect(strip.swatches?.background).toBeNull();
+      expect(strip.text).toBe(` ${'##'.repeat(8)} `);
+    }
+    // The title's rule is ASCII.
+    expect(lines[1]?.map((span) => span.text).join('')).toBe('-----------');
   });
 
   it('works with nothing to read, as in a test: the rows it can be sure of', async () => {
@@ -190,7 +196,7 @@ describe('fastfetch in a pipe', () => {
   it('writes the details alone, a Label: value a line, for grep', async () => {
     const { stdoutPlain } = await runLine('fastfetch', { tty: false, sys: createSysInfo(ANDROID_PHONE().host) });
     const lines = stdoutPlain.split('\n');
-    expect(lines.slice(0, 3)).toEqual(['guest@vesen', '───────────', 'OS: Android 14']);
+    expect(lines.slice(0, 3)).toEqual(['guest@vesen', '-----------', 'OS: Android 14']);
     expect(lines).toContain('Host (approximate): Pixel 7');
     expect(stdoutPlain).not.toContain('MMMM');
   });

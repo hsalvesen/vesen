@@ -52,7 +52,7 @@ export default defineCommand({
     },
     confirmOn: ['cellular', 'saveData', 'touch'],
   },
-  loadingLabel: () => 'measuring the connection…',
+  loadingLabel: () => 'measuring the connection...',
   examples: [
     { line: 'speedtest', note: 'latency, download and upload' },
     { line: 'speedtest --full', note: 'the longer run' },
