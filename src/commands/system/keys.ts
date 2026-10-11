@@ -34,7 +34,7 @@ export default defineCommand({
   summary: 'show or hide the key bar on touch screens',
   synopsis: ['keys', 'keys auto|on|off'],
   description:
-    "On a touch screen, a bar of keys rides above the keyboard: tab, ↑ and ↓ for history (hold ↑ for the list), ^C, clear, ••• for symbols, and ▾ to put the keyboard away. With 'auto', the default, it goes once a hardware keyboard is used, and the suggestion chips stay; 'on' always shows it and 'off' never does. The setting is remembered. With no argument, says which is in force.",
+    "On a touch screen, a bar of keys rides above the keyboard: tab, ↑ and ↓ for history (hold ↑ for the list), ^C, clear, ... for symbols, and the chevron to put the keyboard away. With 'auto', the default, it goes once a hardware keyboard is used, and the suggestion chips stay; 'on' always shows it and 'off' never does. The setting is remembered. With no argument, says which is in force.",
   // --help is `help keys`: the keys themselves, then this.
   handlesHelp: true,
   flags: [{ long: 'help', description: 'display the keys and this help, and exit' }],
