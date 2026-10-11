@@ -106,29 +106,32 @@ test.describe('the app shell', { tag: '@smoke' }, () => {
       await page.setViewportSize({ width, height: 800 });
       await page.goto('/');
       await run(page, 'help');
-      const grids = await page.locator('[role="log"] .output').last().evaluate((output) => {
+      const lists = await page.locator('[role="log"] .output').last().evaluate((output) => {
         const main = document.querySelector('main') as HTMLElement;
         const edge = main.getBoundingClientRect().left + main.clientWidth - parseFloat(getComputedStyle(main).paddingRight);
-        return Array.from(output.querySelectorAll<HTMLElement>('.grid'), (grid) => {
-          const cells = Array.from(grid.querySelectorAll<HTMLElement>('.cell'));
-          const lefts = new Set(cells.map((cell) => Math.round(cell.getBoundingClientRect().left)));
+        return Array.from(output.querySelectorAll<HTMLElement>('.lists'), (block) => {
+          const columns = Array.from(block.querySelectorAll<HTMLElement>('.list'));
+          const tops = new Set(columns.map((column) => Math.round(column.getBoundingClientRect().top)));
           return {
-            text: grid.textContent ?? '',
-            columns: lefts.size,
-            // The rightmost cell's right edge, against the transcript's content edge.
-            right: Math.max(...cells.map((cell) => cell.getBoundingClientRect().right)),
+            text: block.textContent ?? '',
+            columns: columns.length,
+            bands: tops.size,
+            // The rightmost column's right edge, against the transcript's content edge.
+            right: Math.max(...columns.map((column) => column.getBoundingClientRect().right)),
             edge,
-            scrolls: grid.scrollWidth - grid.clientWidth,
+            scrolls: block.scrollWidth - block.clientWidth,
           };
         });
       });
-      expect(grids.map((grid) => grid.text).join(' ')).toContain('whoami');
-      for (const grid of grids) {
-        expect(grid.right, 'the last column is cut off').toBeLessThanOrEqual(grid.edge + 1);
-        expect(grid.scrolls, 'the grid has to be scrolled').toBeLessThanOrEqual(0);
+      expect(lists).toHaveLength(1);
+      expect(lists[0]?.text).toContain('whoami');
+      for (const block of lists) {
+        expect(block.right, 'the last column is cut off').toBeLessThanOrEqual(block.edge + 1);
+        expect(block.scrolls, 'the columns have to be scrolled').toBeLessThanOrEqual(0);
       }
-      // Wide enough for more than one column of names and summaries.
-      expect(Math.max(...grids.map((grid) => grid.columns))).toBeGreaterThanOrEqual(2);
+      // Every category is a column, side by side where there is room.
+      expect(lists[0]?.columns).toBe(8);
+      expect(lists[0]?.bands).toBeLessThanOrEqual(2);
     });
   }
 
