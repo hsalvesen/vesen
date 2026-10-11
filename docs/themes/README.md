@@ -1,6 +1,6 @@
 # Vesen themes
 
-Each screenshot shows the banner, `help` and `ls -a` at 1280×800. They are generated from the built app, so they match what visitors see: run `npm run build && node scripts/theme-screenshots.mjs` after changing a theme or the look. With ffmpeg installed, the same script rebuilds `themes.gif`.
+Each screenshot shows `help` and `ls -a` at 1280×800 (the index names every command, so the banner has scrolled off the top). They are generated from the built app, so they match what visitors see: run `npm run build && node scripts/theme-screenshots.mjs` after changing a theme or the look. With ffmpeg installed, the same script rebuilds `themes.gif`.
 
 Every theme passes the contrast check (`npm run check:contrast -- --strict`): text in each role reaches at least 4.5:1 on the theme's background.
 

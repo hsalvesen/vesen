@@ -7,11 +7,13 @@
 import { out, type Block, type Line, type SpanStyle } from '../../output/model';
 
 /**
- * The VESEN logo: a bold italic wordmark in six rows of block and quadrant characters, 43
- * columns wide. Each cell is two pixels by two of a bitmap whose letters have four-pixel stems
- * and lean one pixel to the right every two rows, so the diagonals step by half a cell and read
- * as smooth slants. scripts/og.mjs reads it from this file for the link preview, so it stays a
- * plain template literal. Drawn at line height 1 (ui/art-class.ts), where the rows touch.
+ * The VESEN logo: a bold italic wordmark in seven rows, 44 columns wide: six rows of letters in
+ * block and quadrant characters, and their drop shadow in colons one column right and one row
+ * down, drawn from the letters' own bitmap by scripts/art/wordmark.py. Each letter cell is two
+ * pixels by two of a bitmap whose letters have four-pixel stems and lean one pixel to the right
+ * every two rows, so the diagonals step by half a cell and read as smooth slants. scripts/og.mjs
+ * reads it from this file for the link preview (it expects the seven rows), so it stays a plain
+ * template literal. Drawn at line height 1 (ui/art-class.ts), where the rows touch.
  */
 export const BANNER_ART = `▐█▌   ▐█▌▐██████▌ ▟█████▌▐██████▌▐█▙▖   ▐█▌
 ▐█▌: ▐█▌:██::::::██::::::██::::::██▜▙:  ██::
@@ -22,8 +24,8 @@ export const BANNER_ART = `▐█▌   ▐█▌▐██████▌ ▟█�
  ::::   ::::::: ::::::: ::::::: ::    :::`;
 
 /**
- * The same wordmark at half the size, three rows and 26 columns, with the same lean, for a
- * terminal under COMPACT_BELOW columns (a phone).
+ * The same wordmark at half the size, four rows and 27 columns (three of letters, one of
+ * shadow), with the same lean, for a terminal under COMPACT_BELOW columns (a phone).
  */
 export const BANNER_ART_COMPACT = `█   █ █▀▀▀ ▟▀▀▀ █▀▀▀ █▖  █
 █:▗▛ ▐▛▀▀:▝▀▀▜▖▐▛▀▀:▐▛▙:▐▌:

@@ -42,6 +42,8 @@ A rewrite of the whole app, built from the audit and plan in [docs/plan](docs/pl
 
 - `weather` draws a card from Open-Meteo, with place search, `weather --here`, units by locale and a curated place table (Gadigal, Aotearoa and the Palestinian place names keep working); the wttr.in scrape is gone.
 - `stock` reads quotes through vesen's own Cloudflare Worker (`worker/stock`), with a card, a chart, a table for several tickers, search by name, ranges, market phases, saved copies marked STALE, and an honest interim source until the Worker is deployed.
+- After the owner's second review, `weather`'s pictograms are hand-drawn ASCII at the terminal's line height (a shaded sun, a crescent, clouds, rain by intensity, sleet, snow, fog, a bolt, and a question mark for a code it does not know); its range bar is text, `-` for the scale, `=` inside the day's range with each `=` shaded from the cold colour to the hot one along the scale, and `|` at the current temperature; the place shown among same-named matches is marked `*`; facts are separated by ` | `, a cut ends in `...` and an approximate place starts `~`.
+- `stock`'s chart is a traced ASCII line with a dotted previous close and an `o` at the last point, its range bars are `[--*----]` tracks, the range shown is marked `*`, and changes carry their sign with no arrow.
 - `qr` uses an in-house encoder (the `qrcode` dependency is gone), draws a scannable card in the theme's colours and a black-on-white full-screen Present mode, and saves, shares or copies the image.
 - `curl` says plainly what CORS allows; `speedtest` asks before spending data on a phone.
 
@@ -68,12 +70,15 @@ A rewrite of the whole app, built from the audit and plan in [docs/plan](docs/pl
 
 - Role colours (`--role-*`) over each theme's palette, with every theme passing WCAG contrast; cockatoo and swamphen adjusted to pass.
 - Vesen Mono, a self-hosted subset of Cascadia Code under the SIL OFL.
-- A new VESEN wordmark in the banner, bold and italic in block characters, with a compact one on phones; the link preview matches. The banner also says this is a virtual file system and points at `tree`.
+- A new VESEN wordmark in the banner, bold and italic in block characters with a drop shadow drawn in colons, with a compact one on phones; the link preview matches. The banner also says this is a virtual file system and points at `tree`.
 - Fifteen themes: five new ones named for Australian animals, galah, lorikeet, magpie, platypus and quokka (the second light theme), with every palette slot readable at 4.5:1.
 - Tappable names carry no underline until hovered or focused, and under `cathode phosphor` and `vintage` they glow like the text beside them (browsers give buttons no text shadow of their own).
-- Every glyph on the page comes from Vesen Mono, checked by `npm run check:glyphs`: the mail card's and link cards' icons, the dock's keys, the Shutdown screen and the stock card no longer fall back to another font, and vesen's own output uses the font's rules, arrows and bullets instead of ASCII stand-ins (fastfetch's underline, weather's plain-text range bar).
-- `fastfetch`'s Apple, Android, Windows and Linux logos and `weather`'s pictograms (sun, moon, clouds, rain by intensity, sleet, snow, fog, thunder) are redrawn in block and box-drawing characters for the terminal's tight line spacing; art drawn with letters, such as `cowsay`'s animals, keeps the terminal's normal line height instead of being squashed.
-- `weather` names the other matches for an ambiguous place as tappable chips with the chosen one marked, and its header states the units in use.
+- Every glyph on the page comes from Vesen Mono, checked by `npm run check:glyphs`: the mail card's and link cards' icons, the dock's keys, the Shutdown screen and the stock card no longer fall back to another font.
+- After the owner's second review, everything vesen draws is drawn in ASCII on the character grid, as a text-mode terminal draws it: art, bars, charts, rules, connectors, spinners, markers, bullets and separators, never a CSS strip, an SVG chart or block shading. Box drawing and half blocks stay only where the thing is that by nature (the wordmark's letters and the scannable QR code); prose keeps its typography, and a command that imitates a Linux tool keeps that tool's format.
+- `fastfetch`'s Apple, Android, Windows and Linux logos are fine ASCII tracings in letters and punctuation, traced in the terminal's own font from silhouettes drawn for vesen and shown at the normal line height, as `cowsay`'s animals are; the tools that drew them are in `scripts/art/`.
+- `tree` prints `|--` and `` `-- `` connectors at the terminal's line height, with `--charset utf-8` for box drawing; `figlet` inks with `#`; the status line spins `| / - \` (a still `...` under reduced motion); `cmatrix` rains ASCII; swatches are `##` cells; `theme ls` and `cathode ls` mark the current entry `*` in the foreground instead of colouring its name.
+- Vesen's own text uses ASCII punctuation: `->` on link cards and in the in-app hint (`... -> Open in browser`), `...` on the dock's symbols key, `>` on a chip that runs a line, ` | ` between facts (the QR meta line, the status line's elapsed time), `*` for bullets and markers, on the Shutdown screen, in the pager's hint, `privacy`, `debug`, the stale-chunk notice, the prompt's cut folder name, `help keys` and every status label.
+- `weather` names the other matches for an ambiguous place as tappable chips with the chosen one marked `*`, and its header states the units in use.
 - CRT tiers: full on desktop, a lighter static effect on phones and in-app browsers, off under reduced motion, more contrast or forced colours.
 - Link preview, icons and a web manifest.
 

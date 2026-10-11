@@ -4,10 +4,11 @@
 //
 //   npm run build && node scripts/theme-screenshots.mjs
 //
-// It serves dist/ with Vite's preview server and drives Playwright's Chromium
-// (`npx playwright install chromium`). The CRT sweep is hidden so the images are the same on
-// every run; the scanlines and vignette of the desktop default stay. With ffmpeg on the PATH it
-// also rebuilds docs/themes/themes.gif from the screenshots.
+// It serves dist/ with Vite's preview server (on a free port, or the one PW_PORT names, as the
+// Playwright runs do) and drives Playwright's Chromium (`npx playwright install chromium`). The
+// CRT sweep is hidden so the images are the same on every run; the scanlines and vignette of
+// the desktop default stay. With ffmpeg on the PATH it also rebuilds docs/themes/themes.gif
+// from the screenshots.
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -97,7 +98,9 @@ async function main() {
   }
   const { preview } = await import('vite');
   const { chromium } = await import('@playwright/test');
-  const server = await preview({ root: ROOT, logLevel: 'error', preview: { port: 0, open: false } });
+  // PW_PORT, when set, is the port and nothing else will do; otherwise any free port.
+  const port = Number(process.env.PW_PORT) || 0;
+  const server = await preview({ root: ROOT, logLevel: 'error', preview: { port, strictPort: port !== 0, open: false } });
   const url = server.resolvedUrls?.local[0];
   if (!url) throw new Error('theme-screenshots: the preview server has no local URL');
   const browser = await chromium.launch();
