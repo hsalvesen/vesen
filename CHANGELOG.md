@@ -19,6 +19,7 @@ A rewrite of the whole app, built from the audit and plan in [docs/plan](docs/pl
 - No command holds more than 16 MB of standard input at once, and `$( )` keeps at most 16 MB of output: past that the command says `input too large` and the pipe closes, so `seq 1e9 | sort` fails in a moment instead of filling the memory. Drawings (`figlet`, `cowsay`) count against the screen's caps like text, their message is capped at 4096 characters, and width options such as `figlet -w` are bounded.
 - `ping` refuses loopback, private and reserved addresses in every form, IPv4 written inside IPv6 (`::ffff:192.168.1.1`, NAT64, 6to4) and plain numbers (`2130706433`) included, before sending anything.
 - The sudo joke's password field is masked, ignored by password managers, and never stored anywhere.
+- After the joke password, `sudo` no longer opens or links the YouTube video: it puts on a short show over the terminal, an original ASCII dancer (a singer in a long coat with a tall quiff, side-stepping with a microphone) to "Never Logging Out", an 8-bit chiptune written for vesen in the Game Boy style (two pulse channels, a triangle bass, noise drums), played in the browser with nothing fetched. Esc, ^C, q, Back and a Close button end it; m or Mute silences it; reduced motion shows one still frame. A pipe gets the sudoers message alone.
 
 ### Shell
 
