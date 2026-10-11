@@ -96,8 +96,9 @@ test.describe('accessibility', { tag: '@smoke' }, () => {
 
     const banner = page.locator('.art-fit').first();
     await expect(banner).toHaveAttribute('aria-hidden', 'true');
-    await expect(page.locator('.sr-only', { hasText: 'Vesen logo' })).toHaveCount(1);
-    await expect(page.getByText('vesen v', { exact: false }).first()).toBeVisible();
+    // The version sits on the logo's last row of letters (aria-hidden art); screen readers
+    // hear it from the sr-only label instead of a separate "vesen v…" line.
+    await expect(page.locator('.sr-only', { hasText: /^Vesen logo, version \S+$/ })).toHaveCount(1);
 
     await run(page, 'fastfetch');
     const logo = page.locator('[role="log"] .art[aria-hidden="true"]').nth(1);
