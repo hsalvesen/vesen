@@ -2,7 +2,8 @@ import { render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RICK_CLOSED } from '../../commands/lib/rick';
-import sudo, { SUDO_HINT } from '../../commands/shell/sudo';
+import sudo from '../../commands/shell/sudo';
+import { SUDO_HINT } from '../../commands/shell/sudo.run';
 import rm from '../../commands/files/rm';
 import theme from '../../commands/portfolio/theme';
 import sleep from '../../commands/shell/sleep';
@@ -895,7 +896,7 @@ describe('sudo’s password', () => {
     expect(input.value).not.toContain('hunter');
   });
 
-  it('is described by its dim hint, so a screen reader says it is a joke and nothing is kept', async () => {
+  it('is described by its dim hint, so a screen reader says how to cancel', async () => {
     const { input, controller } = setup();
     expect(input.getAttribute('aria-describedby')).toBe('prompt-keys');
     await sudoPrompt(input, controller);
@@ -903,6 +904,20 @@ describe('sudo’s password', () => {
     const said = ids.map((id) => document.getElementById(id)?.textContent ?? '').join(' ');
     expect(said).toContain(SUDO_HINT);
     expect(ids).toContain(READ_HINT_ID);
+  });
+
+  it('is cancelled by Escape, as the hint says: the read ends, the line is interrupted, and nothing was kept', async () => {
+    const { input, controller, h } = setup();
+    await sudoPrompt(input, controller);
+    typeKeys(input, SECRET);
+    expect(press(input, 'Escape').defaultPrevented).toBe(true);
+    await vi.waitFor(() => expect(h.commits).toHaveLength(1));
+    expect(controller.read).toBeNull();
+    expect(controller.mode).toBe('edit');
+    expect(h.commits[0]).toMatchObject({ line: 'sudo ls', status: 130, interrupted: true });
+    expect(JSON.stringify(h.commits)).not.toContain(SECRET);
+    expect(input.value).toBe('');
+    expect(controller.text).toBe('');
   });
 
   it('is emptied when the prompt loses focus or the page is hidden', async () => {

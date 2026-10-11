@@ -32,7 +32,9 @@ describe('privacy', () => {
       'ipify',
     ]);
     expect(stdoutPlain).toContain('IP address and location lookups happen only on request: weather with no place, ip addr, ifconfig and fastfetch --net.');
-    expect(stdoutPlain).toContain('What you type at sudo is never kept.');
+    expect(stdoutPlain).toContain('What you type at sudo is never kept or sent anywhere.');
+    // Nothing of what follows sudo's password is described here.
+    expect(stdoutPlain).not.toMatch(/dancer|\btune\b|\bthe show\b|\btrack\b|rickroll/i);
     expect(stdoutPlain).toContain('the commits git log showed for 10 (session storage)');
   });
 

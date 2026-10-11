@@ -1,15 +1,10 @@
-// sudo: the joke. It asks for guest's password in sudo's own words, with a dim line saying it is a
-// joke and nothing typed is kept (docs/plan/02-architecture-and-contracts.md, section 12), puts
-// on a short show on the terminal (the Rick app: a dancer drawn for vesen and an 8-bit tune of
-// its own, src/commands/lib/rick.ts), then says what sudo says to a user who is not in the sudoers
-// file. The command never runs. The password is masked as it is typed, never echoed, and dropped
-// here: it is not compared, kept, shown or sent anywhere. In a pipe or a script there is no show,
-// only the message. The body is in sudo.run.ts.
+// sudo: it asks for guest's password in sudo's own words, and everything a visitor sees before the
+// answer reads like sudo's (the summary, --help, man, and a dim line saying how to cancel). The
+// password is masked as it is typed, never echoed, and dropped: it is not compared, kept, shown or
+// sent anywhere (docs/plan/02-architecture-and-contracts.md, section 12). What follows the answer
+// is in sudo.run.ts, with the long help, so the kernel's chunk carries only this spec.
 
 import { defineCommand } from '../../shell/types';
-
-/** The dim line above the password prompt, so nobody is coaxed into typing a real password. */
-export const SUDO_HINT = '(this is a joke; nothing you type is kept)';
 
 export default defineCommand({
   name: 'sudo',

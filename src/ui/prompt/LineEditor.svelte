@@ -12,7 +12,7 @@
     size by --input-scale (platform/measure.ts). There is no mirror.
   - A secret (sudo's password) is masked: the input holds only asterisks (the controller keeps
     the password), drawn as discs on touch; the mirror shows nothing but the cursor. The read's dim
-    hint (that it is a joke, and nothing is kept) describes the input to screen readers.
+    hint (how to cancel) describes the input to screen readers.
   - The input is keyed on controller.inputEpoch: after a password an input method typed into, a
     fresh input, with no undo history, takes its place.
 -->

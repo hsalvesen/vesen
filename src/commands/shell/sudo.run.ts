@@ -1,21 +1,26 @@
 // The body of sudo; its spec, in sudo.ts, loads this the first time sudo runs, so the kernel's
 // chunk carries only the spec. The password read here is dropped: never compared, kept, shown or
-// sent anywhere. The show (the dancer and the tune, commands/lib/rick.ts) comes with this body
-// too, and the Rick app's chunk with its first showing.
+// sent anywhere. After it, on a terminal, comes the show (the Rick app: a dancer drawn for vesen
+// to the owner's own track, commands/lib/rick.ts; the app's chunk comes with its first showing),
+// and then what sudo says to a user who is not in the sudoers file. The command never runs. In a
+// pipe or a script there is no show, only the message. Nothing a visitor sees before the answer
+// gives the show away: the long help below reads like sudo's own.
 
 import { out } from '../../output/model';
 import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
 import { rickView } from '../lib/rick';
-import { SUDO_HINT } from './sudo';
+
+/** The dim line above the password prompt on a keyboard: how to leave it, as the status line says it. */
+export const SUDO_HINT = 'Ctrl+C or Esc to cancel';
+
+/** The same on a touch screen, where the dock offers a Cancel chip, and a keyboard, if there is one, Esc. */
+export const SUDO_TOUCH_HINT = 'Tap Cancel or press Esc to cancel';
 
 /** What --help, help and man say about sudo, besides its spec (sudo.ts). */
 export const doc: CommandDoc = {
   description:
-    "Asks for guest's password, as sudo does, puts on a short show (a dancer and an 8-bit tune of vesen's own, until Esc, ^C, q or Back), and then says what sudo says to a user who is not in the sudoers file. It is a joke: what is typed at the password prompt is hidden, and is never kept, shown or sent anywhere. In a pipe or a script there is no show, only the message.",
-  man: [
-    { heading: 'THE SHOW', body: 'The tune and the dancer are drawn and played in your browser; nothing is fetched. Press m to mute, or use the Mute button on a touch screen.' },
-    { heading: 'EXIT STATUS', body: '1: guest is not in the sudoers file.' },
-  ],
+    "Asks for guest's password, then runs COMMAND as the superuser, or as USER with -u. With -i it runs the target user's login shell instead, and with -s a shell. Whether guest may run a command as another user is decided by the sudoers file. The password is read at the terminal, so sudo cannot run from a pipe, a script or $( ).",
+  man: [{ heading: 'EXIT STATUS', body: '1: guest is not in the sudoers file.' }],
 };
 
 /**
@@ -30,7 +35,8 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   if (ctx.args.length === 0 && !shell) return ctx.usage('a command is required');
   if (!ctx.tty.interactive) return ctx.fail('a terminal is required to read the password');
 
-  const password = await ctx.tty.readLine({ prompt: `[sudo] password for ${ctx.user.name}: `, secret: true, hint: SUDO_HINT });
+  const hint = ctx.tty.touch ? SUDO_TOUCH_HINT : SUDO_HINT;
+  const password = await ctx.tty.readLine({ prompt: `[sudo] password for ${ctx.user.name}: `, secret: true, hint });
   if (password === null) {
     if (ctx.signal.aborted) throw ctx.signal.reason;
     return ctx.fail('a password is required');

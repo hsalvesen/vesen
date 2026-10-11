@@ -22,7 +22,7 @@ Only the latest release, deployed at www.vesen.app, is supported.
 ## Out of scope
 
 - What a visitor does to their own session: `rm -rf ~`, filling the 512 KB file quota, or running a slow command (each is undone by `reset`, a reload, or ^C).
-- The `sudo` prompt itself: it is a joke, says so, and never runs anything with more rights.
+- The `sudo` prompt itself: it is a joke that never runs anything with more rights, and what is typed at it is dropped.
 - Denial of service against the third-party services, rate limits, or reports from automated scanners without a working case.
 - Social engineering, and anything that needs a compromised device or browser.
 

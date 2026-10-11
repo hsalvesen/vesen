@@ -26,7 +26,7 @@ function firebaseHeaders(): Record<string, string> {
 async function servedLikeFirebase(page: Page, origin: string) {
   const problems: string[] = [];
   page.on('console', (message) => {
-    if (message.type() === 'error' && !isBenignConsoleMessage(message.text())) problems.push(message.text());
+    if (message.type() === 'error' && !isBenignConsoleMessage(message.text(), message.location().url)) problems.push(message.text());
   });
   page.on('pageerror', (error) => problems.push(error.message));
   page.on('request', (request) => {
@@ -81,6 +81,35 @@ test.describe('production headers', { tag: '@smoke' }, () => {
     expect(json).not.toMatch(/CLICKID|MTExYWJj/);
     expect(results.csp).toEqual([]);
 
+    expect(problems).toEqual([]);
+  });
+
+  test("sudo's show loads its track under the production CSP", async ({ page, baseURL }) => {
+    const problems = await servedLikeFirebase(page, new URL(baseURL ?? '').origin);
+    await page.goto('/');
+    await expect(page.locator('[data-completion="ready"]')).toHaveCount(1);
+    const prompt = page.locator('input.command-input');
+    await prompt.fill('sudo ls');
+    await prompt.press('Enter');
+    await expect(page.locator('.edit-row .read-prompt')).toHaveText('[sudo] password for guest: ');
+    await prompt.pressSequentially('x');
+    await prompt.press('Enter');
+    const show = page.getByRole('dialog', { name: 'You have been rickrolled' });
+    await expect(show).toBeVisible();
+
+    // default-src 'self' covers media: the element made for the show loads from this origin. A
+    // policy that refused it would say so in the console, and the element would report an error.
+    const audio = show.locator('audio');
+    await expect(audio).toHaveAttribute('src', '/audio/incident-report.mp3');
+    if (test.info().project.name === 'desktop-chrome') {
+      await expect.poll(() => audio.evaluate((element: HTMLAudioElement) => element.readyState), { timeout: 15_000 }).toBeGreaterThanOrEqual(1);
+    } else {
+      await page.waitForTimeout(1500);
+    }
+    expect(await audio.evaluate((element: HTMLAudioElement) => element.error?.code ?? null)).toBeNull();
+
+    await page.keyboard.press('Escape');
+    await expect(show).toBeHidden();
     expect(problems).toEqual([]);
   });
 

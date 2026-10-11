@@ -14,7 +14,7 @@ export interface ReadOptions {
   readonly prompt: string;
   /** Masked as it is typed, never echoed and never stored: a password. */
   readonly secret?: boolean;
-  /** A dim line above the prompt: sudo's `(this is a joke; nothing you type is kept)`. */
+  /** A dim line above the prompt: sudo's `Ctrl+C or Esc to cancel`. */
   readonly hint?: string;
   /** Aborts the read (with null) when the job is interrupted. */
   readonly signal?: AbortSignal;

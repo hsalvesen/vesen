@@ -210,7 +210,8 @@ test.describe('sudo', { tag: '@smoke' }, () => {
     await prompt(page).press('Enter');
 
     await expect(page.locator('.edit-row .read-prompt')).toHaveText('[sudo] password for guest: ');
-    await expect(page.locator('.prompt-line .hint')).toHaveText('(this is a joke; nothing you type is kept)');
+    // The dim line says how to cancel, in the words of what the screen offers, and nothing more.
+    await expect(page.locator('.prompt-line .hint')).toHaveText(isPhone() ? 'Tap Cancel or press Esc to cancel' : 'Ctrl+C or Esc to cancel');
     await expect(prompt(page)).toHaveAttribute('type', 'text');
     await expect(prompt(page)).toHaveAttribute('autocomplete', 'off');
     await expect(prompt(page)).toHaveAttribute('data-1p-ignore', '');
@@ -263,8 +264,8 @@ test.describe('sudo', { tag: '@smoke' }, () => {
     const field = nodes.find((node) => node.role?.value === 'combobox');
     expect(field?.name?.value).toBe('[sudo] password for guest:');
     expect(String(field?.value?.value ?? '')).not.toContain('hunter');
-    // Described by the dim line that says it is a joke.
-    expect(field?.description?.value ?? '').toContain('nothing you type is kept');
+    // Described by the dim line that says how to cancel.
+    expect(field?.description?.value ?? '').toContain('Ctrl+C or Esc to cancel');
     expect(JSON.stringify(nodes)).not.toContain(SECRET);
   });
 

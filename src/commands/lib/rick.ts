@@ -1,12 +1,28 @@
 // sudo's show, drawn and written for vesen: a singer in a long coat with a tall quiff dances with
-// a microphone, side-stepping and swinging arms and hips, to an 8-bit tune of vesen's own. sudo
-// hands both to the Rick app (src/ui/apps/Rick.svelte) through tty.fullscreen after the joke
-// password prompt; the app draws the frames in theme colours and plays the song through Web Audio.
+// a microphone, side-stepping and swinging arms and hips, to the owner's own track, with an 8-bit
+// tune of vesen's own as the fallback. sudo hands all of it to the Rick app (src/ui/apps/Rick.svelte)
+// through tty.fullscreen after the password prompt; the app draws the frames in theme colours,
+// plays the track through an audio element it makes when it opens (never before), and plays the
+// song through Web Audio where the track cannot load or play.
 //
 // The dancer is composed from sprites (hair, face, coat, arms, legs, microphone, floor), each with
 // a colour role, placed a little differently in each frame, so every frame is the same size and
-// every cell knows what it is. The tune is an original chiptune in the style of a handheld's sound
-// chip: it quotes nothing.
+// every cell knows what it is; it is drawn in plain ASCII. The tune is an original chiptune in the
+// style of a handheld's sound chip: it quotes nothing.
+//
+// The owner may supply frames of their own (RICK_FRAMES): a text file the app fetches when the
+// show opens, and plays in the dancer's place when it is there and well formed, started together
+// with the track. The format (src/lib/frames.ts reads it; scripts/ascii-frames.mjs writes it from
+// a folder of PNG frames) is a header line, then the frames, each `rows` lines of `cols`
+// characters, with a line of `===` between frames:
+//
+//   vesen-frames fps=12 cols=60 rows=17
+//   ...17 rows of 60 characters...
+//   ===
+//   ...the next frame...
+//
+// Missing, malformed or over its caps (4 MB, 10,000 frames), the file is ignored and the drawn
+// dancer plays. This project ships no such file.
 
 import type { Role } from '../../output/model';
 import { loopSeconds, type Song } from '../../lib/chiptune';
@@ -27,6 +43,18 @@ export const RICK_TITLE = 'You have been rickrolled';
 /** How the dancer reads to a screen reader. */
 export const RICK_ALT = 'A singer in a long coat with a tall quiff dances with a microphone, side-stepping and swinging their arms.';
 
+/**
+ * The owner's track (public/audio/incident-report.mp3, served from this origin), fetched only when
+ * the show opens. An empty string means no track: the song alone.
+ */
+export const RICK_TRACK = '/audio/incident-report.mp3';
+
+/**
+ * The owner's frames file, if they add one (public/audio/incident-report.frames, in the format
+ * above), fetched only when the show opens. An empty string means the drawn dancer alone.
+ */
+export const RICK_FRAMES = '/audio/incident-report.frames';
+
 /** A run of same-coloured cells in a frame row. */
 export interface FrameSpan {
   readonly text: string;
@@ -46,6 +74,11 @@ export interface RickView {
   readonly alt: string;
   readonly frames: readonly RickFrame[];
   readonly fps: number;
+  /** The path of the track to play, on this origin; '' for none. */
+  readonly track: string;
+  /** The path of the owner's frames file, on this origin; '' for none. */
+  readonly framesFile: string;
+  /** The tune played where the track cannot be. */
   readonly song: Song;
   readonly touch: boolean;
 }
@@ -109,8 +142,9 @@ const HAND_R = sprite('fg-strong', '(');
 const MIC = sprite('fg-strong', 'o', '|');
 const MIC_FLAT = sprite('fg-strong', 'o');
 
-/** The stage. */
-const FLOOR = sprite('muted', '━'.repeat(FRAME_COLS));
+/** The stage: a row of equals signs, in plain ASCII like the rest of the dancer. */
+export const FLOOR_CHAR = '=';
+const FLOOR = sprite('muted', FLOOR_CHAR.repeat(FRAME_COLS));
 
 // ── Composing ──────────────────────────────────────────────────────────────────────────────
 
@@ -303,5 +337,5 @@ export function rickLoopSeconds(): number {
 
 /** What sudo hands the app. */
 export function rickView(touch: boolean): RickView {
-  return { title: RICK_TITLE, alt: RICK_ALT, frames: rickFrames(), fps: RICK_FPS, song: RICK_SONG, touch };
+  return { title: RICK_TITLE, alt: RICK_ALT, frames: rickFrames(), fps: RICK_FPS, track: RICK_TRACK, framesFile: RICK_FRAMES, song: RICK_SONG, touch };
 }

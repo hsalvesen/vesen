@@ -3,7 +3,7 @@
 // promised length and tempo, written for vesen.
 import { describe, expect, it } from 'vitest';
 import { parseSong, schedule } from '../../lib/chiptune';
-import { compose, FRAME_COLS, FRAME_ROWS, RICK_ALT, RICK_FPS, RICK_SONG, RICK_TITLE, rickFrames, rickLoopSeconds, rickView } from './rick';
+import { compose, FLOOR_CHAR, FRAME_COLS, FRAME_ROWS, RICK_ALT, RICK_FPS, RICK_FRAMES, RICK_SONG, RICK_TITLE, RICK_TRACK, rickFrames, rickLoopSeconds, rickView } from './rick';
 
 /**
  * The code points in public/fonts/VesenMono.woff2, as inclusive ranges (scripts/fonts/build-vesen-mono.py
@@ -41,10 +41,11 @@ describe('the dancer', () => {
     }
   });
 
-  it('is drawn only with glyphs the web font has', () => {
+  it('is drawn only with glyphs the web font has: plain ASCII, in fact', () => {
     const used = new Set(frames.flatMap((frame) => Array.from(frame.text.replace(/\n/g, ''))));
     const missing = [...used].filter((ch) => !inFont(ch));
     expect(missing).toEqual([]);
+    for (const frame of frames) expect(frame.text).toMatch(/^[\x20-\x7e\n]*$/);
   });
 
   it('colours the coat in the accent, the face and hands in the strong foreground and the floor muted, with the spans spelling each row', () => {
@@ -57,9 +58,10 @@ describe('the dancer', () => {
       expect(roles).toContain('accent');
       expect(roles).toContain('fg-strong');
       expect(roles).toContain('fg');
-      // The floor: the last row, one muted span across the frame.
+      // The floor: the last row, one muted span of equals signs across the frame.
       const floor = frame.rows[FRAME_ROWS - 1] ?? [];
-      expect(floor).toEqual([{ text: '━'.repeat(FRAME_COLS), role: 'muted' }]);
+      expect(FLOOR_CHAR).toBe('=');
+      expect(floor).toEqual([{ text: '='.repeat(FRAME_COLS), role: 'muted' }]);
       // The coat's hem sits above the floor, in the accent, and the quiff on top in the foreground.
       expect(frame.rows[10]?.some((span) => span.role === 'accent' && span.text.includes('|____|'))).toBe(true);
       expect(frame.rows[0]?.some((span) => span.role === 'fg' && span.text.trim() !== '')).toBe(true);
@@ -141,12 +143,15 @@ describe('the tune', () => {
 });
 
 describe('the view', () => {
-  it('carries the frames, the song, the title and the way it reads, and whether the screen is touch', () => {
+  it('carries the frames, the track and the frames file to look for, the song, the title and the way it reads, and whether the screen is touch', () => {
     const view = rickView(true);
-    expect(view).toMatchObject({ title: RICK_TITLE, alt: RICK_ALT, fps: RICK_FPS, touch: true });
+    expect(view).toMatchObject({ title: RICK_TITLE, alt: RICK_ALT, fps: RICK_FPS, track: RICK_TRACK, framesFile: RICK_FRAMES, touch: true });
     expect(view.frames).toBe(rickFrames());
     expect(view.song).toBe(RICK_SONG);
     expect(rickView(false).touch).toBe(false);
     expect(RICK_TITLE).toBe('You have been rickrolled');
+    // Both on this origin, under a name that fits sudo's closing line and gives nothing away.
+    expect(RICK_TRACK).toBe('/audio/incident-report.mp3');
+    expect(RICK_FRAMES).toBe('/audio/incident-report.frames');
   });
 });
