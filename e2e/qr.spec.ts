@@ -180,7 +180,7 @@ test.describe('the QR card', { tag: '@smoke' }, () => {
     }
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
-    expect(await promptFocused(page)).toBe(focused);
+    await expect.poll(() => promptFocused(page)).toBe(focused);
 
     await tapOrClick(lastFigure(page));
     await expect(dialog).toBeVisible();
@@ -188,7 +188,8 @@ test.describe('the QR card', { tag: '@smoke' }, () => {
     await expect(dialog).toHaveCount(0);
     expect(page.url()).toBe(url);
     expect(await echoes(page).count()).toBe(entries);
-    expect(await promptFocused(page)).toBe(focused);
+    // Instagram's WebKit sometimes restores focus a tick after history.back() closes the dialog.
+    await expect.poll(() => promptFocused(page)).toBe(focused);
     expect(await sideways(page)).toEqual({ page: 0, body: 0, transcript: 0 });
   });
 

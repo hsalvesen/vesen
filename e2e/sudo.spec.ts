@@ -139,8 +139,10 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
       await goBack(page);
       await reported(page, home);
       // The show's entry was its only one: one more Back is the page before vesen.
-      await page.evaluate(() => void setTimeout(() => history.back(), 0));
-      await expect(page).toHaveURL(/\/404\.html$/, { timeout: 15_000 });
+      await Promise.all([
+        page.waitForURL(/\/404\.html$/, { timeout: 15_000 }),
+        page.evaluate(() => history.back()),
+      ]);
       expect(errors).toEqual([]);
     });
   }
