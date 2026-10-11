@@ -38,7 +38,7 @@ jobs:
         if: env.CF_READY != 'true'
         run: echo "::notice title=Stock Worker not deployed::CLOUDFLARE_API_TOKEN is not set. See worker/stock/README.md, Owner setup."
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: env.CF_READY == 'true'
 
       - uses: actions/setup-node@v4
