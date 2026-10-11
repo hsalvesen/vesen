@@ -229,8 +229,10 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
       await sudoLs(page);
       await goBack(page);
       await reported(page, home);
-      // The show's entry was its only one: one more Back is the page before vesen.
-      await page.evaluate(() => void setTimeout(() => history.back(), 0));
+      // The show's entry was its only one: one more Back is the page before vesen. That Back
+      // leaves the document, so it is the browser's own (a page.evaluate in flight while the
+      // document goes away fails with "Execution context was destroyed" on a slow machine).
+      await page.goBack({ timeout: 15_000 });
       await expect(page).toHaveURL(/\/404\.html$/, { timeout: 15_000 });
       expect(errors).toEqual([]);
     });
