@@ -55,14 +55,15 @@ export function wmo(code: number | null | undefined): WmoInfo {
 }
 
 // ── Art ────────────────────────────────────────────────────────────────────────────────────
-// Original pictograms, 13 columns by 5 rows, drawn in the block, quadrant and box-drawing
-// characters of the terminal's font. Each segment carries the role that colours it, and an art
-// row carries only the art roles below, never a text role: the weather card draws the lines
-// that start with one at line height 1, so the blocks of one row meet the blocks of the next. A
-// blank row is a cloud row of spaces, and the unknown mark is drawn in fog, which is muted like
-// dim.
+// Original pictograms, 13 columns by 5 rows, drawn by hand in printable ASCII and shown at the
+// terminal's line height, as text is. Each segment carries the role that colours it: the sun's
+// disc is shaded with colons and has eight rays, the moon is a shaded crescent among dot stars,
+// a cloud has rounded tops drawn with . - ' ( ) and a flat base of underscores, rain is ' and ,
+// strokes at an angle (drizzle sparser and lighter, heavy rain denser), snow is * and . flakes,
+// sleet a mix of both, fog layered ~ and - bands, thunder a bolt of _ and / with rain either side,
+// and the unknown mark a question mark in the same hand, drawn in fog, which is muted like dim.
 
-/** The roles the art is drawn in; no text line starts with one (view.ts). */
+/** The roles the art is drawn in; every art segment carries one, so each has a colour. */
 export const ART_ROLES: ReadonlySet<WeatherRole> = new Set<WeatherRole>(['sun', 'moon', 'cloud', 'rain', 'snow', 'bolt', 'fog']);
 
 /** Whether a segment's role is one the art is drawn in. */
@@ -70,79 +71,85 @@ export function isArtRole(role: unknown): boolean {
   return typeof role === 'string' && (ART_ROLES as ReadonlySet<string>).has(role);
 }
 
-/** The cloud, three rows: two bumps and a flat base; the rain, snow and bolt fall from it. */
+/** The cloud, three rows: a bump between two shoulders, over a flat base; the weather falls from it. */
 const CLOUD: readonly ArtRow[] = [
-  [['cloud', '     ▄███▄   ']],
-  [['cloud', '  ▄███████▙  ']],
-  [['cloud', '  ▀█████████▘']],
+  [['cloud', '     .--.    ']],
+  [['cloud', '  .-(    )-. ']],
+  [['cloud', ' (__________)']],
 ];
-const BLANK: ArtRow = [['cloud', '             ']];
 
 export const ART: Readonly<Record<ArtKey, readonly ArtRow[]>> = {
-  // The sun's disc with eight rays, a gap between them.
+  // The sun: a shaded disc with its shoulders, and eight rays with a gap between them.
   clear: [
-    [['sun', '  ╲   ╵   ╱  ']],
-    [['sun', '    ▟███▙    ']],
-    [['sun', '  ─ █████ ─  ']],
-    [['sun', '    ▜███▛    ']],
-    [['sun', '  ╱   ╷   ╲  ']],
+    [['sun', '  \\   |   /  ']],
+    [['sun', '   _.---._   ']],
+    [['sun', '-  (:::::)  -']],
+    [['sun', "   '-___-'   "]],
+    [['sun', '  /   |   \\  ']],
   ],
-  // A crescent and two stars.
+  // A crescent lit on the left, shaded, and three stars.
   clearNight: [
-    [['moon', '     ▄██▄  · ']],
-    [['moon', '    ███▀     ']],
-    [['moon', '    ██    ·  ']],
-    [['moon', '    ███▄     ']],
-    [['moon', '     ▀██▀    ']],
+    [['moon', '    .--.   . ']],
+    [['moon', "   /::.'     "]],
+    [['moon', '  (::(     . ']],
+    [['moon', "   \\::'.     "]],
+    [['moon', "    '--'   . "]],
   ],
-  // The sun above a cloud in front of it, its lower half behind the cloud's edge.
+  // The sun at the top left, its lower half behind a cloud whose bump cuts into the disc.
   partly: [
-    [['sun', '   ╲ ╵ ╱     ']],
-    [['sun', '  ─ ▟█▙ ─    ']],
-    [['sun', '    ███ '], ['cloud', '▗██▖ ']],
-    [['cloud', '  ▗▄▄▄▄▟████▙']],
-    [['cloud', '  ▀█████████▘']],
+    [['sun', '   \\ | /     ']],
+    [['sun', ' - .---. -   ']],
+    [['sun', '  (::::'], ['cloud', '.--.  ']],
+    [['cloud', " .'        '."]],
+    [['cloud', ' (__________)']],
   ],
   partlyNight: [
-    [['moon', '   ▄█▄    ·  ']],
-    [['moon', '  ██▀        ']],
-    [['moon', '  ▀█▄   '], ['cloud', '▗██▖ ']],
-    [['cloud', '  ▗▄▄▄▄▟████▙']],
-    [['cloud', '  ▀█████████▘']],
+    [['moon', '    .-.   .  ']],
+    [['moon', "   /::'     ."]],
+    [['moon', '  (::( '], ['cloud', '.--.  ']],
+    [['cloud', " .'        '."]],
+    [['cloud', ' (__________)']],
   ],
-  cloudy: [BLANK, ...CLOUD, BLANK],
+  // One large cloud, five rows tall.
+  cloudy: [
+    [['cloud', '      .-.    ']],
+    [['cloud', '   .-(   )-. ']],
+    [['cloud', '  (        ) ']],
+    [['cloud', ' (          )']],
+    [['cloud', ' (__________)']],
+  ],
   // Layers of haze.
   fog: [
-    BLANK,
-    [['fog', ' ─── ─── ─── ']],
-    [['fog', '   ───── ─── ']],
-    [['fog', ' ─── ─── ─── ']],
-    [['fog', '   ─── ───── ']],
+    [['fog', '  ~~~~~~~~~  ']],
+    [['fog', ' ---- ------ ']],
+    [['fog', '  ~~~~~~~~~~ ']],
+    [['fog', ' ------ ---- ']],
+    [['fog', '  ~~~~~~~~~  ']],
   ],
-  // Rain by intensity: short ticks, lines, then heavy lines.
-  drizzle: [...CLOUD, [['rain', '    ╷   ╷    ']], [['rain', '  ╷   ╷   ╷  ']]],
-  rain: [...CLOUD, [['rain', '   │  │  │   ']], [['rain', '  │  │  │    ']]],
-  heavyRain: [...CLOUD, [['rain', '  ┃ ┃ ┃ ┃ ┃  ']], [['rain', ' ┃ ┃ ┃ ┃ ┃   ']]],
+  // Rain by intensity: a few light drops, three slanting strokes, then five.
+  drizzle: [...CLOUD, [['rain', "    '    '   "]], [['rain', '  .    .     ']]],
+  rain: [...CLOUD, [['rain', "   '  '  '   "]], [['rain', '  ,  ,  ,    ']]],
+  heavyRain: [...CLOUD, [['rain', "  ' ' ' ' '  "]], [['rain', ' , , , , ,   ']]],
   sleet: [
     ...CLOUD,
-    [['rain', '   │ '], ['snow', '• '], ['rain', '│ '], ['snow', '•   ']],
-    [['snow', '  • '], ['rain', '│ '], ['snow', '• '], ['rain', '│    ']],
+    [['rain', "   ' "], ['snow', '* '], ['rain', "' "], ['snow', '*   ']],
+    [['snow', '  * '], ['rain', ', '], ['snow', '* '], ['rain', ',    ']],
   ],
-  snow: [...CLOUD, [['snow', '   •   •   • ']], [['snow', '  •   •   •  ']]],
-  heavySnow: [...CLOUD, [['snow', '  • • • • •  ']], [['snow', ' • • • • • • ']]],
-  // A bolt with a kink and a tip, rain either side of it.
+  snow: [...CLOUD, [['snow', '   *   .   * ']], [['snow', ' .   *   .   ']]],
+  heavySnow: [...CLOUD, [['snow', '  * . * . *  ']], [['snow', ' . * . * . * ']]],
+  // A bolt with a kink, down to its tip, rain either side of it.
   thunder: [
     ...CLOUD,
-    [['rain', '  │  '], ['bolt', '▄█▛  '], ['rain', '│  ']],
-    [['rain', '   │ '], ['bolt', '▜▛  '], ['rain', '│   ']],
+    [['rain', " '  "], ['bolt', '____/'], ['rain', "  ' "]],
+    [['rain', '  ,  '], ['bolt', '/'], ['rain', '    ,  ']],
   ],
   // A question mark.
   unknown: [
-    [['fog', '    ▗███▖    ']],
-    [['fog', '    ▝▘ ▐▌    ']],
-    [['fog', '      ▗▛     ']],
-    [['fog', '      █      ']],
-    [['fog', '      ▄      ']],
+    [['fog', '    .--.     ']],
+    [['fog', '   (    )    ']],
+    [['fog', "      .'     "]],
+    [['fog', '      |      ']],
+    [['fog', '      o      ']],
   ],
 };
 

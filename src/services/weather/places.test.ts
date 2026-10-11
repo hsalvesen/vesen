@@ -193,8 +193,8 @@ describe('placeLabel', () => {
       id: 'ip', name: 'Sydney', region: 'New South Wales', countryCode: 'AU', country: 'Australia',
       lat: -33.87, lon: 151.2, kind: 'city', source: 'ip', approximate: true,
     };
-    expect(placeLabel(place, 'compact')).toBe('≈ Sydney, AU');
-    expect(placeLabel(place, 'wide')).toBe('≈ Sydney, New South Wales, Australia');
+    expect(placeLabel(place, 'compact')).toBe('~ Sydney, AU');
+    expect(placeLabel(place, 'wide')).toBe('~ Sydney, New South Wales, Australia');
     const singapore: Place = { id: 'x', name: 'Singapore', region: 'Singapore', countryCode: 'SG', country: 'Singapore', lat: 1.29, lon: 103.85, kind: 'city', source: 'open-meteo' };
     expect(placeLabel(singapore, 'wide')).toBe('Singapore');
     expect(placeLabel(singapore, 'compact')).toBe('Singapore, SG');

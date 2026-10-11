@@ -4,7 +4,7 @@
 // layout by container width at display time, and pipes get plain text from the same lines.
 
 import { charWidth, textWidth, type Colour } from '../../output/model';
-import { countryLabel, placeLabel } from './places';
+import { APPROXIMATE, countryLabel, placeLabel } from './places';
 import type {
   ArtRow, BarSegment, CurrentView, Daily, DayView, Forecast, GeoFailure, Line, Note, Place, RangeBar, Segment,
   TextSegment, Units, WeatherRole, WeatherView,
@@ -21,7 +21,7 @@ export const MAX_DAYS = 7;
 const COMPACT_BAR = 5;
 const WIDE_BAR = 10;
 
-/** The colour token each role is drawn in. The bar is shaded from `cold` to `hot` by the card. */
+/** The colour token each role is drawn in. The card shades a bar's range cells from `cold` to `hot`. */
 export const ROLE_COLOUR: Readonly<Record<WeatherRole | 'bar', Colour>> = {
   text: 'fg',
   head: 'fg-strong',
@@ -50,20 +50,29 @@ export const OSM_CREDIT = 'Place search © OpenStreetMap contributors';
 
 // ── Text measurement ───────────────────────────────────────────────────────────────────────
 
-/** The start of `text` in fewer than `width` columns, then '…'. */
-function cut(text: string, width: number): string {
+/** What a cut line ends in: three periods, as the terminal writes an ellipsis. */
+export const ELLIPSIS = '...';
+
+/** The start of `text` that fits in `width` columns. */
+function take(text: string, width: number): string {
   let out = '';
   let used = 0;
   for (const ch of text) {
     const w = charWidth(ch);
-    if (used + w > width - 1) break;
+    if (used + w > width) break;
     out += ch;
     used += w;
   }
-  return `${out.trimEnd()}…`;
+  return out;
 }
 
-/** Cuts `text` to `width` columns, ending in '…' when anything was cut. */
+/** The start of `text` and the ellipsis, in `width` columns; too narrow for the ellipsis, just the start. */
+function cut(text: string, width: number): string {
+  if (width < ELLIPSIS.length) return take(text, width);
+  return `${take(text, width - ELLIPSIS.length).trimEnd()}${ELLIPSIS}`;
+}
+
+/** Cuts `text` to `width` columns, ending in '...' when anything was cut. */
 export function fit(text: string, width: number): string {
   if (textWidth(text) <= width) return text;
   return width <= 0 ? '' : cut(text, width);
@@ -90,14 +99,14 @@ export function lineWidth(line: Line): number {
   return line.reduce((sum, segment) => sum + textWidth(segment[1]), 0);
 }
 
-/** Cuts a line to `width` columns, ending in '…' when anything was cut. */
+/** Cuts a line to `width` columns, ending in '...' when anything was cut. */
 export function fitLine(line: Line, width: number): Line {
   if (lineWidth(line) <= width) return line;
   const out: Segment[] = [];
   let used = 0;
   for (const segment of line) {
     const w = textWidth(segment[1]);
-    if (used + w <= width - 1) {
+    if (used + w <= width - ELLIPSIS.length) {
       out.push(segment);
       used += w;
       continue;
@@ -121,7 +130,10 @@ export function renderPlain(view: WeatherView, layout: 'compact' | 'wide' = 'wid
   return toPlain(view[layout]);
 }
 
-/** One line for --oneline: 'Oslo, NO: clear sky, 12°C (feels 9°C), SSW 13 km/h · today 10–17°C, 0% rain'. */
+/** Between facts on one line: ' | ', as the terminal separates them. */
+export const SEP = ' | ';
+
+/** One line for --oneline: 'Oslo, NO: clear sky, 12°C (feels 9°C), SSW 13 km/h | today 10-17°C, 0% rain'. */
 export function renderOneLine(view: WeatherView): string {
   const { current: c, units } = view;
   const parts = [`${view.title.compact}: ${c.label.toLowerCase()}, ${num(c.temp)}${units.temp} (feels ${num(c.feels)}${units.temp})`];
@@ -130,9 +142,9 @@ export function renderOneLine(view: WeatherView): string {
   const today = view.days[0];
   if (today) {
     const rain = today.precipProb == null ? '' : `, ${today.precipProb}% rain`;
-    parts.push(`${today.label.toLowerCase()} ${num(today.min)}–${num(today.max)}${units.temp}${rain}`);
+    parts.push(`${today.label.toLowerCase()} ${num(today.min)}-${num(today.max)}${units.temp}${rain}`);
   }
-  return parts.join(' · ');
+  return parts.join(SEP);
 }
 
 // ── Building the view ──────────────────────────────────────────────────────────────────────
@@ -220,11 +232,11 @@ export function noteText(note: Note): string {
   }
 }
 
-/** '≈ Sydney, New South Wales, AU': the place as the network located it. */
+/** '~ Sydney, New South Wales, AU': the place as the network located it (APPROXIMATE, places.ts). */
 function approximateLabel(place: Place): string {
   const country = place.countryCode === 'PS' ? countryLabel('PS') : place.countryCode ?? place.country;
   const parts = [place.name, place.region, country].filter((part, i, all): part is string => Boolean(part) && all.indexOf(part) === i);
-  return `≈ ${parts.join(', ')}`;
+  return `${APPROXIMATE}${parts.join(', ')}`;
 }
 
 function collectNotes(place: Place, given: readonly Note[]): Note[] {
@@ -306,17 +318,25 @@ function dayViews(forecast: Forecast, start: number, count: number, today: strin
 }
 
 /** What the bar is drawn with, one cell each: the scale, the day's range on it, and the current temperature. */
-export const BAR_TRACK = '─';
-export const BAR_RANGE = '━';
-export const BAR_NOW = '┃';
+export const BAR_TRACK = '-';
+export const BAR_RANGE = '=';
+export const BAR_NOW = '|';
 
-/** The bar as text, `cols` wide: ─ outside the day's range, ━ inside, ┃ at the current temperature. */
+/**
+ * The bar as text, `cols` wide: - outside the day's range, = inside, | at the current temperature.
+ * A range always keeps at least one = cell, so a steady day still shows: when the | would cover
+ * the only one, the = moves to the cell beside it.
+ */
 export function barText(bar: RangeBar, cols: number): string {
   const cell = (pct: number): number => Math.min(cols - 1, Math.max(0, Math.floor((pct / 100) * cols)));
   const from = cell(bar.lo);
   const to = Math.max(from, Math.min(cols - 1, Math.ceil((bar.hi / 100) * cols) - 1));
   const chars: string[] = Array.from({ length: cols }, (_, i) => (i >= from && i <= to ? BAR_RANGE : BAR_TRACK));
-  if (bar.now !== undefined) chars[cell(bar.now)] = BAR_NOW;
+  if (bar.now !== undefined) {
+    const now = cell(bar.now);
+    chars[now] = BAR_NOW;
+    if (!chars.includes(BAR_RANGE) && cols > 1) chars[now + 1 < cols ? now + 1 : now - 1] = BAR_RANGE;
+  }
   return chars.join('');
 }
 
@@ -338,13 +358,16 @@ function artLines(art: readonly ArtRow[], gap: string, right: readonly Line[]): 
   return art.map((row, i) => [...row, ['text', gap] as TextSegment, ...(right[i] ?? [])]);
 }
 
+/** What marks the place shown among its namesakes, on the card and in its text. */
+export const CHOSEN_MARK = '*';
+
 /**
- * The same-named places as a list, the one shown first and marked with ›, the others dim, so
+ * The same-named places as a list, the one shown first and marked with *, the others dim, so
  * which was chosen is plain; on the card the others are chips in the same order.
  */
 function matchLines(place: Place, others: readonly Place[], width: number): Line[] {
   const lines: Line[] = [[['dim', MATCHES_LABEL]]];
-  lines.push([['text', `› ${fit(alternativeLabel(place), width - 2)}`]]);
+  lines.push([['text', `${CHOSEN_MARK} ${fit(alternativeLabel(place), width - 2)}`]]);
   for (const other of others) lines.push([['dim', `  ${fit(alternativeLabel(other), width - 2)}`]]);
   return lines;
 }
@@ -374,8 +397,8 @@ function compactLines(view: Omit<WeatherView, 'compact' | 'wide' | 'summary'>, n
     [['cond', c.medium]],
     [['temp', `${num(c.temp)}${units.temp}`], ['dim', ` feels ${deg(c.feels)}`]],
     [['wind', windText(c, units)], ['dim', c.gust == null ? '' : ` g ${c.gust}`]],
-    [['pct', `Hum ${c.humidity == null ? '-' : `${c.humidity}%`}`], ['dim', ' · '], ['mm', `${formatPrecip(c.precip, units)} ${units.precip}`]],
-    [['dim', `UV ${uvText(c.uv)} · ${c.sunrise ?? '-'}-${c.sunset ?? '-'}`]],
+    [['pct', `Hum ${c.humidity == null ? '-' : `${c.humidity}%`}`], ['dim', SEP], ['mm', `${formatPrecip(c.precip, units)} ${units.precip}`]],
+    [['dim', `UV ${uvText(c.uv)}${SEP}${c.sunrise ?? '-'}-${c.sunset ?? '-'}`]],
   ];
   const rows = view.days.map((d): Line => [
     ['text', pad(d.label, 6, 'end')],
@@ -389,11 +412,11 @@ function compactLines(view: Omit<WeatherView, 'compact' | 'wide' | 'summary'>, n
     ['cond', d.cond.short],
   ]);
   // The full credit, broken where it reads well: 'Weather data by Open-Meteo.com', then
-  // '(CC BY 4.0) · Updated 14:15 GMT+11'.
+  // '(CC BY 4.0) | Updated 14:15 GMT+11'.
   const credit = view.attribution.openMeteo;
   const cut = credit.lastIndexOf(' (');
   const footer: Line[] = [
-    ...(cut > 0 ? [credit.slice(0, cut), `${credit.slice(cut + 1)} · Updated ${view.attribution.updated}`] : [credit]).flatMap((text) =>
+    ...(cut > 0 ? [credit.slice(0, cut), `${credit.slice(cut + 1)}${SEP}Updated ${view.attribution.updated}`] : [credit]).flatMap((text) =>
       wrap(text, W).map((piece): Line => [['dim', piece]]),
     ),
   ];
@@ -420,10 +443,10 @@ function wideLines(view: Omit<WeatherView, 'compact' | 'wide' | 'summary'>, note
     [['wind', windText(c, units)], ['dim', c.gust == null ? '' : `, gusts ${c.gust} ${units.wind}`]],
     [
       ['pct', `Humidity ${c.humidity == null ? '-' : `${c.humidity}%`}`],
-      ['dim', ' · '],
+      ['dim', SEP],
       ['mm', `Precip ${formatPrecip(c.precip, units)} ${units.precip}`],
     ],
-    [['dim', `UV ${uvText(c.uv)} · Sunrise ${c.sunrise ?? '-'} · Sunset ${c.sunset ?? '-'}`]],
+    [['dim', `UV ${uvText(c.uv)}${SEP}Sunrise ${c.sunrise ?? '-'}${SEP}Sunset ${c.sunset ?? '-'}`]],
   ];
   const header: Line = [
     ['dim', `${pad('Day', 7, 'end')}${pad('Low', 4, 'start')} ${pad('Range', WIDE_BAR, 'end')} High  ${pad('Rain', 12, 'end')} ${pad('Wind', 8, 'end')} Conditions`],
@@ -444,7 +467,7 @@ function wideLines(view: Omit<WeatherView, 'compact' | 'wide' | 'summary'>, note
     ['text', ' '],
     ['cond', d.cond.medium],
   ]);
-  const footer: Line[] = wrap(`Updated ${view.attribution.updated} · ${view.attribution.openMeteo}`, W).map(
+  const footer: Line[] = wrap(`Updated ${view.attribution.updated}${SEP}${view.attribution.openMeteo}`, W).map(
     (text): Line => [['dim', text]],
   );
   if (view.attribution.osm) footer.push([['dim', view.attribution.osm]]);

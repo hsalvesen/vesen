@@ -167,7 +167,7 @@ test.describe('weather', () => {
         ? "Instagram didn't share your location, so this uses an approximate network location. Open vesen.app in Safari or Chrome for a precise fix."
         : 'so this uses an approximate network location.',
     );
-    await expect(card.locator('.sr-only')).toContainText('≈ Sydney, New South Wales, AU (approximate, from your network)');
+    await expect(card.locator('.sr-only')).toContainText('~ Sydney, New South Wales, AU (approximate, from your network)');
     // Inside Instagram, asking again would get the same answer: the note says where to go instead.
     if (inApp) await expect(card.getByRole('button', { name: 'use precise location' })).toHaveCount(0);
     else await expect(card.getByRole('button', { name: 'use precise location' })).toBeVisible();

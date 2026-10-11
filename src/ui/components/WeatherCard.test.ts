@@ -43,23 +43,25 @@ describe('WeatherCard', () => {
     expect(wide?.getAttribute('aria-hidden')).toBe('true');
     expect(compact?.querySelectorAll(':scope > .wx-line')).toHaveLength(view.compact.length);
     expect(wide?.querySelectorAll(':scope > .wx-line')).toHaveLength(view.wide.length);
-    // Line for line what a pipe gets: the bars are their ASCII drawings, under the CSS strip.
+    // Line for line what a pipe gets: the bars and the art are their own characters.
     const rows = Array.from(compact?.querySelectorAll('.wx-line') ?? [], (row) => (row.textContent ?? '').trimEnd());
     expect(rows.join('\n')).toBe(toPlain(view.compact));
   });
 
-  it('draws the five lines beside the pictogram with their rows touching, and the rest at the terminal line height', () => {
+  it('draws the pictogram as text, in its roles, at the terminal line height like every other line', () => {
     const view = card();
     const { root } = show(view);
-    for (const [layout, lines] of [['.wx-compact', view.compact], ['.wx-wide', view.wide]] as const) {
-      const rows = Array.from(root.querySelectorAll(`${layout} > .wx-line`));
-      const art = rows.map((row, i) => (row.classList.contains('wx-art') ? i : -1)).filter((i) => i >= 0);
-      expect(art, layout).toHaveLength(view.current.art.length);
-      // Consecutive lines, each starting with an art row, and no other.
-      expect(art, layout).toEqual(art.map((_, i) => (art[0] ?? 0) + i));
-      for (const [i, line] of lines.entries()) {
-        expect(art.includes(i), `${layout} line ${i}`).toBe(line[0] !== undefined && line[0][0] !== 'bar' && ['sun', 'moon', 'cloud', 'rain', 'snow', 'bolt', 'fog'].includes(line[0][0]));
-      }
+    const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'WeatherCard.svelte'), 'utf8');
+    expect(source).not.toMatch(/line-height/);
+    for (const layout of ['.wx-compact', '.wx-wide']) {
+      const rows = Array.from(root.querySelectorAll<HTMLElement>(`${layout} > .wx-line`));
+      // No line is set apart: the art rows are spans like the text beside them.
+      expect(rows.map((row) => row.className)).toEqual(rows.map(() => 'wx-line'));
+      const artRows = rows.filter((row) => (row.textContent ?? '').startsWith(view.current.art[0]?.[0]?.[1] ?? '\0'));
+      expect(artRows).toHaveLength(1);
+      const sun = artRows[0]?.querySelector<HTMLElement>('span');
+      expect(sun?.getAttribute('style')).toMatch(/^color: var\(--role-sun\);?$/);
+      expect(sun?.textContent).toMatch(/^[\x20-\x7e]{13}$/);
     }
   });
 
@@ -79,12 +81,33 @@ describe('WeatherCard', () => {
     expect(source).toMatch(/@supports not \(container-type: inline-size\) \{\s*@media \(min-width: 769px\)/);
   });
 
-  it('shades each range bar on one scale, with a tick for now on today only', () => {
-    const { root } = show(card());
-    const bars = Array.from(root.querySelectorAll<HTMLElement>('.wx-compact .wx-bar'));
-    expect(bars).toHaveLength(3);
-    for (const bar of bars) expect(bar.getAttribute('style')).toMatch(/^--lo: \d+%; --hi: \d+%/);
-    expect(bars.map((bar) => bar.querySelector('.wx-now') !== null)).toEqual([true, false, false]);
+  it('draws each range bar as its characters, the = cells shaded along the scale, with | for now on today only', () => {
+    const view = card();
+    const { root } = show(view);
+    const rows = Array.from(root.querySelectorAll<HTMLElement>('.wx-compact .wx-line')).filter((row) => row.querySelector('.wx-range'));
+    expect(rows).toHaveLength(3);
+    expect(rows.map((row) => row.querySelectorAll('.wx-now').length)).toEqual([1, 0, 0]);
+    expect(root.querySelector('.wx-now')?.textContent).toBe('|');
+    for (const [i, row] of rows.entries()) {
+      const bar = view.compact.find((line) => line.some((s) => s[0] === 'bar') && line[0]?.[1].startsWith(view.days[i]?.label ?? '\0'));
+      const text = bar?.find((s) => s[0] === 'bar')?.[1] ?? '';
+      const cells = Array.from(row.querySelectorAll<HTMLElement>('.wx-track, .wx-range, .wx-now'));
+      expect(cells.map((cell) => cell.textContent).join('')).toBe(text);
+      // Each = is one span whose share of the cold role falls from left to right across the bar.
+      const ranges = Array.from(row.querySelectorAll<HTMLElement>('.wx-range'));
+      expect(ranges.map((cell) => cell.textContent)).toEqual(ranges.map(() => '='));
+      const cold = ranges.map((cell) => Number(/--cold: (\d+)%/.exec(cell.getAttribute('style') ?? '')?.[1]));
+      expect(cold.every((value) => Number.isInteger(value) && value >= 0 && value <= 100)).toBe(true);
+      expect(cold).toEqual([...cold].sort((a, b) => b - a));
+      // The cold end is colder than the hot end: a = at the left edge is all cold, at the right edge none.
+      const first = text.indexOf('=');
+      if (first === 0) expect(cold[0]).toBe(100);
+      if (text.lastIndexOf('=') === text.length - 1) expect(cold[cold.length - 1]).toBe(0);
+    }
+    const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'WeatherCard.svelte'), 'utf8');
+    expect(source).toMatch(/\.wx-range \{\s*color: var\(--role-cold/);
+    expect(source).toMatch(/@supports \(color: color-mix\(in oklab[^)]*\)\) \{\s*\.wx-range \{\s*color: color-mix\(in oklab, var\(--role-cold[^;]*var\(--cold, 100%\), var\(--role-hot/);
+    expect(source).not.toMatch(/clip-path|wx-fill|wx-bar-text|linear-gradient/);
   });
 
   it('runs a trusted chip, and draws a forged one as text that does nothing', async () => {
@@ -103,10 +126,16 @@ describe('WeatherCard', () => {
     const { root } = show({ ...card(springfields[0] as Place, [], also), chosen: 'Springfield, Missouri, US' });
     const row = root.querySelectorAll('.wx-chips')[0];
     expect(row?.getAttribute('role')).toBe('group');
-    expect(row?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Matches: › Springfield, Missouri, US Springfield, Illinois, US');
+    expect(row?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Matches: * Springfield, Missouri, US Springfield, Illinois, US');
     const chosen = row?.querySelector('.wx-chosen');
     expect(chosen?.tagName).toBe('SPAN');
     expect(chosen?.getAttribute('aria-current')).toBe('true');
+    expect(chosen?.querySelector('.wx-mark')?.getAttribute('aria-hidden')).toBe('true');
+    // Marked in the terminal's foreground, bold at most: no accent colour or outline on the chip.
+    const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'WeatherCard.svelte'), 'utf8');
+    const chosenRule = /\.wx-chosen \{([^}]*)\}/.exec(source)?.[1] ?? '';
+    expect(chosenRule.trim()).toBe('font-weight: bold;');
+    expect(source).not.toMatch(/--role-accent/);
     expect(Array.from(row?.querySelectorAll('button') ?? [], (button) => button.textContent)).toEqual(['Springfield, Illinois, US']);
   });
 

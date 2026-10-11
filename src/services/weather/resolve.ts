@@ -26,7 +26,7 @@ export interface ResolveOptions {
   /** Whether Nominatim may be asked after Open-Meteo finds nothing. */
   readonly nominatim?: boolean;
   readonly signal?: AbortSignal | null;
-  /** Names each step for the status line: 'Searching for “Springfield”…'. */
+  /** Names each step for the status line: 'Searching for "Springfield"...'. */
   readonly onPhase?: (label: string) => void;
   /** Recent place names, offered alongside curated ones in "Did you mean". */
   readonly recent?: readonly string[];
@@ -134,7 +134,7 @@ export async function resolvePlace(query: string, options: ResolveOptions): Prom
   };
 
   const searchOpenMeteo = async (): Promise<GeoHit | null> => {
-    phase(`Searching for “${text}”…`);
+    phase(`Searching for "${text}"...`);
     if (qualifier) return pick(await qualified(name, qualifier));
     const direct = pick(await geocode(name));
     if (direct) return direct;
@@ -149,7 +149,7 @@ export async function resolvePlace(query: string, options: ResolveOptions): Prom
   };
 
   const searchNominatim = async (): Promise<GeoHit | null> => {
-    phase(`Searching OpenStreetMap for “${text}”…`);
+    phase(`Searching OpenStreetMap for "${text}"...`);
     const [top] = await sources.nominatimSearch(qualifier ? `${name}, ${qualifier}` : name, signal);
     return top ? { place: top, alternatives: [] } : null;
   };
