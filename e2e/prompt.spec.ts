@@ -203,8 +203,7 @@ test.describe('the line editor on a desktop', { tag: '@smoke' }, () => {
 test.describe('sudo', { tag: '@smoke' }, () => {
   const SECRET = 'hunter2-correct-horse';
 
-  test('asks for a password it never keeps, then reports the incident with a link', async ({ page, context }) => {
-    await context.route('https://www.youtube.com/**', (route) => route.fulfill({ contentType: 'text/html', body: '<title>video</title>' }));
+  test('asks for a password it never keeps, then puts on the show and reports the incident', async ({ page, context }) => {
     await open(page);
     if (isPhone()) await tapPrompt(page);
     await prompt(page).fill('sudo ls');
@@ -225,14 +224,17 @@ test.describe('sudo', { tag: '@smoke' }, () => {
     if (isPhone()) expect(masked.security).toBe('disc');
     else expect(masked.mirror).toBe(' ');
 
-    // On a desktop browser the video opens inside the Enter that answers; inside Instagram and on
-    // phones only the card shows.
-    const popup = isPhone() ? null : page.waitForEvent('popup');
+    // The Enter that answers opens the show over the terminal; nothing opens anywhere else. Esc
+    // ends it, and the sudoers line follows (e2e/sudo.spec.ts has the rest of the show).
     await prompt(page).press('Enter');
+    const show = page.getByRole('dialog', { name: 'You have been rickrolled' });
+    await expect(show).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(show).toBeHidden();
     await expect(lastEntry(page)).toContainText('guest is not in the sudoers file. This incident will be reported.');
-    await expect(lastEntry(page).locator('.card')).toContainText('youtube.com');
-    if (popup !== null) expect((await popup).url()).toContain('youtube.com');
-    await expect(prompt(page)).toBeFocused();
+    await expect(lastEntry(page).locator('.card')).toHaveCount(0);
+    expect(context.pages()).toHaveLength(1);
+    if (!isPhone()) await expect(prompt(page)).toBeFocused();
 
     // The password went nowhere: not the page, storage, or history.
     const kept = await page.evaluate(

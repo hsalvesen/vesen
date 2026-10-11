@@ -53,7 +53,7 @@ const NOTES: readonly string[] = [
   "curl and wget fetch the address you give them, and ping times requests to the host you name, straight from your browser; curl --via-proxy, where this site has a proxy of its own, sends the address through that proxy.",
   'qr makes its codes in your browser: nothing you encode is sent anywhere.',
   'Links open only when you tap them, or in a desktop browser when whoami, repo or open opens one.',
-  "This browser keeps the theme, your settings, history, your files under ~, nano's unsaved changes for up to 30 days (should Back or closing the page cut it short), recent weather places and place searches, and the last quotes and tickers stock showed (local storage), and a snapshot of the screen for Back for 30 minutes and the commits git log showed for 10 (session storage). What you type at sudo is never kept.",
+  "This browser keeps the theme, your settings, history, your files under ~, nano's unsaved changes for up to 30 days (should Back or closing the page cut it short), recent weather places and place searches, and the last quotes and tickers stock showed (local storage), and a snapshot of the screen for Back for 30 minutes and the commits git log showed for 10 (session storage). What you type at sudo is never kept. Its show is drawn and played in this browser.",
   'No analytics, and no cookies.',
 ];
 
