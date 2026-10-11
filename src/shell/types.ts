@@ -453,7 +453,7 @@ export const OWNER_HOME: string = OWNER.home;
 
 export type InAppBrowser = 'instagram' | 'facebook' | 'tiktok';
 
-export type FullscreenView = 'pager' | 'editor' | 'matrix' | 'sl' | 'shutdown' | 'qr-present';
+export type FullscreenView = 'pager' | 'editor' | 'matrix' | 'sl' | 'rick' | 'shutdown' | 'qr-present';
 
 /** What the terminal can do for a running command. */
 export interface Tty {

@@ -1,16 +1,12 @@
 // sudo: the joke. It asks for guest's password in sudo's own words, with a dim line saying it is a
-// joke and nothing typed is kept (docs/plan/02-architecture-and-contracts.md, section 12), then
-// says what sudo says to a user who is not in the sudoers file, and links the video. The command
-// never runs. The password is masked as it is typed, never echoed, and dropped here: it is not
-// compared, kept, shown or sent anywhere.
-//
-// On a desktop browser outside an in-app browser the video opens in a new tab inside the Enter
-// that answers the prompt (the read's `opens`); everywhere, a link card with Copy is printed. The
-// body is in sudo.run.ts.
+// joke and nothing typed is kept (docs/plan/02-architecture-and-contracts.md, section 12), puts
+// on a short show on the terminal (the Rick app: a dancer drawn for vesen and an 8-bit tune of
+// its own, src/commands/lib/rick.ts), then says what sudo says to a user who is not in the sudoers
+// file. The command never runs. The password is masked as it is typed, never echoed, and dropped
+// here: it is not compared, kept, shown or sent anywhere. In a pipe or a script there is no show,
+// only the message. The body is in sudo.run.ts.
 
 import { defineCommand } from '../../shell/types';
-
-export const SUDO_VIDEO = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
 
 /** The dim line above the password prompt, so nobody is coaxed into typing a real password. */
 export const SUDO_HINT = '(this is a joke; nothing you type is kept)';

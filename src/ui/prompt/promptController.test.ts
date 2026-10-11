@@ -1,6 +1,7 @@
 import { render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { RICK_CLOSED } from '../../commands/lib/rick';
 import sudo, { SUDO_HINT } from '../../commands/shell/sudo';
 import rm from '../../commands/files/rm';
 import theme from '../../commands/portfolio/theme';
@@ -32,7 +33,10 @@ afterEach(() => {
 
 function setup(options: { touch?: boolean; dock?: boolean; platform?: 'mac' | 'other'; now?: () => number; catalogue?: CatalogueLoader } = {}) {
   const storage = createStorage(window).local;
-  const h = harness({ specs: [sudo, rm, theme, sleep], storage, ...(options.catalogue ? { catalogue: options.catalogue } : {}) });
+  // A terminal that shows sudo's app and closes it at once: the shell's own app runner would wait
+  // for an AppHost these tests never mount.
+  const terminal = { size: () => ({ cols: 80, rows: 24 }), touch: options.touch ?? false, inApp: null, fullscreen: () => Promise.resolve(RICK_CLOSED) };
+  const h = harness({ specs: [sudo, rm, theme, sleep], storage, terminal, ...(options.catalogue ? { catalogue: options.catalogue } : {}) });
   const screen: ScreenStore = createScreen();
   const controller = new PromptController({
     shell: h.shell,

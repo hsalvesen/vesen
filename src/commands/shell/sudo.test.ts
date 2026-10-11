@@ -1,18 +1,29 @@
+// sudo: the password prompt in sudo's words, masked and dropped; then the show (the Rick app with
+// the dancer and the tune) on the terminal, and the sudoers line after it; the message alone in
+// a pipe or where no app can show; and ^C at either stage.
 import { describe, expect, it, vi } from 'vitest';
 import type { Block } from '../../output/model';
 import { plain } from '../../output/plain';
-import type { KV, Opener } from '../../services/types';
+import type { KV } from '../../services/types';
+import { createAppRunner } from '../../shell/apps';
 import type { Shell } from '../../shell/index';
-import { fakeOpener as openerFake } from '../../testing/opener';
+import type { FullscreenView } from '../../shell/types';
 import { harness } from '../../testing/shell-harness';
 import rm from '../files/rm';
-import sudo, { SUDO_HINT, SUDO_VIDEO } from './sudo';
+import { RICK_CLOSED, RICK_SONG, rickFrames, type RickView } from '../lib/rick';
+import sudo, { SUDO_HINT } from './sudo';
 
 const SECRET = 'hunter2-correct-horse';
 
-function fakeOpener(result: 'opened' | 'blocked' | 'skipped' = 'opened'): Opener & { preflight: ReturnType<typeof vi.fn> } {
-  const preflight = vi.fn(() => result);
-  return { ...openerFake({ autoOpen: result !== 'skipped' }), preflight };
+/** A terminal that shows each app and closes it at once, recording what was shown. */
+function terminal(options: { touch?: boolean; fullscreen?: (view: FullscreenView, props: unknown, signal: AbortSignal) => Promise<unknown> } = {}) {
+  const shown: { view: FullscreenView; props: RickView }[] = [];
+  const fullscreen = vi.fn(async (view: FullscreenView, props: unknown, signal: AbortSignal): Promise<unknown> => {
+    shown.push({ view, props: props as RickView });
+    if (options.fullscreen) return options.fullscreen(view, props, signal);
+    return RICK_CLOSED;
+  });
+  return { shown, fullscreen, info: { size: () => ({ cols: 80, rows: 24 }), touch: options.touch ?? false, inApp: null, fullscreen } };
 }
 
 /** Storage that keeps everything written, to look for the secret in. */
@@ -56,67 +67,137 @@ async function asked(shell: Shell) {
 const text = (blocks: readonly Block[]): string => blocks.map((block) => plain(block)).join('');
 
 describe('sudo', () => {
-  it("asks for guest's password in sudo's words, with the joke said, and never echoes the answer", async () => {
-    const opener = fakeOpener();
+  it("asks for guest's password in sudo's words, with the joke said, never echoes the answer, then puts on the show and reports the incident", async () => {
     const storage = memoryStorage();
-    const h = harness({ specs: [sudo], opener, storage });
+    const term = terminal();
+    const h = harness({ specs: [sudo], storage, terminal: term.info });
     const job = h.shell.start('sudo ls');
     const request = await asked(h.shell);
     expect(request).toMatchObject({ prompt: '[sudo] password for guest: ', secret: true, hint: SUDO_HINT });
+    expect(term.fullscreen).not.toHaveBeenCalled();
 
     h.shell.answerRead(request.id, SECRET);
-    // Inside the key press that answered: the video opens on a desktop browser.
-    expect(opener.preflight).toHaveBeenCalledWith(SUDO_VIDEO);
     const result = await job.done;
+
+    // The show: the Rick app, with the dancer's frames and the tune, after the password.
+    expect(term.shown).toHaveLength(1);
+    expect(term.shown[0]?.view).toBe('rick');
+    const view = term.shown[0]?.props;
+    expect(view?.frames).toBe(rickFrames());
+    expect(view?.song).toBe(RICK_SONG);
+    expect(view?.touch).toBe(false);
+    expect(view?.title).toBe('You have been rickrolled');
 
     expect(result.status).toBe(1);
     const shown = text(result.blocks);
     expect(shown).toContain(`${SUDO_HINT}\n[sudo] password for guest: \n`);
     expect(shown).toContain('guest is not in the sudoers file. This incident will be reported.');
-    expect(result.blocks.some((block) => block.type === 'card' && block.href === SUDO_VIDEO)).toBe(true);
+    // No link, no card: the video is gone.
+    expect(result.blocks.some((block) => block.type === 'card')).toBe(false);
+    expect(shown).not.toMatch(/youtube|http/);
 
-    // The password reached nothing: the screen, history, storage.
+    // The password reached nothing: the screen, history, storage, the app.
     expect(JSON.stringify(h.commits)).not.toContain(SECRET);
     expect(JSON.stringify(h.shell.history.list())).not.toContain(SECRET);
     expect(storage.dump()).not.toContain(SECRET);
+    expect(JSON.stringify(term.shown)).not.toContain(SECRET);
     expect(h.shell.history.list().map((entry) => entry.line)).toEqual(['sudo ls']);
   });
 
-  it('prints the link card when the browser waits for a tap, as in Instagram', async () => {
-    const opener = fakeOpener('skipped');
-    const h = harness({ specs: [sudo], opener });
+  it('tells the app it is on a touch screen', async () => {
+    const term = terminal({ touch: true });
+    const h = harness({ specs: [sudo], terminal: term.info });
     const job = h.shell.start('sudo -i');
     h.shell.answerRead((await asked(h.shell)).id, '');
+    await job.done;
+    expect(term.shown[0]?.props.touch).toBe(true);
+  });
+
+  it('makes the sandwich after the show, and still exits 0 for it', async () => {
+    const term = terminal();
+    const order: string[] = [];
+    term.fullscreen.mockImplementation(async () => {
+      order.push('show');
+      return RICK_CLOSED;
+    });
+    const h = harness({ specs: [sudo], terminal: term.info });
+    const job = h.shell.start('sudo make me a sandwich');
+    h.shell.answerRead((await asked(h.shell)).id, 'x');
     const result = await job.done;
-    expect(result.blocks.find((block) => block.type === 'card')).toMatchObject({ href: SUDO_VIDEO });
+    expect(order).toEqual(['show']);
+    expect(result.status).toBe(0);
+    expect(text(result.blocks)).toContain('Okay. One sandwich, made with superuser care.');
+    expect(text(result.blocks)).not.toContain('incident');
+  });
+
+  it('prints the message alone where no full-screen app can show', async () => {
+    const term = terminal({ fullscreen: () => Promise.reject(new Error('full-screen apps need the terminal')) });
+    const h = harness({ specs: [sudo], terminal: term.info });
+    const job = h.shell.start('sudo ls');
+    h.shell.answerRead((await asked(h.shell)).id, 'x');
+    const result = await job.done;
+    expect(result.status).toBe(1);
+    expect(text(result.blocks)).toContain('guest is not in the sudoers file. This incident will be reported.');
+  });
+
+  it('shows nothing when its output is not the terminal: a file gets the message only', async () => {
+    const term = terminal();
+    const h = harness({ specs: [sudo], terminal: term.info });
+    const job = h.shell.start('sudo ls > out.txt');
+    h.shell.answerRead((await asked(h.shell)).id, 'x');
+    const result = await job.done;
+    expect(result.status).toBe(1);
+    expect(term.fullscreen).not.toHaveBeenCalled();
+    expect(text(result.blocks)).toContain('guest is not in the sudoers file. This incident will be reported.');
+    expect(h.fs.readFile('/home/guest/out.txt')).toBe('');
+  });
+
+  it('is interrupted by ^C while the show is up, and the prompt comes back', async () => {
+    const apps = createAppRunner();
+    const term = terminal({ fullscreen: (view, props, signal) => apps.open(view, props, signal) });
+    const h = harness({ specs: [sudo], terminal: term.info });
+    const job = h.shell.start('sudo ls');
+    h.shell.answerRead((await asked(h.shell)).id, 'x');
+    await vi.waitFor(() => expect(apps.request.get()?.view).toBe('rick'));
+    h.shell.abort();
+    const result = await job.done;
+    expect(result).toMatchObject({ status: 130, interrupted: true });
+    expect(apps.request.get()).toBeNull();
+    expect(text(result.blocks)).not.toContain('sudoers');
   });
 
   it('is interrupted by ^C at the prompt, and ^D says a password is required', async () => {
-    const h = harness({ specs: [sudo] });
+    const term = terminal();
+    const h = harness({ specs: [sudo], terminal: term.info });
     const job = h.shell.start('sudo ls');
     await asked(h.shell);
     h.shell.abort();
     expect(await job.done).toMatchObject({ status: 130, interrupted: true });
     expect(h.shell.reads.get()).toBeNull();
+    expect(term.fullscreen).not.toHaveBeenCalled();
 
     const eof = h.shell.start('sudo ls');
     h.shell.answerRead((await asked(h.shell)).id, null);
     const result = await eof.done;
     expect(result.status).toBe(1);
     expect(h.commits[h.commits.length - 1]?.blocks.map((block) => plain(block)).join('')).toContain('sudo: a password is required');
+    expect(term.fullscreen).not.toHaveBeenCalled();
   });
 
   it('needs a command, and a terminal to ask at', async () => {
-    const h = harness({ specs: [sudo] });
+    const term = terminal();
+    const h = harness({ specs: [sudo], terminal: term.info });
     expect(await h.run('sudo')).toMatchObject({ status: 1 });
     expect((await h.run('sudo')).stderr).toContain('sudo: a command is required');
     const inner = await h.run('x=$(sudo ls); echo "[$x]"');
     expect(inner.stderr).toContain('sudo: a terminal is required to read the password');
     expect(h.shell.reads.get()).toBeNull();
+    expect(term.fullscreen).not.toHaveBeenCalled();
   });
 
   it('answers --help from its spec, and passes a later --help to the command', async () => {
-    const h = harness({ specs: [sudo] });
+    const term = terminal();
+    const h = harness({ specs: [sudo], terminal: term.info });
     expect((await h.run('sudo --help')).stdout).toContain('sudo [-u USER] COMMAND [ARG]...');
     const job = h.shell.start('sudo ls --help');
     expect((await asked(h.shell)).secret).toBe(true);
