@@ -121,7 +121,7 @@ test.describe('the shell kernel', { tag: '@smoke' }, () => {
     // When the kernel arrives, the cancelled line does not run.
     await run(page, 'echo after');
     await expect(lastEntry(page).locator('.command-output')).toHaveText('after');
-    await expect(page.locator('[role="log"] .command-output').filter({ hasText: 'Portfolio' })).toHaveCount(0);
+    await expect(page.locator('[role="log"] .command-output .lists')).toHaveCount(0);
   });
 
   test('history survives a reload', async ({ page }) => {

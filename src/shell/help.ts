@@ -1,9 +1,9 @@
 // Help generated from command specs (docs/plan/02-architecture-and-contracts.md, section 11):
 //
-// - the help index: the portfolio commands with their summaries in a grid that reflows, then
-//   every other category as a column of its names, side by side as many as fit (a lists block,
-//   which reflows on its own); with --all, every category's grid. Each name is tappable (it
-//   inserts itself at the prompt). In a pipe, a line of names per category;
+// - the help index: every category as a column of its names, vesen's own commands first, side by
+//   side as many as fit (a lists block, which reflows on its own); with --all, every category as a
+//   grid of names with their summaries. Each name is tappable (it inserts itself at the prompt).
+//   In a pipe, a line of names per category;
 // - the `<cmd> --help` panels as callouts (what it does, Usage, Options, Examples as run chips,
 //   See also);
 // - man pages: NAME, SYNOPSIS, DESCRIPTION, OPTIONS, EXAMPLES and SEE ALSO, laid out to the width
@@ -22,7 +22,7 @@ import { CATEGORY_ORDER } from './registry';
 import type { ArgSpec, Category, CommandDoc, CommandSpec, FlagSpec, Registry } from './types';
 
 export const CATEGORY_TITLES: Readonly<Record<Category, string>> = {
-  portfolio: 'Portfolio',
+  portfolio: 'Vesen',
   files: 'Files',
   text: 'Text',
   shell: 'Shell',
@@ -80,12 +80,13 @@ export interface IndexOptions {
 }
 
 /**
- * The help index: the portfolio commands, the reason the site exists, each with its summary in
- * a grid, then every other category as a column of all its names, by name, side by side as many
- * as fit and the rest in a band below (one lists block, which reflows on its own: a desktop shows
- * the seven at once, a phone three or four a band). With `all`, every category gets the grid. A
- * name inserts itself at the prompt when tapped. In a pipe the index is plain text: the portfolio
- * with its summaries, then one `Category: a b c` line per category, naming every command.
+ * The help index: every category as a column of all its names, by name, vesen's own commands
+ * (the `portfolio` category, titled Vesen) first, side by side as many as fit and the rest in a
+ * band below (one lists block, which reflows on its own: a desktop shows them all at once, a
+ * phone three or four a band). No column stands out: what each command does is in `help --all`,
+ * where every category is a grid of names with their summaries, and in `man vesen`. A name
+ * inserts itself at the prompt when tapped. In a pipe the index is plain text: one
+ * `Category: a b c` line per category, naming every command.
  */
 export function helpIndex(registry: Registry, options: IndexOptions = {}): Block[] {
   const blocks: Block[] = [];
@@ -98,12 +99,12 @@ export function helpIndex(registry: Registry, options: IndexOptions = {}): Block
     // The registry lists by name.
     const specs = registry.list({ category });
     if (specs.length === 0) continue;
-    if (options.all === true || category === 'portfolio') blocks.push(...categoryTable(category, specs, minCh));
+    if (options.all === true) blocks.push(...categoryTable(category, specs, minCh));
     else if (options.tty === true) columns.push(categoryColumn(category, specs));
     else lines.push(categoryLine(category, specs));
   }
-  if (columns.length > 0) blocks.push(out.lines([[]]), out.lists(columns));
-  if (lines.length > 0) blocks.push(out.lines([[], ...lines]));
+  if (columns.length > 0) blocks.push(out.lists(columns));
+  if (lines.length > 0) blocks.push(out.lines(lines));
   const more: Line[] = [[]];
   if (options.all !== true) {
     more.push([out.run('help --all', 'help --all', STRONG), out.span(' lists every command with what it does.', MUTED)]);
@@ -441,7 +442,7 @@ export function vesenPage(registry: Registry, options: ManOptions): Block[] {
 
   const portfolio = registry.list({ category: 'portfolio' });
   if (portfolio.length > 0) {
-    page.heading('Portfolio');
+    page.heading("Vesen's own commands");
     for (const spec of portfolio) {
       page.line([out.run(spec.name, `man ${spec.name}`, BOLD)]);
       page.text(sentence(spec.summary), page.hang);

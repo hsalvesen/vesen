@@ -54,14 +54,13 @@ describe('the help index', () => {
     return lists?.type === 'lists' ? lists.columns.map((column) => [column.title.text, ...column.items.map((item) => item.text)]) : [];
   };
 
-  it('is, on a terminal, the portfolio with summaries, then a column of names for each other category', () => {
+  it('is, on a terminal, a column of names for every category, vesen\'s own first', () => {
     const blocks = helpIndex(registry, { tty: true });
     expect(text(blocks)).toBe(
       [
-        'Portfolio',
-        'theme   change the theme',
-        'whoami  about the developer',
-        '',
+        'Vesen',
+        'theme',
+        'whoami',
         'Files',
         'cd',
         'ls',
@@ -77,11 +76,12 @@ describe('the help index', () => {
     // hidden command and an empty category are left out.
     expect(blocks.filter((block) => block.type === 'lists')).toHaveLength(1);
     expect(columnsOf(blocks)).toEqual([
+      ['Vesen', 'theme', 'whoami'],
       ['Files', 'cd', 'ls'],
       ['Text', 'head'],
     ]);
     const lists = blocks.find((block) => block.type === 'lists');
-    const files = lists?.type === 'lists' ? lists.columns[0] : undefined;
+    const files = lists?.type === 'lists' ? lists.columns[1] : undefined;
     expect(files?.title).toMatchObject({ text: 'Files', style: { fg: 'accent', bold: true } });
     expect(files?.items[1]).toMatchObject({ text: 'ls', action: { kind: 'insert', text: 'ls ' } });
     expect(isTrustedAction(files?.items[1]?.action)).toBe(true);
@@ -90,10 +90,7 @@ describe('the help index', () => {
   it('is plain text in a pipe: one line of names per category', () => {
     expect(text(helpIndex(registry))).toBe(
       [
-        'Portfolio',
-        'theme   change the theme',
-        'whoami  about the developer',
-        '',
+        'Vesen: theme whoami',
         'Files: cd ls',
         'Text: head',
         '',
@@ -116,14 +113,14 @@ describe('the help index', () => {
     const names = ['aardvark', ...many.map((spec) => spec.name)];
     expect(columnsOf(helpIndex(big, { tty: true }))).toEqual([['Text', ...names]]);
     expect(text(helpIndex(big, { tty: true }))).not.toMatch(/\+\d+ more/);
-    expect(text(helpIndex(big))).toContain(`\nText: ${names.join(' ')}\n`);
+    expect(`\n${text(helpIndex(big))}`).toContain(`\nText: ${names.join(' ')}\n`);
   });
 
-  it('groups every visible command by category with --all, the portfolio first, each with its summary', () => {
+  it('groups every visible command by category with --all, vesen\'s own first, each with its summary', () => {
     const blocks = helpIndex(registry, { all: true });
     expect(text(blocks)).toBe(
       [
-        'Portfolio',
+        'Vesen',
         'theme   change the theme',
         'whoami  about the developer',
         'Files',
@@ -136,7 +133,7 @@ describe('the help index', () => {
         '',
       ].join('\n'),
     );
-    expect(CATEGORY_TITLES.portfolio).toBe('Portfolio');
+    expect(CATEGORY_TITLES.portfolio).toBe('Vesen');
   });
 
   it('lays each category out as a grid wide enough for a name and its summary', () => {
@@ -151,8 +148,8 @@ describe('the help index', () => {
   });
 
   it('makes each name a trusted tap that inserts it at the prompt', () => {
-    const grid = helpIndex(registry).find((block) => block.type === 'grid');
-    const item = grid?.type === 'grid' ? grid.items[0] : undefined;
+    const lists = helpIndex(registry, { tty: true }).find((block) => block.type === 'lists');
+    const item = lists?.type === 'lists' ? lists.columns[0]?.items[0] : undefined;
     expect(item?.text).toBe('theme');
     expect(isTrustedAction(item?.action)).toBe(true);
     expect(item?.action).toMatchObject({ kind: 'insert', text: 'theme ' });
@@ -281,7 +278,7 @@ describe('man pages', () => {
     const registry = new CommandRegistry([head, { name: 'theme', category: 'portfolio', summary: 'change the theme', run: () => 0 }]);
     const about = text(vesenPage(registry, { columns: 80, version: '2.0.0' }));
     expect(about).toContain('vesen - a terminal in the browser, and the portfolio of Has Salvesen');
-    expect(about).toContain('PORTFOLIO');
+    expect(about).toContain("VESEN'S OWN COMMANDS");
     expect(about).toContain('       theme');
     expect(about).toContain('Written by Has Salvesen.');
   });

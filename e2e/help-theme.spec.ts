@@ -44,8 +44,8 @@ async function run(page: Page, line: string): Promise<void> {
   await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
 }
 
-/** The categories of the help index, in its order: the portfolio as a grid, the rest as columns. */
-const CATEGORIES = ['Portfolio', 'Files', 'Text', 'Shell', 'System', 'Network', 'Fun', 'Editor'];
+/** The categories of the help index, in its order, each a column; vesen's own commands first. */
+const CATEGORIES = ['Vesen', 'Files', 'Text', 'Shell', 'System', 'Network', 'Fun', 'Editor'];
 
 test.describe('the help index', { tag: '@smoke' }, () => {
   test('shows every category, the commands in columns that fit the screen, and a tapped name goes to the prompt', async ({ page, hasTouch }) => {
@@ -55,12 +55,12 @@ test.describe('the help index', { tag: '@smoke' }, () => {
     for (const heading of CATEGORIES) {
       await expect(output.getByText(heading, { exact: true })).toBeVisible();
     }
-    // The portfolio is a grid of names and what they do...
-    await expect(output.locator('.grid .cell').filter({ hasText: 'change the colour theme' })).toHaveCount(1);
-    // ...and every other category a column: its title over every one of its commands, by name,
-    // nothing cut and nothing counted.
+    // Every category is a column: its title over every one of its commands, by name, nothing
+    // cut and nothing counted, and no summaries (they are in help --all).
+    await expect(output.locator('.grid')).toHaveCount(0);
+    await expect(output.getByText('change the colour theme')).toHaveCount(0);
     const columns = output.locator('.lists .list');
-    await expect(columns).toHaveCount(CATEGORIES.length - 1);
+    await expect(columns).toHaveCount(CATEGORIES.length);
     const shape = await columns.evaluateAll((lists) =>
       lists.map((list) => ({
         title: list.querySelector('.list-title')?.textContent ?? '',
@@ -69,7 +69,7 @@ test.describe('the help index', { tag: '@smoke' }, () => {
         right: list.getBoundingClientRect().right,
       })),
     );
-    expect(shape.map((column) => column.title)).toEqual(CATEGORIES.slice(1));
+    expect(shape.map((column) => column.title)).toEqual(CATEGORIES);
     for (const column of shape) {
       expect(column.names.length, column.title).toBeGreaterThan(0);
       expect(column.names, column.title).toEqual([...column.names].sort((a, b) => a.localeCompare(b)));
@@ -77,7 +77,7 @@ test.describe('the help index', { tag: '@smoke' }, () => {
     expect(shape.find((column) => column.title === 'Files')?.names).toEqual(expect.arrayContaining(['cat', 'cd', 'find', 'ls', 'tree']));
     expect(shape.find((column) => column.title === 'Editor')?.names).toEqual(['less', 'more', 'nano']);
     expect(await output.getByText(/\+\d+ more/).count()).toBe(0);
-    // A desktop shows the seven side by side; a phone three or four a band.
+    // A desktop shows the eight side by side; a phone three or four a band.
     const bands = new Set(shape.map((column) => column.top)).size;
     if (test.info().project.name === 'desktop-chrome') expect(bands).toBe(1);
     else expect(bands).toBeGreaterThanOrEqual(2);
@@ -153,12 +153,12 @@ test.describe('help and theme', { tag: '@smoke' }, () => {
       await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
     } else await run(page, 'help');
     const output = lastEntry(page).locator('.command-output');
-    // The portfolio comes first. A phone shows a long output from its start, so its heading is in
-    // view; a desktop follows the prompt, and the index, every command in columns, is taller than
-    // its screen now, so there the heading is in view once the output is scrolled to its start.
-    const heading = output.getByText('Portfolio', { exact: true });
+    // Vesen's own commands come first. A phone shows a long output from its start, so the title
+    // is in view; a desktop follows the prompt, and the index, every command in columns, is
+    // taller than its screen, so there the title is in view once the output is scrolled to its start.
+    const heading = output.getByText('Vesen', { exact: true });
     await expect(heading).toBeVisible();
-    await expect(output.locator('.text').first()).toHaveText('Portfolio');
+    await expect(output.locator('.list-title').first()).toHaveText('Vesen');
     if (hasTouch) await expect(heading).toBeInViewport();
     await expect(output.getByRole('button', { name: 'help --all', exact: true })).toBeVisible();
 
@@ -179,7 +179,7 @@ test.describe('help and theme', { tag: '@smoke' }, () => {
     await page.goto('/');
     await run(page, 'help');
     await run(page, 'theme ls');
-    const heading = page.locator('[role="log"]').getByText('Portfolio', { exact: true }).first();
+    const heading = page.locator('[role="log"]').getByText('Vesen', { exact: true }).first();
     const before = await heading.evaluate((el) => getComputedStyle(el).color);
     // The theme ls entry itself, which stays where it is as later lines are added.
     const listing = page.locator('[role="log"] .entry').nth((await page.locator('[role="log"] .entry').count()) - 1);

@@ -8,7 +8,7 @@ import { allCommands } from '../lib/catalogue';
 /** What --help, help and man say about help, besides its spec (help.ts). */
 export const doc: CommandDoc = {
   description:
-    "With no COMMAND, lists the portfolio commands with what each does, then the names of the rest in a column per category; with -a, every command with what it does. Tap a name to put it at the prompt. With a COMMAND, shows its options and examples, as 'COMMAND --help' does. 'help keys' lists the keys the terminal answers to.",
+    "With no COMMAND, lists every command by name in a column per category, vesen's own first; with -a, every command with what it does. Tap a name to put it at the prompt. With a COMMAND, shows its options and examples, as 'COMMAND --help' does. 'help keys' lists the keys the terminal answers to.",
 };
 
 export async function run(ctx: CommandContext): Promise<ExitCode> {

@@ -11,18 +11,18 @@ import { allSpecFiles } from '../index';
 const text = (blocks: readonly Block[]): string => blocks.map(plain).join('');
 const literal = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/** The categories the index gives a column: every one but the portfolio. */
-const COLUMNS = CATEGORY_ORDER.filter((category) => category !== 'portfolio');
+/** The categories the index gives a column: every one, vesen's own (the portfolio) first. */
+const COLUMNS = CATEGORY_ORDER;
 
 describe('help', () => {
-  it('is the portfolio commands with their summaries, then a column of every name for each other category', async () => {
+  it("is a column of every name for each category, vesen's own first, with no summaries", async () => {
     const s = await session({ cols: 40 });
     const result = await s.run('help');
     expect(result.status).toBe(0);
     const listed = text(result.blocks);
-    expect(listed.indexOf('Portfolio')).toBe(0);
+    expect(listed.indexOf('Vesen')).toBe(0);
     for (const spec of s.app.shell.registry.list({ category: 'portfolio' })) {
-      expect(listed, spec.name).toMatch(new RegExp(`^${literal(spec.name)} +${literal(spec.summary)}$`, 'm'));
+      expect(listed, spec.name).not.toContain(spec.summary);
     }
     // One lists block: a column per category, headed by its name, with every one of its
     // commands under it by name and nothing cut, each a tap that puts it at the prompt.
@@ -49,15 +49,15 @@ describe('help', () => {
     // longest name, and no row of them is wider than the screen.
     const screen = renderScreen(lists, 40);
     for (const row of screen) expect(row.length, row).toBeLessThanOrEqual(40);
-    const titles = screen.filter((row) => /^(Files|System)\b/.test(row));
-    expect(titles[0]).toMatch(/^Files +Text +Shell$/);
+    const titles = screen.filter((row) => /^(Vesen|System)\b/.test(row));
+    expect(titles[0]).toMatch(/^Vesen +Files +Text +Shell$/);
     expect(titles[1]).toMatch(/^System +Network +Fun +Editor$/);
     s.stop();
   });
 
   it('names every command on one line per category in a pipe', async () => {
     const piped = await session({ cols: 40, tty: false });
-    const listed = (await piped.run('help')).stdoutPlain;
+    const listed = `\n${(await piped.run('help')).stdoutPlain}`;
     for (const category of COLUMNS) {
       const names = piped.app.shell.registry.list({ category }).map((spec) => spec.name);
       expect(listed, category).toContain(`\n${CATEGORY_TITLES[category]}: ${names.join(' ')}\n`);
@@ -77,14 +77,14 @@ describe('help', () => {
     for (const hidden of s.app.shell.registry.list({ includeHidden: true }).filter((spec) => spec.hidden)) {
       expect(listed).not.toMatch(new RegExp(`^${literal(hidden.name)} `, 'm'));
     }
-    expect(listed.indexOf('Portfolio')).toBe(0);
+    expect(listed.indexOf('Vesen')).toBe(0);
     s.stop();
   });
 
   it('makes each name a tap that puts it at the prompt', async () => {
     const { blocks } = await runLine('help');
-    const grid = blocks.find((block) => block.type === 'grid');
-    const theme = grid?.type === 'grid' ? grid.items.find((item) => item.text === 'theme') : undefined;
+    const lists = blocks.find((block) => block.type === 'lists');
+    const theme = lists?.type === 'lists' ? lists.columns.flatMap((column) => column.items).find((item) => item.text === 'theme') : undefined;
     expect(isTrustedAction(theme?.action)).toBe(true);
     expect(theme?.action).toMatchObject({ kind: 'insert', text: 'theme ' });
   });

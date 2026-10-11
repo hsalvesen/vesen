@@ -261,7 +261,7 @@ test.describe('focus', { tag: '@smoke' }, () => {
     // With the keyboard put away, output stays something to read. (A tapped command name is
     // different: it goes to the prompt to be finished, so it opens the keyboard.)
     await prompt(page).evaluate((input) => input.blur());
-    await page.locator('main').getByText('Portfolio', { exact: true }).first().tap();
+    await page.locator('main').getByText('Vesen', { exact: true }).first().tap();
     await expect(prompt(page)).not.toBeFocused();
   });
 
