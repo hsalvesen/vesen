@@ -6,21 +6,21 @@
   container queries are missing, a viewport media query decides instead.
 
   Everything is drawn with text interpolation from the view model, which comes only from the
-  weather command. Colours are role and palette tokens; a range bar is a CSS strip shaded from
-  the cold role to the hot one, with a tick at the current temperature, laid over its text
-  drawing (box-drawing glyphs from the terminal's font), which keeps it exactly as wide as its
-  columns and is what a copy picks up. Screen readers hear one summary, not the art. The chips
-  are the command's trusted actions only; under 'Matches:' the place shown comes first, marked ›
-  and outlined, so which of the same-named places this is stays plain.
+  weather command, and everything drawn is the text itself, on the character grid at the
+  terminal's line height: the pictogram is ASCII art, and a range bar is its characters
+  ('--==|=----'), each cell its own span, the = cells shaded from the cold role to the hot one by
+  where they sit on the scale. Colours are role and palette tokens. Screen readers hear one
+  summary, not the art. The chips are the command's trusted actions only; under 'Matches:' the
+  place shown comes first, marked * in the terminal's foreground, so which of the same-named
+  places this is stays plain.
 
   Markup inside the text blocks is written without whitespace between tags on purpose: they
   preserve whitespace, so any space Svelte kept there would show.
 -->
 <script lang="ts">
   import { colourVar, isTrustedAction, type Action, type ChipItem } from '../../output/model';
-  import type { Line, RangeBar, WeatherCardProps } from '../../services/weather/types';
-  import { MATCHES_LABEL, ROLE_COLOUR } from '../../services/weather/view';
-  import { isArtRole } from '../../services/weather/wmo';
+  import type { Line, WeatherCardProps } from '../../services/weather/types';
+  import { BAR_NOW, BAR_RANGE, CHOSEN_MARK, MATCHES_LABEL, ROLE_COLOUR } from '../../services/weather/view';
   import type { ComponentBlockProps } from './registry';
 
   let { view, alt, onaction }: ComponentBlockProps = $props();
@@ -43,19 +43,32 @@
       .join(' '),
   );
 
-  /** The narrowest a day's range may be drawn, in percent of the bar, so a steady day still shows. */
-  const MIN_SPAN = 8;
+  /** One run of a range bar's text: the scale, a range cell, or the mark at the current temperature. */
+  interface BarCell {
+    readonly kind: 'track' | 'range' | 'now';
+    readonly text: string;
+    /** A range cell's share of the cold role, from 100% at the bar's left end to 0% at its right. */
+    readonly cold: number;
+  }
 
-  function barStyle(bar: RangeBar): string {
-    let lo = Math.min(100, Math.max(0, Math.round(bar.lo)));
-    let hi = Math.min(100, Math.max(lo, Math.round(bar.hi)));
-    if (hi - lo < MIN_SPAN) {
-      const middle = (lo + hi) / 2;
-      lo = Math.max(0, Math.min(100 - MIN_SPAN, Math.round(middle - MIN_SPAN / 2)));
-      hi = lo + MIN_SPAN;
+  /**
+   * The bar's text as cells: runs of the scale's - in one span, each = its own, coloured by its
+   * place across the whole bar, so a warm day's range sits in the warm colours.
+   */
+  function barCells(text: string): BarCell[] {
+    const cells: BarCell[] = [];
+    const last = Math.max(1, text.length - 1);
+    for (let i = 0; i < text.length; i += 1) {
+      const ch = text.charAt(i);
+      if (ch === BAR_RANGE) cells.push({ kind: 'range', text: ch, cold: Math.round(100 * (1 - i / last)) });
+      else if (ch === BAR_NOW) cells.push({ kind: 'now', text: ch, cold: 0 });
+      else {
+        const previous = cells[cells.length - 1];
+        if (previous?.kind === 'track') cells[cells.length - 1] = { ...previous, text: previous.text + ch };
+        else cells.push({ kind: 'track', text: ch, cold: 0 });
+      }
     }
-    const now = bar.now === undefined ? '' : `; --now: ${Math.min(100, Math.max(0, Math.round(bar.now)))}%`;
-    return `--lo: ${lo}%; --hi: ${hi}%${now}`;
+    return cells;
   }
 
   function colour(role: string): string {
@@ -63,20 +76,13 @@
     return `color: ${colourVar(token)}`;
   }
 
-  /**
-   * A line that starts with the pictogram: its art rows carry only the art roles (wmo.ts), which
-   * no text line starts with. Such a line is drawn at line height 1, so the blocks of one row
-   * meet the blocks of the next, as the terminal draws block art.
-   */
-  const artLine = (row: Line): boolean => row.length > 0 && isArtRole(row[0]?.[0]);
-
   function run(action: Action): void {
     if (isTrustedAction(action)) onaction?.(action);
   }
 </script>
 
 <!-- One line per row; no whitespace between tags, which the pre-formatted blocks would show. -->
-{#snippet lines(rows: readonly Line[])}{#each rows as row}<div class="wx-line" class:wx-art={artLine(row)}>{#if row.length === 0}<br />{:else}{#each row as segment}{#if segment[0] === 'bar'}<span class="wx-bar" style={barStyle(segment[2])}><span class="wx-track"></span><span class="wx-fill"></span>{#if segment[2].now !== undefined}<span class="wx-now"></span>{/if}<span class="wx-bar-text">{segment[1]}</span></span>{:else}<span style={colour(segment[0])}>{segment[1]}</span>{/if}{/each}{/if}</div>{/each}{/snippet}
+{#snippet lines(rows: readonly Line[])}{#each rows as row}<div class="wx-line">{#if row.length === 0}<br />{:else}{#each row as segment}{#if segment[0] === 'bar'}{#each barCells(segment[1]) as cell}{#if cell.kind === 'range'}<span class="wx-range" style="--cold: {cell.cold}%">{cell.text}</span>{:else}<span class={cell.kind === 'now' ? 'wx-now' : 'wx-track'}>{cell.text}</span>{/if}{/each}{:else}<span style={colour(segment[0])}>{segment[1]}</span>{/if}{/each}{/if}</div>{/each}{/snippet}
 
 {#snippet chip(item: ChipItem)}
   {#if onaction && isTrustedAction(item.action)}
@@ -99,7 +105,7 @@
     {#if also.length > 0}
       <div class="wx-chips" role="group" aria-label="Places with this name">
         <span class="wx-also">{MATCHES_LABEL}</span>
-        {#if chosen !== null}<span class="wx-chip wx-chosen" aria-current="true"><span class="wx-mark" aria-hidden="true">{'› '}</span>{chosen}</span>{/if}
+        {#if chosen !== null}<span class="wx-chip wx-chosen" aria-current="true"><span class="wx-mark" aria-hidden="true">{`${CHOSEN_MARK} `}</span>{chosen}</span>{/if}
         {#each also as item}{@render chip(item)}{/each}
       </div>
     {/if}
@@ -127,12 +133,6 @@
     display: none;
   }
 
-  /* The five lines beside the pictogram: block rows touch, as in the terminal's block art
-     (styles/terminal.css, .art-block). The text beside them is set tighter for those lines. */
-  .wx-art {
-    line-height: 1;
-  }
-
   @container wx (min-width: 74ch) {
     .wx-wide {
       display: block;
@@ -156,52 +156,26 @@
     }
   }
 
-  /* A range bar: the ASCII drawing sets its width and is what a copy takes, drawn transparent
-     under a strip shaded from cold to hot across the whole scale, cut to the day's range. */
-  .wx-bar {
-    position: relative;
-    display: inline-block;
-  }
-
-  /* No shadow either: vintage mode's colour fringes (styles/crt.css) are fixed colours, which
-     transparent glyphs would still cast. */
-  .wx-bar-text {
-    color: transparent;
-    text-shadow: none;
-  }
-
-  .wx-track,
-  .wx-fill {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 50%;
-    height: 0.45em;
-    transform: translateY(-50%);
-    border-radius: 0.25em;
-    pointer-events: none;
-  }
-
+  /* A range bar's cells: the scale muted, the mark at the current temperature strong. */
   .wx-track {
-    background: var(--role-muted, var(--theme-bright-black));
-    opacity: 0.35;
-  }
-
-  .wx-fill {
-    background: linear-gradient(to right, var(--role-cold, var(--theme-cyan)), var(--role-hot, var(--theme-red)));
-    -webkit-clip-path: inset(0 calc(100% - var(--hi, 100%)) 0 var(--lo, 0%) round 0.25em);
-    clip-path: inset(0 calc(100% - var(--hi, 100%)) 0 var(--lo, 0%) round 0.25em);
+    color: var(--role-muted, var(--theme-bright-black));
   }
 
   .wx-now {
-    position: absolute;
-    left: var(--now, 50%);
-    top: 15%;
-    bottom: 15%;
-    width: 2px;
-    margin-left: -1px;
-    background: var(--role-fg-strong, var(--theme-foreground));
-    pointer-events: none;
+    color: var(--role-fg-strong, var(--theme-foreground));
+  }
+
+  /* A range cell is the cold role, mixed towards the hot one by its place on the scale (--cold is
+     its share of the cold role, set inline). An engine without color-mix keeps the cold role: a
+     declaration with var() is never dropped at parse time, so the mix sits behind @supports. */
+  .wx-range {
+    color: var(--role-cold, var(--theme-cyan));
+  }
+
+  @supports (color: color-mix(in oklab, red 50%, blue)) {
+    .wx-range {
+      color: color-mix(in oklab, var(--role-cold, var(--theme-cyan)) var(--cold, 100%), var(--role-hot, var(--theme-red)));
+    }
   }
 
   .wx-chips {
@@ -231,10 +205,9 @@
     cursor: pointer;
   }
 
-  /* The place shown, among its namesakes: outlined in the accent and bold, as stock's current
-     range is; the accent reaches 3:1 on the chip in every theme (lib/roles.ts checks it). */
+  /* The place shown, among its namesakes: the same chip as the others, bold, with its * mark;
+     the mark itself says which is chosen, so no accent colour or outline is needed. */
   .wx-chosen {
-    border-color: var(--role-accent, var(--theme-green));
     font-weight: bold;
   }
 

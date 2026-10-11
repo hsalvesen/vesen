@@ -249,9 +249,12 @@ export function matchesQualifier(fields: QualifierFields, qualifier: string): bo
 
 // ── Labels ─────────────────────────────────────────────────────────────────────────────────
 
+/** What an approximate place's label starts with: a tilde, the terminal's 'about'. */
+export const APPROXIMATE = '~ ';
+
 /**
  * How a place is titled. Compact: 'Gadigal Country · Sydney, AU' (PS is spelled 'Palestine').
- * Wide: 'Gadigal Country · Sydney, New South Wales, Australia'. Approximate places start '≈ '.
+ * Wide: 'Gadigal Country · Sydney, New South Wales, Australia'. Approximate places start '~ '.
  */
 export function placeLabel(place: Place, style: 'compact' | 'wide'): string {
   const head = place.knownAs ? `${place.name} · ${place.knownAs}` : place.name;
@@ -270,7 +273,7 @@ export function placeLabel(place: Place, style: 'compact' | 'wide'): string {
   } else {
     add(place.countryCode === PS ? countryLabel(PS) : place.countryCode ?? place.country);
   }
-  return `${place.approximate ? '≈ ' : ''}${parts.join(', ')}`;
+  return `${place.approximate ? APPROXIMATE : ''}${parts.join(', ')}`;
 }
 
 // ── Suggestions ────────────────────────────────────────────────────────────────────────────

@@ -184,16 +184,17 @@ export interface RangeBar {
 /** A run of text with a role. */
 export type TextSegment = readonly [WeatherRole, string];
 /**
- * A range bar. The text is an ASCII drawing of it ('--====----') exactly as many columns wide
- * as the bar, used for plain text and for measuring; the card draws the bar from `RangeBar`.
+ * A range bar. The text is its drawing ('--==|=----', view.ts barText) exactly as many columns
+ * wide as the bar: what plain text and copies get, and what the card draws, cell by cell, with
+ * each = coloured by its place on the scale.
  */
 export type BarSegment = readonly ['bar', string, RangeBar];
 export type Segment = TextSegment | BarSegment;
 export type Line = readonly Segment[];
 
 /**
- * An art row: segments whose text totals exactly 13 columns, in the block and box-drawing
- * characters of the terminal's font, each with one of the art roles (ART_ROLES in wmo.ts).
+ * An art row: segments whose text totals exactly 13 columns of printable ASCII, each with one of
+ * the art roles (ART_ROLES in wmo.ts).
  */
 export type ArtRow = readonly TextSegment[];
 
@@ -266,7 +267,7 @@ export interface WeatherCardProps extends WeatherView {
   readonly chips: readonly ChipItem[];
   /** Same-named places elsewhere, as chips under 'Matches:', after the one shown. */
   readonly also: readonly ChipItem[];
-  /** The place shown, as the list of matches names it, marked › at the head of `also`; set when `also` has places. */
+  /** The place shown, as the list of matches names it, marked * at the head of `also`; set when `also` has places. */
   readonly chosen?: string;
 }
 

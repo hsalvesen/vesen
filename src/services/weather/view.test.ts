@@ -8,8 +8,8 @@ import { UNIT_PRESETS, UNIT_SYSTEMS } from './units';
 import { ART, ART_WIDTH } from './wmo';
 import { textWidth } from '../../output/model';
 import {
-  COMPACT_COLS, ROLE_COLOUR, WIDE_COLS, barText, buildView, fit, lineWidth, noteText, renderOneLine, renderPlain,
-  toPlain, wrap,
+  BAR_NOW, BAR_RANGE, BAR_TRACK, COMPACT_COLS, ROLE_COLOUR, WIDE_COLS, barText, buildView, fit, fitLine, lineWidth, noteText,
+  renderOneLine, renderPlain, toPlain, wrap,
 } from './view';
 
 /** 14:15 in Sydney (GMT+11) and 05:15 in Oslo (GMT+2), when the fixtures were recorded. */
@@ -111,11 +111,21 @@ describe('cards', () => {
     expect(toPlain(view.wide).split('\n')[0]).toBe('Weather for Gadigal Country · Sydney, New South Wales, Australia (°C)');
   });
 
-  it('cuts a long title with an ellipsis, keeping the units', () => {
+  it('cuts a long title with three periods, keeping the units', () => {
     const view = buildView(sydney, longPlace, UNIT_PRESETS.metric, NOW);
     const title = toPlain(view.compact).split('\n')[0] ?? '';
-    expect(title).toMatch(/… \(°C\)$/);
-    expect(textWidth(title)).toBeLessThanOrEqual(COMPACT_COLS);
+    expect(title).toMatch(/\w\.\.\. \(°C\)$/);
+    expect(textWidth(title)).toBe(COMPACT_COLS);
+  });
+
+  it('writes every separator, marker and cut in ASCII; degrees and the place names keep their typography', () => {
+    const view = buildView(sydney, { ...gadigal, credit: 'osm' }, UNIT_PRESETS.metric, NOW, { days: 7, notes: ALL_NOTES });
+    for (const text of [renderPlain(view, 'compact'), renderPlain(view), renderOneLine(view)]) {
+      // Nothing drawn or punctuating from outside ASCII: only ° in readings, · in the place name
+      // and © in OpenStreetMap's credit remain, which are not drawings.
+      expect(text.replace(/[°·©]/g, '')).toMatch(/^[\x20-\x7e\n]*$/);
+    }
+    expect(renderPlain(view)).toContain('Gadigal Country · Sydney');
   });
 
   it('converts current conditions and days into the chosen units', () => {
@@ -148,8 +158,8 @@ describe('cards', () => {
     const view = buildView(blank, gadigal, UNIT_PRESETS.metric, NOW);
     const compact = renderPlain(view, 'compact');
     expect(compact).toContain('-°C feels -');
-    expect(compact).toContain('Hum - · - mm');
-    expect(compact).toContain('UV - · ---');
+    expect(compact).toContain('Hum - | - mm');
+    expect(compact).toContain('UV - | ---');
     expect(compact.split('\n')).toContain(`Today${' '.repeat(4)}-${' '.repeat(10)}-${' '.repeat(4)}- Unknown`);
     expect(view.days.every((d) => d.bar === null)).toBe(true);
     expect(view.current.label).toBe('Unknown');
@@ -220,18 +230,32 @@ describe('range bars', () => {
     const view = buildView(sydney, gadigal, UNIT_PRESETS.metric, NOW, { days: 7 });
     expect(view.days.filter((d) => d.bar?.now !== undefined).map((d) => d.label)).toEqual(['Today']);
     for (const layout of [view.compact, view.wide]) {
-      const markers = layout.flatMap((line) => line.filter((s) => s[0] === 'bar' && s[1].includes('┃')));
+      const markers = layout.flatMap((line) => line.filter((s) => s[0] === 'bar' && s[1].includes(BAR_NOW)));
       expect(markers).toHaveLength(1);
     }
   });
 
-  it('draws bars of the exact width from box-drawing glyphs, one cell each', () => {
-    expect(barText({ lo: 0, hi: 100 }, 10)).toBe('━━━━━━━━━━');
-    expect(barText({ lo: 20, hi: 60 }, 10)).toBe('──━━━━────');
-    expect(barText({ lo: 50, hi: 50 }, 5)).toBe('──━──');
-    expect(barText({ lo: 0, hi: 100, now: 100 }, 5)).toBe('━━━━┃');
-    expect(barText({ lo: 0, hi: 40, now: 0 }, 5)).toBe('┃━───');
+  it('draws bars of the exact width in ASCII, one cell each: - outside the range, = inside, | now', () => {
+    expect([BAR_TRACK, BAR_RANGE, BAR_NOW]).toEqual(['-', '=', '|']);
+    expect(barText({ lo: 0, hi: 100 }, 10)).toBe('==========');
+    expect(barText({ lo: 20, hi: 60 }, 10)).toBe('--====----');
+    expect(barText({ lo: 50, hi: 50 }, 5)).toBe('--=--');
+    expect(barText({ lo: 0, hi: 100, now: 100 }, 5)).toBe('====|');
+    expect(barText({ lo: 0, hi: 40, now: 0 }, 5)).toBe('|=---');
     expect(textWidth(barText({ lo: 20, hi: 60, now: 40 }, 10))).toBe(10);
+  });
+
+  it('keeps at least one = in every bar, beside the | when that would cover the only one', () => {
+    expect(barText({ lo: 50, hi: 50, now: 50 }, 5)).toBe('--|=-');
+    expect(barText({ lo: 100, hi: 100, now: 100 }, 5)).toBe('---=|');
+    expect(barText({ lo: 0, hi: 0, now: 0 }, 5)).toBe('|=---');
+    expect(barText({ lo: 0, hi: 0, now: 0 }, 1)).toBe('|');
+    for (let lo = 0; lo <= 100; lo += 5) {
+      for (const cols of [5, 10]) {
+        expect(barText({ lo, hi: lo, now: lo }, cols), `${lo}% in ${cols}`).toContain('=');
+        expect(barText({ lo, hi: Math.min(100, lo + 3), now: lo }, cols), `${lo}% in ${cols}`).toContain('=');
+      }
+    }
   });
 });
 
@@ -248,8 +272,8 @@ describe('notes and credits', () => {
     expect(noteText({ kind: 'stale', ageMs: 2 * 3_600_000, cause: 'upstream' })).toBe('Showing the forecast from 2 h ago (Open-Meteo had a problem).');
     expect(noteText({ kind: 'country-point' })).toBe('Country-level point. Try a city for local weather.');
     expect(noteText({ kind: 'approximate' })).toBe('Approximate location from your network.');
-    expect(noteText({ kind: 'approximate', label: '≈ Sydney, New South Wales, AU' })).toBe(
-      '≈ Sydney, New South Wales, AU (approximate, from your network)',
+    expect(noteText({ kind: 'approximate', label: '~ Sydney, New South Wales, AU' })).toBe(
+      '~ Sydney, New South Wales, AU (approximate, from your network)',
     );
     expect(noteText({ kind: 'device-fallback', reason: 'denied' })).toBe(
       'Location permission was denied, so this uses an approximate network location.',
@@ -275,7 +299,7 @@ describe('notes and credits', () => {
       expect(at).toBeGreaterThan(0);
       expect(text(layout).slice(at, at + 4)).toEqual([
         'Matches:',
-        '› Springfield, Missouri, US',
+        '* Springfield, Missouri, US',
         '  Springfield, Illinois, US',
         '  Springfield, Massachusetts, US',
       ]);
@@ -306,7 +330,7 @@ describe('notes and credits', () => {
     const country: Place = { ...osloPlace, kind: 'country', approximate: true };
     const view = buildView(oslo, country, UNIT_PRESETS.metric, NOW, { notes: [{ kind: 'country-point' }] });
     expect(view.notes).toEqual([
-      '≈ Oslo, NO (approximate, from your network)',
+      '~ Oslo, NO (approximate, from your network)',
       'Country-level point. Try a city for local weather.',
     ]);
   });
@@ -314,10 +338,10 @@ describe('notes and credits', () => {
   it('always credits Open-Meteo, and OpenStreetMap when it found the place', () => {
     const plain = buildView(sydney, gadigal, UNIT_PRESETS.metric, NOW);
     expect(plain.attribution).toEqual({ openMeteo: 'Weather data by Open-Meteo.com (CC BY 4.0)', osm: null, updated: '14:15 GMT+11' });
-    expect(renderPlain(plain)).toContain('Updated 14:15 GMT+11 · Weather data by Open-Meteo.com (CC BY 4.0)');
+    expect(renderPlain(plain)).toContain('Updated 14:15 GMT+11 | Weather data by Open-Meteo.com (CC BY 4.0)');
     expect(renderPlain(plain, 'compact').split('\n').slice(-2)).toEqual([
       'Weather data by Open-Meteo.com',
-      '(CC BY 4.0) · Updated 14:15 GMT+11',
+      '(CC BY 4.0) | Updated 14:15 GMT+11',
     ]);
 
     const osm = buildView(sydney, { ...gadigal, credit: 'osm' }, UNIT_PRESETS.metric, NOW);
@@ -329,10 +353,10 @@ describe('notes and credits', () => {
 describe('plain text', () => {
   it('prints one line for --oneline', () => {
     expect(renderOneLine(buildView(oslo, osloPlace, UNIT_PRESETS.metric, NOW))).toBe(
-      'Oslo, NO: clear sky, 12°C (feels 9°C), SSW 13 km/h · today 10–17°C, 0% rain',
+      'Oslo, NO: clear sky, 12°C (feels 9°C), SSW 13 km/h | today 10-17°C, 0% rain',
     );
     expect(renderOneLine(buildView(sydney, gadigal, UNIT_PRESETS.imperial, NOW))).toBe(
-      'Gadigal Country · Sydney, AU: clear sky, 76°F (feels 80°F), W 3 mph · today 60–78°F, 98% rain',
+      'Gadigal Country · Sydney, AU: clear sky, 76°F (feels 80°F), W 3 mph | today 60-78°F, 98% rain',
     );
   });
 
@@ -355,12 +379,24 @@ describe('text measurement', () => {
     expect(textWidth('17°C · ≈ …')).toBe(10);
   });
 
-  it('fits and wraps by columns', () => {
-    expect(fit('Gadigal Country', 8)).toBe('Gadigal…');
+  it('fits and wraps by columns, cutting with three periods', () => {
+    expect(fit('Gadigal Country', 8)).toBe('Gadig...');
     expect(fit('Oslo', 8)).toBe('Oslo');
+    expect(fit('Gadigal Country', 4)).toBe('G...');
+    expect(fit('Gadigal Country', 3)).toBe('...');
+    expect(fit('Gadigal Country', 2)).toBe('Ga');
+    expect(fit('Gadigal Country', 0)).toBe('');
     expect(textWidth(fit('東京都千代田区', 7))).toBeLessThanOrEqual(7);
+    expect(fit('東京都千代田区', 7)).toBe('東京...');
     expect(wrap('Showing the forecast from 14 min ago', 20)).toEqual(['Showing the forecast', 'from 14 min ago']);
-    expect(wrap('Supercalifragilistic', 10)).toEqual(['Supercali…']);
+    expect(wrap('Supercalifragilistic', 10)).toEqual(['Superca...']);
+    expect(fitLine([['text', 'Humidity 51%'], ['dim', ' | '], ['mm', 'Precip 0.0 mm']], 20)).toEqual([
+      ['text', 'Humidity 51%'],
+      ['dim', ' | '],
+      ['mm', 'Pr...'],
+    ]);
+    expect(fitLine([['text', 'Humidity 51%'], ['dim', ' | '], ['mm', 'Precip 0.0 mm']], 15)).toEqual([['text', 'Humidity 51%'], ['dim', '...']]);
+    expect(fitLine([['text', 'Humidity 51%'], ['dim', ' | '], ['mm', 'Precip 0.0 mm']], 14)).toEqual([['text', 'Humidity 51...']]);
   });
 
   it('maps every role to a theme colour token', () => {

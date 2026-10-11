@@ -35,8 +35,8 @@ export function placeWords(argv: readonly string[]): string[] {
 function loadingLabel(argv: readonly string[]): string {
   if (argv.includes('--forget') || argv.includes('--legend')) return 'weather';
   const place = placeWords(argv).join(' ');
-  if (place === '-') return 'Fetching the forecast…';
-  return place === '' ? 'Locating you…' : `Searching for “${place}”…`;
+  if (place === '-') return 'Fetching the forecast...';
+  return place === '' ? 'Locating you...' : `Searching for "${place}"...`;
 }
 
 const spec: CommandSpec & RawArgsSpec & RunnerChoice = {

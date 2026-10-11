@@ -159,10 +159,10 @@ describe('the spec', () => {
   });
 
   it('says what it is doing before its body has said anything', () => {
-    expect(spec.loadingLabel?.(['weather', 'Springfield,', 'IL'])).toBe('Searching for “Springfield, IL”…');
-    expect(spec.loadingLabel?.(['weather', '-d', '3', '-u', 'Oslo'])).toBe('Searching for “Oslo”…');
-    expect(spec.loadingLabel?.(['weather'])).toBe('Locating you…');
-    expect(spec.loadingLabel?.(['weather', '--here'])).toBe('Locating you…');
+    expect(spec.loadingLabel?.(['weather', 'Springfield,', 'IL'])).toBe('Searching for "Springfield, IL"...');
+    expect(spec.loadingLabel?.(['weather', '-d', '3', '-u', 'Oslo'])).toBe('Searching for "Oslo"...');
+    expect(spec.loadingLabel?.(['weather'])).toBe('Locating you...');
+    expect(spec.loadingLabel?.(['weather', '--here'])).toBe('Locating you...');
     expect(placeWords(['weather', '--units', 'uk', '-33.87,151.21'])).toEqual(['-33.87,151.21']);
   });
 });
@@ -266,7 +266,7 @@ describe('a curated place', () => {
       '7 days': 'weather -d 7 Gadigal Country',
       'my location': 'weather --here',
     });
-    expect(result.labels).toEqual(['Searching for “Gadigal”…', 'Fetching forecast for Gadigal Country…']);
+    expect(result.labels).toEqual(['Searching for "Gadigal"...', 'Fetching forecast for Gadigal Country...']);
     r.stop();
   });
 
@@ -314,7 +314,7 @@ describe('a curated place', () => {
   it('writes one line, or JSON, for scripts', async () => {
     const r = rig();
     const oneline = await r.run('weather --oneline Gadigal');
-    expect(oneline.stdout).toBe('Gadigal Country · Sydney, AU: clear sky, 24°C (feels 26°C), W 6 km/h · today 16–26°C, 98% rain');
+    expect(oneline.stdout).toBe('Gadigal Country · Sydney, AU: clear sky, 24°C (feels 26°C), W 6 km/h | today 16-26°C, 98% rain');
     expect(oneline.card).toBeUndefined();
     const parsed = JSON.parse((await r.run('weather --json Gadigal')).stdout) as Record<string, unknown>;
     expect(parsed).toMatchObject({
@@ -350,8 +350,8 @@ describe('a searched place', () => {
     // Chips on the card, the one shown named first; the list in the text a pipe gets.
     expect(result.card?.props.notes.join(' ')).not.toContain('matches');
     expect(result.card?.props.chosen).toBe('Springfield, Missouri, US');
-    expect(result.card?.plain).toContain('Matches:\n› Springfield, Missouri, US\n  Springfield, Illinois, US\n  Springfield, Massachusetts, US');
-    expect((await r.run('weather Springfield | cat')).stdout).toContain('› Springfield, Missouri, US\n  Springfield, Illinois, US');
+    expect(result.card?.plain).toContain('Matches:\n* Springfield, Missouri, US\n  Springfield, Illinois, US\n  Springfield, Massachusetts, US');
+    expect((await r.run('weather Springfield | cat')).stdout).toContain('* Springfield, Missouri, US\n  Springfield, Illinois, US');
     expect(labelled(result.card?.props.also ?? [])).toEqual({
       'Springfield, Illinois, US': 'weather Springfield, Illinois',
       'Springfield, Massachusetts, US': 'weather Springfield, Massachusetts',
@@ -366,7 +366,7 @@ describe('a searched place', () => {
     expect(result.status).toBe(0);
     expect(result.card?.props.place).toMatchObject({ name: 'Sydney', source: 'nominatim', credit: 'osm' });
     expect(result.card?.plain).toContain('Place search © OpenStreetMap contributors');
-    expect(result.labels).toContain('Searching OpenStreetMap for “Eora Nation”…');
+    expect(result.labels).toContain('Searching OpenStreetMap for "Eora Nation"...');
     r.stop();
   });
 
@@ -418,14 +418,14 @@ describe('location', () => {
     const result = await r.run('weather');
     expect(r.geo.asked).toEqual([]);
     expect(r.network.callsTo('get.geojs.io')).toHaveLength(1);
-    expect(result.card?.props.title.compact).toBe('≈ Sydney, AU');
-    expect(result.card?.props.notes).toContain('≈ Sydney, New South Wales, AU (approximate, from your network)');
+    expect(result.card?.props.title.compact).toBe('~ Sydney, AU');
+    expect(result.card?.props.notes).toContain('~ Sydney, New South Wales, AU (approximate, from your network)');
     expect(labelled(result.chips)).toEqual({
       '°F': 'weather -u',
       '7 days': 'weather -d 7',
       'use precise location': 'weather --here',
     });
-    expect(result.labels).toContain('Locating you (approximate)…');
+    expect(result.labels).toContain('Locating you (approximate)...');
     // Never kept as a recent place.
     expect(r.service.recent()).toEqual([]);
     r.stop();
@@ -482,7 +482,7 @@ describe('location', () => {
     const r = rig();
     const result = await r.run('weather --here');
     expect(r.geo.asked).toEqual([LOCATE_PROMPT_MS]);
-    expect(result.labels).toContain('Waiting for location permission…');
+    expect(result.labels).toContain('Waiting for location permission...');
     expect(result.card?.props.place.source).toBe('device');
     expect(labelled(result.chips)['my location']).toBeUndefined();
     r.stop();

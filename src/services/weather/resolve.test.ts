@@ -254,7 +254,7 @@ describe('status labels', () => {
   it('names each step', async () => {
     const phases: string[] = [];
     await resolve('Eora Nation', { nominatim: true, onPhase: (label) => phases.push(label) });
-    expect(phases).toEqual(['Searching for “Eora Nation”…', 'Searching OpenStreetMap for “Eora Nation”…']);
+    expect(phases).toEqual(['Searching for "Eora Nation"...', 'Searching OpenStreetMap for "Eora Nation"...']);
   });
 });
 

@@ -350,7 +350,7 @@ async function namedPoint(ctx: CommandContext, service: WeatherService, place: P
 }
 
 async function fromNetwork(ctx: CommandContext, service: WeatherService): Promise<Place> {
-  ctx.tty.status('Locating you (approximate)…');
+  ctx.tty.status('Locating you (approximate)...');
   return service.ipLocate(ctx.signal);
 }
 
@@ -362,7 +362,7 @@ async function here(ctx: CommandContext, service: WeatherService): Promise<Locat
   if (permission === 'unsupported' || permission === 'insecure') failure = permission;
   else if (permission === 'denied') failure = 'denied';
   else {
-    ctx.tty.status(permission === 'granted' ? 'Locating you…' : 'Waiting for location permission…');
+    ctx.tty.status(permission === 'granted' ? 'Locating you...' : 'Waiting for location permission...');
     try {
       const fix = await geo.locate({ timeoutMs: permission === 'granted' ? LOCATE_GRANTED_MS : LOCATE_PROMPT_MS, signal: ctx.signal });
       return { place: await devicePlace(ctx, service, fix.lat, fix.lon), notes: [] };
@@ -575,7 +575,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
 async function forecast(ctx: CommandContext, service: WeatherService, args: WeatherArgs): Promise<ExitCode> {
   const located = await locate(ctx, service, args);
   const { place } = located;
-  ctx.tty.status(`Fetching forecast for ${place.name}…`);
+  ctx.tty.status(`Fetching forecast for ${place.name}...`);
   const result = await service.forecast(place.lat, place.lon, ctx.signal);
   service.remember(place);
 

@@ -55,14 +55,10 @@ describe('art', () => {
     expect(Object.keys(ART).sort()).toEqual([...ART_KEYS].sort());
   });
 
-  /**
-   * What the art may be drawn with: spaces, the middle dot and bullet, box drawing (rays, rain,
-   * fog), block elements (discs, clouds, the bolt) and geometric shapes, all in the terminal's
-   * font (scripts/fonts/build-vesen-mono.py, REQUIRED).
-   */
-  const ART_CHARS = /^[ ·•─-◿]*$/u;
+  /** What the art may be drawn with: printable ASCII, the backtick left out (it would end a template literal). */
+  const ART_CHARS = /^[ -_a-~]*$/;
 
-  it.each(ART_KEYS)('%s is 5 rows of exactly 13 columns, in characters the font has', (key) => {
+  it.each(ART_KEYS)('%s is 5 rows of exactly 13 columns of printable ASCII', (key) => {
     const rows = ART[key];
     expect(rows).toHaveLength(ART_HEIGHT);
     for (const row of rows) {
@@ -73,11 +69,36 @@ describe('art', () => {
     }
   });
 
-  it('draws something in every pictogram, with block or box characters', () => {
+  it('draws every pictogram with letters and punctuation, nothing from outside ASCII', () => {
     for (const key of ART_KEYS) {
       const text = ART[key].map((row) => row.map(([, s]) => s).join('')).join('\n');
-      expect(text, key).toMatch(/[─-▟]/u);
+      expect(text, key).toMatch(/[^ \n]/);
+      expect(text, key).toMatch(/^[\x20-\x7e\n]*$/);
+      expect(text, key).not.toContain('`');
     }
+  });
+
+  it('traces each shape with the strokes of its kind', () => {
+    const text = (key: ArtKey): string => ART[key].map((row) => row.map(([, s]) => s).join('')).join('\n');
+    // The sun: a shaded disc between its rays.
+    expect(text('clear')).toMatch(/\\ {3}\| {3}\//);
+    expect(text('clear')).toContain('(:::::)');
+    expect(text('clear')).toMatch(/\/ {3}\| {3}\\/);
+    // The moon: a shaded crescent and dot stars.
+    expect(text('clearNight')).toContain('(::(');
+    expect(text('clearNight').match(/\./g)?.length).toBeGreaterThanOrEqual(5);
+    // Clouds: a rounded top and a flat base.
+    for (const key of ['partly', 'partlyNight', 'cloudy', 'drizzle', 'rain', 'thunder'] as const) {
+      expect(text(key), key).toContain('.-');
+      expect(text(key), key).toContain('(__________)');
+    }
+    // Fog: bands of ~ and -.
+    expect(text('fog')).toMatch(/~{9}/);
+    expect(text('fog')).toMatch(/-{4}/);
+    // Thunder: a bolt of _ and / under the cloud.
+    expect(text('thunder')).toContain('____/');
+    // The unknown mark: a question mark with a dot under its stem.
+    expect(text('unknown').split('\n').slice(2)).toEqual(["      .'     ", '      |      ', '      o      ']);
   });
 
   it('carries only art roles, which no text role shares, so the card can tell the art lines apart', () => {
@@ -105,15 +126,20 @@ describe('art', () => {
     expect(roles('rain')).toEqual(new Set(['cloud', 'rain']));
     expect(roles('sleet')).toEqual(new Set(['cloud', 'rain', 'snow']));
     expect(roles('thunder')).toEqual(new Set(['cloud', 'rain', 'bolt']));
-    expect(roles('fog')).toEqual(new Set(['cloud', 'fog']));
+    expect(roles('cloudy')).toEqual(new Set(['cloud']));
+    expect(roles('snow')).toEqual(new Set(['cloud', 'snow']));
+    expect(roles('fog')).toEqual(new Set(['fog']));
     expect(roles('unknown')).toEqual(new Set(['fog']));
   });
 
   it('draws the rain heavier from drizzle to heavy rain, and the snow thicker', () => {
     const fall = (key: ArtKey) => ART[key].slice(3).map((row) => row.map(([, s]) => s).join(''));
-    expect(fall('drizzle').join('')).toMatch(/^[ ╷]+$/u);
-    expect(fall('rain').join('')).toMatch(/^[ │]+$/u);
-    expect(fall('heavyRain').join('')).toMatch(/^[ ┃]+$/u);
+    expect(fall('drizzle').join('')).toMatch(/^[ '.]+$/);
+    expect(fall('rain').join('')).toMatch(/^[ ',]+$/);
+    expect(fall('heavyRain').join('')).toMatch(/^[ ',]+$/);
+    expect(fall('snow').join('')).toMatch(/^[ *.]+$/);
+    expect(fall('heavySnow').join('')).toMatch(/^[ *.]+$/);
+    expect(fall('sleet').join('')).toMatch(/^[ ',*]+$/);
     const marks = (key: ArtKey) => fall(key).join('').replace(/ /g, '').length;
     expect(marks('drizzle')).toBeLessThan(marks('rain'));
     expect(marks('rain')).toBeLessThan(marks('heavyRain'));
