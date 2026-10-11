@@ -218,11 +218,11 @@ test.describe('the dock on a short screen', { tag: '@smoke' }, () => {
       await focusPrompt(page);
       await check(width >= 375 ? 44 : 40);
       // The twelve keys of the symbols page share the width too (WCAG 2.5.8's 24px at least),
-      // with ••• to come back first.
+      // with ... to come back first.
       await key(page, 'Symbols').tap();
       await expect(key(page, 'Pipe')).toBeVisible();
       await check(24);
-      expect((await keyBoxes(page))[0]?.label).toBe('•••');
+      expect((await keyBoxes(page))[0]?.label).toBe('...');
       await key(page, 'Pipe').tap();
       await expect(prompt(page)).toHaveValue('|');
       await expect(prompt(page)).toBeFocused();

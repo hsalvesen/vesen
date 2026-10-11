@@ -1,9 +1,8 @@
 // cmatrix's rain: what the Matrix app (src/ui/apps/Matrix.svelte) draws through tty.fullscreen,
 // and the still screen cmatrix prints in a pipe, or wherever no full-screen app can show.
 
-/** Half-width katakana (all but ﾛ, which looks like a missing glyph), digits and a few signs: narrow characters, one cell each. */
-export const MATRIX_GLYPHS =
-  'ｦｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾜﾝ0123456789Z:.=*+-<>¦|';
+/** Letters, digits and a few signs: the printable ASCII the original rain was drawn with, one cell each. */
+export const MATRIX_GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789:.=*+-<>|';
 
 /** What cmatrix hands the Matrix app. */
 export interface MatrixView {

@@ -10,7 +10,7 @@ export type ReloadTarget = Pick<
 > & { readonly navigator?: { readonly onLine: boolean } };
 
 /** What the visitor reads just before the reload. */
-export const UPDATE_NOTICE = 'vesen was updated, reloading…';
+export const UPDATE_NOTICE = 'vesen was updated, reloading...';
 
 /**
  * Recovers a tab that is still running an old build after a deploy.

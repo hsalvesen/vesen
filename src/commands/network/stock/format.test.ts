@@ -41,13 +41,14 @@ describe('prices', () => {
 });
 
 describe('changes', () => {
-  it('always show the sign and the arrow, with a real minus', () => {
-    expect(formatChange(0.65, 0.4293, 2)).toBe('▲ +0.65 (+0.43%)');
-    expect(formatChange(-0.8, -0.2397, 2)).toBe(`▼ ${MINUS}0.80 (${MINUS}0.24%)`);
-    expect(formatChange(0, 0, 2)).toBe('◆ 0.00 (0.00%)');
-    expect(formatChange(null, -0.698, 2)).toBe(`▼ ${MINUS}0.70%`);
+  it('always show the sign, in ASCII, which is the marker of the direction', () => {
+    expect(MINUS).toBe('-');
+    expect(formatChange(0.65, 0.4293, 2)).toBe('+0.65 (+0.43%)');
+    expect(formatChange(-0.8, -0.2397, 2)).toBe('-0.80 (-0.24%)');
+    expect(formatChange(0, 0, 2)).toBe('0.00 (0.00%)');
+    expect(formatChange(null, -0.698, 2)).toBe('-0.70%');
     expect(formatChange(null, null, 2)).toBeNull();
-    expect(formatPercent(1.5)).toBe('▲ +1.50%');
+    expect(formatPercent(1.5)).toBe('+1.50%');
     expect(formatPercent(null)).toBeNull();
   });
 

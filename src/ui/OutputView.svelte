@@ -25,8 +25,10 @@
 
 <div class="output">
   {#each blocks as block}
+    <!-- Lines with an alt are a drawing (tree): screen readers hear the alt instead of them. The
+         span and the div are written together, so no whitespace text node sits between them. -->
     {#if block.type === 'lines'}
-      <div class="lines" class:stderr={block.stream === 'stderr'}>
+      {#if block.alt !== undefined}<span class="sr-only">{block.alt}</span>{/if}<div class="lines" class:stderr={block.stream === 'stderr'} aria-hidden={block.alt === undefined ? undefined : 'true'}>
         {#each block.lines as line}
           {@const hang = hangingIndent(line)}
           <!-- A label row's description wraps under itself, not under the label. -->
@@ -35,8 +37,8 @@
       </div>
     {:else if block.type === 'art'}
       <!-- Hidden from screen readers, which hear the alternative text instead of the glyphs. Block
-           art (the banner, figlet) is drawn with its rows touching; art drawn with letters
-           (cowsay, sl, fastfetch's logos) at the terminal's line height. -->
+           art (the banner, text-mode QR codes) is drawn with its rows touching; art drawn with
+           letters and punctuation (cowsay, sl, figlet, fastfetch's logos) at the terminal's line height. -->
       <div class="art-wrap">
         <div
           class="art {artClass(block.text)} {spanClasses(block.style)}"

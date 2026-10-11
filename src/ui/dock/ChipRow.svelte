@@ -2,7 +2,7 @@
   The dock's row of chips (designs/phone-and-instagram.md, "B. Exploring by tapping"; F067): a
   horizontally scrolling listbox of the chips the prompt offers now. A chip's label is the word it
   completes; its name for screen readers says the whole of what a tap does. A tap does what the
-  chip says: a completion goes on the line exactly as Tab would put it there, and a chip marked ⏎
+  chip says: a completion goes on the line exactly as Tab would put it there, and a chip marked >
   runs its line. A long press on a chip that runs puts its line at the prompt instead, to edit.
   Pressing a chip never takes focus from the prompt, so the keyboard stays as it was. A new set of
   chips starts scrolled to its first; the Tab menu's choice is kept in view.
@@ -66,8 +66,7 @@
               class="swatch"
               style:background={chip.swatch}
               aria-hidden="true"
-            ></span>{/if}<span class="label"><b>{chip.label.slice(0, chip.matchLen)}</b>{chip.label.slice(chip.matchLen)}</span
-          >{#if runs && !lead}<span class="glyph run" aria-hidden="true">⏎</span>{/if}
+            ></span>{/if}<span class="label"><b>{chip.label.slice(0, chip.matchLen)}</b>{chip.label.slice(chip.matchLen)}</span>
         </button>
       {/each}
       {#if more > 0}
@@ -141,9 +140,9 @@
     font-weight: bold;
   }
 
+  /* The mark keeps the chip's own colour: a plain-text marker, not a coloured one. */
   .glyph {
     flex: none;
-    color: var(--role-accent);
   }
 
   .swatch {

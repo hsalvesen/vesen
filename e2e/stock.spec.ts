@@ -67,7 +67,13 @@ test.describe('stock', { tag: '@smoke' }, () => {
       await expect(card.locator('.symbol')).toHaveText('AAPL');
       await expect(card.locator('.price')).toHaveText('332.89 USD');
       await expect(card.locator('.badge')).toHaveCount(0);
-      await expect(card.locator('svg path')).toHaveCount(1);
+      // The chart is ASCII text on the grid, five rows, ending in its o; no SVG anywhere in the card.
+      await expect(card.locator('svg')).toHaveCount(0);
+      const plot = card.locator('.spark .plot');
+      await expect(plot).toHaveText(/^[ _\-'\/\\.o\n]+$/);
+      expect(((await plot.textContent()) ?? '').split('\n')).toHaveLength(5);
+      await expect(plot).toContainText('o');
+      await expect(card.locator('.track').first()).toHaveText(/^\[-*\*-*\]$/);
       await expect(card.locator('.footer')).toContainText('Yahoo Finance');
       expect(await sideways(page), 'nothing scrolls sideways').toEqual({ page: 0, body: 0, transcript: 0 });
       const box = await card.boundingBox();
@@ -82,7 +88,10 @@ test.describe('stock', { tag: '@smoke' }, () => {
       await expect(page.locator('[role="log"] .command-input-display').last()).toHaveText('stock -r 5d AAPL');
       await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
       const week = lastEntry(page).locator('.quote');
-      await expect(week.locator('.chip[aria-pressed="true"]')).toHaveText('5d');
+      // The range shown is marked with a plain *, no accent outline.
+      const shown = week.locator('.chip[aria-current="true"]');
+      await expect(shown).toHaveText('* 5d');
+      expect(await shown.evaluate((el) => getComputedStyle(el).boxShadow)).toBe('none');
       await expect(week.locator('.axis')).toContainText('from');
       expect(quotes.requests.some((url) => url.includes('range%3D5d') || url.includes('range=5d'))).toBe(true);
 
@@ -106,7 +115,7 @@ test.describe('stock', { tag: '@smoke' }, () => {
     await prompt(page).fill('stock CBA.AX');
     await prompt(page).press('Enter');
 
-    const stop = page.getByRole('button', { name: 'Stop: fetching CBA.AX…' });
+    const stop = page.getByRole('button', { name: 'Stop: fetching CBA.AX...' });
     await expect(stop).toBeVisible();
     await press(stop, hasTouch);
     await expect(lastEntry(page)).toContainText('^C');
@@ -137,8 +146,8 @@ test.describe('stock', { tag: '@smoke' }, () => {
       await page.goto('/');
       await run(page, `theme ${theme}`);
       await run(page, 'stock AAPL');
-      const selected = lastEntry(page).locator('.quote .chip[aria-pressed="true"]');
-      await expect(selected).toHaveText('1d');
+      const selected = lastEntry(page).locator('.quote .chip[aria-current="true"]');
+      await expect(selected).toHaveText('* 1d');
       expect(await chipContrast(selected)).toBeGreaterThanOrEqual(4.5);
       await run(page, 'stock AAPL CBA.AX');
       const tickers = lastEntry(page).locator('.quotes button.chip');
@@ -154,7 +163,7 @@ test.describe('stock', { tag: '@smoke' }, () => {
     await run(page, 'stock AAPL CBA.AX ZZZZQQ');
     const table = lastEntry(page).locator('.quotes table');
     await expect(table.locator('tbody tr')).toHaveCount(3);
-    await expect(table.locator('td.failure')).toHaveText('— not found');
+    await expect(table.locator('td.failure')).toHaveText('not found');
     expect(await sideways(page), 'nothing scrolls sideways').toEqual({ page: 0, body: 0, transcript: 0 });
     await press(table.getByRole('button', { name: 'Show CBA.AX' }), hasTouch);
     await expect(page.locator('[role="log"] .command-input-display').last()).toHaveText('stock CBA.AX');

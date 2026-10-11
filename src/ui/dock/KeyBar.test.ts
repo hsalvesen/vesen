@@ -51,11 +51,11 @@ describe('the keys', () => {
 });
 
 describe('KeyBar', () => {
-  it('is a toolbar of tab ↑ ↓ ^C clear ••• and a chevron, each driving the controller as the hardware key does', async () => {
+  it('is a toolbar of tab ↑ ↓ ^C clear ... and a chevron, each driving the controller as the hardware key does', async () => {
     const t = target();
     render(KeyBar, { props: { target: t } });
     expect(screen.getByRole('toolbar', { name: 'Terminal keys' })).toBeInTheDocument();
-    expect(labels()).toEqual(['tab', '↑', '↓', '^C', 'clear', '•••', '<chevron-down>']);
+    expect(labels()).toEqual(['tab', '↑', '↓', '^C', 'clear', '...', '<chevron-down>']);
     // The chevron is an inline SVG in the key's own colour, hidden from screen readers, which hear the key's name.
     const chevron = screen.getByRole('button', { name: 'Hide the keyboard' }).querySelector('svg');
     expect(chevron?.getAttribute('aria-hidden')).toBe('true');
@@ -77,20 +77,20 @@ describe('KeyBar', () => {
     input.remove();
   });
 
-  it('turns ••• into a page of symbols, which type at the cursor, and back', async () => {
+  it('turns ... into a page of symbols, which type at the cursor, and back', async () => {
     const t = target();
     render(KeyBar, { props: { target: t } });
     await tap('Symbols');
     expect(screen.getByRole('toolbar', { name: 'Symbols' })).toBeInTheDocument();
     // The way back, and the cursor keys, first: never off the edge of a narrow screen.
-    expect(labels()).toEqual(['•••', '←', '→', 'esc', '|', '>', '/', '-', '~', '*', '"', '$']);
+    expect(labels()).toEqual(['...', '←', '→', 'esc', '|', '>', '/', '-', '~', '*', '"', '$']);
     expect(screen.getByRole('button', { name: 'Symbols' }).getAttribute('aria-pressed')).toBe('true');
     await tap('Pipe');
     await tap('Escape');
     await tap('Cursor left');
     expect(t.calls).toEqual(['insert:|', 'key:Escape', 'key:ArrowLeft']);
     await tap('Symbols');
-    expect(labels()).toEqual(['tab', '↑', '↓', '^C', 'clear', '•••', '<chevron-down>']);
+    expect(labels()).toEqual(['tab', '↑', '↓', '^C', 'clear', '...', '<chevron-down>']);
   });
 
   it('repeats ← and → while held', async () => {
@@ -127,7 +127,7 @@ describe('KeyBar', () => {
     rerender({ variant: 'compact' });
     expect(labels()).toEqual(['tab', '↑', '^C']);
     rerender({ variant: 'closed', busy: false });
-    expect(labels()).toEqual(['<keyboard>Type a command…', '↑', 'clear']);
+    expect(labels()).toEqual(['<keyboard>Type a command...', '↑', 'clear']);
     await tap('Type a command');
     // The keyboard opens, and the prompt comes into view however far up the visitor had read.
     expect(t.calls).toEqual(['focus:keyboard', 'reveal']);

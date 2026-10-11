@@ -1,4 +1,4 @@
-// poweroff: systemd's shutdown lines, a fade, then '● vesen is off' with Power on, which starts a
+// poweroff: systemd's shutdown lines, a fade, then '* vesen is off' with Power on, which starts a
 // new session with the files kept. It never leaves a dead page (F029), and only a line typed at
 // the prompt can set it off.
 

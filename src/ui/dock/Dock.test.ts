@@ -58,12 +58,12 @@ async function tap(element: Element): Promise<void> {
 }
 
 describe('Dock', () => {
-  it('with the keyboard put away: the starters, then Type a command… (behind a keyboard icon) ↑ clear', async () => {
+  it('with the keyboard put away: the starters, then Type a command... (behind a keyboard icon) ↑ clear', async () => {
     const { dock, input } = await setup();
     expect(document.activeElement).not.toBe(input);
     expect(dock.dataset.dockMode).toBe('full');
     expect(chipLabels(dock)).toEqual(['help', 'cat README.md', 'fastfetch', 'ls', 'theme ls', 'cathode ls']);
-    expect(keyLabels(dock)).toEqual(['<keyboard>Type a command…', '↑', 'clear']);
+    expect(keyLabels(dock)).toEqual(['<keyboard>Type a command...', '↑', 'clear']);
     await tap(screen.getByRole('button', { name: 'Type a command' }));
     expect(document.activeElement).toBe(input);
   });
@@ -73,7 +73,7 @@ describe('Dock', () => {
     input.focus();
     await tick();
     expect(dock.querySelector('.chip-row')).not.toBeNull();
-    expect(keyLabels(dock)).toEqual(['tab', '↑', '↓', '^C', 'clear', '•••', '<chevron-down>']);
+    expect(keyLabels(dock)).toEqual(['tab', '↑', '↓', '^C', 'clear', '...', '<chevron-down>']);
 
     visibleArea.set({ height: 400, keyboardOpen: true });
     await tick();
@@ -87,7 +87,7 @@ describe('Dock', () => {
     expect(dock.dataset.dockMode).toBe('minimal');
     // The chips are not drawn; they are still there for screen readers, visually hidden.
     expect(dock.querySelector('.chip-row')?.closest('.sr-only')).not.toBeNull();
-    expect(keyLabels(dock)).toEqual(['tab', '↑', '↓', '^C', 'clear', '•••', '<chevron-down>']);
+    expect(keyLabels(dock)).toEqual(['tab', '↑', '↓', '^C', 'clear', '...', '<chevron-down>']);
   });
 
   it('shows Tab’s list in the minimal dock: the compact row while the list or its menu is open', async () => {

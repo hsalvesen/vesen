@@ -44,9 +44,12 @@ export interface QrView {
   readonly tips: readonly string[];
 }
 
-/** `v3 · 29×29 · EC M · 34/42 B · mask 2` */
+/** Between the facts of the meta line, which the presenter wraps only there. */
+export const META_SEP = ' | ';
+
+/** `v3 | 29x29 | EC M | 34/42 B | mask 2` */
 export function metaLine(view: Pick<QrView, 'version' | 'size' | 'ecc' | 'bytes' | 'capacity' | 'mask'>): string {
-  return `v${view.version} · ${view.size}×${view.size} · EC ${view.ecc} · ${view.bytes}/${view.capacity} B · mask ${view.mask}`;
+  return [`v${view.version}`, `${view.size}x${view.size}`, `EC ${view.ecc}`, `${view.bytes}/${view.capacity} B`, `mask ${view.mask}`].join(META_SEP);
 }
 
 /** Said when the level was raised: the meta line's title. */
@@ -55,19 +58,23 @@ export function raisedNote(view: Pick<QrView, 'ecc' | 'requestedEcc'>): string |
   return `Error correction raised from ${view.requestedEcc} to ${view.ecc} for free; -e ${view.requestedEcc} keeps ${view.requestedEcc}.`;
 }
 
-/** The payload as one line of text: line breaks shown as ⏎, other controls as U+FFFD. */
+/** The payload as one line of text: line breaks written as \n, other controls as U+FFFD. */
 export function displayPayload(payload: string): string {
-  return replaceUnsafe(payload.replace(/\r?\n/g, '⏎'));
+  return replaceUnsafe(payload.replace(/\r?\n/g, '\\n'));
 }
+
+/** What stands for the cut in middleEllipsis. */
+const ELLIPSIS = '...';
 
 /** `text` cut to `max` characters in the middle, so both its start and its end show. */
 export function middleEllipsis(text: string, max: number): string {
   const chars = Array.from(text);
   if (chars.length <= max) return text;
-  if (max <= 1) return '…';
-  const head = Math.ceil((max - 1) / 2);
-  const tail = Math.floor((max - 1) / 2);
-  return `${chars.slice(0, head).join('')}…${tail > 0 ? chars.slice(chars.length - tail).join('') : ''}`;
+  if (max <= ELLIPSIS.length) return ELLIPSIS.slice(0, Math.max(1, max));
+  const room = max - ELLIPSIS.length;
+  const head = Math.ceil(room / 2);
+  const tail = Math.floor(room / 2);
+  return `${chars.slice(0, head).join('')}${ELLIPSIS}${tail > 0 ? chars.slice(chars.length - tail).join('') : ''}`;
 }
 
 /** What scanning does, under the code. */

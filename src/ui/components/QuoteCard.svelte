@@ -2,9 +2,10 @@
   One quote (docs/plan/07-stock-and-proxy.md, "Rendering"), drawn from the QuoteCardView that
   commands/network/stock/view.ts builds: the ticker and name with a STALE badge when the copy is
   not live, the price and its change, the market phase, the chart, the day and 52-week ranges,
-  the stats, where the data came from and how old it is, and chips. Text by interpolation only;
-  every colour a role. One fluid layout, at most 62 columns wide, with no width maths: it fits
-  a 320 px phone without scrolling sideways.
+  the stats, where the data came from and how old it is, and chips. The chart and the range
+  tracks are ASCII text on the character grid (chart.ts). Text by interpolation only; every colour
+  a role. One fluid layout, at most 62 columns wide, with no width maths: it fits a 320 px phone
+  without scrolling sideways.
 
   The chips are trusted actions made by the command. A press on one never takes focus from the
   prompt, so a phone's keyboard stays down.
@@ -37,14 +38,16 @@
     </div>
     <div class="phase" class:live={card.phase.live}>{card.phase.text}</div>
     {#if card.chart !== null}
-      <div class="chart"><Sparkline spark={card.chart} id={card.id} /></div>
+      <div class="chart"><Sparkline spark={card.chart} /></div>
     {/if}
     {#if card.bars.length > 0}
       <div class="bars">
         {#each card.bars as bar}
+          {@const mark = bar.track.indexOf('*')}
           <span class="bar-label">{bar.label}</span>
           <span class="bar-value">{bar.low}</span>
-          <span class="track" role="img" aria-label="{bar.label} range {bar.low} to {bar.high}"><span class="mark" style="left: {bar.at}%"></span></span>
+          <!-- The track as text, `[--*----]`, its mark in the strong text role. -->
+          <span class="track" role="img" aria-label="{bar.label} range {bar.low} to {bar.high}">{bar.track.slice(0, mark)}<span class="mark">{bar.track.slice(mark, mark + 1)}</span>{bar.track.slice(mark + 1)}</span>
           <span class="bar-value">{bar.high}</span>
         {/each}
       </div>
@@ -62,17 +65,18 @@
         {#each card.chips as chip}
           {#if onaction && isTrustedAction(chip.action)}
             <!-- mousedown is cancelled so the press does not take focus, or the keyboard, from the prompt. -->
+            <!-- The range shown carries a plain marker, and aria-current for a screen reader. -->
             <button
               type="button"
               class="chip"
               class:active={chip.active}
-              aria-pressed={chip.active ? 'true' : undefined}
+              aria-current={chip.active ? 'true' : undefined}
               aria-label={chip.title}
               onmousedown={(event) => event.preventDefault()}
-              onclick={() => onaction?.(chip.action)}>{chip.label}</button
+              onclick={() => onaction?.(chip.action)}>{#if chip.active}<span aria-hidden="true">{'* '}</span>{/if}{chip.label}</button
             >
           {:else}
-            <span class="chip" class:active={chip.active}>{chip.label}</span>
+            <span class="chip" class:active={chip.active} aria-current={chip.active ? 'true' : undefined}>{#if chip.active}<span aria-hidden="true">{'* '}</span>{/if}{chip.label}</span>
           {/if}
         {/each}
       </div>
@@ -170,13 +174,13 @@
     margin: 0.25em 0;
   }
 
-  /* The ranges share a label column, and their tracks take what is left. */
+  /* The ranges share a label column and a track column, each as wide as its text. */
   .bars {
     display: grid;
-    grid-template-columns: auto auto minmax(3ch, 1fr) auto;
-    align-items: center;
+    grid-template-columns: auto auto auto auto;
+    justify-content: start;
+    align-items: baseline;
     column-gap: 1ch;
-    row-gap: 0.15em;
   }
 
   .bar-label {
@@ -189,20 +193,12 @@
   }
 
   .track {
-    position: relative;
-    height: 0.15em;
-    border-radius: 0.1em;
-    background: var(--role-muted);
+    color: var(--role-muted);
+    white-space: pre;
   }
 
   .mark {
-    position: absolute;
-    top: 50%;
-    width: 0.6em;
-    height: 0.6em;
-    border-radius: 50%;
-    background: var(--role-fg-strong);
-    transform: translate(-50%, -50%);
+    color: var(--role-fg-strong);
   }
 
   .stats {
@@ -227,9 +223,8 @@
     margin-top: 0.25em;
   }
 
-  /* Chip text on the chip, as every card's chips are; the current range is bold and outlined in
-     the accent, which reaches 3:1 on the chip in every theme (lib/roles.ts checks it), while its
-     text stays the chip's own colour, which reaches 4.5:1. */
+  /* Chip text on the chip, as every card's chips are; the current range is marked with a * before
+     its label and bold, in the chip's own colour, which reaches 4.5:1 in every theme. */
   .chip {
     padding: 0 1ch;
     border: 1px solid var(--role-chip-fg);
@@ -241,8 +236,6 @@
   }
 
   .chip.active {
-    border-color: var(--role-accent);
-    box-shadow: inset 0 0 0 1px var(--role-accent);
     font-weight: bold;
   }
 

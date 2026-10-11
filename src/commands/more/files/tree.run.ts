@@ -1,10 +1,10 @@
 // The body of tree; its spec, in tree.ts, loads this the first time tree runs.
 //
-// The drawing is one art block on the terminal, so its lines never wrap: a narrow screen scrolls
-// it sideways instead of breaking the lines apart. A screen reader hears every path instead of the
-// box-drawing characters. A pipe receives the same text as tree prints.
+// The drawing is ordinary lines on the terminal, at its line height, with the connectors of
+// `tree --charset=ascii` unless --charset asks for the box-drawing set. A screen reader hears
+// every path instead of the connectors. A pipe receives the same text as tree prints.
 
-import { out } from '../../../output/model';
+import { out, type Line } from '../../../output/model';
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
 import type { Stat } from '../../../vfs/types';
 import { childPath } from '../../lib/files';
@@ -14,11 +14,15 @@ import { humanSize, modeString } from '../../lib/listing';
 /** What --help, help and man say about tree, besides its spec (tree.ts). */
 export const doc: CommandDoc = {
   description:
-    'Draws each DIRECTORY (the working directory when none is given) and everything inside it as a tree, sorted by name, then counts the folders and files it showed. Hidden names are left out unless -a asks for them; a link is shown with what it points to and is not followed. On a narrow screen the drawing scrolls sideways rather than wrapping.',
+    'Draws each DIRECTORY (the working directory when none is given) and everything inside it as a tree, sorted by name, then counts the folders and files it showed. Hidden names are left out unless -a asks for them; a link is shown with what it points to and is not followed.',
   man: [
     {
       heading: 'PATTERNS',
       body: "-I takes a shell pattern: * any run of characters, ? any one, [abc] one of a set. Join patterns with | to leave out any of them: tree -I '*.txt|bin'. A dot at the start of a name is an ordinary character.",
+    },
+    {
+      heading: 'CHARSETS',
+      body: "--charset NAME chooses the lines of the drawing: ascii draws them with |, ` and -, as tree --charset=ascii does; utf-8 draws box-drawing lines. ascii is the default here, unlike tree's, because this terminal draws every line at its normal line height, where box-drawing pieces no longer join up and the rows crowd each other. Any other NAME is drawn as ascii, as tree draws a charset it does not know.",
     },
     {
       heading: 'FILE DETAILS',
@@ -27,6 +31,29 @@ export const doc: CommandDoc = {
     { heading: 'EXIT STATUS', body: '0 when every DIRECTORY could be read, 2 when one could not.' },
   ],
 };
+
+/**
+ * The lines a tree is drawn with: `tee` before an entry with more below it, `last` before the
+ * last one, and `bar` or `gap` continuing beside what is inside each.
+ */
+export interface Charset {
+  readonly tee: string;
+  readonly last: string;
+  readonly bar: string;
+  readonly gap: string;
+}
+
+/** The charsets --charset takes: tree's ascii set, the default here, and its box-drawing utf-8 set. */
+export const CHARSETS: Readonly<Record<'ascii' | 'utf-8', Charset>> = {
+  ascii: { tee: '|-- ', last: '`-- ', bar: '|   ', gap: '    ' },
+  'utf-8': { tee: '├── ', last: '└── ', bar: '│   ', gap: '    ' },
+};
+
+/** The charset NAME names, in any case (utf8 too); ascii for one tree does not know, as tree falls back. */
+export function charsetNamed(name: unknown): Charset {
+  const key = typeof name === 'string' ? name.trim().toLowerCase() : 'ascii';
+  return key === 'utf-8' || key === 'utf8' ? CHARSETS['utf-8'] : CHARSETS.ascii;
+}
 
 interface Options {
   readonly all: boolean;
@@ -38,6 +65,7 @@ interface Options {
   /** -p, -s and -h: what goes in the brackets before a name. */
   readonly perms: boolean;
   readonly size: 'bytes' | 'human' | null;
+  readonly charset: Charset;
 }
 
 interface Tally {
@@ -121,9 +149,10 @@ function draw(ctx: CommandContext, list: readonly Entry[], shown: string, spoken
     const descend = entry.directory && entry.link === null && depth < options.level;
     // Each folder is read once: here, to know whether it opens, and its entries drawn below.
     const inside = descend ? entries(ctx, entry.path, options) : [];
-    tally.lines.push(`${prefix}${last ? '└── ' : '├── '}${label}${inside === null ? '  [error opening dir]' : ''}`);
+    const { charset } = options;
+    tally.lines.push(`${prefix}${last ? charset.last : charset.tee}${label}${inside === null ? '  [error opening dir]' : ''}`);
     tally.spoken.push(entry.directory ? `${childSpoken}/` : childSpoken);
-    if (inside !== null && inside.length > 0) draw(ctx, inside, childShown, childSpoken, `${prefix}${last ? '    ' : '│   '}`, depth + 1, options, tally);
+    if (inside !== null && inside.length > 0) draw(ctx, inside, childShown, childSpoken, `${prefix}${last ? charset.gap : charset.bar}`, depth + 1, options, tally);
   });
 }
 
@@ -146,6 +175,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
     dirsFirst: ctx.opts.dirsfirst === true,
     perms: ctx.opts.p === true,
     size: ctx.opts.h === true ? 'human' : ctx.opts.s === true ? 'bytes' : null,
+    charset: charsetNamed(ctx.opts.charset),
   };
   const roots = ctx.args.length === 0 ? ['.'] : ctx.args;
   const tally: Tally = { dirs: 0, files: 0, lines: [], spoken: [] };
@@ -185,7 +215,9 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   }
   const report = options.dirsOnly ? plural(tally.dirs, 'directory', 'directories') : `${plural(tally.dirs, 'directory', 'directories')}, ${plural(tally.files, 'file', 'files')}`;
   const alt = `Tree of ${roots.join(', ')}, ${report}${tally.spoken.length > 0 ? `: ${tally.spoken.join(', ')}` : ''}`;
-  await ctx.stdout.block(out.art(tally.lines.join('\n'), alt, 'scroll'));
+  // Ordinary lines, so the drawing sits at the terminal's line height; the alt is what a screen
+  // reader hears instead of the connectors.
+  await ctx.stdout.block(out.lines(tally.lines.map((row): Line => [out.span(row)]), 'stdout', alt));
   if (ctx.opts.noreport !== true) await ctx.stdout.write(`\n${report}\n`);
   return status;
 }

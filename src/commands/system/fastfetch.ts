@@ -12,7 +12,7 @@ export default defineCommand({
   featured: true,
   budgetMs: 10_000,
   flags: [{ long: 'net', description: 'add your public IP, asked of api.ipify.org' }],
-  loadingLabel: () => 'gathering system information…',
+  loadingLabel: () => 'gathering system information...',
   examples: [
     { line: 'fastfetch', note: 'this system, at a glance', offline: true, starter: 3 },
     { line: 'fastfetch --net', note: 'with your public IP' },

@@ -4,135 +4,135 @@
 
 $ tree projects
 projects
-├── learning
-│   └── javascript-basics.js
-├── portfolio
-│   └── index.html
-└── vesen
-    └── info.txt
+|-- learning
+|   `-- javascript-basics.js
+|-- portfolio
+|   `-- index.html
+`-- vesen
+    `-- info.txt
 
 3 directories, 3 files
 ? 0
 $ tree -L 1 /
 /
-├── bin -> usr/bin
-├── boot
-├── dev
-├── etc
-├── home
-├── lib
-├── media
-├── mnt
-├── opt
-├── proc
-├── root
-├── sys
-├── tmp
-├── usr
-└── var
+|-- bin -> usr/bin
+|-- boot
+|-- dev
+|-- etc
+|-- home
+|-- lib
+|-- media
+|-- mnt
+|-- opt
+|-- proc
+|-- root
+|-- sys
+|-- tmp
+|-- usr
+`-- var
 
 15 directories, 0 files
 ? 0
 $ tree -a -I .ssh ~
 /home/guest
-├── .bash_history
-├── .bashrc
-├── .gitconfig
-├── .local
-│   └── share
-│       └── applications
-├── .profile
-├── .vimrc
-├── bin
-│   ├── deploy
-│   └── my-script
-├── config
-│   └── app.conf
-├── desktop
-│   └── shortcuts.txt
-├── documents
-│   └── linux.txt
-├── downloads
-│   ├── README-download.txt
-│   └── software.tar.gz
-├── history.txt
-├── music
-│   └── playlist.m3u
-├── pictures
-│   └── vacation.jpg
-├── projects
-│   ├── learning
-│   │   └── javascript-basics.js
-│   ├── portfolio
-│   │   └── index.html
-│   └── vesen
-│       └── info.txt
-├── public
-│   └── shared-file.txt
-├── README.md
-├── scripts
-│   ├── backup.sh
-│   └── setup.py
-├── src
-│   └── main.c
-├── templates
-│   └── document-template.txt
-└── videos
-    └── tutorial.mp4
+|-- .bash_history
+|-- .bashrc
+|-- .gitconfig
+|-- .local
+|   `-- share
+|       `-- applications
+|-- .profile
+|-- .vimrc
+|-- bin
+|   |-- deploy
+|   `-- my-script
+|-- config
+|   `-- app.conf
+|-- desktop
+|   `-- shortcuts.txt
+|-- documents
+|   `-- linux.txt
+|-- downloads
+|   |-- README-download.txt
+|   `-- software.tar.gz
+|-- history.txt
+|-- music
+|   `-- playlist.m3u
+|-- pictures
+|   `-- vacation.jpg
+|-- projects
+|   |-- learning
+|   |   `-- javascript-basics.js
+|   |-- portfolio
+|   |   `-- index.html
+|   `-- vesen
+|       `-- info.txt
+|-- public
+|   `-- shared-file.txt
+|-- README.md
+|-- scripts
+|   |-- backup.sh
+|   `-- setup.py
+|-- src
+|   `-- main.c
+|-- templates
+|   `-- document-template.txt
+`-- videos
+    `-- tutorial.mp4
 
 19 directories, 25 files
 ? 0
 $ tree -df projects
 projects
-├── projects/learning
-├── projects/portfolio
-└── projects/vesen
+|-- projects/learning
+|-- projects/portfolio
+`-- projects/vesen
 
 3 directories
 ? 0
 $ tree --dirsfirst --noreport /home
 /home
-├── guest
-│   ├── bin
-│   │   ├── deploy
-│   │   └── my-script
-│   ├── config
-│   │   └── app.conf
-│   ├── desktop
-│   │   └── shortcuts.txt
-│   ├── documents
-│   │   └── linux.txt
-│   ├── downloads
-│   │   ├── README-download.txt
-│   │   └── software.tar.gz
-│   ├── music
-│   │   └── playlist.m3u
-│   ├── pictures
-│   │   └── vacation.jpg
-│   ├── projects
-│   │   ├── learning
-│   │   │   └── javascript-basics.js
-│   │   ├── portfolio
-│   │   │   └── index.html
-│   │   └── vesen
-│   │       └── info.txt
-│   ├── public
-│   │   └── shared-file.txt
-│   ├── scripts
-│   │   ├── backup.sh
-│   │   └── setup.py
-│   ├── src
-│   │   └── main.c
-│   ├── templates
-│   │   └── document-template.txt
-│   ├── videos
-│   │   └── tutorial.mp4
-│   ├── history.txt
-│   └── README.md
-├── has
-│   ├── about.md
-│   └── projects.md
-└── user -> guest
+|-- guest
+|   |-- bin
+|   |   |-- deploy
+|   |   `-- my-script
+|   |-- config
+|   |   `-- app.conf
+|   |-- desktop
+|   |   `-- shortcuts.txt
+|   |-- documents
+|   |   `-- linux.txt
+|   |-- downloads
+|   |   |-- README-download.txt
+|   |   `-- software.tar.gz
+|   |-- music
+|   |   `-- playlist.m3u
+|   |-- pictures
+|   |   `-- vacation.jpg
+|   |-- projects
+|   |   |-- learning
+|   |   |   `-- javascript-basics.js
+|   |   |-- portfolio
+|   |   |   `-- index.html
+|   |   `-- vesen
+|   |       `-- info.txt
+|   |-- public
+|   |   `-- shared-file.txt
+|   |-- scripts
+|   |   |-- backup.sh
+|   |   `-- setup.py
+|   |-- src
+|   |   `-- main.c
+|   |-- templates
+|   |   `-- document-template.txt
+|   |-- videos
+|   |   `-- tutorial.mp4
+|   |-- history.txt
+|   `-- README.md
+|-- has
+|   |-- about.md
+|   `-- projects.md
+`-- user -> guest
 ? 0
 $ tree nope
 nope  [error opening dir]

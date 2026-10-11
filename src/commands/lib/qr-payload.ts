@@ -36,7 +36,7 @@ export interface PayloadError {
 }
 
 /** The note on a link that gained https://. */
-export const HTTPS_NOTE = 'added https:// · --text encodes exactly what you typed';
+export const HTTPS_NOTE = 'added https:// | --text encodes exactly what you typed';
 
 const SCHEME = /^([a-z][a-z0-9+.-]*):/i;
 

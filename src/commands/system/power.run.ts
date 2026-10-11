@@ -1,5 +1,5 @@
 // The bodies of poweroff, reboot and shutdown: systemd's lines go to the Shutdown app
-// (ctx.tty.fullscreen), which fades to '● vesen is off' and waits for Power on (or, for a reboot,
+// (ctx.tty.fullscreen), which fades to '* vesen is off' and waits for Power on (or, for a reboot,
 // comes straight back); then a new login session starts with the banner, files and history kept.
 
 import type { ShutdownView } from '../../shell/shutdown';

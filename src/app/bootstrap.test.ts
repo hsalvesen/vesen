@@ -205,7 +205,7 @@ describe('bootstrap', () => {
     expect(last?.line).toBe('');
     // A lines block, which the first paint's chunk draws itself: never a layout block, whose
     // renderer is in a chunk of its own, which may be one of those that failed to load.
-    expect(last?.blocks).toMatchObject([{ type: 'lines', lines: [[{ text: 'vesen was updated, reloading…', style: { fg: 'warn', bold: true } }]] }]);
+    expect(last?.blocks).toMatchObject([{ type: 'lines', lines: [[{ text: 'vesen was updated, reloading...', style: { fg: 'warn', bold: true } }]] }]);
   });
 
   // `lss` is not a command, so the line waits for the whole catalogue, which a cold test run

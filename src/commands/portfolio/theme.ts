@@ -1,13 +1,16 @@
 // theme: list the colour themes with a preview of each, or switch to one, by name in any case.
 // Output is drawn in theme tokens, so a switch recolours everything already on the screen; the
-// marker and the highlight on the current theme in `theme ls` are live, so they move too, in
-// every earlier listing (F075, F030, F009). The theme is remembered by name.
+// marker on the current theme in `theme ls` is live, so it moves too, in every earlier listing
+// (F075, F030, F009). The theme is remembered by name.
 
 import { out, type Line, type SpanStyle } from '../../output/model';
 import { defineCommand, PLAIN_ARG, type ArgSpec, type CommandContext, type EnumValue, type ExitCode, type ValueContext } from '../../shell/types';
 
-/** The mark beside the current theme in a listing. */
-export const CURRENT_MARK = '› ';
+/**
+ * The mark in the first column of a listing's current row (theme ls, cathode ls): plain text in
+ * the terminal's foreground, never a theme colour, so the row it marks is obvious in every theme.
+ */
+export const CURRENT_MARK = '* ';
 
 const STRONG: SpanStyle = { fg: 'fg-strong' };
 const MUTED: SpanStyle = { fg: 'muted' };
@@ -31,14 +34,14 @@ async function list(ctx: CommandContext): Promise<ExitCode> {
   const rows: Line[] = themes.map((theme) => {
     const isCurrent = theme.name.toLowerCase() === current;
     return [
-      out.live(isCurrent ? CURRENT_MARK : ' '.repeat(CURRENT_MARK.length), { kind: 'isCurrentTheme', theme: theme.name, marker: CURRENT_MARK }, { fg: 'accent' }),
+      out.live(isCurrent ? CURRENT_MARK : ' '.repeat(CURRENT_MARK.length), { kind: 'isCurrentTheme', theme: theme.name, marker: CURRENT_MARK }),
       // A tap switches to it.
       { ...out.run(theme.name, `theme ${theme.name}`, STRONG), live: { kind: 'isCurrentTheme', theme: theme.name } },
       out.span(' '.repeat(width - theme.name.length + 2)),
       out.swatches(theme.background, theme.swatches),
     ];
   });
-  rows.push([], [out.span(`Try one with: theme NAME, or ${ctx.tty.touch ? 'tap' : 'click'} a name.`, MUTED)]);
+  rows.push([], [out.span(`${CURRENT_MARK.trim()} marks the current theme. Try one with: theme NAME, or ${ctx.tty.touch ? 'tap' : 'click'} a name.`, MUTED)]);
   await ctx.stdout.block(out.lines(rows));
   return 0;
 }

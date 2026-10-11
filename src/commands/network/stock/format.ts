@@ -1,10 +1,12 @@
 // How stock writes numbers, prices, times and ages. Fixed en-US grouping, so a quote reads the
 // same in every browser; prices in the instrument's own currency, to its own decimals, with the
 // ISO code after the number ('332.89 USD') and minor units as their own suffix ('127.20p'), never
-// a hard-coded '$'. Every Intl call has a fallback, for older WebViews that lack an option.
+// a hard-coded '$'. A change carries its sign, '+' or the ASCII '-', which is also what says
+// which way it went: the text terminal's own marker, coloured by the card. Every Intl call has a
+// fallback, for older WebViews that lack an option.
 
-/** U+2212, which lines up with '+' where a hyphen would not. */
-export const MINUS = '−';
+/** The sign of a loss: the ASCII hyphen-minus, one cell like '+' in the terminal's font. */
+export const MINUS = '-';
 
 /** Minor-unit currencies Yahoo reports prices in, and the suffix each is written with. */
 const MINOR_UNITS: Readonly<Record<string, string>> = {
@@ -55,22 +57,19 @@ export function toneOf(value: number | null, decimals: number): 'up' | 'down' | 
   return value > 0 ? 'up' : 'down';
 }
 
-/** '▲ +0.65 (+0.43%)', '▼ −0.80 (−0.24%)', '◆ 0.00 (0.00%)'; null when there is no change. */
+/** '+0.65 (+0.43%)', '-0.80 (-0.24%)', '0.00 (0.00%)'; null when there is no change. */
 export function formatChange(change: number | null, percent: number | null, priceHint: number): string | null {
   if (change === null && percent === null) return null;
-  const tone = toneOf(change ?? percent, change === null ? 2 : priceHint);
-  const arrow = tone === 'up' ? '▲' : tone === 'down' ? '▼' : '◆';
-  const parts = [arrow];
+  const parts: string[] = [];
   if (change !== null) parts.push(formatSigned(change, priceHint));
   if (percent !== null) parts.push(change === null ? `${formatSigned(percent, 2)}%` : `(${formatSigned(percent, 2)}%)`);
   return parts.join(' ');
 }
 
-/** '▲ +0.43%', for the table. */
+/** '+0.43%', for the table. */
 export function formatPercent(percent: number | null): string | null {
   if (percent === null) return null;
-  const tone = toneOf(percent, 2);
-  return `${tone === 'up' ? '▲' : tone === 'down' ? '▼' : '◆'} ${formatSigned(percent, 2)}%`;
+  return `${formatSigned(percent, 2)}%`;
 }
 
 /** 34.3M, 1.1K, 2.5B. */

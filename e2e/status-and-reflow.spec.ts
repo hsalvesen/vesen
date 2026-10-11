@@ -46,13 +46,13 @@ test.describe('the status line', { tag: '@smoke' }, () => {
     const status = entry.getByRole('button', { name: 'Stop: sleeping 5' });
     await expect(status).toBeVisible();
     await expect(status).toContainText('sleeping 5');
-    if (isPhone()) await expect(status.locator('.stop-chip')).toHaveText('■ Stop');
+    if (isPhone()) await expect(status.locator('.stop-chip')).toHaveText('Stop');
     else await expect(status).toContainText('(Ctrl+C or Esc to stop)');
     await expect(status.locator('.elapsed')).toHaveCount(0);
     await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'true');
 
     // From three seconds, how long it has run.
-    await expect(status.locator('.elapsed')).toHaveText(/· [34]s$/, { timeout: 4500 });
+    await expect(status.locator('.elapsed')).toHaveText(/\| [34]s$/, { timeout: 4500 });
 
     await page.keyboard.press('Escape');
     await expect(status).toBeHidden();

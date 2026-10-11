@@ -1,14 +1,14 @@
 <!--
   The status line under a running line's entry (docs/plan/designs/shell-architecture.md, "LOADING,
-  CANCEL AND ERRORS"; F013, F047): a braille spinner (a still '…' under reduced motion), what the
-  command is doing (its spec's loadingLabel or what it set with tty.status(); 'Processing…' when
-  it says nothing), the seconds it has run once it has run three, then how to stop it: the keys on
-  a keyboard, a Stop chip on touch. The whole line is one button that stops the command, so a tap
-  or a click anywhere on it does.
+  CANCEL AND ERRORS"; F013, F047): the classic | / - \ spinner (a still '...' under reduced
+  motion), what the command is doing (its spec's loadingLabel or what it set with tty.status();
+  'Processing...' when it says nothing), the seconds it has run once it has run three, then how to
+  stop it: the keys on a keyboard, a Stop chip on touch. The whole line is one button that stops
+  the command, so a tap or a click anywhere on it does.
 -->
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { DEFAULT_LABEL, ELAPSED_FROM_S, formatElapsed, SPINNER, STILL } from './status-line';
+  import { DEFAULT_LABEL, ELAPSED_FROM_S, ELAPSED_SEPARATOR, formatElapsed, SPINNER, STILL } from './status-line';
 
   let {
     label = null,
@@ -61,9 +61,9 @@
   onclick={() => onstop()}
 >
   <span class="spinner" aria-hidden="true">{reduce ? STILL : SPINNER[frame]}</span>
-  <span class="what">{text}{#if seconds >= ELAPSED_FROM_S}<span class="elapsed">{` · ${formatElapsed(seconds)}`}</span>{/if}</span>
+  <span class="what">{text}{#if seconds >= ELAPSED_FROM_S}<span class="elapsed">{`${ELAPSED_SEPARATOR}${formatElapsed(seconds)}`}</span>{/if}</span>
   {#if touch}
-    <span class="stop-chip">■ Stop</span>
+    <span class="stop-chip">Stop</span>
   {:else}
     <span class="hint">(Ctrl+C or Esc to stop)</span>
   {/if}
@@ -86,9 +86,11 @@
     cursor: pointer;
   }
 
+  /* One cell for a frame; the still '...' takes its three. */
   .spinner {
     flex: none;
-    width: 1ch;
+    min-width: 1ch;
+    white-space: pre;
   }
 
   .what {

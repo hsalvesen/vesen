@@ -99,15 +99,20 @@ export type LiveBinding =
 export type HexColour = string & { readonly [checkedHex]: true };
 
 /**
- * A strip of swatches in fixed colours: a theme's own palette on its own background, in
- * `theme ls`. It is the one place output carries hex rather than tokens, because it previews a
- * theme other than the one showing; it is drawn for the eye only (hidden from screen readers),
- * and a pipe receives the span's text.
+ * A strip of swatches, each two `#` cells in its colour: a theme's own palette on its own
+ * background in `theme ls`, where the colours are hex because it previews a theme other than the
+ * one showing, or the palette tokens of the theme in force, as fastfetch's strip, which then
+ * follows the theme. It is drawn for the eye only (hidden from screen readers), and a pipe
+ * receives the span's text.
  */
 export interface Swatches {
-  readonly background: HexColour;
-  readonly colours: readonly HexColour[];
+  /** The strip's own background; null for the terminal's. */
+  readonly background: HexColour | null;
+  readonly colours: readonly (HexColour | Palette)[];
 }
+
+/** One swatch as text: two cells of ink on the character grid. */
+export const SWATCH = '##';
 
 export interface Span {
   readonly text: string;
@@ -144,6 +149,11 @@ export interface LinesBlock {
   readonly type: 'lines';
   readonly lines: readonly Line[];
   readonly stream: Stream;
+  /**
+   * What a screen reader hears instead of the lines, for a drawing made of ordinary lines, such
+   * as tree's: the lines are then hidden from it, as art is. Left out for text.
+   */
+  readonly alt?: string;
 }
 
 /** Items laid out in as many columns as fit: ls, help. */
@@ -209,7 +219,7 @@ export interface CardBlock {
   readonly type: 'card';
   readonly title: string;
   readonly href: SafeHref;
-  /** The link's text: the URL as people read it (`linkedin.com/in/…`) unless given. */
+  /** The link's text: the URL as people read it (`linkedin.com/in/...`) unless given. */
   readonly label?: string;
   readonly detail?: string;
   /** What Copy puts on the clipboard; defaults to the href. */
@@ -218,14 +228,14 @@ export interface CardBlock {
   readonly copyLabel?: string;
   /**
    * The link as a button-like anchor with this label, such as 'Open mail app' (the card adds
-   * the → after it), and the label shown as text beside it; without it the label itself is the
+   * the -> after it), and the label shown as text beside it; without it the label itself is the
    * anchor.
    */
   readonly openLabel?: string;
   /**
-   * Inside an in-app browser: a dim `hint`, then the manual '••• → Open in browser' (or 'Menu →'
-   * on Android) and a tap that opens `url` in the real browser where the device has a way to.
-   * Ignored elsewhere.
+   * Inside an in-app browser: a dim `hint`, then the manual '... -> Open in browser' (or
+   * 'Menu ->' on Android) and a tap that opens `url` in the real browser where the device has a
+   * way to. Ignored elsewhere.
    */
   readonly escape?: { readonly url: SafeHref; readonly hint?: string };
 }
@@ -415,7 +425,9 @@ export const out = {
     stream,
   }),
 
-  lines: (lines: readonly Line[], stream: Stream = 'stdout'): LinesBlock => ({ type: 'lines', lines, stream }),
+  /** Lines; `alt` makes them a drawing a screen reader hears as that text instead (see LinesBlock). */
+  lines: (lines: readonly Line[], stream: Stream = 'stdout', alt?: string): LinesBlock =>
+    alt === undefined ? { type: 'lines', lines, stream } : { type: 'lines', lines, stream, alt },
 
   /** A grid; `notes`, by index, put text after each item in its cell; `order` as GridBlock says. */
   grid: (items: readonly Span[], minCh?: number, notes?: readonly Line[], order?: GridBlock['order']): GridBlock => ({
@@ -430,18 +442,20 @@ export const out = {
   live: (text: string, live: LiveBinding, style?: SpanStyle): Span => ({ ...span(text, style), live }),
 
   /**
-   * A strip of colour swatches, two cells each, in `colours` on `background` (each `#rrggbb`),
-   * with a space either side; see Swatches.
+   * A strip of colour swatches, `##` each, in `colours` (each `#rrggbb`, or a palette token) on
+   * `background` (`#rrggbb`, or null for the terminal's own), with a space either side; see
+   * Swatches.
    */
-  swatches: (background: string, colours: readonly string[]): Span => {
+  swatches: (background: string | null, colours: readonly string[]): Span => {
     const fixed = (value: string): HexColour => {
       const hex = hexColour(value);
       if (hex === null) throw new TypeError(`out.swatches: not a #rrggbb colour: ${value}`);
       return hex;
     };
+    const colour = (value: string): HexColour | Palette => (isPalette(value) ? value : fixed(value));
     return {
-      text: ` ${'██'.repeat(colours.length)} `,
-      swatches: { background: fixed(background), colours: colours.map(fixed) },
+      text: ` ${SWATCH.repeat(colours.length)} `,
+      swatches: { background: background === null ? null : fixed(background), colours: colours.map(colour) },
     };
   },
 

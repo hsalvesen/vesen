@@ -82,11 +82,11 @@ function viewOf(text: string, extra: Partial<QrView> = {}): QrView {
 }
 
 describe('the words on the card', () => {
-  it('writes the meta line as v3 · 29×29 · EC M · 34/44 B · mask 2', () => {
+  it('writes the meta line as v3 | 29x29 | EC M | 34/44 B | mask 2', () => {
     // 44 data codewords: version 3 holds 70, and level M spends 26 on error correction.
     const qr = encodeText('https://github.com/hsalvesen/vesen', { ecc: 'M', mask: 2 });
     expect(metaLine({ version: qr.version, size: qr.size, ecc: qr.ecc, bytes: 34, capacity: qr.capacityBits / 8, mask: qr.mask })).toBe(
-      'v3 · 29×29 · EC M · 34/44 B · mask 2',
+      'v3 | 29x29 | EC M | 34/44 B | mask 2',
     );
   });
 
@@ -98,16 +98,16 @@ describe('the words on the card', () => {
   });
 
   it('shows line breaks and controls, and hides nothing', () => {
-    expect(displayPayload('BEGIN:VCARD\nEND:VCARD')).toBe('BEGIN:VCARD⏎END:VCARD');
+    expect(displayPayload('BEGIN:VCARD\nEND:VCARD')).toBe('BEGIN:VCARD\\nEND:VCARD');
     expect(displayPayload('a\u0007b\u202ec')).toBe('a\ufffdb\ufffdc');
     expect(displayPayload('<u>x</u>')).toBe('<u>x</u>');
   });
 
   it('cuts long payloads in the middle', () => {
-    expect(middleEllipsis('https://www.wikipedia.org/wiki/Computer_terminal', 21)).toBe('https://ww…r_terminal');
+    expect(middleEllipsis('https://www.wikipedia.org/wiki/Computer_terminal', 21)).toBe('https://w..._terminal');
     expect(middleEllipsis('short', 10)).toBe('short');
-    expect(middleEllipsis('🦉🦉🦉🦉🦉', 3)).toBe('🦉…🦉');
-    expect(middleEllipsis('abc', 1)).toBe('…');
+    expect(middleEllipsis('🦉🦉🦉🦉🦉', 3)).toBe('...');
+    expect(middleEllipsis('abc', 1)).toBe('.');
   });
 
   it('hints at what scanning does, and at full screen on a phone and in vintage mode', () => {

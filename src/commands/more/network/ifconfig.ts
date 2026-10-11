@@ -13,7 +13,7 @@ const spec: CommandSpec & RawArgsSpec & RunnerChoice = {
   rawArgs: true,
   flags: [{ short: 'a', description: 'every interface, down ones too' }],
   args: [{ name: 'INTERFACE', source: { kind: 'enum', values: () => [{ value: 'eth0' }, { value: 'lo' }] }, optional: true }],
-  loadingLabel: (argv) => (argv.includes('lo') ? 'ifconfig' : 'ifconfig: asking Cloudflare for your public address…'),
+  loadingLabel: (argv) => (argv.includes('lo') ? 'ifconfig' : 'ifconfig: asking Cloudflare for your public address...'),
   examples: [
     { line: 'ifconfig', note: 'the interfaces, and your public address' },
     { line: 'ifconfig lo', note: 'the loopback only', offline: true },

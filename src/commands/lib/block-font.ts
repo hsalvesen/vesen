@@ -1,15 +1,15 @@
 // figlet's one font: block letters five rows high, drawn for vesen. A-Z (lower case is drawn as
 // upper case), 0-9 and the common punctuation; anything else is drawn as `?`. Each glyph is five
-// rows of the same width, `#` for ink; letters sit one column apart and words a space glyph
-// apart. Loaded only with figlet's body.
+// rows of the same width, `#` for ink, as figlet's own fonts draw it; letters sit one column
+// apart and words a space glyph apart. Loaded only with figlet's body.
 
 import { textWidth } from '../../output/model';
 
 /** The font's height in rows. */
 export const FONT_HEIGHT = 5;
 
-/** What the ink is drawn with. */
-export const INK = '█';
+/** What the ink is drawn with: figlet's own `#`, text at the terminal's line height. */
+export const INK = '#';
 
 /** The glyphs, by character: five rows each, every row the same width. */
 const GLYPHS: Readonly<Record<string, readonly string[]>> = {
@@ -158,7 +158,7 @@ function drawBand(band: string, options: FigletOptions): string[] {
   const width = Math.max(0, ...rows.map((row) => row.length));
   const room = Math.max(0, options.width - width);
   const pad = ' '.repeat(options.align === 'center' ? Math.floor(room / 2) : options.align === 'right' ? room : 0);
-  return rows.map((row) => `${pad}${row}`.replace(/#/g, INK).trimEnd());
+  return rows.map((row) => `${pad}${row}`.trimEnd());
 }
 
 /**

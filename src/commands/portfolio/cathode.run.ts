@@ -25,11 +25,12 @@ async function list(ctx: CommandContext): Promise<ExitCode> {
   const modes = ctx.appearance.cathodeModes();
   const current = ctx.appearance.currentCathode();
   const width = Math.max(...modes.map((mode) => mode.name.length));
-  const rows: Line[] = [[out.span('Cathode variations (current marked):', ACCENT)]];
+  const rows: Line[] = [[out.span(`Cathode variations (${CURRENT_MARK.trim()} marks the current one):`, ACCENT)]];
   for (const mode of modes) {
     const isCurrent = mode.name === current;
     rows.push([
-      out.live(isCurrent ? CURRENT_MARK : ' '.repeat(CURRENT_MARK.length), { kind: 'isCurrentCathode', mode: mode.name, marker: CURRENT_MARK }, ACCENT),
+      // The marker is plain text in the terminal's foreground, never the accent.
+      out.live(isCurrent ? CURRENT_MARK : ' '.repeat(CURRENT_MARK.length), { kind: 'isCurrentCathode', mode: mode.name, marker: CURRENT_MARK }),
       { ...out.run(mode.name, `cathode set ${mode.name}`, STRONG), live: { kind: 'isCurrentCathode', mode: mode.name } },
       out.span(' '.repeat(width - mode.name.length + 2)),
       out.span(mode.summary, STRONG),

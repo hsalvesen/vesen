@@ -71,6 +71,6 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
       { head: [cell('Service'), cell('Asked by'), cell('What it is sent')], stackBelowCols: 100 },
     ),
   );
-  await ctx.stdout.block(out.lines([[], ...NOTES.map((note): Line => [out.span(`• ${note}`)])]));
+  await ctx.stdout.block(out.lines([[], ...NOTES.map((note): Line => [out.span(`* ${note}`)])]));
   return 0;
 }

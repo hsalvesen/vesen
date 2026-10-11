@@ -3,14 +3,13 @@
   fallbacks"): the title, the link as a real anchor, and Copy. A tapped link opens in a new tab in
   a browser and in the same view inside an in-app browser, so Back comes back to the terminal.
 
-  Copy uses the Clipboard API, then execCommand (services/clipboard.ts). It shows '✓ Copied' for
+  Copy uses the Clipboard API, then execCommand (services/clipboard.ts). It shows 'Copied' for
   two seconds and says so politely; if copying fails, the text is selected and the card says to
   press and hold. Inside an in-app browser a card may also offer the real browser, always beside
   the manual instruction; that only ever happens on a tap.
 
-  Everything is drawn in the terminal's font, so the only marks are glyphs it has: → before a
-  link and after a button that leaves the page, ✓ once copied. The buttons are the chips every
-  card uses, with words on them.
+  Everything is drawn in the terminal's font, in ASCII: -> before a link and after a button that
+  leaves the page. The buttons are the chips every card uses, with words on them.
 -->
 <script lang="ts">
   import { onDestroy, tick } from 'svelte';
@@ -19,7 +18,7 @@
 
   let { card }: { card: CardBlock } = $props();
 
-  /** How long '✓ Copied' stays. */
+  /** How long 'Copied' stays. */
   const COPIED_MS = 2000;
 
   const links = linkPolicy();
@@ -79,7 +78,7 @@
   {#if card.openLabel !== undefined || href === null}
     <div class="card-label">{label}</div>
   {:else}
-    <a class="card-url" {href} {target} rel="noopener noreferrer"><span aria-hidden="true">{'→ '}</span>{label}</a>
+    <a class="card-url" {href} {target} rel="noopener noreferrer"><span aria-hidden="true">{'-> '}</span>{label}</a>
   {/if}
   {#if card.detail !== undefined}
     <div class="card-detail">{card.detail}</div>
@@ -87,11 +86,11 @@
   <div class="card-actions">
     {#if card.openLabel !== undefined && href !== null}
       <!-- A plain anchor, so a tap is the browser's own navigation: nothing cancels it. -->
-      <a class="chip card-open" {href} {target} rel="noopener noreferrer">{card.openLabel}<span class="arrow" aria-hidden="true">{' →'}</span></a>
+      <a class="chip card-open" {href} {target} rel="noopener noreferrer">{card.openLabel}<span class="arrow" aria-hidden="true">{' ->'}</span></a>
     {/if}
     <!-- mousedown is cancelled so a click does not take focus, and the keyboard, from the prompt. -->
     <button type="button" class="chip card-copy" onmousedown={(event) => event.preventDefault()} onclick={copy}>
-      {copied ? '✓ Copied' : (card.copyLabel ?? 'Copy')}
+      {copied ? 'Copied' : (card.copyLabel ?? 'Copy')}
     </button>
   </div>
   {#if failed}
@@ -104,7 +103,7 @@
     <div class="card-escape">
       <span class="muted">{links.inApp.menuHint}</span>
       {#if escapeHref !== null}
-        <button type="button" class="chip card-external" onclick={() => links.openExternal(escape.url)}>Open in {links.inApp.browser}<span class="arrow" aria-hidden="true">{' →'}</span></button>
+        <button type="button" class="chip card-external" onclick={() => links.openExternal(escape.url)}>Open in {links.inApp.browser}<span class="arrow" aria-hidden="true">{' ->'}</span></button>
       {/if}
     </div>
   {/if}

@@ -25,7 +25,7 @@ describe('ChipRow', () => {
     expect(list.id).toBe('completion-list');
     const options = screen.getAllByRole('option');
     expect(options.map((o) => o.getAttribute('aria-label'))).toEqual(['Run: theme', 'Run: theme wombat', 'Insert: documents/', 'Run: help']);
-    expect(options.map((o) => o.textContent)).toEqual(['⏎theme', 'wombat⏎', 'documents/', 'help⏎']);
+    expect(options.map((o) => o.textContent)).toEqual(['>theme', '>wombat', 'documents/', '>help']);
     expect(options[1]?.querySelector('b')?.textContent).toBe('w');
     expect(options.every((o) => o.getAttribute('tabindex') === '-1')).toBe(true);
     expect(list.textContent).toContain('+2');
@@ -45,7 +45,7 @@ describe('ChipRow', () => {
     const { rerender } = render(ChipRow, { props: { chips: [stop] } });
     const option = screen.getByRole('option', { name: 'Cancel the running command (Control C)' });
     expect(option.classList.contains('emphasis')).toBe(true);
-    expect(option.textContent).toBe('×cancel ^C');
+    expect(option.textContent).toBe('xcancel ^C');
     rerender({ chips: [{ id: 'control:cancel', label: 'Cancel', matchLen: 0, kind: 'control', action: { kind: 'cancel' } }] });
     expect(screen.getByRole('option', { name: 'Cancel the password prompt' })).toBeInTheDocument();
   });

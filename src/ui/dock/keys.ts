@@ -39,7 +39,7 @@ export interface KeyDef {
   readonly holdForHistory?: boolean;
   /** Held, it repeats: ← and →. */
   readonly repeat?: boolean;
-  /** Takes the room the others leave: the Type a command… bar. */
+  /** Takes the room the others leave: the Type a command... bar. */
   readonly wide?: boolean;
 }
 
@@ -54,10 +54,11 @@ const UP: KeyDef = {
 const DOWN: KeyDef = { id: 'down', label: '↓', ariaLabel: 'Next command', action: { type: 'key', key: 'ArrowDown' } };
 const INTERRUPT: KeyDef = { id: 'interrupt', label: '^C', ariaLabel: 'Control C: cancel', action: { type: 'interrupt' } };
 const CLEAR: KeyDef = { id: 'clear', label: 'clear', ariaLabel: 'Clear the screen', action: { type: 'clear' } };
-export const SYMBOLS_KEY: KeyDef = { id: 'symbols', label: '•••', ariaLabel: 'Symbols', action: { type: 'symbols' } };
+/** The symbols key: three dots in ASCII, the way a text terminal writes "more". */
+export const SYMBOLS_KEY: KeyDef = { id: 'symbols', label: '...', ariaLabel: 'Symbols', action: { type: 'symbols' } };
 const HIDE: KeyDef = { id: 'hide', label: '', icon: 'chevron-down', ariaLabel: 'Hide the keyboard', action: { type: 'hide' } };
 
-/** With the keyboard open: tab ↑ ↓ ^C clear •••, then a chevron that puts the keyboard away. */
+/** With the keyboard open: tab ↑ ↓ ^C clear ..., then a chevron that puts the keyboard away. */
 export const FULL_KEYS: readonly KeyDef[] = [TAB, UP, DOWN, INTERRUPT, CLEAR, SYMBOLS_KEY, HIDE];
 
 /** On a short screen, before the chips in the one row: tab ↑ ^C. */
@@ -66,8 +67,8 @@ export const COMPACT_KEYS: readonly KeyDef[] = [TAB, UP, INTERRUPT];
 const symbol = (text: string, name: string): KeyDef => ({ id: `sym:${text}`, label: text, ariaLabel: name, action: { type: 'insert', text } });
 
 /**
- * The symbols page, after ••• to go back (SYMBOLS_PAGE): what a phone keyboard hides away. The
- * cursor keys come first, beside •••, so the way back and the arrows are never off the edge.
+ * The symbols page, after ... to go back (SYMBOLS_PAGE): what a phone keyboard hides away. The
+ * cursor keys come first, beside ..., so the way back and the arrows are never off the edge.
  */
 export const SYMBOL_KEYS: readonly KeyDef[] = [
   { id: 'left', label: '←', ariaLabel: 'Cursor left', action: { type: 'key', key: 'ArrowLeft' }, repeat: true },
@@ -83,12 +84,12 @@ export const SYMBOL_KEYS: readonly KeyDef[] = [
   symbol('$', 'Dollar'),
 ];
 
-/** The symbols page as drawn: ••• (back to the keys) first, then the cursor keys and symbols. */
+/** The symbols page as drawn: ... (back to the keys) first, then the cursor keys and symbols. */
 export const SYMBOLS_PAGE: readonly KeyDef[] = [SYMBOLS_KEY, ...SYMBOL_KEYS];
 
 /** With the keyboard put away: a bar to bring it back (a keyboard icon and the words), ↑ and clear. */
 export const CLOSED_KEYS: readonly KeyDef[] = [
-  { id: 'type', label: 'Type a command…', icon: 'keyboard', ariaLabel: 'Type a command', action: { type: 'type' }, wide: true },
+  { id: 'type', label: 'Type a command...', icon: 'keyboard', ariaLabel: 'Type a command', action: { type: 'type' }, wide: true },
   UP,
   CLEAR,
 ];

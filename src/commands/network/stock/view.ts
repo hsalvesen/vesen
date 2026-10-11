@@ -8,9 +8,16 @@
 import { out, type Action } from '../../../output/model';
 import { SYMBOL_RE, isRange, marketPhaseAt, type QuoteEnvelope, type QuoteSeries, type Range, type SearchHit } from '../../../services/market/contract';
 import type { FailureCode, MarketBackend, QuoteOutcome } from '../../../services/market/port';
+import { CARD_CHART, MINI_CHART, traceChart, trackText, type ChartRun, type Tone } from './chart';
 import { formatAge, formatChange, formatClock, formatCompact, formatDay, formatDuration, formatNumber, formatPercent, formatPrice, toneOf } from './format';
 
-export type Tone = 'up' | 'down' | 'flat';
+export type { Tone } from './chart';
+
+/** Between facts on one line: the market phase and its time, the footer's source, delay and age. */
+export const SEP = ' | ';
+
+/** What stands in for a figure the quote lacks. */
+export const NONE = '-';
 
 /** The ranges offered as chips under a card; 6mo and 5y are there for typing. */
 export const RANGE_CHIPS: readonly Range[] = ['1d', '5d', '1mo', '1y'];
@@ -40,7 +47,7 @@ export interface ChipView {
   /** The words a screen reader says, when the label alone is not enough ('Show AAPL over 5 days'). */
   readonly title: string;
   readonly action: Action;
-  /** The chart's current range: drawn outlined. */
+  /** The chart's current range: drawn with a marker before its label, and aria-current. */
   readonly active: boolean;
 }
 
@@ -102,6 +109,10 @@ export function reasonText(code: FailureCode | QuoteEnvelope['staleReason']): st
   }
 }
 
+/** The mark before a market phase: `*` while trading, `o` while not. */
+export const LIVE_MARK = '* ';
+export const IDLE_MARK = 'o ';
+
 /** The market phase now, from the periods the quote carries: an older copy never claims 'Open'. */
 export function phaseLine(quote: QuoteEnvelope, nowSec: number): { readonly text: string; readonly live: boolean } {
   const { timezone, tzAbbr, periods } = quote.market;
@@ -109,16 +120,16 @@ export function phaseLine(quote: QuoteEnvelope, nowSec: number): { readonly text
   const info = marketPhaseAt(quote.type, periods, nowSec);
   switch (info.phase) {
     case 'always_open':
-      return { text: '● Trading 24/7', live: true };
+      return { text: `${LIVE_MARK}Trading 24/7`, live: true };
     case 'open':
-      return { text: `● Open · closes ${clock(info.closesAt ?? periods?.regular.end ?? nowSec)}`, live: true };
+      return { text: `${LIVE_MARK}Open${SEP}closes ${clock(info.closesAt ?? periods?.regular.end ?? nowSec)}`, live: true };
     case 'pre':
-      return { text: info.opensAt === null ? '○ Pre-market' : `○ Pre-market · opens in ${formatDuration((info.opensAt - nowSec) * 1000)}`, live: false };
+      return { text: info.opensAt === null ? `${IDLE_MARK}Pre-market` : `${IDLE_MARK}Pre-market${SEP}opens in ${formatDuration((info.opensAt - nowSec) * 1000)}`, live: false };
     case 'post':
-      return { text: `○ After hours · closed ${clock(periods?.regular.end ?? quote.asOf)}`, live: false };
+      return { text: `${IDLE_MARK}After hours${SEP}closed ${clock(periods?.regular.end ?? quote.asOf)}`, live: false };
     case 'closed':
       return {
-        text: info.opensAt === null ? `○ Closed · last trade ${clock(quote.asOf)}` : `○ Closed · opens in ${formatDuration((info.opensAt - nowSec) * 1000)}`,
+        text: info.opensAt === null ? `${IDLE_MARK}Closed${SEP}last trade ${clock(quote.asOf)}` : `${IDLE_MARK}Closed${SEP}opens in ${formatDuration((info.opensAt - nowSec) * 1000)}`,
         live: false,
       };
     case 'unknown':
@@ -133,16 +144,16 @@ export function footerText(outcome: Extract<QuoteOutcome, { ok: true }>, nowMs: 
   const clock = (sec: number): string => formatClock(sec, quote.market.timezone, quote.market.tzAbbr);
   if (outcome.freshness === 'saved') {
     const what = quote.source === 'snapshot' ? 'Snapshot' : 'Saved copy';
-    return `${what} from ${formatAge(nowMs - outcome.savedAt)} · live data unavailable (${reasonText(outcome.reason)})`;
+    return `${what} from ${formatAge(nowMs - outcome.savedAt)}${SEP}live data unavailable (${reasonText(outcome.reason)})`;
   }
   if (quote.stale) {
     const what = quote.source === 'snapshot' ? 'Snapshot' : 'Saved copy';
-    return `${what} from ${formatAge(nowMs - quote.fetchedAt * 1000)} · live data unavailable (${reasonText(quote.staleReason)})`;
+    return `${what} from ${formatAge(nowMs - quote.fetchedAt * 1000)}${SEP}live data unavailable (${reasonText(quote.staleReason)})`;
   }
   const via = outcome.via === 'interim' ? ' via public proxy, may be slow' : '';
-  if (quote.source === 'snapshot') return `${provider}${via} · snapshot as of ${clock(quote.fetchedAt)}`;
-  if (quote.delayed) return `${provider}${via} · 15-min delayed · ${clock(quote.asOf)}`;
-  return `${provider}${via} · may be delayed · updated ${formatAge(nowMs - quote.asOf * 1000)}`;
+  if (quote.source === 'snapshot') return `${provider}${via}${SEP}snapshot as of ${clock(quote.fetchedAt)}`;
+  if (quote.delayed) return `${provider}${via}${SEP}15-min delayed${SEP}${clock(quote.asOf)}`;
+  return `${provider}${via}${SEP}may be delayed${SEP}updated ${formatAge(nowMs - quote.asOf * 1000)}`;
 }
 
 /** 'showing CBA.AX (ASX)': what a name or alias was taken to mean. */
@@ -152,51 +163,35 @@ export function resolvedNote(typed: string, quote: QuoteEnvelope): string | null
   return `'${typed}' isn't a ticker on its own — showing ${quote.symbol}${about === null ? '' : ` (${about})`}`;
 }
 
-// ── The sparkline ──────────────────────────────────────────────────────────────────────────
+// ── The chart ──────────────────────────────────────────────────────────────────────────────
 
 export interface SparkView {
-  /** The viewBox the path is drawn in; the SVG stretches it to the card's width. */
-  readonly width: number;
-  readonly height: number;
-  /** The closes as one path, x across the session, y down from the highest. */
-  readonly path: string;
-  /** Where the comparison line crosses, in viewBox units; null when there is none. */
-  readonly baseline: number | null;
-  /** The last point, in percent of the box: the dot. */
-  readonly last: { readonly x: number; readonly y: number };
-  /** The line's colour when it does not cross the baseline: up, down or flat overall. */
+  /** The closes traced in ASCII (chart.ts), top row first; each row's cells as runs of one tone. */
+  readonly rows: readonly (readonly ChartRun[])[];
+  /** Up, down or flat overall: the last close against the comparison line, or the first close. */
   readonly tone: Tone;
-  /** Under the chart: the start, what the dashed line is, the end. */
+  /** Under the chart: the start, what the dotted line is, the end. */
   readonly labels: { readonly start: string; readonly middle: string; readonly end: string };
   /** What a screen reader hears instead. */
   readonly label: string;
 }
 
-const SPARK = { width: 300, height: 60, pad: 4 } as const;
-
 const r1 = (value: number): number => Math.round(value * 10) / 10;
 
-/** The chart's geometry and words, or null with fewer than two points. */
+/**
+ * The chart's rows and words, or null with fewer than two points. The closes are spread over the
+ * chart's columns from the first to the last point, so a day still trading fills it as far as its
+ * last close, like the day a session ends with.
+ */
 export function sparkView(quote: QuoteEnvelope, series: QuoteSeries, options: { mini?: boolean } = {}): SparkView | null {
   const points = series.points;
   const first = points[0];
   const lastPoint = points[points.length - 1];
   if (points.length < 2 || first === undefined || lastPoint === undefined) return null;
-  const span = Math.max(series.end - series.start, lastPoint[0], 1);
   const closes = points.map(([, close]) => close);
-  const values = series.baseline === null ? closes : [...closes, series.baseline];
-  let low = Math.min(...values);
-  let high = Math.max(...values);
-  if (high - low < 1e-9) {
-    low -= 1;
-    high += 1;
-  }
-  const { width, height, pad } = SPARK;
-  const x = (t: number): number => r1((t / span) * width);
-  const y = (v: number): number => r1(pad + ((high - v) / (high - low)) * (height - 2 * pad));
-  const path = points.map(([t, v], i) => `${i === 0 ? 'M' : 'L'}${x(t)} ${y(v)}`).join('');
-  const baseline = series.baseline === null ? null : y(series.baseline);
   const tone = toneOf(series.baseline === null ? lastPoint[1] - first[1] : lastPoint[1] - series.baseline, quote.priceHint);
+  const rows = traceChart(closes, series.baseline, options.mini ? MINI_CHART : CARD_CHART, tone);
+  if (rows === null) return null;
 
   const zone = quote.market.timezone;
   const when = (sec: number): string =>
@@ -209,16 +204,7 @@ export function sparkView(quote: QuoteEnvelope, series: QuoteSeries, options: { 
     series.baseline === null ? '' : `, ${lastPoint[1] >= series.baseline ? 'above' : 'below'} the ${series.range === '1d' ? 'previous close' : 'first close'} of ${formatNumber(series.baseline, quote.priceHint)}`;
   const label = `${quote.symbol} ${RANGE_WORDS[series.range]}: ${direction}, from ${formatNumber(first[1], quote.priceHint)} to ${formatNumber(lastPoint[1], quote.priceHint)}${comparison}`;
 
-  return {
-    width,
-    height,
-    path,
-    baseline,
-    last: { x: r1((x(lastPoint[0]) / width) * 100), y: r1((y(lastPoint[1]) / height) * 100) },
-    tone,
-    labels,
-    label,
-  };
+  return { rows, tone, labels, label };
 }
 
 // ── The card ───────────────────────────────────────────────────────────────────────────────
@@ -229,12 +215,12 @@ export interface RangeBarView {
   readonly high: string;
   /** Where the price sits, 0 to 100. */
   readonly at: number;
+  /** The same on a track of cells: `[--*----]` (chart.ts). */
+  readonly track: string;
 }
 
 export interface QuoteCardView {
   readonly kind: 'quote-card';
-  /** Unique on the page, for the chart's gradient. */
-  readonly id: string;
   readonly symbol: string;
   readonly name: string | null;
   /** Shown as a STALE badge: why the copy is not live. */
@@ -249,18 +235,10 @@ export interface QuoteCardView {
   readonly chips: readonly ChipView[];
 }
 
-let nextId = 0;
-
-/** A new id for a card or table drawn now, so two on one page never share a gradient. */
-export function viewId(prefix: string): string {
-  nextId += 1;
-  return `${prefix}-${nextId.toString(36)}`;
-}
-
 function rangeBar(label: string, low: number | null, high: number | null, price: number, quote: QuoteEnvelope): RangeBarView | null {
   if (low === null || high === null || high < low) return null;
   const at = high - low < 1e-9 ? 50 : Math.min(100, Math.max(0, ((price - low) / (high - low)) * 100));
-  return { label, low: formatNumber(low, quote.priceHint), high: formatNumber(high, quote.priceHint), at: r1(at) };
+  return { label, low: formatNumber(low, quote.priceHint), high: formatNumber(high, quote.priceHint), at: r1(at), track: trackText(at) };
 }
 
 /** The range the card's chart shows; the saved copy's own when it is not the one asked for. */
@@ -283,14 +261,13 @@ export function cardView(outcome: Extract<QuoteOutcome, { ok: true }>, asked: Ra
   // Stats mean little for an index or a currency pair, so their cards leave them out.
   const stats: { label: string; value: string }[] = [];
   if (quote.type !== 'INDEX' && quote.type !== 'CURRENCY') {
-    stats.push({ label: quote.openApprox ? 'First trade' : 'Open', value: quote.open === null ? '—' : formatNumber(quote.open, quote.priceHint) });
-    stats.push({ label: 'Vol', value: quote.volume === null ? '—' : formatCompact(quote.volume) });
-    stats.push({ label: 'Exch', value: quote.exchange ?? '—' });
+    stats.push({ label: quote.openApprox ? 'First trade' : 'Open', value: quote.open === null ? NONE : formatNumber(quote.open, quote.priceHint) });
+    stats.push({ label: 'Vol', value: quote.volume === null ? NONE : formatCompact(quote.volume) });
+    stats.push({ label: 'Exch', value: quote.exchange ?? NONE });
   }
 
   return {
     kind: 'quote-card',
-    id: viewId('stk'),
     symbol: quote.symbol,
     name: quote.name,
     stale,
@@ -315,8 +292,8 @@ export function cardView(outcome: Extract<QuoteOutcome, { ok: true }>, asked: Ra
 /** One sentence for a screen reader. */
 export function cardAlt(view: QuoteCardView): string {
   const parts = [`${view.symbol}${view.name === null ? '' : `, ${view.name}`}: ${view.price}`];
-  if (view.change !== null) parts.push(view.change.text.replace(/^[▲▼◆] /, view.change.tone === 'up' ? 'up ' : view.change.tone === 'down' ? 'down ' : 'unchanged '));
-  parts.push(view.phase.text.replace(/^[●○] /, ''));
+  if (view.change !== null) parts.push(`${view.change.tone === 'up' ? 'up' : view.change.tone === 'down' ? 'down' : 'unchanged'} ${view.change.text}`);
+  parts.push(view.phase.text.replace(/^[*o] /, '').split(SEP).join(', '));
   if (view.stale !== null) parts.push(`stale: ${view.stale}`);
   return `${parts.join('. ')}.`;
 }
@@ -334,13 +311,12 @@ export interface QuoteRowView {
   readonly tone: Tone;
   readonly stale: boolean;
   readonly spark: SparkView | null;
-  /** '— not found', '— unavailable': the row's failure, shown in place of its figures. */
+  /** 'not found', 'unavailable': the row's failure, shown in place of its figures. */
   readonly failure: string | null;
 }
 
 export interface QuoteTableView {
   readonly kind: 'quote-table';
-  readonly id: string;
   readonly rows: readonly QuoteRowView[];
   readonly footer: string | null;
 }
@@ -349,19 +325,19 @@ export interface QuoteTableView {
 export function failureWords(code: FailureCode): string {
   switch (code) {
     case 'not_found':
-      return '— not found';
+      return 'not found';
     case 'invalid_symbol':
     case 'bad_request':
-      return '— not a valid ticker';
+      return 'not a valid ticker';
     case 'offline':
-      return "— you're offline";
+      return "you're offline";
     case 'timeout':
-      return '— timed out';
+      return 'timed out';
     case 'origin_not_allowed':
     case 'not_configured':
-      return '— not available on this host';
+      return 'not available on this host';
     default:
-      return '— unavailable';
+      return 'unavailable';
   }
 }
 
@@ -402,14 +378,12 @@ export function tableView(rows: readonly { readonly symbol: string; readonly out
   const firstOk = rows.find((row) => row.outcome.ok === true)?.outcome;
   const footer =
     firstOk !== undefined && firstOk.ok === true
-      ? `${PROVIDERS[firstOk.quote.provider]}${via === 'interim' ? ' via public proxy, may be slow' : ''} · may be delayed · updated ${formatAge(nowMs - firstOk.quote.asOf * 1000)}`
+      ? `${PROVIDERS[firstOk.quote.provider]}${via === 'interim' ? ' via public proxy, may be slow' : ''}${SEP}may be delayed${SEP}updated ${formatAge(nowMs - firstOk.quote.asOf * 1000)}`
       : null;
-  return { kind: 'quote-table', id: viewId('stt'), rows: views, footer };
+  return { kind: 'quote-table', rows: views, footer };
 }
 
 export function tableAlt(view: QuoteTableView): string {
-  return view.rows
-    .map((row) => (row.failure === null ? `${row.symbol} ${row.last ?? ''} ${row.percent ?? ''}`.trim() : `${row.symbol} ${row.failure.replace(/^— /, '')}`))
-    .join('; ');
+  return view.rows.map((row) => (row.failure === null ? `${row.symbol} ${row.last ?? ''} ${row.percent ?? ''}`.trim() : `${row.symbol} ${row.failure}`)).join('; ');
 }
 

@@ -13,8 +13,7 @@ describe('artClass', () => {
     expect(artClass('██\n██')).toBe('art-block');
     expect(artClass(BANNER_ART)).toBe('art-block');
     expect(artClass(BANNER_ART_COMPACT)).toBe('art-block');
-    // figlet's ink, and a text-mode QR code's half blocks.
-    expect(artClass(` ${INK}${INK} \n${INK}  ${INK}`)).toBe('art-block');
+    // A text-mode QR code's half blocks.
     expect(artClass('▀▄▀▄\n▄▀▄▀')).toBe('art-block');
     // The quadrants and shades too.
     expect(artClass('▗▟▙▖\n▝▜▛▘')).toBe('art-block');
@@ -31,6 +30,8 @@ describe('artClass', () => {
     expect(artClass(' /\\_/\\\n( o.o )\n > ^ <')).toBe('art-glyph');
     for (const cow of COWS) expect(artClass(cow.art), cow.name).toBe('art-glyph');
     expect(artClass(trainFrame(0))).toBe('art-glyph');
+    // figlet's ink is #, as figlet's own fonts draw it: text, at the terminal's line height.
+    expect(artClass(` ${INK}${INK} \n${INK}  ${INK}`)).toBe('art-glyph');
     expect(artClass('')).toBe('art-glyph');
     // Geometric shapes and arrows alone are glyphs of text, not cells of a block.
     expect(artClass('● ○ ◆ → ↑')).toBe('art-glyph');

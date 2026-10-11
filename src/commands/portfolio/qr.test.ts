@@ -32,7 +32,7 @@ describe('qr on the terminal', () => {
       requestedEcc: 'M',
       bytes: 17,
       capacity: 22,
-      note: 'added https:// · --text encodes exactly what you typed',
+      note: 'added https:// | --text encodes exactly what you typed',
       tips: [],
       options: { type: 'svg', size: 'fit', margin: 4, fullscreen: false },
     });
@@ -125,7 +125,7 @@ describe('qr into a pipe', () => {
     expect(result.status).toBe(0);
     expect(result.stdoutPlain).toBe(toText(encodeText('https://vesen.app', { ecc: 'M', boostEcc: true }), { style: 'utf8', margin: 2 }).join('\n'));
     expect(result.stdoutPlain).toMatch(/^[█▀▄ \n]+$/);
-    expect(result.stderrPlain).toBe('added https:// · --text encodes exactly what you typed');
+    expect(result.stderrPlain).toBe('added https:// | --text encodes exactly what you typed');
   });
 
   it('writes the style -t asks for', async () => {

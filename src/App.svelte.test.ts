@@ -128,10 +128,10 @@ describe('App', () => {
     expect(entry?.querySelector('.command-input-display')?.textContent).toBe('stock AAPL');
     expect(container.querySelector('[data-prompt-area]')?.textContent).not.toContain('stock AAPL');
     // The spinner draws its first frame straight away, under the running entry.
-    const cancel = await screen.findByRole('button', { name: 'Stop: fetching AAPL…' });
+    const cancel = await screen.findByRole('button', { name: 'Stop: fetching AAPL...' });
     expect(entry?.contains(cancel)).toBe(true);
     // The status line says what the command is doing, and how to stop it.
-    expect(cancel).toHaveTextContent(/^⠋\s*fetching AAPL…\s*\(Ctrl\+C or Esc to stop\)$/);
+    expect(cancel).toHaveTextContent(/^\|\s*fetching AAPL\.\.\.\s*\(Ctrl\+C or Esc to stop\)$/);
 
     // A tap must not be cancelled at pointerdown: WebKit on iOS then never sends the click.
     expect(await fireEvent.pointerDown(cancel)).toBe(true);
@@ -418,7 +418,7 @@ describe('the session snapshot and the alternate screen', () => {
 
   it('inside an in-app browser, saves before a tapped link leaves in the same view', async () => {
     const session = sessionStore();
-    const inApp = fakeOpener({ inApp: { label: 'Instagram', browser: 'Safari', menuHint: '••• → Open in browser' }, plan: () => ({ mode: 'self', target: '_self' }) });
+    const inApp = fakeOpener({ inApp: { label: 'Instagram', browser: 'Safari', menuHint: '... -> Open in browser' }, plan: () => ({ mode: 'self', target: '_self' }) });
     const { container } = render(App, { props: { shell, platform: { ...platform(session), opener: inApp } } });
     await type('repo');
     const link = await vi.waitFor(() => {

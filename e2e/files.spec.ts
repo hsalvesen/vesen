@@ -80,7 +80,7 @@ test.describe('files and the prompt', { tag: '@smoke' }, () => {
     expect(sizes.overflow).toBeLessThanOrEqual(0);
     // At least ten cells of room to type.
     expect(sizes.input).toBeGreaterThan(70);
-    expect(await promptText(page.locator('[data-prompt-area] .prompt'))).toMatch(/^guest@vesen:…[\w-]+\$$/);
+    expect(await promptText(page.locator('[data-prompt-area] .prompt'))).toMatch(/^guest@vesen:\.\.\.[\w-]+\$$/);
   });
 
   test('system files are the system\'s: touch /etc/x is refused, and the $ turns red', async ({ page }) => {

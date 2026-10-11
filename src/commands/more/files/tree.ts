@@ -1,7 +1,14 @@
-// tree: list the contents of folders in a tree, drawn with box-drawing lines, with a count of
-// folders and files at the end; the body is in tree.run.ts.
+// tree: list the contents of folders in a tree, drawn with the connectors of tree --charset=ascii
+// (|-- and `--) unless --charset asks for box-drawing lines, with a count of folders and files at
+// the end; the body is in tree.run.ts.
 
-import { defineCommand } from '../../../shell/types';
+import { defineCommand, type EnumValue } from '../../../shell/types';
+
+/** The charsets --charset offers; tree.run.ts draws any other as ascii. */
+const CHARSET_NAMES: readonly EnumValue[] = [
+  { value: 'ascii', summary: 'the lines drawn with |, ` and - (the default here)' },
+  { value: 'utf-8', summary: 'box-drawing lines' },
+];
 
 export default defineCommand({
   name: 'tree',
@@ -26,6 +33,11 @@ export default defineCommand({
     },
     { long: 'noreport', description: 'leave out the count of folders and files' },
     { long: 'dirsfirst', description: 'list folders before files' },
+    {
+      long: 'charset',
+      description: 'draw the lines in NAME: ascii (the default here, since box-drawing lines no longer join at this line height) or utf-8',
+      value: { name: 'NAME', source: { kind: 'enum', values: () => CHARSET_NAMES, caseInsensitive: true } },
+    },
   ],
   args: [{ name: 'DIRECTORY', source: { kind: 'path', accept: 'dir' }, optional: true, variadic: true }],
   examples: [

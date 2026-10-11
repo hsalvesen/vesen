@@ -170,7 +170,7 @@ export interface InAppInfo {
   readonly label: string;
   /** The real browser an escape opens: 'Safari' on iOS, 'Chrome' on Android, else 'your browser'. */
   readonly browser: string;
-  /** The manual instruction, always shown beside an escape: '••• → Open in browser'. */
+  /** The manual instruction, always shown beside an escape: '... -> Open in browser'. */
   readonly menuHint: string;
 }
 
@@ -203,7 +203,7 @@ export interface Opener {
    * and only beside the manual instruction. False when there is no escape here.
    */
   openExternal(url: string): boolean;
-  /** The manual "••• → Open in browser" instruction for the current in-app browser, or null. */
+  /** The manual "... -> Open in browser" instruction for the current in-app browser, or null. */
   menuHint(): string | null;
   /** True when the system share sheet is available. */
   canShare(): boolean;

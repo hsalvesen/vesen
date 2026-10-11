@@ -41,11 +41,11 @@ describe('QrPresenter', () => {
     expect(image.getAttribute('src')?.startsWith('data:image/png;base64,iVBORw0KGgo')).toBe(true);
     expect(screen.getByText('https://vesen.app')).toBeInTheDocument();
     const meta = dialog.querySelector('.meta');
-    expect(meta?.textContent).toBe(`v2 · 25×25 · EC Q · 17/22 B · mask ${view.mask}`);
+    expect(meta?.textContent).toBe(`v2 | 25x25 | EC Q | 17/22 B | mask ${view.mask}`);
     // Each label stays with its value: the line wraps only between the parts.
     expect(Array.from(meta?.querySelectorAll('.together') ?? []).map((part) => part.textContent)).toEqual([
       'v2',
-      '25×25',
+      '25x25',
       'EC Q',
       '17/22 B',
       `mask ${view.mask}`,

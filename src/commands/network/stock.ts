@@ -9,7 +9,7 @@ import { defineCommand } from '../../shell/types';
 export const RANGE_VALUES = ['1d', '5d', '1mo', '6mo', '1y', '5y'] as const;
 export const TICKER_VALUES = ['AAPL', 'TEAM', 'CBA.AX', 'BHP.AX', '^AXJO', '^GSPC', 'BTC-USD', 'AUDUSD=X', 'MSFT', 'NVDA'] as const;
 
-/** The status line while stock runs: 'fetching CBA.AX…', 'searching for apple…'. */
+/** The status line while stock runs: 'fetching CBA.AX...', 'searching for apple...'. */
 export function stockLabel(argv: readonly string[]): string {
   const operands: string[] = [];
   let search = false;
@@ -28,14 +28,14 @@ export function stockLabel(argv: readonly string[]): string {
       operands.push(word);
     }
   }
-  if (search) return operands.length > 0 ? `searching for ${operands.join(' ')}…` : 'searching…';
+  if (search) return operands.length > 0 ? `searching for ${operands.join(' ')}...` : 'searching...';
   const symbols = operands.map((word) => word.replace(/^\$/, '').toUpperCase());
   if (symbols.length === 0) return 'stock';
   if (symbols.length <= 3) {
     const last = symbols.pop() ?? '';
-    return `fetching ${symbols.length > 0 ? `${symbols.join(', ')} and ${last}` : last}…`;
+    return `fetching ${symbols.length > 0 ? `${symbols.join(', ')} and ${last}` : last}...`;
   }
-  return `fetching ${symbols.slice(0, 2).join(', ')} and ${symbols.length - 2} more…`;
+  return `fetching ${symbols.slice(0, 2).join(', ')} and ${symbols.length - 2} more...`;
 }
 
 export default defineCommand({

@@ -41,6 +41,8 @@
   const helpText = prepareLines(PAGER_HELP.map((line) => [{ text: line }]));
   /** Ten cells of the font, to measure one by. */
   const PROBE = 'MMMMMMMMMM';
+  /** The keys hint on a keyboard, two spaces between the pair. */
+  const PAGER_HINT = 'h help  q quit';
 
   /** The screen in characters: the terminal's until the pager has measured its own. */
   let columns = $state(view.columns);
@@ -355,7 +357,8 @@
     {:else}
       <div class="status">
         <span class="where">{status}</span>
-        {#if !view.touch}<span class="hint">h help · q quit</span>{/if}
+        <!-- Two spaces between the keys, kept as an expression so the compiler does not collapse them. -->
+        {#if !view.touch}<span class="hint">{PAGER_HINT}</span>{/if}
       </div>
     {/if}
     <p class="sr-only" role="status" aria-live="polite">{message}</p>

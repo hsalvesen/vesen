@@ -42,7 +42,7 @@ export default defineCommand({
     // +short and @google may stand anywhere on the line, so they are never taken for NAME or TYPE.
     { name: 'OPTION', source: { kind: 'enum', values: () => OPTIONS }, optional: true, variadic: true, marks: '+@' },
   ],
-  loadingLabel: (argv) => `dig: resolving ${argv.slice(1).find((word) => /^[^-+@]/.test(word) && word.includes('.')) ?? 'the name'}…`,
+  loadingLabel: (argv) => `dig: resolving ${argv.slice(1).find((word) => /^[^-+@]/.test(word) && word.includes('.')) ?? 'the name'}...`,
   examples: [
     { line: 'dig vesen.app', note: 'the A record, with every section' },
     { line: 'dig +short vesen.app MX', note: 'just the mail servers' },

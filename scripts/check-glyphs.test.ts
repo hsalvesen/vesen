@@ -41,11 +41,12 @@ describe('findMissing', () => {
     ]);
   });
 
-  it('passes the characters allowed on purpose', () => {
+  it('passes the characters allowed on purpose, and no longer the katakana cmatrix once drew', () => {
     expect(isAllowed(0x0301)).toBe(true);
-    expect(isAllowed(0xff71)).toBe(true);
+    expect(isAllowed(0xff71)).toBe(false);
     expect(isAllowed(0x2709)).toBe(false);
-    expect(findMissing('/[̀-ͯ]/ and ｱ and ‸', drawn)).toEqual([]);
+    expect(findMissing('/[̀-ͯ]/ and ‸', drawn)).toEqual([]);
+    expect(findMissing('ｱ', drawn)).toEqual([{ line: 1, char: 'ｱ', codePoint: 0xff71 }]);
     for (const entry of ALLOWED) expect(entry.why).not.toBe('');
   });
 

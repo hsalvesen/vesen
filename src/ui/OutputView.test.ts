@@ -140,7 +140,7 @@ describe('OutputView: links and actions', () => {
     expect(link?.getAttribute('href')).toBe('https://www.linkedin.com/in/example');
     expect(link?.getAttribute('target')).toBe('_blank');
     expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
-    expect(link?.textContent).toBe('→ linkedin.com/in/example');
+    expect(link?.textContent).toBe('-> linkedin.com/in/example');
     expect(root.querySelector('.card-detail')?.textContent).toBe('profile');
     expect(root.querySelector('button.card-copy')?.textContent?.trim()).toBe('Copy');
   });
@@ -308,7 +308,7 @@ describe('OutputView: layout blocks', () => {
 });
 
 describe('OutputView: live bindings', () => {
-  it('highlights the current theme and follows the store', async () => {
+  it('marks the current theme with aria-current, in its own colour, and follows the store', async () => {
     const root = await view([
       out.lines([
         [{ text: 'swamphen', live: { kind: 'isCurrentTheme', theme: 'swamphen' } }],
@@ -319,7 +319,8 @@ describe('OutputView: live bindings', () => {
     theme.set(themeNamed('swamphen'));
     flushSync();
     expect(current()).toEqual(['swamphen']);
-    expect(styleOf(root.querySelector('[aria-current="true"]'))).toBe('color: var(--role-accent, var(--theme-cyan))');
+    // No accent on the current entry: the marker beside it, plain text, says which it is.
+    expect(styleOf(root.querySelector('[aria-current="true"]'))).toBeUndefined();
 
     theme.set(themeNamed('cockatoo'));
     flushSync();

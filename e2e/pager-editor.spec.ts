@@ -49,7 +49,7 @@ test.describe('the pager and the editor', { tag: '@smoke' }, () => {
     await expect(pager.locator('.rows')).toContainText('LS(1)');
     await expect(pager.locator('.status')).toContainText('Manual page ls(1)');
     if (isPhone()) await expect(page.getByRole('button', { name: 'Close' })).toBeVisible();
-    else await expect(pager).toContainText('h help · q quit');
+    else await expect(pager).toContainText('h help  q quit');
     // Nothing scrolls sideways, at any width.
     const sideways = await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - window.innerWidth));
     expect(sideways).toBe(0);

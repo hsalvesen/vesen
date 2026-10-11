@@ -27,8 +27,8 @@ const SKIPPED_DIRS = new Set(['__snapshots__', 'node_modules']);
 
 /**
  * Characters the terminal font does not draw, on purpose. Each is matched on input, stripped
- * before anything reaches the screen, drawn on a canvas, or used only by tests, so the font
- * never needs it. Anything else outside ASCII that the font lacks fails the check.
+ * before anything reaches the screen, or used only by tests, so the font never needs it.
+ * Anything else outside ASCII that the font lacks fails the check.
  * @type {readonly { from: number, to: number, why: string }[]}
  */
 export const ALLOWED = [
@@ -41,7 +41,6 @@ export const ALLOWED = [
   { from: 0x202f, to: 0x202f, why: 'the narrow no-break space is made plain as it is typed (shell/editor/normalize.ts)' },
   { from: 0x2038, to: 0x2038, why: 'the caret marks the cursor in test lines (src/testing/completion-env.ts)' },
   { from: 0x2066, to: 0x2069, why: 'bidirectional isolates are removed from upstream text (lib/upstream-text.ts)' },
-  { from: 0xff66, to: 0xff9d, why: "half-width katakana: cmatrix's rain, drawn on a canvas where the fallback font is meant (commands/lib/matrix.ts)" },
 ];
 
 /**

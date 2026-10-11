@@ -48,7 +48,7 @@ const spec: CommandSpec & RawArgsSpec & RunnerChoice = {
   ],
   // Each object's words choose what follows them, so Tab and the chips offer get only after route.
   args: [{ name: 'OBJECT', source: { kind: 'enum', values: () => OBJECTS } }],
-  loadingLabel: (argv) => (/^a/.test(argv.slice(1).find((word) => !word.startsWith('-')) ?? '') ? 'ip: asking Cloudflare for your public address…' : 'ip'),
+  loadingLabel: (argv) => (/^a/.test(argv.slice(1).find((word) => !word.startsWith('-')) ?? '') ? 'ip: asking Cloudflare for your public address...' : 'ip'),
   examples: [
     { line: 'ip addr', note: 'the addresses, and your public one' },
     { line: 'ip -br link', note: 'one line a device', offline: true },

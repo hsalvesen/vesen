@@ -30,9 +30,15 @@ describe('the status line', () => {
     expect(button.querySelector('.elapsed')).toBeNull();
     expect(button.querySelector('.spinner')?.textContent).not.toBe(SPINNER[0]);
     await vi.advanceTimersByTimeAsync(200);
-    expect(button.querySelector('.elapsed')?.textContent).toBe(' · 3s');
+    expect(button.querySelector('.elapsed')?.textContent).toBe(' | 3s');
     await vi.advanceTimersByTimeAsync(62_000);
-    expect(button.querySelector('.elapsed')?.textContent).toBe(' · 1m 05s');
+    expect(button.querySelector('.elapsed')?.textContent).toBe(' | 1m 05s');
+  });
+
+  it('spins through the classic | / - \\ cycle, in ASCII', () => {
+    expect(SPINNER).toEqual(['|', '/', '-', '\\']);
+    expect(STILL).toBe('...');
+    for (const frame of [...SPINNER, STILL, DEFAULT_LABEL]) expect(frame).toMatch(/^[ -~]+$/);
   });
 
   it("says 'Processing…' for a command that says nothing about itself", () => {
@@ -40,7 +46,7 @@ describe('the status line', () => {
     expect(view.getByRole('button', { name: `Stop: ${DEFAULT_LABEL}` })).toBeTruthy();
   });
 
-  it('is still under reduced motion: a … in place of the spinner', async () => {
+  it('is still under reduced motion: ... in place of the spinner', async () => {
     vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduced-motion'), media: query }));
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
     const view = render(StatusLine, { props: { label: 'sleeping 5', startedAt: Date.now(), onstop: () => {} } });
@@ -48,14 +54,14 @@ describe('the status line', () => {
     expect(spinner()).toBe(STILL);
     await vi.advanceTimersByTimeAsync(3000);
     expect(spinner()).toBe(STILL);
-    expect(view.container.querySelector('.elapsed')?.textContent).toBe(' · 3s');
+    expect(view.container.querySelector('.elapsed')?.textContent).toBe(' | 3s');
   });
 
   it('has a Stop chip on touch, and stops the command on a tap anywhere on it without taking focus', async () => {
     const onstop = vi.fn();
     const view = render(StatusLine, { props: { label: 'sleeping 5', touch: true, onstop } });
     const button = view.getByRole('button', { name: 'Stop: sleeping 5' });
-    expect(view.container.querySelector('.stop-chip')?.textContent).toBe('■ Stop');
+    expect(view.container.querySelector('.stop-chip')?.textContent).toBe('Stop');
     expect(view.container.querySelector('.hint')).toBeNull();
     // A tap must not be cancelled at pointerdown: WebKit on iOS then never sends the click.
     expect(await fireEvent.pointerDown(button)).toBe(true);

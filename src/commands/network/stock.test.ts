@@ -68,13 +68,13 @@ describe('the spec', () => {
   });
 
   it('says what it is fetching on the status line', () => {
-    expect(stockLabel(['stock', 'cba.ax'])).toBe('fetching CBA.AX…');
-    expect(stockLabel(['stock', '$aapl'])).toBe('fetching AAPL…');
-    expect(stockLabel(['stock', '-r', '5d', 'AAPL', '-f'])).toBe('fetching AAPL…');
-    expect(stockLabel(['stock', 'AAPL', 'CBA.AX'])).toBe('fetching AAPL and CBA.AX…');
-    expect(stockLabel(['stock', 'A', 'B', 'C'])).toBe('fetching A, B and C…');
-    expect(stockLabel(['stock', 'A', 'B', 'C', 'D', 'E'])).toBe('fetching A, B and 3 more…');
-    expect(stockLabel(['stock', '-s', 'commonwealth', 'bank'])).toBe('searching for commonwealth bank…');
+    expect(stockLabel(['stock', 'cba.ax'])).toBe('fetching CBA.AX...');
+    expect(stockLabel(['stock', '$aapl'])).toBe('fetching AAPL...');
+    expect(stockLabel(['stock', '-r', '5d', 'AAPL', '-f'])).toBe('fetching AAPL...');
+    expect(stockLabel(['stock', 'AAPL', 'CBA.AX'])).toBe('fetching AAPL and CBA.AX...');
+    expect(stockLabel(['stock', 'A', 'B', 'C'])).toBe('fetching A, B and C...');
+    expect(stockLabel(['stock', 'A', 'B', 'C', 'D', 'E'])).toBe('fetching A, B and 3 more...');
+    expect(stockLabel(['stock', '-s', 'commonwealth', 'bank'])).toBe('searching for commonwealth bank...');
     expect(stockLabel(['stock', '--search=x'])).toBe('stock');
     expect(stockLabel(['stock'])).toBe('stock');
   });
@@ -167,14 +167,14 @@ describe('one ticker', () => {
     expect(stderrPlain).toBe('');
     const card = component(blocks);
     expect(card?.type === 'component' && (card.props as QuoteCardView).stale).toBe('timed out');
-    expect(card?.type === 'component' && (card.props as QuoteCardView).footer).toMatch(/^Saved copy from .* · live data unavailable \(timed out\)$/);
+    expect(card?.type === 'component' && (card.props as QuoteCardView).footer).toMatch(/^Saved copy from .* \| live data unavailable \(timed out\)$/);
   });
 
   it('prints plain text for --plain and into a pipe, and the envelope for --json', async () => {
     use(fakeMarket({ AAPL: live('AAPL') }));
     const plain = await runLine('stock --plain AAPL');
     expect(component(plain.blocks)).toBeUndefined();
-    expect(plain.stdoutPlain).toContain('332.89 USD  ▼ −0.80 (−0.24%)');
+    expect(plain.stdoutPlain).toContain('332.89 USD  -0.80 (-0.24%)');
     const piped = await runLine('stock AAPL', { tty: false });
     expect(piped.stdoutPlain).toBe(plain.stdoutPlain);
     const json = await runLine('stock --json AAPL');
@@ -223,10 +223,10 @@ describe('the status line', () => {
     stop();
     s.stop();
     expect(labels.filter((label, i) => label !== labels[i - 1])).toEqual([
-      'fetching CBA.AX…',
-      'still fetching CBA.AX…',
-      'taking longer than usual — market data is slow…',
-      'retrying CBA.AX (2/2)…',
+      'fetching CBA.AX...',
+      'still fetching CBA.AX...',
+      'taking longer than usual, market data is slow...',
+      'retrying CBA.AX (2/2)...',
     ]);
   });
 });
@@ -273,7 +273,7 @@ describe('failures, in plain words', () => {
     [
       'origin_not_allowed',
       {},
-      "stock: live quotes aren't available on this host.\nvesen's quote proxy only serves vesen.app — set VITE_STOCK_API to your own (README → Stock quotes).",
+      "stock: live quotes aren't available on this host.\nvesen's quote proxy only serves vesen.app — set VITE_STOCK_API to your own (README -> Stock quotes).",
     ],
   ])('%s %j', async (code, extra, message) => {
     use(fakeMarket({ AAPL: fail(code, extra) }));
@@ -320,7 +320,7 @@ describe('several tickers', () => {
       ['AAPL', null],
       ['CBA.AX', null],
       ['BTC-USD', null],
-      ['ZZZZQQ', '— not found'],
+      ['ZZZZQQ', 'not found'],
     ]);
     // Asked once each, the same ticker twice only once.
     expect(market.calls.map((call) => call.symbol)).toEqual(['AAPL', 'CBA.AX', 'BTC-USD', 'ZZZZQQ']);

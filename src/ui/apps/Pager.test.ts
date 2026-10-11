@@ -37,7 +37,8 @@ describe('Pager', () => {
     const { rows, status } = open();
     expect(rows()).toEqual(numbered(10).map((line) => line[0]?.text));
     expect(status()).toBe('notes.txt lines 1-10/100 10%');
-    expect(screen.getByText('h help · q quit')).toBeInTheDocument();
+    expect(screen.getByText('h help q quit')).toBeInTheDocument();
+    expect(document.querySelector('.hint')?.textContent).toBe('h help  q quit');
   });
 
   it("moves with less's keys", async () => {
@@ -182,7 +183,7 @@ describe('Pager on a touch screen', () => {
       'Search',
       'Close',
     ]);
-    expect(screen.queryByText('h help · q quit')).toBeNull();
+    expect(screen.queryByText('h help q quit')).toBeNull();
     await fireEvent.click(screen.getByRole('button', { name: 'On a screen' }));
     expect(rows()[0]).toBe('line 11');
     await fireEvent.click(screen.getByRole('button', { name: 'Back a screen' }));

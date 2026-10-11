@@ -20,7 +20,7 @@ export default defineCommand({
     { name: 'SERVER', source: { kind: 'enum', values: () => SERVERS }, optional: true },
   ],
   // NAME, never -t's TYPE or the SERVER after it.
-  loadingLabel: (argv) => `host: looking up ${argv.find((word, i) => i > 0 && !word.startsWith('-') && argv[i - 1] !== '-t') ?? 'the name'}…`,
+  loadingLabel: (argv) => `host: looking up ${argv.find((word, i) => i > 0 && !word.startsWith('-') && argv[i - 1] !== '-t') ?? 'the name'}...`,
   examples: [
     { line: 'host vesen.app', note: 'its addresses and mail servers' },
     { line: 'host -t TXT example.com', note: 'one type of record' },

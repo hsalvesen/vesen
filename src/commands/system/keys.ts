@@ -1,6 +1,6 @@
 // keys: show or hide the key bar in the phone dock (docs/plan/04-phone-and-instagram.md, "Dock,
-// chips and key bar"). The bar (tab, ↑, ↓, ^C, clear, a page of symbols, and ▾ to put the
-// keyboard away) rides above a touch screen's keyboard. Under `auto`, the default, it goes once a
+// chips and key bar"). The bar (tab, ↑, ↓, ^C, clear, a page of symbols, and a chevron to put
+// the keyboard away) rides above a touch screen's keyboard. Under `auto`, the default, it goes once a
 // hardware keyboard is used there, and the chips stay. The setting is remembered.
 
 import { out } from '../../output/model';

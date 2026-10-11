@@ -23,6 +23,7 @@
     cardHint,
     displayPayload,
     formatPx,
+    META_SEP,
     metaLine,
     middleEllipsis,
     moduleSize,
@@ -184,7 +185,7 @@
 
 {#if view !== null}
   <div class="qr" role="group" aria-label={alt} data-qr-card bind:this={root} use:measureWidth={(w) => (width = w)}>
-    <div class="qr-head"><span class="qr-name">qr</span> <span class="qr-payload" title={view.payload}>{shown}</span>{#if view.note !== undefined}<span class="qr-dim">{` · ${view.note}`}</span>{/if}</div>
+    <div class="qr-head"><span class="qr-name">qr</span> <span class="qr-payload" title={view.payload}>{shown}</span>{#if view.note !== undefined}<span class="qr-dim">{`${META_SEP}${view.note}`}</span>{/if}</div>
     {#if asArt && art !== null}
       <div
         class="qr-text"

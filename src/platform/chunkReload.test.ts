@@ -85,7 +85,7 @@ describe('installChunkReload', () => {
 
     for (const frame of frames) frame(0);
     expect(order).toEqual([UPDATE_NOTICE, 'reload']);
-    expect(UPDATE_NOTICE).toBe('vesen was updated, reloading…');
+    expect(UPDATE_NOTICE).toBe('vesen was updated, reloading...');
   });
 
   it('says nothing when it will not reload', () => {

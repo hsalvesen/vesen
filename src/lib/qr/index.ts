@@ -35,6 +35,7 @@ export {
   asQrView,
   cardHint,
   displayPayload,
+  META_SEP,
   metaLine,
   middleEllipsis,
   qrFileName,

@@ -360,8 +360,8 @@ describe('swatches, markers and grid notes', () => {
   it('swatches checks every colour, and gives a pipe its blocks of text', () => {
     const strip = out.swatches('#222235', ['#FFFFFF', '#f60055']);
     expect(strip.swatches).toEqual({ background: '#222235', colours: ['#ffffff', '#f60055'] });
-    expect(strip.text).toBe(' ████ ');
-    expect(plain(out.lines([[strip]]))).toBe(' ████ \n');
+    expect(strip.text).toBe(' #### ');
+    expect(plain(out.lines([[strip]]))).toBe(' #### \n');
     expect(() => out.swatches('red', [])).toThrow(TypeError);
     expect(() => out.swatches('#000000', ['url(x)'])).toThrow(TypeError);
     expect(hexColour('#ABCDEF')).toBe('#abcdef');
@@ -369,9 +369,9 @@ describe('swatches, markers and grid notes', () => {
   });
 
   it('live makes a span the renderer reads from the stores, which a pipe reads as written', () => {
-    const marker = out.live('› ', { kind: 'isCurrentTheme', theme: 'wombat', marker: '› ' }, { fg: 'accent' });
-    expect(marker).toEqual({ text: '› ', style: { fg: 'accent' }, live: { kind: 'isCurrentTheme', theme: 'wombat', marker: '› ' } });
-    expect(lineText([marker, out.span('wombat')])).toBe('› wombat');
+    const marker = out.live('* ', { kind: 'isCurrentTheme', theme: 'wombat', marker: '* ' }, { fg: 'accent' });
+    expect(marker).toEqual({ text: '* ', style: { fg: 'accent' }, live: { kind: 'isCurrentTheme', theme: 'wombat', marker: '* ' } });
+    expect(lineText([marker, out.span('wombat')])).toBe('* wombat');
   });
 
   it('grid notes line up after their items in a pipe', () => {
