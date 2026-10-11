@@ -103,7 +103,9 @@ test.describe('accessibility', { tag: '@smoke' }, () => {
     await run(page, 'fastfetch');
     const logo = page.locator('[role="log"] .art[aria-hidden="true"]').nth(1);
     await expect(logo).toBeAttached();
-    await expect(page.locator('.sr-only', { hasText: / logo$/ })).toHaveCount(2);
+    // Banner alt is "Vesen logo, version …"; fastfetch's OS art ends in " logo".
+    await expect(page.locator('.sr-only', { hasText: /^Vesen logo, version \S+$/ })).toHaveCount(1);
+    await expect(page.locator('.sr-only', { hasText: /^(macOS|iOS|Android|Windows|Linux) logo$/ })).toHaveCount(1);
 
     await run(page, 'theme ls');
     const swatches = page.locator('.swatches');
