@@ -36,9 +36,9 @@ describe('artClass', () => {
     expect(artClass('● ○ ◆ → ↑')).toBe('art-glyph');
   });
 
-  it('draws every fastfetch logo as block art', () => {
+  it('draws every fastfetch logo, traced in letters and punctuation, at the terminal line height', () => {
     for (const os of ['macOS', 'iOS', 'Android', 'Windows', 'Linux', 'unknown']) {
-      expect(artClass(logoFor(os).art), os).toBe('art-block');
+      expect(artClass(logoFor(os).art), os).toBe('art-glyph');
     }
   });
 });

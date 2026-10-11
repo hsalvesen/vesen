@@ -14,19 +14,21 @@ import { out, type Block, type Line, type SpanStyle } from '../../output/model';
  * plain template literal. Drawn at line height 1 (ui/art-class.ts), where the rows touch.
  */
 export const BANNER_ART = `▐█▌   ▐█▌▐██████▌ ▟█████▌▐██████▌▐█▙▖   ▐█▌
-▐█▌  ▐█▌ ██      ██      ██      ██▜▙   ██
-▐█▌ ▐█▌ ▐█████▌  ▜█████▖▐█████▌ ▐█▌▝█▖ ▐█▌
-▐█▌▐█▌  ██           ██ ██      ██  ▜▙ ██
-▐███▌  ▐█▌          ▐█▌▐█▌     ▐█▌  ▝█▟█▌
-▝██▘   ███████ ██████▀ ███████ ██    ▀██`;
+▐█▌: ▐█▌:██::::::██::::::██::::::██▜▙:  ██::
+▐█▌:▐█▌:▐█████▌  ▜█████▖▐█████▌ ▐█▌▝█▖ ▐█▌:
+▐█▌▐█▌::██::::::  :::██:██::::::██::▜▙:██::
+▐███▌::▐█▌:         ▐█▌▐█▌:    ▐█▌: ▝█▟█▌:
+▝██▘:: ███████ ██████▀:███████ ██::  ▀██::
+ ::::   ::::::: ::::::: ::::::: ::    :::`;
 
 /**
  * The same wordmark at half the size, three rows and 26 columns, with the same lean, for a
  * terminal under COMPACT_BELOW columns (a phone).
  */
 export const BANNER_ART_COMPACT = `█   █ █▀▀▀ ▟▀▀▀ █▀▀▀ █▖  █
-█ ▗▛ ▐▛▀▀ ▝▀▀▜▖▐▛▀▀ ▐▛▙ ▐▌
-█▟▘  █▄▄▄ ▄▄▄▛ █▄▄▄ █ ▜▄█`;
+█:▗▛ ▐▛▀▀:▝▀▀▜▖▐▛▀▀:▐▛▙:▐▌:
+█▟▘::█▄▄▄:▄▄▄▛:█▄▄▄:█:▜▄█::
+ :::  :::: :::: :::: : :::`;
 
 /** Below this many columns, the banner is the compact one. */
 export const COMPACT_BELOW = 50;

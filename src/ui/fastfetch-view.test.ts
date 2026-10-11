@@ -46,12 +46,12 @@ describe('fastfetch on the page', () => {
     for (let i = 0; i < 5; i += 1) await tick();
 
     const columns = container.querySelector('.columns');
-    expect(logoCh).toBe(19);
-    expect(columns?.getAttribute('style')).toContain('--stack-at: 60ch; --left: 19ch');
+    expect(logoCh).toBe(26);
+    expect(columns?.getAttribute('style')).toContain('--stack-at: 60ch; --left: 26ch');
     expect(columns?.classList.contains('sized')).toBe(true);
     expect(columns?.querySelectorAll(':scope > .column')).toHaveLength(2);
-    // Block art: drawn with its rows touching.
-    expect(container.querySelector('.art')?.classList.contains('art-block')).toBe(true);
+    // Art drawn with letters and punctuation: at the terminal's line height, not squashed.
+    expect(container.querySelector('.art')?.classList.contains('art-glyph')).toBe(true);
     expect(container.querySelector('.art')?.getAttribute('aria-hidden')).toBe('true');
     expect(container.querySelector('.sr-only')?.textContent).toBe('macOS logo');
 

@@ -234,7 +234,7 @@ test.describe('zoom and the touch input', { tag: '@smoke' }, () => {
       await page.goto('/');
       await fontLoaded(page);
 
-      // Under 50 columns the banner is the compact logo, three rows of the wordmark.
+      // Under 50 columns the banner is the compact logo, four rows: three of the wordmark and its shadow.
       const banner = page.locator('.art-fit').first();
       await expect(banner).toContainText('▟▀▀▀');
       const fit = await banner.evaluate((art) => {
@@ -246,8 +246,8 @@ test.describe('zoom and the touch input', { tag: '@smoke' }, () => {
           pageOverflow: document.documentElement.scrollWidth - window.innerWidth,
         };
       });
-      // Three rows of art, none wrapped, none cut off, and no sideways scroll anywhere.
-      expect(fit.rows).toBeCloseTo(3, 0);
+      // Four rows of art, none wrapped, none cut off, and no sideways scroll anywhere.
+      expect(fit.rows).toBeCloseTo(4, 0);
       expect(fit.whiteSpace).toBe('pre');
       expect(fit.overflow, 'banner scrolls inside itself').toBeLessThanOrEqual(0);
       expect(fit.pageOverflow, 'page scrolls sideways').toBeLessThanOrEqual(0);

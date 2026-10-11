@@ -125,8 +125,8 @@ describe('fastfetch on the terminal', () => {
     expect(status).toBe(0);
     const columns = columnsOf(blocks);
     expect(columns.stackBelowCols).toBe(60);
-    // The details start just past the logo: the apple's widest row, 19 cells.
-    expect(columns.leftCh).toBe(19);
+    // The details start just past the logo: the apple's widest row, 26 cells.
+    expect(columns.leftCh).toBe(26);
     expect(columns.left).toEqual([expect.objectContaining({ type: 'art', alt: 'macOS logo', fit: 'scale' })]);
     const details = columns.right[0] as LinesBlock;
     const text = details.lines.map(lineText);
@@ -142,15 +142,16 @@ describe('fastfetch on the terminal', () => {
     expect(columnsOf(blocks).left).toEqual([expect.objectContaining({ alt: 'Windows logo', style: { fg: 'blue', bold: true } })]);
   });
 
-  it('draws every logo in block and quadrant characters, about 20 columns wide and 10 to 13 rows tall', () => {
-    const BLOCKS = /^[ ▀-▟]*$/u;
+  it('draws every logo in printable ASCII without a backtick, 25 to 28 columns wide and 13 or 14 rows tall', () => {
+    // Letters and punctuation only, so the art is drawn at the terminal's line height (ui/art-class.ts).
+    const ASCII = /^[ -~]*$/;
     for (const [os, alt, colour, width, height] of [
-      ['macOS', 'macOS logo', 'green', 19, 13],
-      ['iOS', 'iOS logo', 'green', 19, 13],
-      ['Android', 'Android logo', 'green', 19, 10],
-      ['Windows', 'Windows logo', 'blue', 20, 11],
-      ['Linux', 'Linux logo', 'yellow', 20, 13],
-      ['unknown', 'Linux logo', 'yellow', 20, 13],
+      ['macOS', 'macOS logo', 'green', 26, 14],
+      ['iOS', 'iOS logo', 'green', 26, 14],
+      ['Android', 'Android logo', 'green', 25, 14],
+      ['Windows', 'Windows logo', 'blue', 28, 13],
+      ['Linux', 'Linux logo', 'yellow', 26, 14],
+      ['unknown', 'Linux logo', 'yellow', 26, 14],
     ] as const) {
       const logo = logoFor(os);
       const rows = logo.art.split('\n');
@@ -158,7 +159,11 @@ describe('fastfetch on the terminal', () => {
       expect(logo.colour, os).toBe(colour);
       expect(rows, os).toHaveLength(height);
       expect(Math.max(...rows.map(textWidth)), os).toBe(width);
-      for (const row of rows) expect(row, os).toMatch(BLOCKS);
+      for (const row of rows) {
+        expect(row, os).toMatch(ASCII);
+        expect(row, os).not.toContain('`');
+        expect(row, os).toBe(row.trimEnd());
+      }
     }
   });
 
