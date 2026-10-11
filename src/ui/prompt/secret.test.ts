@@ -29,11 +29,11 @@ describe('secretEdit', () => {
 
 describe('secretMerge', () => {
   it('takes what an input method added under the mask, and says real text reached the input', () => {
-    expect(secretMerge('ab', '••', '••cd', '•')).toEqual({ state: { text: 'abcd', cursor: 4 }, added: true });
+    expect(secretMerge('ab', '**', '**cd', '*')).toEqual({ state: { text: 'abcd', cursor: 4 }, added: true });
   });
 
   it('drops mask characters an undo brought back, which stand for nothing it can know', () => {
-    expect(secretMerge('ab', '••', '•••••', '•')).toEqual({ state: { text: 'ab', cursor: 2 }, added: false });
-    expect(secretMerge('abc', '•••', '•', '•')).toEqual({ state: { text: 'a', cursor: 1 }, added: false });
+    expect(secretMerge('ab', '**', '*****', '*')).toEqual({ state: { text: 'ab', cursor: 2 }, added: false });
+    expect(secretMerge('abc', '***', '*', '*')).toEqual({ state: { text: 'a', cursor: 1 }, added: false });
   });
 });

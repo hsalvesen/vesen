@@ -249,14 +249,14 @@ test.describe('sudo', { tag: '@smoke' }, () => {
     expect(await page.evaluate(() => localStorage.getItem('vesen:history:v1'))).toContain('sudo ls');
   });
 
-  test('never puts the password in the input’s value, so the accessibility tree has only bullets', async ({ page }) => {
+  test('never puts the password in the input’s value, so the accessibility tree has only asterisks', async ({ page }) => {
     test.skip(test.info().project.name !== 'desktop-chrome', 'the accessibility tree through Chromium’s DevTools protocol');
     await open(page);
     await prompt(page).fill('sudo ls');
     await prompt(page).press('Enter');
     await expect(page.locator('.edit-row .read-prompt')).toHaveText('[sudo] password for guest: ');
     await prompt(page).pressSequentially(SECRET);
-    await expect(prompt(page)).toHaveValue('•'.repeat(SECRET.length));
+    await expect(prompt(page)).toHaveValue('*'.repeat(SECRET.length));
     const client = await page.context().newCDPSession(page);
     await client.send('Accessibility.enable');
     const { nodes } = (await client.send('Accessibility.getFullAXTree')) as { nodes: { role?: { value?: string }; name?: { value?: string }; value?: { value?: unknown }; description?: { value?: string } }[] };

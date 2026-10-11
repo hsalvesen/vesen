@@ -224,20 +224,17 @@
         break;
       case 'open':
         // A new tab, or the same view inside an in-app browser. Only the opener opens anything
-        // (02, section 7): with none, as in a test mount, the bell says nothing happened.
+        // (02, section 7): with none, as in a test mount, nothing happens.
         if (opener) {
           if (opener.plan(action.href).target === '_self') beforeLeaving();
           opener.open(action.href);
-        } else prompt.ringBell();
+        }
         break;
       case 'copy':
-        void clipboard.copy(action.text).then((copied) => {
-          if (!copied) prompt.ringBell();
-        });
+        void clipboard.copy(action.text);
         break;
       case 'share':
         if (opener) void opener.share({ url: action.url, ...(action.title ? { title: action.title } : {}) });
-        else prompt.ringBell();
         break;
     }
   }
@@ -270,6 +267,7 @@
               chips={inlineChips}
               more={Dock === null ? prompt.chipList.more : 0}
               listed={prompt.listed}
+              choice={prompt.chipList.chips.find((chip) => chip.selected === true) ?? null}
               question={prompt.question}
               announce={prompt.announce}
               onchoose={(chip) => prompt.choose(chip)}

@@ -12,7 +12,7 @@ A terminal in your browser, by Has Salvesen.
 
 New here? Type help to see all available commands.
 Then try tree to look around the virtual file system, or cat README.md for the story behind it.
-Tab completes a command, ↑ brings the last one back, and help <cmd> explains any of them.
+Tab completes a command, the up arrow brings the last one back, and help <cmd> explains any of them.
 ? 0
 [terminal at 80, 120 columns; pipe at 80, 120 columns]
 ▐█▌   ▐█▌▐██████▌ ▟█████▌▐██████▌▐█▙▖   ▐█▌
@@ -26,5 +26,5 @@ A terminal in your browser, by Has Salvesen.
 
 New here? Type help to see all available commands.
 Then try tree to look around the virtual file system, or cat README.md for the story behind it.
-Tab completes a command, ↑ brings the last one back, and help <cmd> explains any of them.
+Tab completes a command, the up arrow brings the last one back, and help <cmd> explains any of them.
 ? 0

@@ -1,7 +1,13 @@
 <!--
   The completions under the prompt (docs/plan/03-terminal-input.md, "Desktop completion row and
-  chips"; F067). While typing, a quiet row of the first few candidates and a count of the rest;
-  after Tab, the whole list, with each candidate's description, and the Tab menu's choice marked.
+  chips"; F067). While typing, a quiet row of the first few candidates and a count of the rest.
+  After Tab, the whole list, with the Tab menu's choice marked, and a name is never cut short:
+  - a short list (up to LONG_LIST candidates) has each description beside its name, in columns
+    wide enough for both; the name never shrinks, so the description is what gets cut;
+  - a long list is names only, in columns as wide as the longest (as `ls -C` lays them out),
+    and one muted line under them names the menu's choice with its description as Tab cycles.
+  On a phone the dock draws the chips, with no descriptions, so the choice's line comes on its
+  own, through `choice`. Every chip keeps its description as a tooltip.
   Chips are <button role=option> in a listbox: a theme name carries its colour, and the typed part
   of each label is bold. A tap or click does what Tab would, through the same accept(), and keeps
   focus, and a phone's keyboard, on the prompt. Everything here is text, never markup. The app
@@ -11,12 +17,20 @@
   import type { Chip } from '../shell/complete/types';
   import { COMPLETION_LIST_ID, optionId } from './completion-ids';
 
+  /** A Tab list longer than this is names only, with the choice's description on its own line. */
+  const LONG_LIST = 16;
+  /** In ch: the `>` before a chip that runs with its gap, a swatch (0.9em) with its gap, and a chip's padding. */
+  const RUN_WIDTH = 2;
+  const SWATCH_WIDTH = 2.1;
+  const PADDING = 1;
+
   let {
     chips = [],
     more = 0,
     listed = false,
     question = null,
     announce = '',
+    choice = null,
     onchoose,
   }: {
     chips?: readonly Chip[];
@@ -28,10 +42,31 @@
     question?: string | null;
     /** Said politely to screen readers: 'No completions'. */
     announce?: string;
+    /** The Tab menu's candidate on the line, named with its description under the list. */
+    choice?: Chip | null;
     onchoose?: (chip: Chip) => void;
   } = $props();
 
   const runs = (chip: Chip): boolean => chip.action.kind === 'run';
+
+  /** A long list: names only. */
+  const long = $derived(listed && chips.length > LONG_LIST);
+
+  /**
+   * The widest chip in ch: its label, the > where it runs, a swatch where it has one, and the
+   * padding. A listed column is at least this wide, so no name is ever cut.
+   */
+  const column = $derived.by(() => {
+    let widest = 0;
+    for (const chip of chips) {
+      const width = [...chip.label].length + (runs(chip) ? RUN_WIDTH : 0) + (chip.swatch ? SWATCH_WIDTH : 0);
+      if (width > widest) widest = width;
+    }
+    return widest + PADDING;
+  });
+
+  /** The choice's line: under a long list, or the dock's chips, when the choice has a description. */
+  const named = $derived(listed && (long || chips.length === 0) && choice?.summary ? choice : null);
 
   /** The chip's name for screen readers: what a tap does, when that is more than its label says. */
   function nameOf(chip: Chip): string | undefined {
@@ -50,13 +85,13 @@
   }
 </script>
 
-<div class="completion-row" class:listed>
+<div class="completion-row" class:listed class:long>
   {#if question}
     <div class="question">{question}</div>
   {/if}
 
   {#if chips.length > 0}
-    <div id={COMPLETION_LIST_ID} class="chips" role="listbox" aria-label={listed ? 'Completions' : 'Suggestions'}>
+    <div id={COMPLETION_LIST_ID} class="chips" role="listbox" aria-label={listed ? 'Completions' : 'Suggestions'} style:--column={`${column}ch`}>
       {#each chips as chip, index (chip.id)}
         <button
           type="button"
@@ -72,15 +107,19 @@
           onmousedown={(event) => event.preventDefault()}
           onclick={() => onchoose?.(chip)}
         >
-          {#if chip.swatch}<span class="swatch" style:background={chip.swatch} aria-hidden="true"></span>{/if}<span class="label"
+          {#if runs(chip)}<span class="run" aria-hidden="true">&gt;</span>{/if}{#if chip.swatch}<span class="swatch" style:background={chip.swatch} aria-hidden="true"></span>{/if}<span class="label"
             ><b>{chip.label.slice(0, chip.matchLen)}</b>{chip.label.slice(chip.matchLen)}</span
-          >{#if runs(chip)}<span class="run" aria-hidden="true"> ⏎</span>{/if}{#if listed && chip.summary}<span class="summary">{chip.summary}</span>{/if}
+          >{#if listed && !long && chip.summary}<span class="summary">{chip.summary}</span>{/if}
         </button>
       {/each}
     </div>
     {#if more > 0}
       <span class="more">+{more} more</span>
     {/if}
+  {/if}
+
+  {#if named}
+    <div class="choice"><span class="choice-name">{named.label}</span><span class="choice-summary">{named.summary}</span></div>
   {/if}
 
   <div class="sr-only" aria-live="polite">{announce}</div>
@@ -125,7 +164,7 @@
   }
 
   /* A hovered chip is the chip colours throughout: its name, a folder's link colour, its
-     description and ⏎ alike, the one pair checked for contrast (lib/roles.ts). */
+     description and the > that marks a run alike, the one pair checked for contrast (lib/roles.ts). */
   .chip:not(.selected):hover,
   .chip:not(.selected):hover .label,
   .chip:not(.selected):hover .summary,
@@ -159,18 +198,36 @@
     color: var(--role-accent);
   }
 
-  /* After Tab: the whole list, a candidate and its description per cell. */
+  /* After Tab: the whole list in columns at least --column wide (set from the chips), so a name
+     is never cut. A short list has each description beside its name, in columns wide enough for
+     both: 36ch, or the longest name and 10ch of description. A name wider than the terminal
+     widens its column and the list scrolls sideways, never the page. */
   .listed .chips {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(24ch, 100%), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(max(36ch, calc(var(--column) + 10ch)), 100%), 1fr));
+    justify-content: start;
     width: 100%;
+    overflow-x: auto;
+  }
+
+  /* A long list: names only, in columns as wide as the longest, as `ls -C` lays them out. */
+  .long .chips {
+    grid-template-columns: repeat(auto-fill, minmax(min(var(--column), 100%), max-content));
   }
 
   .listed .chip {
     color: var(--role-fg-strong);
   }
 
+  /* The name never shrinks; the description is what gets cut. */
+  .listed .label {
+    flex: none;
+    overflow: visible;
+  }
+
   .summary {
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     color: var(--role-muted);
@@ -190,6 +247,24 @@
       outline: 2px solid Highlight;
       outline-offset: -2px;
     }
+  }
+
+  /* The menu's choice, named under a long list (or the dock's chips) with its description. */
+  .choice {
+    flex-basis: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: pre;
+    color: var(--role-muted);
+  }
+
+  .choice-name {
+    color: var(--role-fg);
+  }
+
+  .choice-summary {
+    margin-left: 2ch;
   }
 
   .more {

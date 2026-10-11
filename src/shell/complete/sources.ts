@@ -33,7 +33,7 @@ const SUMMARY_MAX = 50;
 
 function short(text: string): string {
   const one = text.replace(/\s+/g, ' ');
-  return one.length > SUMMARY_MAX ? `${one.slice(0, SUMMARY_MAX - 1)}…` : one;
+  return one.length > SUMMARY_MAX ? `${one.slice(0, SUMMARY_MAX - 3)}...` : one;
 }
 
 function variable(env: CompletionEnv, name: string): string | undefined {

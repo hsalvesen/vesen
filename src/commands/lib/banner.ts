@@ -44,7 +44,7 @@ export interface BannerOptions {
 }
 
 /** Under the first steps on a keyboard: the keys a terminal has. */
-export const KEYS_HINT = 'Tab completes a command, ↑ brings the last one back, and help <cmd> explains any of them.';
+export const KEYS_HINT = 'Tab completes a command, the up arrow brings the last one back, and help <cmd> explains any of them.';
 /** Under the first steps on touch, where the dock's chips run commands. */
 export const TOUCH_HINT = 'Tap a chip below to run it, or type a command.';
 

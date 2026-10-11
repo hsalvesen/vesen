@@ -101,7 +101,7 @@ describe('the input', () => {
     const { input, view } = setup({ touch: true });
     expect(document.activeElement).not.toBe(input);
     expect(view.container.querySelector('.mirror')).toBeNull();
-    expect(input.getAttribute('placeholder')).toBe('Type a command…');
+    expect(input.getAttribute('placeholder')).toBe('Type a command...');
   });
 
   it('draws the line in the mirror, with a block cursor on the character under the caret', async () => {
@@ -137,7 +137,7 @@ describe('the input', () => {
 });
 
 describe('a running command', () => {
-  it('never disables the input: what is typed waits as type-ahead, and Enter rings the bell', async () => {
+  it('never disables the input: what is typed waits as type-ahead, and Enter leaves it there', async () => {
     const { input, controller, view } = setup();
     await type(input, 'hang');
     press(input, 'Enter');
@@ -154,7 +154,6 @@ describe('a running command', () => {
     await type(input, 'ls -a');
     const enter = press(input, 'Enter');
     expect(enter.defaultPrevented).toBe(true);
-    expect(controller.bell).toBe(true);
     expect(input.value).toBe('ls -a');
     expect(controller.running?.line).toBe('hang');
   });
@@ -252,13 +251,12 @@ describe('Tab and the chips', () => {
     expect(press(input, 'Backspace').defaultPrevented).toBe(true);
     expect(controller.question).toBeNull();
     expect(input.value).toBe('cat many/f');
-    // Any other key rings the bell, and the question stays; it neither types nor moves.
+    // Any other key is ignored: the question stays, and it neither types nor moves.
     press(input, 'Tab');
     for (const key of ['x', 'ArrowUp', 'ArrowLeft']) {
       expect(press(input, key).defaultPrevented, key).toBe(true);
       expect(controller.question, key).not.toBeNull();
     }
-    expect(controller.bell).toBe(true);
     expect(input.value).toBe('cat many/f');
     press(input, 'y');
     await tick();
@@ -267,15 +265,15 @@ describe('Tab and the chips', () => {
     expect(input.value).toBe('cat many/f');
   });
 
-  it('rings the bell for Tab at the > continuation, which completes nothing, and does not act unseen', async () => {
+  it('does nothing for Tab at the > continuation, which completes nothing, and never acts unseen', async () => {
     const { input, controller } = setup();
     await engineReady(controller);
     await type(input, 'echo "a');
     press(input, 'Enter');
     expect(controller.ps2).not.toBeNull();
     expect(press(input, 'Tab').defaultPrevented).toBe(true);
-    expect(controller.bell).toBe(true);
     expect(controller.tab.phase).toBe('idle');
+    expect(controller.announce).toBe('');
     press(input, 'Tab');
     expect(input.value).toBe('');
   });
@@ -334,37 +332,34 @@ describe('Tab while the catalogue is on its way', () => {
     expect(input.value).toBe('h');
   });
 
-  it('waits on, without the bell, when there is nothing to show yet, and completes when the rest lands', async () => {
+  it("waits on, without saying 'No completions', when there is nothing to show yet, and completes when the rest lands", async () => {
     const catalogue = later();
     const { input, controller } = setup({ catalogue: catalogue.load });
     await engineReady(controller);
-    const bell = vi.spyOn(controller, 'ringBell');
     await type(input, 'hu');
     press(input, 'Tab');
     await new Promise((resolve) => setTimeout(resolve, TAB_CATALOGUE_WAIT_MS + 150));
-    // Past the short wait: no bell, no "No completions", the line as it was.
-    expect(bell).not.toHaveBeenCalled();
+    // Past the short wait: no "No completions", the line as it was.
     expect(controller.announce.trim()).not.toBe('No completions');
     expect(input.value).toBe('hu');
     catalogue.arrive([hush]);
     await vi.waitFor(() => expect(input.value).toBe('hush '));
-    expect(bell).not.toHaveBeenCalled();
+    expect(controller.announce.trim()).not.toBe('No completions');
   });
 
   it("does the same for the dock's tab key", async () => {
     const catalogue = later();
     const { input, controller } = setup({ catalogue: catalogue.load, touch: true, dock: true });
     await engineReady(controller);
-    const bell = vi.spyOn(controller, 'ringBell');
     await type(input, 'hu');
     controller.pressKey('Tab');
     await new Promise((resolve) => setTimeout(resolve, TAB_CATALOGUE_WAIT_MS + 150));
-    expect(bell).not.toHaveBeenCalled();
+    expect(controller.announce.trim()).not.toBe('No completions');
     catalogue.arrive([hush]);
     await vi.waitFor(() => expect(input.value).toBe('hush '));
   });
 
-  it('rings once the catalogue fails, or once a line would have stopped waiting for it', async () => {
+  it("says 'No completions' once the catalogue fails, or once a line would have stopped waiting for it", async () => {
     let fail: () => void = () => {};
     const failing: CatalogueLoader = () =>
       new Promise((_, reject) => {
@@ -372,28 +367,26 @@ describe('Tab while the catalogue is on its way', () => {
       });
     const first = setup({ catalogue: failing });
     await engineReady(first.controller);
-    const bell = vi.spyOn(first.controller, 'ringBell');
     await type(first.input, 'hu');
     press(first.input, 'Tab');
     await new Promise((resolve) => setTimeout(resolve, TAB_CATALOGUE_WAIT_MS + 150));
-    expect(bell).not.toHaveBeenCalled();
+    expect(first.controller.announce.trim()).not.toBe('No completions');
     fail();
-    await vi.waitFor(() => expect(bell).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(first.controller.announce.trim()).toBe('No completions'));
     expect(first.input.value).toBe('hu');
 
-    // A catalogue that never comes: the bell after as long as a line waits for a command.
+    // A catalogue that never comes: 'No completions' after as long as a line waits for a command.
     expect(TAB_EMPTY_WAIT_MS).toBe(CATALOGUE_WAIT_MS);
     vi.useFakeTimers();
     try {
       const second = setup({ catalogue: later().load });
       await vi.waitFor(() => expect(second.controller.completion).not.toBeNull());
-      const rang = vi.spyOn(second.controller, 'ringBell');
       await type(second.input, 'hu');
       press(second.input, 'Tab');
       vi.advanceTimersByTime(TAB_EMPTY_WAIT_MS - 1);
-      expect(rang).not.toHaveBeenCalled();
+      expect(second.controller.announce.trim()).not.toBe('No completions');
       vi.advanceTimersByTime(1);
-      expect(rang).toHaveBeenCalledTimes(1);
+      expect(second.controller.announce.trim()).toBe('No completions');
       expect(second.input.value).toBe('hu');
     } finally {
       vi.useRealTimers();

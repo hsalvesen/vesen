@@ -228,7 +228,7 @@ describe('banner', () => {
     expect(hint(true)).toBe(TOUCH_HINT);
     expect(TOUCH_HINT).toBe('Tap a chip below to run it, or type a command.');
     expect(hint(false)).toBe(KEYS_HINT);
-    expect(KEYS_HINT).toBe('Tab completes a command, ↑ brings the last one back, and help <cmd> explains any of them.');
+    expect(KEYS_HINT).toBe('Tab completes a command, the up arrow brings the last one back, and help <cmd> explains any of them.');
     const touch = bannerBlocks({ version: '1.2.0', columns: 44, touch: true });
     expect(touch[0]).toMatchObject({ type: 'art', text: withVersion(BANNER_ART_COMPACT, '1.2.0'), alt: 'Vesen logo, version 1.2.0' });
   });

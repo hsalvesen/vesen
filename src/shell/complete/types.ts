@@ -128,7 +128,7 @@ export interface TabEffect {
   readonly list?: 'show' | 'hide';
   /** The menu's selected candidate. */
   readonly highlight?: number | null;
-  /** Nothing to complete: flash, never beep. */
+  /** Nothing to complete. A signal only: the prompt shows nothing for it (the announcement says it). */
   readonly bell?: boolean;
   /** For the polite live region: 'No completions'. */
   readonly announce?: string;

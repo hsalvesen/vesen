@@ -7,7 +7,7 @@
 // their results into writes to the real <input>, which stays the editing surface everywhere.
 //
 // - The input is never disabled. While a command runs, what is typed stays in it as type-ahead,
-//   and Enter rings the bell instead of running it.
+//   and Enter leaves it there instead of running it.
 // - Enter commits the line at once: it leaves the input, and the shell puts it on the screen as
 //   its entry, where the output streams in under it; preflight runs first, inside the key press
 //   (so a URL can open).
@@ -52,8 +52,6 @@ import { secretEdit, secretMerge } from './secret';
 
 /** Escape, then Tab within this long, leaves the terminal (F095). */
 export const ESCAPE_TAB_MS = 1000;
-/** The visual bell: the prompt's underline flashes this long. */
-export const BELL_MS = 150;
 /** The cursor holds still this long after an edit, then blinks. */
 export const STEADY_MS = 600;
 
@@ -66,7 +64,7 @@ export const TAB_CATALOGUE_WAIT_MS = 300;
 /**
  * When the commands there are have nothing to offer, a first Tab waits on for the rest as long as
  * a line waits for a command (CATALOGUE_WAIT_MS in shell/registry.ts), or until the line changes:
- * the bell would say a command that is on its way does not exist.
+ * 'No completions' would say a command that is on its way does not exist.
  */
 export const TAB_EMPTY_WAIT_MS = 8000;
 
@@ -77,7 +75,7 @@ const OWN_READ = -1;
 export const READ_HINT_ID = 'prompt-read-hint';
 
 /** What the input shows for each character of a secret. */
-export const SECRET_MASK = '•';
+export const SECRET_MASK = '*';
 
 const EMPTY_LINE: EditState = { text: '', cursor: 0 };
 
@@ -204,8 +202,6 @@ export class PromptController {
   lastStatus = $state<ExitCode>(0);
   /** The line that ran last at this prompt, for the chips that follow it. */
   last = $state.raw<LastRun | null>(null);
-  /** The visual bell is showing. */
-  bell = $state(false);
   /** For the polite live region; a no-break space alternates so a repeat is announced again. */
   announce = $state('');
   /** When the line last changed, for the cursor that holds still while typing. */
@@ -246,7 +242,6 @@ export class PromptController {
   private lastArg: LastArgState | null = null;
   private runs = 0;
   private announced = 0;
-  private bellTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly stops: (() => void)[] = [];
   /** The line a Tab is waiting on the catalogue for, and its timer. */
   private tabWait: { readonly key: string; readonly timer: ReturnType<typeof setTimeout> } | null = null;
@@ -441,7 +436,6 @@ export class PromptController {
 
   destroy(): void {
     for (const stop of this.stops.splice(0)) stop();
-    clearTimeout(this.bellTimer);
     this.cancelTabWait();
     this.input = null;
   }
@@ -1037,11 +1031,9 @@ export class PromptController {
   pressTab(reverse = false): void {
     const completion = this.completion;
     if (completion === null || this.read !== null || this.search !== null || this.running !== null) return;
-    // The `> ` continuation completes nothing (no ghost, no chips): Tab says so, never acts unseen.
-    if (this.ps2 !== null) {
-      this.ringBell();
-      return;
-    }
+    // The `> ` continuation completes nothing (no ghost, no chips): Tab does nothing there, and
+    // never acts unseen.
+    if (this.ps2 !== null) return;
     const registry = completion.env.registry;
     const key = tabKey(this.state);
     const fresh = this.tab.phase === 'idle' || this.tab.key !== key;
@@ -1056,7 +1048,8 @@ export class PromptController {
 
   /**
    * Presses Tab on the line `key` once the catalogue is in, or TAB_CATALOGUE_WAIT_MS have passed;
-   * with nothing to show by then, it waits on, up to TAB_EMPTY_WAIT_MS, rather than ring the bell.
+   * with nothing to show by then, it waits on, up to TAB_EMPTY_WAIT_MS, rather than say 'No
+   * completions'.
    */
   private waitForCommands(key: string, arrived: Promise<void>, reverse: boolean): void {
     this.cancelTabWait();
@@ -1124,7 +1117,7 @@ export class PromptController {
     }
     this.tab = step.tab;
     if (effect.edit !== undefined) this.write(effect.edit, { keepTab: true });
-    if (effect.bell === true) this.ringBell();
+    // effect.bell (nothing to complete) is not shown: the announcement says it, and nothing flashes.
     if (effect.announce !== undefined) this.say(effect.announce);
     const asking = step.tab;
     if (asking.phase === 'asking') {
@@ -1246,8 +1239,8 @@ export class PromptController {
 
   /**
    * A key while `Display all N possibilities? (y or n)` waits, as readline asks it: y, a space or
-   * Tab lists them; n, Backspace, Escape, Enter, ^C or ^G does not. Any other key rings the bell
-   * and the question stays.
+   * Tab lists them; n, Backspace, Escape, Enter, ^C or ^G does not. Any other key is ignored, and
+   * the question stays.
    */
   private answerQuestion(key: string, chord = key): void {
     if (key === 'y' || key === 'Y' || key === ' ' || key === 'Tab') {
@@ -1256,9 +1249,7 @@ export class PromptController {
     }
     if (key === 'n' || key === 'N' || key === 'Backspace' || key === 'Escape' || key === 'Enter' || chord === 'C-c' || chord === 'C-g') {
       this.finishRead('n');
-      return;
     }
-    this.ringBell();
   }
 
   // ── Running ──────────────────────────────────────────────────────────────────────────────
@@ -1266,8 +1257,8 @@ export class PromptController {
   /**
    * Enter, or a tapped line. Typed: answers a read, runs the search's line, or runs the line; an
    * unfinished line (an open quote, a trailing |) goes on at the `> ` prompt. While a command
-   * runs, Enter only rings the bell and the line stays as type-ahead. A `line` is run as if
-   * typed, interrupting anything running.
+   * runs, Enter does nothing and the line stays as type-ahead. A `line` is run as if typed,
+   * interrupting anything running.
    */
   submit(line?: string, origin: JobOrigin = 'keyboard'): void {
     if (line !== undefined) {
@@ -1283,10 +1274,7 @@ export class PromptController {
       this.searchAccept();
       return;
     }
-    if (this.running !== null) {
-      this.ringBell();
-      return;
-    }
+    if (this.running !== null) return;
     const typed = this.text;
     const ps2 = this.ps2;
     if (ps2 === null && typed.trim() === '') {
@@ -1388,13 +1376,6 @@ export class PromptController {
   }
 
   // ── Feedback ─────────────────────────────────────────────────────────────────────────────
-
-  /** The visual bell: the prompt's underline flashes; nothing beeps. */
-  ringBell(): void {
-    this.bell = true;
-    clearTimeout(this.bellTimer);
-    this.bellTimer = setTimeout(() => (this.bell = false), BELL_MS);
-  }
 
   private say(text: string): void {
     this.announced += 1;

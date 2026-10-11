@@ -94,7 +94,7 @@ test.describe('the terminal font', { tag: '@smoke' }, () => {
     await page.goto('/');
     await expect(page.getByText(/^A terminal in your browser, by Has\u00a0Salvesen\.$/).first()).toBeVisible();
     await expect(page.locator('.sr-only', { hasText: /^Vesen logo, version \S+$/ })).toHaveCount(1);
-    const keys = 'Tab completes a command, ↑ brings the last one back, and help <cmd> explains any of them.';
+    const keys = 'Tab completes a command, the up arrow brings the last one back, and help <cmd> explains any of them.';
     const chips = 'Tap a chip below to run it, or type a command.';
     const phone = PHONES.includes(test.info().project.name);
     await expect(page.getByText(phone ? chips : keys, { exact: true }).first()).toBeVisible();

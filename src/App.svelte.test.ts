@@ -291,7 +291,7 @@ describe('Tab completion and the completion row', () => {
     expect(document.activeElement).toBe(promptBox());
   });
 
-  it('opens and shares nothing without the opener: a chip that would rings the bell instead', async () => {
+  it('opens and shares nothing without the opener: a chip that would does nothing', async () => {
     const opened = vi.spyOn(window, 'open').mockReturnValue(null);
     const share = vi.fn(() => Promise.resolve());
     vi.stubGlobal('navigator', { ...navigator, share });
@@ -312,16 +312,15 @@ describe('Tab completion and the completion row', () => {
     }
     expect(opened).not.toHaveBeenCalled();
     expect(share).not.toHaveBeenCalled();
-    expect(container.querySelector('.input-box.bell')).not.toBeNull();
     opened.mockRestore();
   });
 
-  it("rings the visual bell and says 'No completions' when nothing completes", async () => {
+  it("says 'No completions' when nothing completes, and nothing flashes", async () => {
     const { container } = await ready();
     await type('zzz');
     await press('Tab');
     await settle();
-    expect(container.querySelector('.input-box.bell')).not.toBeNull();
+    expect(container.querySelector('.bell')).toBeNull();
     expect(container.querySelector('.completion-row [aria-live="polite"]')?.textContent?.trim()).toBe('No completions');
     expect(promptBox().value).toBe('zzz');
   });

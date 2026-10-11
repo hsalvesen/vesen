@@ -10,8 +10,8 @@
     with the input.
   - On touch: the native input shows, really 16px so iOS never zooms, drawn at the terminal's
     size by --input-scale (platform/measure.ts). There is no mirror.
-  - A secret (sudo's password) is masked: the input holds only bullets (the controller keeps the
-    password), drawn as discs on touch; the mirror shows nothing but the cursor. The read's dim
+  - A secret (sudo's password) is masked: the input holds only asterisks (the controller keeps
+    the password), drawn as discs on touch; the mirror shows nothing but the cursor. The read's dim
     hint (that it is a joke, and nothing is kept) describes the input to screen readers.
   - The input is keyed on controller.inputEpoch: after a password an input method typed into, a
     fresh input, with no undo history, takes its place.
@@ -137,7 +137,6 @@
     class="input-box"
     class:mirrored
     class:secret
-    class:bell={controller.bell}
     class:focused={controller.focused}
     data-completion={controller.completion === null ? undefined : 'ready'}
   >
@@ -174,7 +173,7 @@
       aria-controls={chips.length > 0 ? COMPLETION_LIST_ID : undefined}
       aria-activedescendant={activeOption}
       aria-describedby={describedBy}
-      placeholder={controller.touch && controller.mode === 'edit' && controller.running === null ? 'Type a command…' : undefined}
+      placeholder={controller.touch && controller.mode === 'edit' && controller.running === null ? 'Type a command...' : undefined}
       enterkeyhint={controller.read !== null ? 'done' : 'go'}
       autocomplete="off"
       autocapitalize="none"
@@ -203,17 +202,10 @@
     min-width: 0;
   }
 
-  /* The visual bell: nothing to complete, or Enter while a command runs. The underline flashes
-     once; there is no beep. */
   .input-box {
     position: relative;
     display: block;
     min-width: 8ch;
-    box-shadow: inset 0 -1px 0 transparent;
-  }
-
-  .input-box.bell {
-    box-shadow: inset 0 -2px 0 var(--role-warn);
   }
 
   .command-input {
