@@ -92,9 +92,10 @@ test.describe('the terminal font', { tag: '@smoke' }, () => {
 
   test('the banner says whose terminal it is, and how to start: the keys, or the chips on touch (F074)', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText(/^vesen v\S+ · a terminal by Has\u00a0Salvesen$/).first()).toBeVisible();
-    const keys = 'Tab completes · ↑ history · help <cmd> for details';
-    const chips = 'Tap a chip below, or type a command';
+    await expect(page.getByText(/^A terminal in your browser, by Has\u00a0Salvesen\.$/).first()).toBeVisible();
+    await expect(page.locator('.sr-only', { hasText: /^Vesen logo, version \S+$/ })).toHaveCount(1);
+    const keys = 'Tab completes a command, ↑ brings the last one back, and help <cmd> explains any of them.';
+    const chips = 'Tap a chip below to run it, or type a command.';
     const phone = PHONES.includes(test.info().project.name);
     await expect(page.getByText(phone ? chips : keys, { exact: true }).first()).toBeVisible();
     await expect(page.getByText(phone ? keys : chips, { exact: true })).toHaveCount(0);

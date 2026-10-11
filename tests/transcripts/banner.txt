@@ -6,13 +6,12 @@ $ banner
 [terminal at 40 columns; pipe at 40 columns]
 █   █ █▀▀▀ ▟▀▀▀ █▀▀▀ █▖  █
 █ ▗▛ ▐▛▀▀ ▝▀▀▜▖▐▛▀▀ ▐▛▙ ▐▌
-█▟▘  █▄▄▄ ▄▄▄▛ █▄▄▄ █ ▜▄█
-vesen v0.0.0-test · a terminal by Has Salvesen
-Tab completes · ↑ history · help <cmd> for details
+█▟▘  █▄▄▄ ▄▄▄▛ █▄▄▄ █ ▜▄█  v0.0.0-test
+A terminal in your browser, by Has Salvesen.
 
-Type help to see all available commands.
-Type cat README.md to learn more about this terminal.
-Type tree to explore the virtual file system.
+New here? Type help to see all available commands.
+Then try tree to look around the virtual file system, or cat README.md for the story behind it.
+Tab completes a command, ↑ brings the last one back, and help <cmd> explains any of them.
 ? 0
 [terminal at 80, 120 columns; pipe at 80, 120 columns]
 ▐█▌   ▐█▌▐██████▌ ▟█████▌▐██████▌▐█▙▖   ▐█▌
@@ -20,11 +19,10 @@ Type tree to explore the virtual file system.
 ▐█▌ ▐█▌ ▐█████▌  ▜█████▖▐█████▌ ▐█▌▝█▖ ▐█▌
 ▐█▌▐█▌  ██           ██ ██      ██  ▜▙ ██
 ▐███▌  ▐█▌          ▐█▌▐█▌     ▐█▌  ▝█▟█▌
-▝██▘   ███████ ██████▀ ███████ ██    ▀██
-vesen v0.0.0-test · a terminal by Has Salvesen
-Tab completes · ↑ history · help <cmd> for details
+▝██▘   ███████ ██████▀ ███████ ██    ▀██  v0.0.0-test
+A terminal in your browser, by Has Salvesen.
 
-Type help to see all available commands.
-Type cat README.md to learn more about this terminal.
-Type tree to explore the virtual file system.
+New here? Type help to see all available commands.
+Then try tree to look around the virtual file system, or cat README.md for the story behind it.
+Tab completes a command, ↑ brings the last one back, and help <cmd> explains any of them.
 ? 0

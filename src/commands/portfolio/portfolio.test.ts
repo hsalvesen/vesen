@@ -10,7 +10,7 @@ import { createStorage } from '../../services/storage';
 import { STORAGE_KEYS } from '../../services/storage-keys';
 import { cathode, cathodeQuality, crtTier, DEFAULT_CATHODE_MODE, persistCathode } from '../../stores/cathode';
 import { defaultTheme, persistTheme, theme } from '../../stores/theme';
-import { BANNER_ART, BANNER_ART_COMPACT, bannerBlocks, KEYS_HINT, TOUCH_HINT } from '../lib/banner';
+import { BANNER_ART, BANNER_ART_COMPACT, bannerBlocks, KEYS_HINT, TOUCH_HINT, withVersion } from '../lib/banner';
 
 afterEach(() => {
   // The stores are the app's, shared by every session in this file.
@@ -161,17 +161,22 @@ describe('cathode', () => {
 });
 
 describe('banner', () => {
-  it('draws the logo as art with a description, then the meta, keys and first steps', async () => {
+  it('draws the logo as art with the version on its last row of letters, then who made it and the first steps', async () => {
     const { status, blocks } = await runLine('banner', { cols: 80 });
     expect(status).toBe(0);
-    expect(blocks[0]).toMatchObject({ type: 'art', text: BANNER_ART, alt: 'Vesen logo', fit: 'scale' });
+    expect(blocks[0]).toMatchObject({ type: 'art', fit: 'scale' });
+    const art = blocks[0]?.type === 'art' ? blocks[0] : undefined;
+    const version = /^Vesen logo, version (\S+)$/.exec(art?.alt ?? '')?.[1];
+    expect(version).toBeDefined();
+    expect(art?.text).toBe(withVersion(BANNER_ART, version ?? ''));
+    expect(art?.text.split('\n')).toHaveLength(BANNER_ART.split('\n').length);
     const lines = rows(blocks).map(lineText);
-    expect(lines[0]).toMatch(/^vesen v.+ · a terminal by Has\u00a0Salvesen$/);
-    expect(lines[1]).toBe('Tab completes · ↑ history · help <cmd> for details');
-    expect(lines).toContain('Type help to see all available commands.');
-    expect(lines).toContain('Type cat README.md to learn more about this terminal.');
-    // The third step says there is a file system, and where to start exploring it.
-    expect(lines).toContain('Type tree to explore the virtual file system.');
+    expect(lines[0]).toBe('A terminal in your browser, by Has\u00a0Salvesen.');
+    expect(lines[1]).toBe('');
+    expect(lines[2]).toBe('New here? Type help to see all available commands.');
+    // The next step says there is a file system, and where to start exploring it.
+    expect(lines[3]).toBe('Then try tree to look around the virtual file system, or cat README.md for the story behind it.');
+    expect(lines[4]).toBe(KEYS_HINT);
     const spans = rows(blocks).flat();
     expect(spans.find((span) => span.text === 'help')?.action).toMatchObject({ kind: 'run', line: 'help' });
     expect(spans.find((span) => span.text === 'cat README.md')?.action).toMatchObject({ kind: 'run', line: 'cat ~/README.md' });
@@ -180,10 +185,18 @@ describe('banner', () => {
     expect(tree?.style).toEqual(spans.find((span) => span.text === 'help')?.style);
   });
 
+  it('puts the version after the last row that holds a block character, so a shadow row below the letters is skipped', () => {
+    expect(withVersion('█▀█\n▀▀▀', '2.0.0')).toBe('█▀█\n▀▀▀  v2.0.0');
+    expect(withVersion('█▀█\n▀▀▀\n ::', '2.0.0')).toBe('█▀█\n▀▀▀  v2.0.0\n ::');
+    expect(withVersion(BANNER_ART_COMPACT, '1.2.0').split('\n')[2]).toMatch(/  v1\.2\.0$/);
+  });
+
   it('is compact under 50 columns, with the same words', async () => {
     const { blocks } = await runLine('banner', { cols: 46 });
-    expect(blocks[0]).toMatchObject({ type: 'art', text: BANNER_ART_COMPACT });
-    expect(lineText(rows(blocks)[0] ?? [])).toMatch(/^vesen v.+ · a terminal by Has\u00a0Salvesen$/);
+    const art = blocks[0]?.type === 'art' ? blocks[0] : undefined;
+    const version = /^Vesen logo, version (\S+)$/.exec(art?.alt ?? '')?.[1] ?? '';
+    expect(art?.text).toBe(withVersion(BANNER_ART_COMPACT, version));
+    expect(lineText(rows(blocks)[0] ?? [])).toBe('A terminal in your browser, by Has\u00a0Salvesen.');
   });
 
   it('draws both logos in block and quadrant characters, within their sizes', () => {
@@ -199,10 +212,12 @@ describe('banner', () => {
   });
 
   it('points a touch screen at the chips, where a keyboard gets the keys (F074)', () => {
-    const second = (touch: boolean) => lineText(rows(bannerBlocks({ version: '1.2.0', columns: 44, touch }))[1] ?? []);
-    expect(second(true)).toBe(TOUCH_HINT);
-    expect(TOUCH_HINT).toBe('Tap a chip below, or type a command');
-    expect(second(false)).toBe(KEYS_HINT);
-    expect(lineText(rows(bannerBlocks({ version: '1.2.0', columns: 44, touch: true }))[0] ?? [])).toBe('vesen v1.2.0 · a terminal by Has\u00a0Salvesen');
+    const hint = (touch: boolean) => lineText(rows(bannerBlocks({ version: '1.2.0', columns: 44, touch })).at(-1) ?? []);
+    expect(hint(true)).toBe(TOUCH_HINT);
+    expect(TOUCH_HINT).toBe('Tap a chip below to run it, or type a command.');
+    expect(hint(false)).toBe(KEYS_HINT);
+    expect(KEYS_HINT).toBe('Tab completes a command, ↑ brings the last one back, and help <cmd> explains any of them.');
+    const touch = bannerBlocks({ version: '1.2.0', columns: 44, touch: true });
+    expect(touch[0]).toMatchObject({ type: 'art', text: withVersion(BANNER_ART_COMPACT, '1.2.0'), alt: 'Vesen logo, version 1.2.0' });
   });
 });

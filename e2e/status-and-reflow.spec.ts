@@ -84,11 +84,9 @@ test.describe('output reflow', { tag: '@smoke' }, () => {
       page.evaluate(() => {
         const entries = Array.from(document.querySelectorAll('[role="log"] .entry'));
         const typed = (line: string) => entries.find((entry) => entry.querySelector('.command-input-display')?.textContent === line);
-        // The help grid with the most columns: its cells' distinct left edges.
-        const columns = Math.max(
-          0,
-          ...Array.from(typed('help')?.querySelectorAll('.grid') ?? [], (grid) => new Set(Array.from(grid.children, (cell) => Math.round(cell.getBoundingClientRect().left))).size),
-        );
+        // The help index's widest band: how many of its category columns share one top edge.
+        const tops = Array.from(typed('help')?.querySelectorAll('.lists .list') ?? [], (list) => Math.round(list.getBoundingClientRect().top));
+        const columns = Math.max(0, ...Array.from(new Set(tops), (top) => tops.filter((t) => t === top).length));
         const [side, main] = Array.from(typed('fastfetch')?.querySelector('.columns')?.children ?? [], (column) => column.getBoundingClientRect());
         return { entries: entries.length, columns, sideBySide: side !== undefined && main !== undefined && Math.abs(side.top - main.top) < 2 };
       });
@@ -97,7 +95,7 @@ test.describe('output reflow', { tag: '@smoke' }, () => {
     expect(await sideways(page)).toEqual({ page: 0, body: 0, transcript: 0 });
 
     await page.setViewportSize({ width: 812, height: 375 });
-    await expect.poll(async () => (await layout()).columns, { message: 'the help grid has more columns' }).toBeGreaterThan(portrait.columns);
+    await expect.poll(async () => (await layout()).columns, { message: 'the help index fits more columns to a band' }).toBeGreaterThan(portrait.columns);
     const landscape = await layout();
     expect(landscape.entries, 'nothing ran again').toBe(portrait.entries);
     expect(portrait.sideBySide, 'fastfetch is stacked in portrait').toBe(false);
@@ -194,7 +192,7 @@ test.describe('ls and the banner at phone widths', { tag: '@smoke' }, () => {
     await page.setViewportSize({ width: 320, height: 568 });
     await page.goto('/');
     const lines = await page.evaluate(() => {
-      const span = Array.from(document.querySelectorAll('[role="log"] span')).find((element) => element.textContent?.includes('a terminal by'));
+      const span = Array.from(document.querySelectorAll('[role="log"] span')).find((element) => element.textContent?.includes('by Has'));
       const node = span?.firstChild;
       if (!node || node.nodeType !== Node.TEXT_NODE) return null;
       const text = node.textContent ?? '';

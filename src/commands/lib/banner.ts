@@ -39,10 +39,10 @@ export interface BannerOptions {
   readonly touch: boolean;
 }
 
-/** Under the logo on a keyboard: the keys a terminal has. */
-export const KEYS_HINT = 'Tab completes · ↑ history · help <cmd> for details';
-/** Under the logo on touch, where the dock's chips run commands. */
-export const TOUCH_HINT = 'Tap a chip below, or type a command';
+/** Under the first steps on a keyboard: the keys a terminal has. */
+export const KEYS_HINT = 'Tab completes a command, ↑ brings the last one back, and help <cmd> explains any of them.';
+/** Under the first steps on touch, where the dock's chips run commands. */
+export const TOUCH_HINT = 'Tap a chip below to run it, or type a command.';
 
 /** The owner's name, never split across lines. */
 const OWNER = 'Has\u00a0Salvesen';
@@ -51,19 +51,38 @@ const MUTED: SpanStyle = { fg: 'muted' };
 const STRONG: SpanStyle = { fg: 'fg-strong' };
 const ACCENT: SpanStyle = { fg: 'accent' };
 
-/** The banner's blocks: the logo, then its lines. */
+/**
+ * The logo with the version after its last row of letters, on the same line (the last row that
+ * holds a block character, so a shadow row drawn with other marks under the letters is skipped).
+ */
+export function withVersion(art: string, version: string): string {
+  const rows = art.split('\n');
+  let last = rows.length - 1;
+  while (last > 0 && !/[\u2580-\u259F]/u.test(rows[last] ?? '')) last -= 1;
+  rows[last] = `${rows[last]}  v${version}`;
+  return rows.join('\n');
+}
+
+/**
+ * The banner's blocks: the logo with the version, then who made it, the first steps for someone
+ * new (help, then tree and the README), and the keys, or the chips on touch.
+ */
 export function bannerBlocks({ version, columns, touch }: BannerOptions): Block[] {
   const compact = columns < COMPACT_BELOW;
   const lines: Line[] = [
     // No-break spaces keep the name whole when the line wraps on a 320px screen.
-    [out.span(`vesen v${version} · a terminal by ${OWNER}`, MUTED)],
-    [out.span(touch ? TOUCH_HINT : KEYS_HINT, MUTED)],
+    [out.span(`A terminal in your browser, by ${OWNER}.`, MUTED)],
     [],
-    [out.span('Type ', STRONG), out.run('help', 'help', ACCENT), out.span(' to see all available commands.', STRONG)],
-    // From home, so the link works from whatever folder it is tapped in.
-    [out.span('Type ', STRONG), out.run('cat README.md', 'cat ~/README.md', ACCENT), out.span(' to learn more about this terminal.', STRONG)],
-    // Says that there is a file system to explore, and where to start.
-    [out.span('Type ', STRONG), out.run('tree', 'tree', ACCENT), out.span(' to explore the virtual file system.', STRONG)],
+    [out.span('New here? Type ', STRONG), out.run('help', 'help', ACCENT), out.span(' to see all available commands.', STRONG)],
+    [
+      out.span('Then try ', STRONG),
+      out.run('tree', 'tree', ACCENT),
+      out.span(' to look around the virtual file system, or ', STRONG),
+      // From home, so the link works from whatever folder it is tapped in.
+      out.run('cat README.md', 'cat ~/README.md', ACCENT),
+      out.span(' for the story behind it.', STRONG),
+    ],
+    [out.span(touch ? TOUCH_HINT : KEYS_HINT, MUTED)],
   ];
-  return [out.art(compact ? BANNER_ART_COMPACT : BANNER_ART, 'Vesen logo'), out.lines(lines)];
+  return [out.art(withVersion(compact ? BANNER_ART_COMPACT : BANNER_ART, version), `Vesen logo, version ${version}`), out.lines(lines)];
 }
