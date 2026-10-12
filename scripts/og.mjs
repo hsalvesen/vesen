@@ -71,7 +71,7 @@ pre { margin: 0; font: inherit; font-size: ${BANNER_PX}px; line-height: ${BANNER
 </style></head>
 <body><div class="frame"></div><div class="card">
 <pre>${escapeHtml(art)}</pre>
-<div class="tagline">Has Salvesen's portfolio, as a working terminal</div>
+<div class="tagline">a terminal in your browser</div>
 <div class="address">www.vesen.app<span class="cursor"></span></div>
 </div></body></html>`;
 }
