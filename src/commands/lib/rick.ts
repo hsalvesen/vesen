@@ -3,7 +3,8 @@
 // track, with an 8-bit tune of vesen's own as the fallback where the track cannot play. sudo
 // hands all of it to the Rick app (src/ui/apps/Rick.svelte) through tty.fullscreen after the
 // password prompt; the app fetches the frames when it opens (the boot warmed the cache at idle,
-// services/warm-show.ts), draws them in the foreground colour at the pace the file names, keeps
+// services/warm-show.ts), the portrait cut on a screen taller than wide, which it fills, and the
+// whole picture elsewhere; draws them in the foreground colour at the pace the file names, keeps
 // them to the track, and shows nothing else but how to leave. Until the file comes, or where it
 // is missing or malformed, the stage is empty; nothing else is drawn.
 //
@@ -15,13 +16,14 @@
 //   ===
 //   ...the next frame...
 //
-// The file shipped is the owner's video at fifteen frames a second, written at the rate that
-// makes one loop of the frames one loop of the track. Over its caps (32 MB, 10,000 frames) it
-// is ignored. The tune is an original chiptune in the style of a handheld's sound chip: it
+// The files shipped are the owner's video at fifteen frames a second, written at the rate that
+// makes one loop of the frames one loop of the track: the whole picture at 120 by 45, and the
+// middle of it at 72 by 56 (scripts/ascii-video.py --aspect 0.64). Over its caps (32 MB, 10,000
+// frames) a file is ignored. The tune is an original chiptune in the style of a handheld's sound chip: it
 // quotes nothing.
 
 import { loopSeconds, type Song } from '../../lib/chiptune';
-import { SHOW_FRAMES, SHOW_TRACK } from '../../lib/show-files';
+import { SHOW_FRAMES, SHOW_FRAMES_PORTRAIT, SHOW_TRACK } from '../../lib/show-files';
 
 /** The Rick app's result when it was closed, by whatever means. */
 export const RICK_CLOSED = 'rickrolled';
@@ -46,6 +48,13 @@ export const RICK_TRACK = SHOW_TRACK;
  */
 export const RICK_FRAMES = SHOW_FRAMES;
 
+/**
+ * The portrait cut of the frames (public/audio/incident-report.portrait.frames): the middle of
+ * the picture, for a screen taller than wide, frame for frame with RICK_FRAMES. An empty string
+ * means the whole picture there too.
+ */
+export const RICK_FRAMES_PORTRAIT = SHOW_FRAMES_PORTRAIT;
+
 /** What sudo hands the Rick app. */
 export interface RickView {
   readonly title: string;
@@ -54,6 +63,8 @@ export interface RickView {
   readonly track: string;
   /** The path of the owner's frames file, on this origin; '' for an empty stage. */
   readonly framesFile: string;
+  /** The path of its portrait cut, played on a screen taller than wide; '' for the whole picture there too. */
+  readonly portraitFramesFile: string;
   /** The tune played where the track cannot be. */
   readonly song: Song;
   readonly touch: boolean;
@@ -161,5 +172,5 @@ export function rickLoopSeconds(): number {
 
 /** What sudo hands the app. */
 export function rickView(touch: boolean): RickView {
-  return { title: RICK_TITLE, alt: RICK_ALT, track: RICK_TRACK, framesFile: RICK_FRAMES, song: RICK_SONG, touch };
+  return { title: RICK_TITLE, alt: RICK_ALT, track: RICK_TRACK, framesFile: RICK_FRAMES, portraitFramesFile: RICK_FRAMES_PORTRAIT, song: RICK_SONG, touch };
 }

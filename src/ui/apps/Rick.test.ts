@@ -10,7 +10,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { RICK_ALT, RICK_CLOSED, RICK_FRAMES, RICK_TITLE, RICK_TRACK, rickView, type RickView } from '../../commands/lib/rick';
+import { RICK_ALT, RICK_CLOSED, RICK_FRAMES, RICK_FRAMES_PORTRAIT, RICK_TITLE, RICK_TRACK, rickView, type RickView } from '../../commands/lib/rick';
 import type { Song } from '../../lib/chiptune';
 import { parseFramesFile, type FramesFile } from '../../lib/frames';
 import type { Chiptune, ChiptuneOptions } from '../../services/chiptune';
@@ -119,6 +119,11 @@ function fakeAudio(mode: AudioMode) {
 
 function reducedMotion(): void {
   vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduced-motion') }));
+}
+
+/** A screen taller than wide: a phone held upright. */
+function portrait(): void {
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(orientation: portrait)' }));
 }
 
 function setVisibility(state: 'hidden' | 'visible'): void {
@@ -398,21 +403,37 @@ describe('the Rick app', () => {
     expect(status(dialog)).toBe('');
   });
 
-  it('stands still under reduced motion while the track plays, and leaves the same way', async () => {
+  it('plays under reduced motion too, as a video does, with the track, and leaves the same way', async () => {
     reducedMotion();
     const raf = frames();
     const { dialog, close, sound } = await show({ file: FILE });
-    expect(dialog.dataset.motion).toBe('still');
-    expect(drawn(dialog)).toBe('abc\ndef');
-    expect(raf.request).not.toHaveBeenCalled();
+    expect(dialog.dataset).toMatchObject({ motion: 'running', sound: 'on' });
     expect(sound.play).toHaveBeenCalledTimes(1);
-    expect(dialog.dataset.sound).toBe('on');
-    setVisibility('hidden');
-    setVisibility('visible');
+    raf.frame(0);
     await tick();
-    expect(dialog.dataset.motion).toBe('still');
+    expect(drawn(dialog)).toBe('abc\ndef');
+    raf.frame(250);
+    raf.frame(500);
+    await tick();
+    expect(drawn(dialog)).toBe('ghi\njkl');
     await fireEvent.keyDown(window, { key: 'q' });
     expect(close).toHaveBeenCalledWith(RICK_CLOSED);
+  });
+
+  it('plays the portrait cut on a screen taller than wide, and the whole picture otherwise', async () => {
+    frames();
+    const wide = await show();
+    expect(wide.fetchFrames).toHaveBeenCalledWith(RICK_FRAMES);
+    expect(wide.dialog.dataset.cut).toBe('landscape');
+    portrait();
+    const upright = await show();
+    expect(upright.fetchFrames).toHaveBeenCalledTimes(1);
+    expect(upright.fetchFrames).toHaveBeenCalledWith(RICK_FRAMES_PORTRAIT);
+    expect(upright.dialog.dataset.cut).toBe('portrait');
+    // A view with no portrait cut plays the whole picture upright too.
+    const whole = await show({ view: { portraitFramesFile: '' } });
+    expect(whole.fetchFrames).toHaveBeenCalledWith(RICK_FRAMES);
+    expect(whole.dialog.dataset.cut).toBe('landscape');
   });
 
   it('says only how to leave where nothing can play', async () => {
@@ -485,13 +506,11 @@ describe('the Rick app', () => {
       expect(dialog.dataset.frames).toBe('none');
     });
 
-    it('stand still under reduced motion too, on the most detailed frame, not a black first one', async () => {
-      reducedMotion();
-      const raf = frames();
+    it('stand still where the browser cannot animate, on the most detailed frame, not a black first one', async () => {
+      vi.stubGlobal('requestAnimationFrame', undefined);
       const { dialog } = await show({ file: FILE });
       expect(dialog.dataset).toMatchObject({ frames: 'file', motion: 'still' });
       expect(drawn(dialog)).toBe('abc\ndef');
-      expect(raf.request).not.toHaveBeenCalled();
       const black = parseFramesFile('vesen-frames fps=2 cols=3 rows=2\n   \n   \n===\nab.\n.cd\n===\naaa\naaa\n') as FramesFile;
       const fades = await show({ file: black });
       expect(drawn(fades.dialog)).toBe('ab.\n.cd');

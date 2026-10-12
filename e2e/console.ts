@@ -11,7 +11,7 @@ const BENIGN = [
  * (src/services/frames.ts) and leaves its stage empty when there is none (as e2e/sudo.spec.ts
  * arranges), so its 404 is expected.
  */
-const OPTIONAL = ['/audio/incident-report.frames'];
+const OPTIONAL = ['/audio/incident-report.frames', '/audio/incident-report.portrait.frames'];
 
 /** `url` is where the message came from (message.location().url), the resource for a failed load. */
 export function isBenignConsoleMessage(text: string, url = ''): boolean {

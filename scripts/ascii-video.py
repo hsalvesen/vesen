@@ -10,12 +10,15 @@ black and white points, eased over about half a second so cuts land cleanly and 
 not flicker, then a gamma lifts the midtones. Rows have their trailing spaces cut (the app pads them
 back), which is most of a dark frame.
 
-  python3 scripts/ascii-video.py video.mp4 --width 120 --fps 15 --out public/audio/incident-report.frames
+  python3 scripts/ascii-video.py video.mp4 --width 120 --fit 194.56
+  python3 scripts/ascii-video.py video.mp4 --width 72 --aspect 0.64 --fit 194.56 --out public/audio/incident-report.portrait.frames
 
   --width N   columns of characters a frame is (120); the rows follow from the video's shape
   --fps N     frames a second to keep (15): source frames are picked nearest to each instant
   --fit S     write the frame rate that makes the frames last S seconds, so they loop with a
               track of that length (the show starts them together and keeps them to it)
+  --aspect A  keep a picture A times as wide as it is tall, cropped at the sides about the
+              centre, before tracing (the show's portrait cut for a phone held upright)
   --gamma G   midtone lift, below 1 brightens (0.85)
   --invert    the ramp the other way, for frames meant for a light theme
   --out PATH  where to write (public/audio/incident-report.frames)
@@ -62,10 +65,17 @@ def luminance(bgr: np.ndarray) -> np.ndarray:
 
 
 def frame_lines(cells: np.ndarray, black: float, white: float, gamma: float, ramp: np.ndarray) -> list[str]:
-    """The rows of a frame from its cells' luminance and the tone points."""
+    """The rows of a frame from its cells' luminance and the tone points.
+
+    Trailing spaces are cut, but a frame that is all black keeps one space, so the reader counts it
+    as a frame: rows of nothing at the end of a file are read as no frame at all.
+    """
     level = np.clip((cells - black) / max(white - black, 1e-6), 0.0, 1.0) ** gamma
     index = np.rint(level * (len(ramp) - 1)).astype(np.intp)
-    return [row.tobytes().decode("ascii").rstrip() for row in ramp[index]]
+    lines = [row.tobytes().decode("ascii").rstrip() for row in ramp[index]]
+    if all(line == "" for line in lines):
+        lines[0] = " "
+    return lines
 
 
 def main(argv: list[str]) -> int:
@@ -74,6 +84,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--width", type=int, default=DEFAULT_WIDTH)
     parser.add_argument("--fps", type=float, default=DEFAULT_FPS)
     parser.add_argument("--fit", type=float, default=None, metavar="SECONDS")
+    parser.add_argument("--aspect", type=float, default=None)
     parser.add_argument("--gamma", type=float, default=DEFAULT_GAMMA)
     parser.add_argument("--invert", action="store_true")
     parser.add_argument("--out", default=DEFAULT_OUT)
@@ -92,7 +103,15 @@ def main(argv: list[str]) -> int:
     source_fps = capture.get(cv2.CAP_PROP_FPS) or 25.0
     width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    cols, rows = grid_size(width, height, args.width)
+    # The columns kept: all of them, or with --aspect a band about the centre.
+    left, kept = 0, width
+    if args.aspect is not None:
+        if not 0.1 <= args.aspect <= width / max(1, height):
+            print(f"ascii-video: --aspect is 0.1 to the video's own, {width / max(1, height):.3f}", file=sys.stderr)
+            return 1
+        kept = round(height * args.aspect)
+        left = (width - kept) // 2
+    cols, rows = grid_size(kept, height, args.width)
     ramp = np.frombuffer((RAMP[::-1] if args.invert else RAMP).encode("ascii"), dtype=np.uint8)
 
     started = time.time()
@@ -106,7 +125,7 @@ def main(argv: list[str]) -> int:
             break
         # The source frame nearest to the instant each output frame falls on.
         while round(wanted / args.fps * source_fps) == source_index:
-            cells = cv2.resize(luminance(bgr), (cols, rows), interpolation=cv2.INTER_AREA)
+            cells = cv2.resize(luminance(bgr[:, left : left + kept]), (cols, rows), interpolation=cv2.INTER_AREA)
             low, high = np.percentile(cells, [1, 99])
             high = max(high, low + MIN_SPREAD)
             if black is None:

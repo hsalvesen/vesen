@@ -19,6 +19,11 @@ const SECRET = 'hunter2-correct-horse';
 const SUDOERS = 'guest is not in the sudoers file. This incident will be reported.';
 const TRACK = '/audio/incident-report.mp3';
 const FRAMES = '/audio/incident-report.frames';
+/** The portrait cut, which a screen taller than wide (a phone held upright) plays instead. */
+const PORTRAIT_FRAMES = '/audio/incident-report.portrait.frames';
+/** Either cut: a test routes or counts the frames whichever the screen plays. */
+const FRAMES_ROUTE = '**/audio/incident-report*.frames';
+const isFrames = (path: string): boolean => path === FRAMES || path === PORTRAIT_FRAMES;
 /** Words that would give the show away before it opens. */
 const TELLING = /joke|show|dancer|tune|track|rickroll|never kept/i;
 
@@ -74,6 +79,26 @@ async function sudoLs(page: Page): Promise<void> {
   await expect(show(page)).toBeVisible();
 }
 
+/**
+ * On a phone held upright the picture covers the stage, which is the screen's width, as large as
+ * it must be, and is cut evenly about its centre: as much from the left as from the right, and
+ * from the top as from the bottom.
+ */
+async function coversTheStage(page: Page): Promise<void> {
+  const box = await show(page).evaluate((dialog) => {
+    const rect = (selector: string) => (dialog.querySelector(selector) as HTMLElement).getBoundingClientRect().toJSON() as DOMRect;
+    return { stage: rect('.stage'), frame: rect('.frame') };
+  });
+  const { stage, frame: picture } = box;
+  expect(stage.width).toBeGreaterThanOrEqual((page.viewportSize()?.width ?? 0) - 2);
+  expect(picture.left).toBeLessThanOrEqual(stage.left + 1);
+  expect(picture.right).toBeGreaterThanOrEqual(stage.right - 1);
+  expect(picture.top).toBeLessThanOrEqual(stage.top + 1);
+  expect(picture.bottom).toBeGreaterThanOrEqual(stage.bottom - 1);
+  expect(Math.abs(picture.left + picture.right - stage.left - stage.right)).toBeLessThanOrEqual(2);
+  expect(Math.abs(picture.top + picture.bottom - stage.top - stage.bottom)).toBeLessThanOrEqual(2);
+}
+
 /** The show is gone, with its audio element, the line has ended with the sudoers message, and nothing else opened. */
 async function reported(page: Page, home: string): Promise<void> {
   await expect(show(page)).toBeHidden();
@@ -90,7 +115,7 @@ async function reported(page: Page, home: string): Promise<void> {
 test.describe("sudo's show", { tag: '@smoke' }, () => {
   test('opens over the terminal after the password, with the track, dances, and ends at Esc or Close with the sudoers line and no new page', async ({ page }) => {
     // Without the owner's file (routed away here) the stage is empty; the file's own test is below.
-    await page.route(`**${FRAMES}`, (route) => route.fulfill({ status: 404, contentType: 'text/plain', body: 'Not Found' }));
+    await page.route(FRAMES_ROUTE, (route) => route.fulfill({ status: 404, contentType: 'text/plain', body: 'Not Found' }));
     const { errors, requests } = await arrive(page);
     const home = page.url();
 
@@ -99,7 +124,9 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
     // reads like sudo's own.
     await expect(audio(page)).toHaveCount(0);
     await expect.poll(() => requests.filter((path) => path === TRACK).length, { timeout: 15_000 }).toBeGreaterThanOrEqual(1);
-    await expect.poll(() => requests.filter((path) => path === FRAMES).length, { timeout: 15_000 }).toBe(1);
+    await expect.poll(() => requests.filter(isFrames).length, { timeout: 15_000 }).toBe(1);
+    // The cut the screen will play, and only that one.
+    expect(requests.filter(isFrames)).toEqual([isPhone() ? PORTRAIT_FRAMES : FRAMES]);
     const warmed = requests.length;
     await prompt(page).fill('sudo --help');
     await prompt(page).press('Enter');
@@ -133,7 +160,7 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
     });
     await expect(show(page)).toHaveAttribute('data-source', 'track');
     // The owner's frames file was looked for again by the show (its warm-up got this test's 404, which is not cached).
-    await expect.poll(() => requests.filter((path) => path === FRAMES).length).toBe(2);
+    await expect.poll(() => requests.filter(isFrames).length).toBe(2);
     // play() has settled: the track runs, or the browser waits for a gesture of its own.
     await expect.poll(() => show(page).getAttribute('data-sound'), { timeout: 10_000 }).not.toBe('off');
     const sound = await show(page).getAttribute('data-sound');
@@ -171,7 +198,7 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
       await expect(entryOf(page, 'sudo ls')).not.toContainText(SUDOERS);
       await expect(audio(page)).toHaveCount(0);
       // The idle warm-up (services/warm-show.ts) may have fetched the show's files by now; the prompt itself asks for nothing.
-      expect(requests.filter((path) => path !== TRACK && path !== FRAMES)).toEqual([]);
+      expect(requests.filter((path) => path !== TRACK && !isFrames(path))).toEqual([]);
       expect(await page.evaluate((secret) => document.documentElement.outerHTML.includes(secret), SECRET)).toBe(false);
     }
 
@@ -246,13 +273,16 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
 
   test("plays the owner's frames when the file is there, fitted to their size", async ({ page }) => {
     const file = ['vesen-frames fps=4 cols=5 rows=2', '#####', '@@@@@', '===', '.....', ':::::', ''].join('\n');
-    await page.route(`**${FRAMES}`, (route) => route.fulfill({ status: 200, contentType: 'text/plain', body: file }));
+    await page.route(FRAMES_ROUTE, (route) => route.fulfill({ status: 200, contentType: 'text/plain', body: file }));
     const { errors } = await arrive(page);
     const home = page.url();
     await sudoLs(page);
     await expect(show(page)).toHaveAttribute('data-frames', 'file');
+    // A phone held upright plays the portrait cut, covering its screen; a desktop the whole picture.
+    await expect(show(page)).toHaveAttribute('data-cut', isPhone() ? 'portrait' : 'landscape');
     await expect.poll(() => frame(page).textContent()).toMatch(/^(#####\n@@@@@|\.\.\.\.\.\n:::::)$/);
     expect(await frame(page).evaluate((element) => [element.style.getPropertyValue('--cols'), element.style.getPropertyValue('--rows')])).toEqual(['5', '2']);
+    if (isPhone()) await coversTheStage(page);
     // At four a second the frames change. Watched from inside the page, frame by frame: a poll from
     // outside, settling into one-second intervals, samples a two-frame loop at the same phase every time.
     const changed = await frame(page).evaluate(
@@ -276,18 +306,21 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
     expect(errors).toEqual([]);
   });
 
-  test('under reduced motion one frame stands still, and Esc or Close still leaves', async ({ page }) => {
+  test('plays under reduced motion too, as a video does, filling a phone held upright, and Esc or Close still leaves', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const { errors } = await arrive(page);
     const home = page.url();
     await sudoLs(page);
-    // The owner's frames, once they are in: the first of them, standing still.
+    // The owner's frames, the real ones, once they are in: playing.
     await expect(show(page)).toHaveAttribute('data-frames', 'file', { timeout: 15_000 });
-    await expect(show(page)).toHaveAttribute('data-motion', 'still');
-    await expect(frame(page)).not.toHaveText('');
+    await expect(show(page)).toHaveAttribute('data-motion', 'running');
+    await expect(show(page)).toHaveAttribute('data-cut', isPhone() ? 'portrait' : 'landscape');
     const first = await frame(page).textContent();
-    await page.waitForTimeout(400);
-    expect(await frame(page).textContent()).toBe(first);
+    await expect.poll(() => frame(page).textContent(), { timeout: 5000 }).not.toBe(first);
+    if (isPhone()) {
+      await coversTheStage(page);
+      expect(await frame(page).evaluate((element) => [element.style.getPropertyValue('--cols'), element.style.getPropertyValue('--rows')])).toEqual(['72', '56']);
+    }
     if (isPhone()) await show(page).getByRole('button', { name: 'Close' }).tap();
     else await page.keyboard.press('Escape');
     await reported(page, home);
@@ -306,8 +339,8 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
     await expect(entryOf(page, 'sudo ls > /tmp/out.txt')).toContainText(SUDOERS);
     await expect(audio(page)).toHaveCount(0);
     // Only the idle warm-up's requests (services/warm-show.ts), if it has run yet: the show fetched nothing of its own.
-    expect(requests.filter((path) => path !== TRACK && path !== FRAMES)).toEqual([]);
-    expect(requests.filter((path) => path === FRAMES).length).toBeLessThanOrEqual(1);
+    expect(requests.filter((path) => path !== TRACK && !isFrames(path))).toEqual([]);
+    expect(requests.filter(isFrames).length).toBeLessThanOrEqual(1);
     expect(errors).toEqual([]);
   });
 });

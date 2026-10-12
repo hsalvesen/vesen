@@ -2,18 +2,20 @@
 // prefetch, and not on Data Saver or mobile data), so a visitor's first `sudo` starts its track
 // and its frames at once instead of after their downloads: the track's audio element is made
 // here, told to load (preload=auto) and kept, out of the page and never played, for the show to
-// take when it opens (services/track.ts audioElement); the frames file is fetched once, at low
-// priority, and its body dropped, so the browser's cache answers the show's own fetch of it
+// take when it opens (services/track.ts audioElement); the frames file the screen would play (the
+// portrait cut on a screen taller than wide, lib/show-files.ts) is fetched once, at low priority,
+// and its body dropped, so the browser's cache answers the show's own fetch of it
 // (services/frames.ts). Nothing here plays, shows or throws; a browser without an audio element
 // or fetch is left alone.
 
-import { SHOW_FRAMES, SHOW_TRACK } from '../lib/show-files';
+import { PORTRAIT_QUERY, SHOW_TRACK, showFramesFor } from '../lib/show-files';
 import type { TrackElement } from './track';
 
-/** What warming needs of the window: a document to make the element in, and fetch. */
+/** What warming needs of the window: a document to make the element in, fetch, and the screen's shape. */
 export interface WarmHost {
   readonly document?: Pick<Document, 'createElement'>;
   fetch?(input: string, init?: RequestInit): Promise<Response>;
+  matchMedia?(query: string): { readonly matches: boolean };
 }
 
 const warmed = new Map<string, TrackElement>();
@@ -36,8 +38,9 @@ export function warmShow(host: WarmHost): void {
   }
   if (typeof host.fetch === 'function') {
     try {
+      const portrait = typeof host.matchMedia === 'function' && host.matchMedia(PORTRAIT_QUERY).matches;
       void host
-        .fetch(SHOW_FRAMES, { credentials: 'same-origin', priority: 'low' })
+        .fetch(showFramesFor(portrait), { credentials: 'same-origin', priority: 'low' })
         .then(async (response) => {
           // Read to the end so the cache keeps it, holding none of it.
           const reader = response.body?.getReader();

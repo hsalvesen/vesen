@@ -2,8 +2,8 @@
 // kept for the show to take once; the frames fetched to the end and dropped; nothing played, and a
 // host without an audio element or fetch left alone.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SHOW_FRAMES, SHOW_TRACK } from '../lib/show-files';
-import { RICK_FRAMES, RICK_TRACK } from '../commands/lib/rick';
+import { SHOW_FRAMES, SHOW_FRAMES_PORTRAIT, SHOW_TRACK } from '../lib/show-files';
+import { RICK_FRAMES, RICK_FRAMES_PORTRAIT, RICK_TRACK } from '../commands/lib/rick';
 import { audioElement } from './track';
 import { resetWarmShow, takeWarmedAudio, warmShow, type WarmHost } from './warm-show';
 
@@ -16,7 +16,7 @@ interface FakeElement {
   play(): Promise<void>;
 }
 
-function host(): { host: WarmHost; made: FakeElement[]; fetched: string[]; read: () => number } {
+function host(upright = false): { host: WarmHost; made: FakeElement[]; fetched: string[]; read: () => number } {
   const made: FakeElement[] = [];
   const fetched: string[] = [];
   let read = 0;
@@ -26,6 +26,7 @@ function host(): { host: WarmHost; made: FakeElement[]; fetched: string[]; read:
     fetched,
     read: () => read,
     host: {
+      matchMedia: (query: string) => ({ matches: upright && query === '(orientation: portrait)' }),
       document: {
         createElement: (tag: string) => {
           expect(tag).toBe('audio');
@@ -65,6 +66,7 @@ describe('warmShow', () => {
   it('names the files the show plays', () => {
     expect(SHOW_TRACK).toBe(RICK_TRACK);
     expect(SHOW_FRAMES).toBe(RICK_FRAMES);
+    expect(SHOW_FRAMES_PORTRAIT).toBe(RICK_FRAMES_PORTRAIT);
   });
 
   it('loads the track into an element it keeps for the show, and reads the frames to the end, once', async () => {
@@ -79,6 +81,13 @@ describe('warmShow', () => {
     expect(takeWarmedAudio(SHOW_TRACK)).toBe(h.made[0]);
     expect(takeWarmedAudio(SHOW_TRACK)).toBeNull();
     expect(h.made[0]?.plays).toBe(0);
+  });
+
+  it('warms the portrait cut on a screen taller than wide, the one the show will play there', async () => {
+    const h = host(true);
+    warmShow(h.host);
+    expect(h.fetched).toEqual([SHOW_FRAMES_PORTRAIT]);
+    await vi.waitFor(() => expect(h.read()).toBe(2));
   });
 
   it('hands the warmed element to the track, which keeps its download', () => {

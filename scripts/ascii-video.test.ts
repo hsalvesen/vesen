@@ -1,26 +1,43 @@
-// The shipped frames file (scripts/ascii-video.py writes it from the owner's video) is what the
-// app will read: well formed, within its caps, plain ASCII, and the size the show was traced at.
+// The shipped frames files (scripts/ascii-video.py writes them from the owner's video) are what
+// the app will read: well formed, within its caps, plain ASCII, every frame of them read, at the
+// rate that makes one loop of them one loop of the track, and the two cuts frame for frame alike.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { FRAMES_MAX_CHARS, FRAMES_MAX_FRAMES, parseFramesFile } from '../src/lib/frames';
 
-const FILE = join(import.meta.dirname, '..', 'public', 'audio', 'incident-report.frames');
+const AUDIO = join(import.meta.dirname, '..', 'public', 'audio');
+/** The track's length in seconds: public/audio/incident-report.mp3. */
+const TRACK_SECONDS = 194.56;
+/** Fifteen frames a second of the video's 212.56 s. */
+const FRAMES = 3189;
 
-describe('the shipped frames file', () => {
-  it('parses at the rate that fits the track, 120 by 45, within the caps, in printable ASCII', () => {
-    const text = readFileSync(FILE, 'latin1');
-    expect(text.length).toBeLessThanOrEqual(FRAMES_MAX_CHARS);
-    expect(text).toMatch(/^[\x20-\x7e\n]*$/);
-    const file = parseFramesFile(text);
-    expect(file).not.toBeNull();
-    // Fifteen frames a second of the video, played a little faster so one loop is the track's 194.56 s.
-    expect({ fps: file?.fps, cols: file?.cols, rows: file?.rows }).toEqual({ fps: 16.3908, cols: 120, rows: 45 });
-    expect((file?.frames.length ?? 0) / (file?.fps ?? 1)).toBeCloseTo(194.56, 2);
-    expect(file?.frames.length).toBeGreaterThan(3000);
-    expect(file?.frames.length).toBeLessThanOrEqual(FRAMES_MAX_FRAMES);
-    // Every frame is the full grid, padded by the parser where a row was cut short.
-    for (const frame of file?.frames ?? []) expect(frame.rows.length).toBe(45);
-    expect(file?.frames[1000]?.text.split('\n').every((row) => row.length === 120)).toBe(true);
+function read(name: string) {
+  const text = readFileSync(join(AUDIO, name), 'latin1');
+  expect(text.length, name).toBeLessThanOrEqual(FRAMES_MAX_CHARS);
+  expect(text, name).toMatch(/^[\x20-\x7e\n]*$/);
+  const file = parseFramesFile(text);
+  expect(file, name).not.toBeNull();
+  return file!;
+}
+
+describe('the shipped frames files', () => {
+  it('read whole, at the rate that fits the track: the whole picture at 120 by 45', () => {
+    const file = read('incident-report.frames');
+    expect({ fps: file.fps, cols: file.cols, rows: file.rows }).toEqual({ fps: 16.3908, cols: 120, rows: 45 });
+    // Every frame, the black last one too: one loop of them is one loop of the track.
+    expect(file.frames).toHaveLength(FRAMES);
+    expect(FRAMES).toBeLessThanOrEqual(FRAMES_MAX_FRAMES);
+    expect(file.frames.length / file.fps).toBeCloseTo(TRACK_SECONDS, 2);
+    for (const frame of file.frames) expect(frame.rows.length).toBe(45);
+    expect(file.frames[1000]?.text.split('\n').every((row) => row.length === 120)).toBe(true);
+  });
+
+  it('and the portrait cut, the middle of it at 72 by 56, frame for frame with it', () => {
+    const file = read('incident-report.portrait.frames');
+    expect({ fps: file.fps, cols: file.cols, rows: file.rows }).toEqual({ fps: 16.3908, cols: 72, rows: 56 });
+    expect(file.frames).toHaveLength(FRAMES);
+    expect(file.frames.length / file.fps).toBeCloseTo(TRACK_SECONDS, 2);
+    for (const frame of file.frames) expect(frame.rows.length).toBe(56);
   });
 });

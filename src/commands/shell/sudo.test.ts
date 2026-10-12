@@ -12,7 +12,7 @@ import type { Shell } from '../../shell/index';
 import type { FullscreenView } from '../../shell/types';
 import { harness } from '../../testing/shell-harness';
 import rm from '../files/rm';
-import { RICK_CLOSED, RICK_FRAMES, RICK_SONG, RICK_TRACK, type RickView } from '../lib/rick';
+import { RICK_CLOSED, RICK_FRAMES, RICK_FRAMES_PORTRAIT, RICK_SONG, RICK_TRACK, type RickView } from '../lib/rick';
 import man from './man';
 import sudo from './sudo';
 import { doc, SUDO_PROMPT } from './sudo.run';
@@ -94,6 +94,7 @@ describe('sudo', () => {
     expect(view?.song).toBe(RICK_SONG);
     expect(view?.track).toBe(RICK_TRACK);
     expect(view?.framesFile).toBe(RICK_FRAMES);
+    expect(view?.portraitFramesFile).toBe(RICK_FRAMES_PORTRAIT);
     expect(view?.touch).toBe(false);
     expect(view?.title).toBe('You have been rickrolled');
 
