@@ -1,10 +1,8 @@
 import './app.css';
 import { mount } from 'svelte';
 import App from './App.svelte';
-import { get } from 'svelte/store';
 import { bootstrap, renderBootError } from './app/bootstrap';
 import { bannerBlocks } from './commands/lib/banner';
-import { columns } from './stores/term';
 
 const target = document.getElementById('app');
 
@@ -13,9 +11,9 @@ try {
   const booted = bootstrap({
     window,
     build: import.meta.url,
-    // At boot, and again for reset and a new login, at the width the terminal has then.
+    // At boot, and again for reset and a new login: the same logo on every screen, scaled to fit.
     banner: () =>
-      bannerBlocks({ version: __APP_VERSION__, columns: get(columns), touch: window.matchMedia?.('(pointer: coarse)').matches ?? false }),
+      bannerBlocks({ version: __APP_VERSION__, touch: window.matchMedia?.('(pointer: coarse)').matches ?? false }),
   });
   if (booted) {
     if (!target) throw new Error('#app is missing from the page');

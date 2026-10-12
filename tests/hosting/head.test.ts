@@ -28,9 +28,10 @@ const publicFile = (url: string) => join('public', url.replace(/^\//, ''));
 
 describe('index.html head', () => {
   it('names the page and describes it for search and link previews', () => {
-    expect(head).toContain('<title>Vesen · a terminal in your browser</title>');
-    expect(meta('description')).toMatch(/^A terminal in your browser/);
-    expect(meta('og:title')).toBe('Vesen · a terminal in your browser');
+    // The tab says only the name; the link preview says what it is.
+    expect(head).toContain('<title>Vesen</title>');
+    expect(meta('description')).toMatch(/^Has Salvesen's portfolio as a working terminal/);
+    expect(meta('og:title')).toBe("Vesen: Has Salvesen's portfolio as a working terminal");
     expect(meta('og:description')).toBeTruthy();
     expect(meta('og:type')).toBe('website');
     expect(meta('og:url')).toBe('https://www.vesen.app/');

@@ -1,7 +1,7 @@
 // Which line height each kind of art gets: block art's rows touch, glyph art keeps the
 // terminal's line height.
 import { describe, expect, it } from 'vitest';
-import { BANNER_ART, BANNER_ART_COMPACT } from '../commands/lib/banner';
+import { BANNER_ART } from '../commands/lib/banner';
 import { INK } from '../commands/lib/block-font';
 import { COWS } from '../commands/lib/cows';
 import { trainFrame } from '../commands/lib/train';
@@ -11,8 +11,6 @@ import { artClass } from './art-class';
 describe('artClass', () => {
   it('draws art made of block elements with its rows touching', () => {
     expect(artClass('██\n██')).toBe('art-block');
-    expect(artClass(BANNER_ART)).toBe('art-block');
-    expect(artClass(BANNER_ART_COMPACT)).toBe('art-block');
     // A text-mode QR code's half blocks.
     expect(artClass('▀▄▀▄\n▄▀▄▀')).toBe('art-block');
     // The quadrants and shades too.
@@ -30,6 +28,8 @@ describe('artClass', () => {
     expect(artClass(' /\\_/\\\n( o.o )\n > ^ <')).toBe('art-glyph');
     for (const cow of COWS) expect(artClass(cow.art), cow.name).toBe('art-glyph');
     expect(artClass(trainFrame(0))).toBe('art-glyph');
+    // The banner's logo, drawn in Roman's letters.
+    expect(artClass(BANNER_ART)).toBe('art-glyph');
     // figlet's ink is #, as figlet's own fonts draw it: text, at the terminal's line height.
     expect(artClass(` ${INK}${INK} \n${INK}  ${INK}`)).toBe('art-glyph');
     expect(artClass('')).toBe('art-glyph');

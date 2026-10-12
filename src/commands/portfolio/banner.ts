@@ -11,7 +11,7 @@ export default defineCommand({
   examples: [{ line: 'banner', offline: true }],
   seeAlso: ['help', 'reset', 'clear'],
   async run(ctx) {
-    for (const block of bannerBlocks({ version: __APP_VERSION__, columns: ctx.stdout.columns, touch: ctx.tty.touch })) {
+    for (const block of bannerBlocks({ version: __APP_VERSION__, touch: ctx.tty.touch })) {
       await ctx.stdout.block(block);
     }
     return 0;

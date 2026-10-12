@@ -23,26 +23,26 @@ const COLOURS = { background: '#222235', foreground: '#ffffff', green: '#06c993'
 
 /**
  * The banner's font size. The font's advance is 1200/2048 em, so this makes each cell exactly
- * 14 px wide and the block letters show no seams between columns. Rows are a pixel shorter than
- * a full block (2380/2048 em), so they overlap and show no seams either.
+ * 20 px wide: the logo's 46 columns are 920 px of the 1200. It is drawn with letters, so its
+ * rows keep a text line height (BANNER_LINE), as the terminal draws it.
  */
-const BANNER_PX = (14 * 2048) / 1200;
+const BANNER_PX = (20 * 2048) / 1200;
+/** The logo's line height, a little under the terminal's 1.35 so the letters hold together. */
+const BANNER_LINE = 1.2;
 
 /** The terminal's own font, if it is in the repo; the system monospace font otherwise. */
 const FONT_CANDIDATES = ['public/fonts/VesenMono.woff2', 'assets-src/fonts/CascadiaCode.ttf'];
 
 /**
- * The seven lines of the VESEN block banner (six of letters, one more for their shadow), read
- * from BANNER_ART, which the banner command draws, so the preview never drifts from what
- * visitors see.
+ * The five rows of the VESEN logo, read from BANNER_ROWS (single-quoted strings), which the
+ * banner command draws, so the preview never drifts from what visitors see.
  * @param {string} source the text of src/commands/lib/banner.ts
  */
 export function bannerArt(source) {
-  const match = /\bBANNER_ART\s*=\s*`([^`]*)`/.exec(source);
-  const art = match?.[1];
-  if (!art) throw new Error('og: could not find the banner art in src/commands/lib/banner.ts');
-  const lines = art.split('\n').map((line) => line.trimEnd());
-  if (lines.length !== 7) throw new Error(`og: expected 7 banner lines, found ${lines.length}`);
+  const list = /\bBANNER_ROWS\b[^=]*=\s*\[([\s\S]*?)\];/.exec(source)?.[1];
+  if (!list) throw new Error('og: could not find the banner rows in src/commands/lib/banner.ts');
+  const lines = [...list.matchAll(/'((?:[^'\\]|\\.)*)'/g)].map((match) => (match[1] ?? '').replace(/\\(.)/g, '$1').trimEnd());
+  if (lines.length !== 5) throw new Error(`og: expected 5 banner rows, found ${lines.length}`);
   return lines.join('\n');
 }
 
@@ -64,14 +64,14 @@ body { display: flex; align-items: center; justify-content: center; color: ${COL
   font-family: 'Vesen OG', ui-monospace, Menlo, monospace; }
 .frame { position: absolute; inset: 28px; border: 4px solid ${COLOURS.green}; border-radius: 18px; }
 .card { position: relative; display: flex; flex-direction: column; align-items: center; }
-pre { margin: 0; font: inherit; font-size: ${BANNER_PX}px; line-height: ${BANNER_PX * (2380 / 2048) - 1}px; }
+pre { margin: 0; font: inherit; font-size: ${BANNER_PX}px; line-height: ${BANNER_LINE}; }
 .tagline { margin-top: 40px; font-size: 34px; }
 .address { margin-top: 18px; font-size: 30px; color: ${COLOURS.green}; }
 .cursor { display: inline-block; width: 0.6em; height: 1.1em; margin-left: 0.15em; vertical-align: -0.2em; background: ${COLOURS.icon}; }
 </style></head>
 <body><div class="frame"></div><div class="card">
 <pre>${escapeHtml(art)}</pre>
-<div class="tagline">a terminal in your browser</div>
+<div class="tagline">Has Salvesen's portfolio, as a working terminal</div>
 <div class="address">www.vesen.app<span class="cursor"></span></div>
 </div></body></html>`;
 }

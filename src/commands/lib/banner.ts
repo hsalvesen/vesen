@@ -7,38 +7,26 @@
 import { out, type Block, type Line, type SpanStyle } from '../../output/model';
 
 /**
- * The VESEN logo: a bold italic wordmark in seven rows, 44 columns wide: six rows of letters in
- * block and quadrant characters, and their drop shadow in colons one column right and one row
- * down, drawn from the letters' own bitmap by scripts/art/wordmark.py. Each letter cell is two
- * pixels by two of a bitmap whose letters have four-pixel stems and lean one pixel to the right
- * every two rows, so the diagonals step by half a cell and read as smooth slants. scripts/og.mjs
- * reads it from this file for the link preview (it expects the seven rows), so it stays a plain
- * template literal. Drawn at line height 1 (ui/art-class.ts), where the rows touch.
+ * The VESEN logo, one row to a string: lower-case letters in the style of figlet's Roman, with
+ * `o` serifs, `888` stems and bowls of `d...b` and `Y...P`, drawn narrower than the font draws
+ * them (the counters of v, e, s and n closed up a column or two, the arch of n down to one), five
+ * rows of 46 columns. Letters and punctuation, so it is drawn at the terminal's line height
+ * (ui/art-class.ts), and the same on every screen: the art block scales it down where the
+ * terminal is narrower. scripts/og.mjs reads these rows for the link preview.
  */
-export const BANNER_ART = `▐█▌   ▐█▌▐██████▌ ▟█████▌▐██████▌▐█▙▖   ▐█▌
-▐█▌: ▐█▌:██::::::██::::::██::::::██▜▙:  ██::
-▐█▌:▐█▌:▐█████▌  ▜█████▖▐█████▌ ▐█▌▝█▖ ▐█▌:
-▐█▌▐█▌::██::::::  :::██:██::::::██::▜▙:██::
-▐███▌::▐█▌:         ▐█▌▐█▌:    ▐█▌: ▝█▟█▌:
-▝██▘:: ███████ ██████▀:███████ ██::  ▀██::
- ::::   ::::::: ::::::: ::::::: ::    :::`;
+export const BANNER_ROWS: readonly string[] = [
+  'oooo  ooo  .oooo.  .oooo.o  .oooo.  ooo. .oo.',
+  ' `88..8\'  d88\' `8b d88( "8 d88\' `8b `888P"Y8b',
+  '  `88.8\'  888ooo88 `"Y8b.  888ooo88  888  888',
+  '   `88\'   888   .o o. )88b 888   .o  888  888',
+  '    `8\'   `Y8bodP\' 8""88P\' `Y8bodP\' o888  888o',
+];
 
-/**
- * The same wordmark at half the size, four rows and 27 columns (three of letters, one of
- * shadow), with the same lean, for a terminal under COMPACT_BELOW columns (a phone).
- */
-export const BANNER_ART_COMPACT = `█   █ █▀▀▀ ▟▀▀▀ █▀▀▀ █▖  █
-█:▗▛ ▐▛▀▀:▝▀▀▜▖▐▛▀▀:▐▛▙:▐▌:
-█▟▘::█▄▄▄:▄▄▄▛:█▄▄▄:█:▜▄█::
- :::  :::: :::: :::: : :::`;
-
-/** Below this many columns, the banner is the compact one. */
-export const COMPACT_BELOW = 50;
+/** The logo as the art block draws it. */
+export const BANNER_ART = BANNER_ROWS.join('\n');
 
 export interface BannerOptions {
   readonly version: string;
-  /** The terminal's width in columns. */
-  readonly columns: number;
   /** A touch screen has no Tab or arrow keys to mention; it has the chips in the dock. */
   readonly touch: boolean;
 }
@@ -56,13 +44,13 @@ const STRONG: SpanStyle = { fg: 'fg-strong' };
 const ACCENT: SpanStyle = { fg: 'accent' };
 
 /**
- * The logo with the version after its last row of letters, on the same line (the last row that
- * holds a block character, so a shadow row drawn with other marks under the letters is skipped).
+ * The logo with the version after its last row of letters, on the same line (the last row with
+ * anything but spaces and colons, so a shadow row drawn under the letters would be skipped).
  */
 export function withVersion(art: string, version: string): string {
   const rows = art.split('\n');
   let last = rows.length - 1;
-  while (last > 0 && !/[\u2580-\u259F]/u.test(rows[last] ?? '')) last -= 1;
+  while (last > 0 && !/[^ :]/u.test(rows[last] ?? '')) last -= 1;
   rows[last] = `${rows[last]}  v${version}`;
   return rows.join('\n');
 }
@@ -71,8 +59,7 @@ export function withVersion(art: string, version: string): string {
  * The banner's blocks: the logo with the version, then who made it, the first steps for someone
  * new (help, then tree and the README), and the keys, or the chips on touch.
  */
-export function bannerBlocks({ version, columns, touch }: BannerOptions): Block[] {
-  const compact = columns < COMPACT_BELOW;
+export function bannerBlocks({ version, touch }: BannerOptions): Block[] {
   const lines: Line[] = [
     // No-break spaces keep the name whole when the line wraps on a 320px screen.
     [out.span(`A terminal in your browser, by ${OWNER}.`, MUTED)],
@@ -88,5 +75,5 @@ export function bannerBlocks({ version, columns, touch }: BannerOptions): Block[
     ],
     [out.span(touch ? TOUCH_HINT : KEYS_HINT, MUTED)],
   ];
-  return [out.art(withVersion(compact ? BANNER_ART_COMPACT : BANNER_ART, version), `Vesen logo, version ${version}`), out.lines(lines)];
+  return [out.art(withVersion(BANNER_ART, version), `Vesen logo, version ${version}`), out.lines(lines)];
 }

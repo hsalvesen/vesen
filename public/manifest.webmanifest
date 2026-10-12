@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Vesen Terminal",
   "short_name": "Vesen",
-  "description": "A terminal in your browser by Has Salvesen.",
+  "description": "Has Salvesen's portfolio as a working terminal.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

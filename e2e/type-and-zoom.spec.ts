@@ -211,9 +211,9 @@ test.describe('zoom and the touch input', { tag: '@smoke' }, () => {
     await page.goto('/');
     await fontLoaded(page);
 
-    // Under 50 columns the banner is the compact logo.
+    // The same logo as everywhere, scaled down to the screen's width.
     const banner = page.locator('.art-fit').first();
-    await expect(banner).toContainText('▟▀▀▀');
+    await expect(banner).toContainText('.oooo.o');
     const fit = await banner.evaluate((art) => ({
       overflow: art.scrollWidth - art.clientWidth,
       css: Array.from(document.styleSheets).some((sheet) => {
@@ -234,20 +234,20 @@ test.describe('zoom and the touch input', { tag: '@smoke' }, () => {
       await page.goto('/');
       await fontLoaded(page);
 
-      // Under 50 columns the banner is the compact logo, four rows: three of the wordmark and its shadow.
+      // The same logo as everywhere, five rows of letters, scaled down to the screen's width.
       const banner = page.locator('.art-fit').first();
-      await expect(banner).toContainText('▟▀▀▀');
+      await expect(banner).toContainText('.oooo.o');
       const fit = await banner.evaluate((art) => {
         const style = getComputedStyle(art);
         return {
-          rows: art.getBoundingClientRect().height / parseFloat(style.fontSize),
+          rows: art.getBoundingClientRect().height / parseFloat(style.lineHeight),
           overflow: art.scrollWidth - art.clientWidth,
           whiteSpace: style.whiteSpace,
           pageOverflow: document.documentElement.scrollWidth - window.innerWidth,
         };
       });
-      // Four rows of art, none wrapped, none cut off, and no sideways scroll anywhere.
-      expect(fit.rows).toBeCloseTo(4, 0);
+      // Five rows of art, none wrapped, none cut off, and no sideways scroll anywhere.
+      expect(fit.rows).toBeCloseTo(5, 0);
       expect(fit.whiteSpace).toBe('pre');
       expect(fit.overflow, 'banner scrolls inside itself').toBeLessThanOrEqual(0);
       expect(fit.pageOverflow, 'page scrolls sideways').toBeLessThanOrEqual(0);

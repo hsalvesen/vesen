@@ -10,7 +10,7 @@ import { createStorage } from '../../services/storage';
 import { STORAGE_KEYS } from '../../services/storage-keys';
 import { cathode, cathodeQuality, crtTier, DEFAULT_CATHODE_MODE, persistCathode } from '../../stores/cathode';
 import { defaultTheme, persistTheme, theme } from '../../stores/theme';
-import { BANNER_ART, BANNER_ART_COMPACT, bannerBlocks, KEYS_HINT, TOUCH_HINT, withVersion } from '../lib/banner';
+import { BANNER_ART, BANNER_ROWS, bannerBlocks, KEYS_HINT, TOUCH_HINT, withVersion } from '../lib/banner';
 
 afterEach(() => {
   // The stores are the app's, shared by every session in this file.
@@ -165,7 +165,7 @@ describe('cathode', () => {
 });
 
 describe('banner', () => {
-  it('draws the logo as art with the version on its last row of letters, then who made it and the first steps', async () => {
+  it('draws the logo as art with the version on its last row, then who made it and the first steps', async () => {
     const { status, blocks } = await runLine('banner', { cols: 80 });
     expect(status).toBe(0);
     expect(blocks[0]).toMatchObject({ type: 'art', fit: 'scale' });
@@ -189,47 +189,41 @@ describe('banner', () => {
     expect(tree?.style).toEqual(spans.find((span) => span.text === 'help')?.style);
   });
 
-  it('puts the version after the last row that holds a block character, so a shadow row below the letters is skipped', () => {
+  it('puts the version after the last row of letters, so a shadow row below them would be skipped', () => {
     expect(withVersion('█▀█\n▀▀▀', '2.0.0')).toBe('█▀█\n▀▀▀  v2.0.0');
     expect(withVersion('█▀█\n▀▀▀\n ::', '2.0.0')).toBe('█▀█\n▀▀▀  v2.0.0\n ::');
-    expect(withVersion(BANNER_ART_COMPACT, '1.2.0').split('\n')[2]).toMatch(/  v1\.2\.0$/);
+    expect(withVersion(BANNER_ART, '1.2.0').split('\n')[4]).toMatch(/o888  888o  v1\.2\.0$/);
   });
 
-  it('is compact under 50 columns, with the same words', async () => {
-    const { blocks } = await runLine('banner', { cols: 46 });
-    const art = blocks[0]?.type === 'art' ? blocks[0] : undefined;
-    const version = /^Vesen logo, version (\S+)$/.exec(art?.alt ?? '')?.[1] ?? '';
-    expect(art?.text).toBe(withVersion(BANNER_ART_COMPACT, version));
-    expect(lineText(rows(blocks)[0] ?? [])).toBe('A terminal in your browser, by Has\u00a0Salvesen.');
-  });
-
-  it('draws both logos in block and quadrant characters with a drop shadow of colons, within their sizes', () => {
-    const widest = (art: string) => Math.max(...art.split('\n').map(textWidth));
-    // Block elements (U+2580–259F), the shadow's colons and spaces only, so the rows line up in the
-    // terminal's font.
-    const BLOCKS = /^[ :▀-▟]+$/u;
-    const full = BANNER_ART.split('\n');
-    const compact = BANNER_ART_COMPACT.split('\n');
-    expect(full).toHaveLength(7);
-    expect(widest(BANNER_ART)).toBeLessThanOrEqual(46);
-    expect(compact).toHaveLength(4);
-    expect(widest(BANNER_ART_COMPACT)).toBeLessThanOrEqual(30);
-    for (const row of [...full, ...compact]) expect(row).toMatch(BLOCKS);
-    expect(widest(BANNER_ART)).toBeGreaterThan(widest(BANNER_ART_COMPACT));
-    // The shadow falls one row down and one column right: none on the first row, only shadow on the last.
-    for (const rows of [full, compact]) {
-      expect(rows[0]).not.toContain(':');
-      expect(rows[rows.length - 1]).toMatch(/^ [ :]+$/);
+  it('is the same logo on every screen, a phone included, with the same words', async () => {
+    for (const cols of [40, 46, 80, 120]) {
+      const { blocks } = await runLine('banner', { cols });
+      const art = blocks[0]?.type === 'art' ? blocks[0] : undefined;
+      const version = /^Vesen logo, version (\S+)$/.exec(art?.alt ?? '')?.[1] ?? '';
+      // Scaled to fit by the art block, never swapped.
+      expect(art, String(cols)).toMatchObject({ text: withVersion(BANNER_ART, version), fit: 'scale' });
+      expect(lineText(rows(blocks)[0] ?? [])).toBe('A terminal in your browser, by Has\u00a0Salvesen.');
     }
   });
 
+  it('draws the logo in five rows of letters and punctuation, 46 columns wide', () => {
+    const widest = (art: string) => Math.max(...art.split('\n').map(textWidth));
+    expect(BANNER_ROWS).toHaveLength(5);
+    expect(widest(BANNER_ART)).toBe(46);
+    for (const row of BANNER_ROWS) expect(row).toMatch(/^[ -~]+$/);
+    expect(BANNER_ART).toBe(BANNER_ROWS.join('\n'));
+    // v, e, s, e and n in Roman's hand: o serifs, 888 stems and the bowls of e.
+    expect(BANNER_ROWS[0]).toBe('oooo  ooo  .oooo.  .oooo.o  .oooo.  ooo. .oo.');
+    expect(BANNER_ROWS[4]).toMatch(/o888  888o$/);
+  });
+
   it('points a touch screen at the chips, where a keyboard gets the keys (F074)', () => {
-    const hint = (touch: boolean) => lineText(rows(bannerBlocks({ version: '1.2.0', columns: 44, touch })).at(-1) ?? []);
+    const hint = (touch: boolean) => lineText(rows(bannerBlocks({ version: '1.2.0', touch })).at(-1) ?? []);
     expect(hint(true)).toBe(TOUCH_HINT);
     expect(TOUCH_HINT).toBe('Tap a chip below to run it, or type a command.');
     expect(hint(false)).toBe(KEYS_HINT);
     expect(KEYS_HINT).toBe('Tab completes a command, the up arrow brings the last one back, and help <cmd> explains any of them.');
-    const touch = bannerBlocks({ version: '1.2.0', columns: 44, touch: true });
-    expect(touch[0]).toMatchObject({ type: 'art', text: withVersion(BANNER_ART_COMPACT, '1.2.0'), alt: 'Vesen logo, version 1.2.0' });
+    const touch = bannerBlocks({ version: '1.2.0', touch: true });
+    expect(touch[0]).toMatchObject({ type: 'art', text: withVersion(BANNER_ART, '1.2.0'), alt: 'Vesen logo, version 1.2.0' });
   });
 });

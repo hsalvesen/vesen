@@ -3,25 +3,11 @@
 # differ, each output is under the variants it belongs to. See README.md.
 
 $ banner
-[terminal at 40 columns; pipe at 40 columns]
-█   █ █▀▀▀ ▟▀▀▀ █▀▀▀ █▖  █
-█:▗▛ ▐▛▀▀:▝▀▀▜▖▐▛▀▀:▐▛▙:▐▌:
-█▟▘::█▄▄▄:▄▄▄▛:█▄▄▄:█:▜▄█::  v0.0.0-test
- :::  :::: :::: :::: : :::
-A terminal in your browser, by Has Salvesen.
-
-New here? Type help to see all available commands.
-Then try tree to look around the virtual file system, or cat README.md for the story behind it.
-Tab completes a command, the up arrow brings the last one back, and help <cmd> explains any of them.
-? 0
-[terminal at 80, 120 columns; pipe at 80, 120 columns]
-▐█▌   ▐█▌▐██████▌ ▟█████▌▐██████▌▐█▙▖   ▐█▌
-▐█▌: ▐█▌:██::::::██::::::██::::::██▜▙:  ██::
-▐█▌:▐█▌:▐█████▌  ▜█████▖▐█████▌ ▐█▌▝█▖ ▐█▌:
-▐█▌▐█▌::██::::::  :::██:██::::::██::▜▙:██::
-▐███▌::▐█▌:         ▐█▌▐█▌:    ▐█▌: ▝█▟█▌:
-▝██▘:: ███████ ██████▀:███████ ██::  ▀██::  v0.0.0-test
- ::::   ::::::: ::::::: ::::::: ::    :::
+oooo  ooo  .oooo.  .oooo.o  .oooo.  ooo. .oo.
+ `88..8'  d88' `8b d88( "8 d88' `8b `888P"Y8b
+  `88.8'  888ooo88 `"Y8b.  888ooo88  888  888
+   `88'   888   .o o. )88b 888   .o  888  888
+    `8'   `Y8bodP' 8""88P' `Y8bodP' o888  888o  v0.0.0-test
 A terminal in your browser, by Has Salvesen.
 
 New here? Type help to see all available commands.
