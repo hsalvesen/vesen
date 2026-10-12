@@ -16,7 +16,7 @@ const isPhone = () => PHONES.includes(test.info().project.name);
 /** The page the visitor came from, for Back to land on if it ever left vesen. */
 const BEFORE = '/404.html';
 const SECRET = 'hunter2-correct-horse';
-const SUDOERS = 'guest is not in the sudoers file. This incident will be reported.';
+const SUDOERS = 'guest is not in the sudoers file.';
 const TRACK = '/audio/incident-report.mp3';
 const FRAMES = '/audio/incident-report.frames';
 /** The portrait cut, which a screen taller than wide (a phone held upright) plays instead. */

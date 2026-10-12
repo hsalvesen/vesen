@@ -58,6 +58,6 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
     await ctx.stdout.line(out.span(`(${ctx.user.name} is still not in the sudoers file. This one is on the house.)`, { fg: 'muted' }));
     return 0;
   }
-  await ctx.stderr.line(`${ctx.user.name} is not in the sudoers file. This incident will be reported.`);
+  await ctx.stderr.line(out.span(`${ctx.user.name} is not in the sudoers file.`, { fg: 'error' }));
   return 1;
 }

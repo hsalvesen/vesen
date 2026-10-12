@@ -103,7 +103,7 @@ describe('sudo', () => {
     // The prompt is the first thing on the screen: nothing above it, an asterisk a key after it.
     expect(shown.startsWith(`Password: ${'*'.repeat(SECRET.length)}\n`)).toBe(true);
     expect(shown).not.toMatch(/cancel|Esc/);
-    expect(shown).toContain('guest is not in the sudoers file. This incident will be reported.');
+    expect(shown).toContain('guest is not in the sudoers file.');
     // No link, no card: the video is gone. Nothing before the answer names the show.
     expect(result.blocks.some((block) => block.type === 'card')).toBe(false);
     expect(shown).not.toMatch(/youtube|http/);
@@ -152,7 +152,7 @@ describe('sudo', () => {
     h.shell.answerRead((await asked(h.shell)).id, 'x');
     const result = await job.done;
     expect(result.status).toBe(1);
-    expect(text(result.blocks)).toContain('guest is not in the sudoers file. This incident will be reported.');
+    expect(text(result.blocks)).toContain('guest is not in the sudoers file.');
   });
 
   it('shows nothing when its output is not the terminal: a file gets the message only', async () => {
@@ -163,7 +163,7 @@ describe('sudo', () => {
     const result = await job.done;
     expect(result.status).toBe(1);
     expect(term.fullscreen).not.toHaveBeenCalled();
-    expect(text(result.blocks)).toContain('guest is not in the sudoers file. This incident will be reported.');
+    expect(text(result.blocks)).toContain('guest is not in the sudoers file.');
     expect(h.fs.readFile('/home/guest/out.txt')).toBe('');
   });
 

@@ -159,12 +159,12 @@ describe('easter eggs', () => {
     expect(result.prompts).toEqual(['Password: ']);
     expect(result.stdoutPlain).toContain('Okay. One sandwich, made with superuser care.');
     expect(result.stdoutPlain).not.toContain('hunter2');
-    expect(result.stderrPlain).not.toContain('sudoers file. This incident');
+    expect(result.stderrPlain).not.toContain('sudoers file');
     expect(result.blocks.some((block) => block.type === 'card')).toBe(false);
     // Anything else is still the joke.
     const other = await runLine('sudo make me a coffee', { answer: () => 'x' });
     expect(other.status).toBe(1);
-    expect(other.stderrPlain).toContain('guest is not in the sudoers file. This incident will be reported.');
+    expect(other.stderrPlain).toBe('guest is not in the sudoers file.');
   });
 
   it('rm -rf / keeps the refusal, and winks only on the terminal', async () => {

@@ -233,7 +233,7 @@ test.describe('sudo', { tag: '@smoke' }, () => {
     await expect(show).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(show).toBeHidden();
-    await expect(lastEntry(page)).toContainText('guest is not in the sudoers file. This incident will be reported.');
+    await expect(lastEntry(page)).toContainText('guest is not in the sudoers file.');
     await expect(lastEntry(page).locator('.card')).toHaveCount(0);
     expect(context.pages()).toHaveLength(1);
     if (!isPhone()) await expect(prompt(page)).toBeFocused();
