@@ -44,8 +44,8 @@
           class="art {artClass(block.text)} {spanClasses(block.style)}"
           class:art-fit={block.fit === 'scale'}
           aria-hidden="true"
-          style="--art-cols: {artColumns(block.text)}; {spanCss(block.style) ?? ''}"
-        >{block.text}</div><span class="sr-only">{block.alt}</span>
+          style="--art-cols: {artColumns(block.text + (block.tail?.text ?? ''))}; {spanCss(block.style) ?? ''}"
+        >{block.text}{#if block.tail}<span class={spanClasses(block.tail.style)} style={spanCss(block.tail.style)}>{block.tail.text}</span>{/if}</div><span class="sr-only">{block.alt}</span>
       </div>
     {:else}
       {#await loadRichBlock() then RichBlock}

@@ -10,7 +10,7 @@ import { createStorage } from '../../services/storage';
 import { STORAGE_KEYS } from '../../services/storage-keys';
 import { cathode, cathodeQuality, crtTier, DEFAULT_CATHODE_MODE, persistCathode } from '../../stores/cathode';
 import { defaultTheme, persistTheme, theme } from '../../stores/theme';
-import { BANNER_ART, BANNER_ROWS, bannerBlocks, KEYS_HINT, TOUCH_HINT, withVersion } from '../lib/banner';
+import { BANNER_ART, BANNER_ROWS, bannerBlocks, KEYS_HINT, TOUCH_HINT } from '../lib/banner';
 
 afterEach(() => {
   // The stores are the app's, shared by every session in this file.
@@ -172,7 +172,9 @@ describe('banner', () => {
     const art = blocks[0]?.type === 'art' ? blocks[0] : undefined;
     const version = /^Vesen logo, version (\S+)$/.exec(art?.alt ?? '')?.[1];
     expect(version).toBeDefined();
-    expect(art?.text).toBe(withVersion(BANNER_ART, version ?? ''));
+    expect(art?.text).toBe(BANNER_ART);
+    // The version after the last row, muted like the line under the logo.
+    expect(art?.tail).toEqual({ text: `  v${version}`, style: { fg: 'muted' } });
     expect(art?.text.split('\n')).toHaveLength(BANNER_ART.split('\n').length);
     const lines = rows(blocks).map(lineText);
     expect(lines[0]).toBe('A terminal in your browser, by Has\u00a0Salvesen.');
@@ -189,19 +191,13 @@ describe('banner', () => {
     expect(tree?.style).toEqual(spans.find((span) => span.text === 'help')?.style);
   });
 
-  it('puts the version after the last row of letters, so a shadow row below them would be skipped', () => {
-    expect(withVersion('█▀█\n▀▀▀', '2.0.0')).toBe('█▀█\n▀▀▀  v2.0.0');
-    expect(withVersion('█▀█\n▀▀▀\n ::', '2.0.0')).toBe('█▀█\n▀▀▀  v2.0.0\n ::');
-    expect(withVersion(BANNER_ART, '1.2.0').split('\n')[4]).toMatch(/o888  888o  v1\.2\.0$/);
-  });
-
   it('is the same logo on every screen, a phone included, with the same words', async () => {
     for (const cols of [40, 46, 80, 120]) {
       const { blocks } = await runLine('banner', { cols });
       const art = blocks[0]?.type === 'art' ? blocks[0] : undefined;
       const version = /^Vesen logo, version (\S+)$/.exec(art?.alt ?? '')?.[1] ?? '';
       // Scaled to fit by the art block, never swapped.
-      expect(art, String(cols)).toMatchObject({ text: withVersion(BANNER_ART, version), fit: 'scale' });
+      expect(art, String(cols)).toMatchObject({ text: BANNER_ART, fit: 'scale', tail: { text: `  v${version}` } });
       expect(lineText(rows(blocks)[0] ?? [])).toBe('A terminal in your browser, by Has\u00a0Salvesen.');
     }
   });
@@ -224,6 +220,6 @@ describe('banner', () => {
     expect(hint(false)).toBe(KEYS_HINT);
     expect(KEYS_HINT).toBe('Tab completes a command, the up arrow brings the last one back, and help <cmd> explains any of them.');
     const touch = bannerBlocks({ version: '1.2.0', touch: true });
-    expect(touch[0]).toMatchObject({ type: 'art', text: withVersion(BANNER_ART, '1.2.0'), alt: 'Vesen logo, version 1.2.0' });
+    expect(touch[0]).toMatchObject({ type: 'art', text: BANNER_ART, tail: { text: '  v1.2.0' }, alt: 'Vesen logo, version 1.2.0' });
   });
 });

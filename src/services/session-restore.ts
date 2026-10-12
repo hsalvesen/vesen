@@ -71,7 +71,8 @@ export function cleanBlock(block: unknown): Block | null {
       case 'art': {
         const text = str(raw.text);
         if (text === undefined) return null;
-        return out.art(text, str(raw.alt) ?? '', raw.fit === 'scroll' ? 'scroll' : 'scale', cleanStyle(raw.style));
+        const tail = raw.tail === undefined ? null : cleanSpan(raw.tail);
+        return out.art(text, str(raw.alt) ?? '', raw.fit === 'scroll' ? 'scroll' : 'scale', cleanStyle(raw.style), tail ?? undefined);
       }
       case 'panel': {
         const tone = str(raw.tone);

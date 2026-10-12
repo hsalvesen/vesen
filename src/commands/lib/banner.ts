@@ -44,18 +44,6 @@ const STRONG: SpanStyle = { fg: 'fg-strong' };
 const ACCENT: SpanStyle = { fg: 'accent' };
 
 /**
- * The logo with the version after its last row of letters, on the same line (the last row with
- * anything but spaces and colons, so a shadow row drawn under the letters would be skipped).
- */
-export function withVersion(art: string, version: string): string {
-  const rows = art.split('\n');
-  let last = rows.length - 1;
-  while (last > 0 && !/[^ :]/u.test(rows[last] ?? '')) last -= 1;
-  rows[last] = `${rows[last]}  v${version}`;
-  return rows.join('\n');
-}
-
-/**
  * The banner's blocks: the logo with the version, then who made it, the first steps for someone
  * new (help, then tree and the README), and the keys, or the chips on touch.
  */
@@ -75,5 +63,6 @@ export function bannerBlocks({ version, touch }: BannerOptions): Block[] {
     ],
     [out.span(touch ? TOUCH_HINT : KEYS_HINT, MUTED)],
   ];
-  return [out.art(withVersion(BANNER_ART, version), `Vesen logo, version ${version}`), out.lines(lines)];
+  // The version after the logo's last row, muted like the line under it.
+  return [out.art(BANNER_ART, `Vesen logo, version ${version}`, 'scale', undefined, out.span(`  v${version}`, MUTED)), out.lines(lines)];
 }

@@ -55,7 +55,7 @@ export function plain(block: Block): string {
     case 'table':
       return asLines(tableRows(block));
     case 'art':
-      return terminated(block.text);
+      return terminated(block.text + (block.tail?.text ?? ''));
     case 'panel':
       return asLines([...(block.title === undefined ? [] : [block.title]), ...block.body.map(lineText)]);
     case 'chips':

@@ -194,6 +194,8 @@ export interface ArtBlock {
   readonly alt: string;
   readonly style?: SpanStyle;
   readonly fit: ArtFit;
+  /** Drawn straight after the art's last character, in its own style: the banner's version. */
+  readonly tail?: Span;
 }
 
 /** A titled, toned box: --help output and notices. */
@@ -464,8 +466,14 @@ export const out = {
     options: { head?: readonly Line[]; align?: readonly Align[]; stackBelowCols?: number } = {},
   ): TableBlock => ({ type: 'table', rows, ...options }),
 
-  art: (text: string, alt: string, fit: ArtFit = 'scale', style?: SpanStyle): ArtBlock =>
-    style === undefined ? { type: 'art', text, alt, fit } : { type: 'art', text, alt, fit, style },
+  art: (text: string, alt: string, fit: ArtFit = 'scale', style?: SpanStyle, tail?: Span): ArtBlock => ({
+    type: 'art',
+    text,
+    alt,
+    fit,
+    ...(style === undefined ? {} : { style }),
+    ...(tail === undefined ? {} : { tail }),
+  }),
 
   panel: (tone: Colour, body: readonly Line[], title?: string): PanelBlock =>
     title === undefined ? { type: 'panel', tone, body } : { type: 'panel', tone, title, body },
