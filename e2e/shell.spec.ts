@@ -135,7 +135,7 @@ test.describe('the app shell', { tag: '@smoke' }, () => {
     });
   }
 
-  test('phones are edge to edge; the desktop keeps its frame', async ({ page }) => {
+  test('phones keep the whole frame 4px in from the edges; the desktop keeps its 16px gutter', async ({ page }) => {
     await page.goto('/');
     const frame = await page.locator('.screen-frame').evaluate((element) => {
       const style = getComputedStyle(element);
@@ -148,7 +148,8 @@ test.describe('the app shell', { tag: '@smoke' }, () => {
       };
     });
     if (isPhone()) {
-      expect(frame).toEqual({ left: 0, right: 0, radius: '0px', borders: ['1px', '0px', '0px', '0px'] });
+      // All four sides, so the frame shows in Instagram's browser too.
+      expect(frame).toEqual({ left: 4, right: 4, radius: '6px', borders: ['2px', '2px', '2px', '2px'] });
     } else {
       expect(frame).toEqual({ left: 16, right: 16, radius: '6px', borders: ['2px', '2px', '2px', '2px'] });
     }

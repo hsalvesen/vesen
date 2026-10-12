@@ -99,22 +99,18 @@ body {
   }
 }
 
-/* Phones, portrait or landscape: edge to edge, with only a thin rule along the top. The safe
-   areas keep clear of the notch and the home indicator; the keyboard covers the indicator, so
-   its inset goes while the keyboard is open. */
+/* Phones, portrait or landscape: the frame all round, 4px in from the edges, so it shows inside
+   Instagram's and every other browser's chrome. The safe areas keep clear of the notch and the home
+   indicator; the keyboard covers the indicator, so its inset goes while the keyboard is open. */
 @media (max-width: 639px), (pointer: coarse) and (max-width: 767px), (pointer: coarse) and (max-height: 479px) {
   .shell {
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
-      env(safe-area-inset-left);
+    padding: max(4px, env(safe-area-inset-top)) max(4px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom))
+      max(4px, env(safe-area-inset-left));
   }
 
+  /* The dock rides on the keyboard: nothing between them. */
   html.kb-open .shell {
     padding-bottom: 0;
-  }
-
-  .screen-frame {
-    border-width: 1px 0 0;
-    border-radius: 0;
   }
 
   .screen {

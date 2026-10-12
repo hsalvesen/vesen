@@ -80,7 +80,7 @@ async function sudoLs(page: Page): Promise<void> {
 }
 
 /**
- * On a phone held upright the picture covers the stage, which is the screen's width, as large as
+ * On a phone held upright the picture covers the stage, the width of the screen's frame, as large as
  * it must be, and is cut evenly about its centre: as much from the left as from the right, and
  * from the top as from the bottom.
  */
@@ -90,7 +90,8 @@ async function coversTheStage(page: Page): Promise<void> {
     return { stage: rect('.stage'), frame: rect('.frame') };
   });
   const { stage, frame: picture } = box;
-  expect(stage.width).toBeGreaterThanOrEqual((page.viewportSize()?.width ?? 0) - 2);
+  // The screen's width less the frame: 4px of gutter and 2px of border each side.
+  expect(stage.width).toBeGreaterThanOrEqual((page.viewportSize()?.width ?? 0) - 14);
   expect(picture.left).toBeLessThanOrEqual(stage.left + 1);
   expect(picture.right).toBeGreaterThanOrEqual(stage.right - 1);
   expect(picture.top).toBeLessThanOrEqual(stage.top + 1);

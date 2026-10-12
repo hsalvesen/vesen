@@ -67,7 +67,8 @@ textarea,
 
 /* Art that shrinks to fit the output's width instead of scrolling. --art-cols is the widest row,
    which the renderer sets. An engine without container units (iOS 15's WebKit, the last on the
-   320px iPhone SE) uses the screen's width less the phone padding of styles/shell.css; where a
+   320px iPhone SE) uses the screen's width less what styles/shell.css takes on a phone (the 4px
+   gutter, the 2px frame and the 12px screen padding, each side, and a pixel to spare); where a
    screen is wide enough for the desktop frame, the banner fits at 1em anyway. The container rule
    sits behind @supports because a declaration with var() is never dropped at parse time: one
    with an unknown unit would leave the font size unset rather than fall back to the first. */
@@ -75,7 +76,7 @@ textarea,
   font-size: min(
     1em,
     calc(
-      (100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) / var(--art-cols, 1) /
+      (100vw - 38px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) / var(--art-cols, 1) /
         var(--ch-ratio)
     )
   );

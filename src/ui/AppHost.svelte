@@ -3,7 +3,7 @@
   full-screen app, drawn over the whole terminal, dock included, until it closes. It sits outside
   <main>, whose vintage CRT filter would capture a fixed child, and the shell under it is inert
   meanwhile, so keys, taps and screen readers reach only the app. It keeps the terminal's look: the
-  same gutter, the same green frame (edge to edge under a thin rule on a phone, as the terminal
+  same gutter, the same green frame (4px in from the edges on a phone, as the terminal
   is there), and the cathode overlay (Cathode.svelte, as the screen frame has it; crt.css gives
   the app's text the same glow), so sudo's show, sl, cmatrix and the pager open as a window of
   the terminal, not a sheet over it. The QR presenter alone goes without:
@@ -118,12 +118,11 @@
     outline: none;
   }
 
-  /* On a phone the terminal runs edge to edge under a thin rule (styles/shell.css): so does the window. */
+  /* On a phone the terminal's frame sits 4px in from the edges (styles/shell.css): so does the window's. */
   @media (max-width: 639px), (pointer: coarse) and (max-width: 767px), (pointer: coarse) and (max-height: 479px) {
     .app-host {
-      inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-      border-width: 1px 0 0;
-      border-radius: 0;
+      inset: max(4px, env(safe-area-inset-top)) max(4px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom))
+        max(4px, env(safe-area-inset-left));
     }
   }
 
