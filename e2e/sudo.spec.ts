@@ -1,13 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isBenignConsoleMessage } from './console';
 
-// sudo's show (src/commands/shell/sudo.run.ts, src/ui/apps/Rick.svelte): the dim line above the
-// password prompt says only how to cancel, and Esc does cancel it; nothing of the show is fetched
-// at boot or for --help. After the password the Rick app opens over the terminal, with the dancer
-// and an <audio> element for the owner's track made only then, and nothing opens anywhere else.
-// Esc, q and ^C end it on a keyboard, the Close button and Back on a phone; the element goes with
-// it, and the sudoers line follows in the transcript. The owner's frames file plays when it is
-// there. Under reduced motion one frame stands still. No console errors anywhere.
+// sudo's show (src/commands/shell/sudo.run.ts, src/ui/apps/Rick.svelte): the password prompt is
+// `Password: ` alone, with no line above it, and Esc cancels it; the show's files are warmed at
+// idle after boot, and --help fetches nothing more. After the password the Rick app opens over
+// the terminal, with the owner's frames and their track, and nothing opens anywhere else; the
+// screen shows the frames and one line saying how to leave. Esc, q and ^C end it on a keyboard,
+// the Close button and Back on a phone; the audio element goes with it, and the sudoers line
+// follows in the transcript. Without the frames file the stage is empty. Under reduced motion
+// one frame stands still. No console errors anywhere.
 
 const PHONES = ['iphone-instagram', 'pixel-7'];
 const isPhone = () => PHONES.includes(test.info().project.name);
@@ -18,7 +19,6 @@ const SECRET = 'hunter2-correct-horse';
 const SUDOERS = 'guest is not in the sudoers file. This incident will be reported.';
 const TRACK = '/audio/incident-report.mp3';
 const FRAMES = '/audio/incident-report.frames';
-const HINT = { keyboard: 'Ctrl+C or Esc to cancel', touch: 'Tap Cancel or press Esc to cancel' };
 /** Words that would give the show away before it opens. */
 const TELLING = /joke|show|dancer|tune|track|rickroll|never kept/i;
 
@@ -58,12 +58,12 @@ async function arrive(page: Page): Promise<{ errors: string[]; requests: string[
   return { errors, requests };
 }
 
-/** Types `sudo ls` and waits for the password prompt, with its dim line. */
+/** Types `sudo ls` and waits for the password prompt: the word alone, no dim line. */
 async function sudoPrompt(page: Page): Promise<void> {
   await prompt(page).fill('sudo ls');
   await prompt(page).press('Enter');
-  await expect(readPrompt(page)).toHaveText('[sudo] password for guest: ');
-  await expect(hint(page)).toHaveText(isPhone() ? HINT.touch : HINT.keyboard);
+  await expect(readPrompt(page)).toHaveText('Password: ');
+  await expect(hint(page)).toHaveCount(0);
 }
 
 /** Types `sudo ls`, then a password, and waits for the show. */
@@ -89,27 +89,35 @@ async function reported(page: Page, home: string): Promise<void> {
 
 test.describe("sudo's show", { tag: '@smoke' }, () => {
   test('opens over the terminal after the password, with the track, dances, and ends at Esc or Close with the sudoers line and no new page', async ({ page }) => {
+    // Without the owner's file (routed away here) the stage is empty; the file's own test is below.
+    await page.route(`**${FRAMES}`, (route) => route.fulfill({ status: 404, contentType: 'text/plain', body: 'Not Found' }));
     const { errors, requests } = await arrive(page);
     const home = page.url();
 
-    // Before the show there is no audio element, nothing of it was fetched, and --help reads like sudo's own.
+    // Once the page is idle the show's files are warmed (services/warm-show.ts): the track into an
+    // element kept out of the page, the frames into the cache; --help fetches nothing more, and
+    // reads like sudo's own.
     await expect(audio(page)).toHaveCount(0);
+    await expect.poll(() => requests.filter((path) => path === TRACK).length, { timeout: 15_000 }).toBeGreaterThanOrEqual(1);
+    await expect.poll(() => requests.filter((path) => path === FRAMES).length, { timeout: 15_000 }).toBe(1);
+    const warmed = requests.length;
     await prompt(page).fill('sudo --help');
     await prompt(page).press('Enter');
     await expect(log(page)).toHaveAttribute('aria-busy', 'false');
     await expect(entryOf(page, 'sudo --help')).toContainText('run a command as the superuser');
     expect(await entryOf(page, 'sudo --help').textContent()).not.toMatch(TELLING);
-    expect(requests).toEqual([]);
+    expect(requests).toHaveLength(warmed);
     await expect(audio(page)).toHaveCount(0);
 
     await sudoLs(page);
-    await expect(show(page)).toContainText('You have been rickrolled');
+    // Nothing on the screen but the stage and the way out: no title, no mute button.
+    await expect(show(page)).not.toContainText('rickrolled');
     if (isPhone()) {
       await expect(show(page).getByRole('button', { name: 'Close' })).toBeVisible();
-      await expect(show(page).getByRole('button', { name: /^(Mute|Unmute)$/ })).toBeVisible();
+      await expect(show(page).getByRole('button')).toHaveCount(1);
       await expect(status(page)).not.toContainText('Esc');
     } else {
-      await expect(status(page)).toContainText('Esc, ^C or q to leave');
+      await expect(status(page)).toHaveText('Ctrl+C, q or Esc to exit');
     }
     // The status line names no track and uses ASCII marks only.
     expect(await status(page).textContent()).toMatch(/^[\x20-\x7e]*$/);
@@ -124,22 +132,19 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
       preload: 'auto',
     });
     await expect(show(page)).toHaveAttribute('data-source', 'track');
-    // The owner's frames file was looked for, once, and only now.
-    await expect.poll(() => requests.filter((path) => path === FRAMES).length).toBe(1);
+    // The owner's frames file was looked for again by the show (its warm-up got this test's 404, which is not cached).
+    await expect.poll(() => requests.filter((path) => path === FRAMES).length).toBe(2);
     // play() has settled: the track runs, or the browser waits for a gesture of its own.
     await expect.poll(() => show(page).getAttribute('data-sound'), { timeout: 10_000 }).not.toBe('off');
     const sound = await show(page).getAttribute('data-sound');
     expect(['on', 'waiting', 'muted']).toContain(sound);
     if (sound === 'on') expect(requests).toContain(TRACK);
 
-    // The dancer: the stage floor is drawn in ASCII, in the frame's own font, and the frames change.
-    await expect(frame(page)).toContainText('====');
+    // Without the file (routed away in this test) the stage stays empty: nothing else is drawn.
     await expect(frame(page)).toHaveAttribute('aria-hidden', 'true');
-    await expect(show(page)).toHaveAttribute('data-motion', 'running');
-    await expect(show(page)).toHaveAttribute('data-frames', 'drawn');
-    const first = await frame(page).textContent();
-    expect(first).toMatch(/^[\x20-\x7e\n]*$/);
-    await expect.poll(() => frame(page).textContent(), { timeout: 3000 }).not.toBe(first);
+    await expect(show(page)).toHaveAttribute('data-frames', 'none');
+    await expect(show(page)).toHaveAttribute('data-motion', 'still');
+    await expect(frame(page)).toHaveText('');
     // Nothing scrolls sideways, and the shell under the show is inert.
     expect(await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - window.innerWidth))).toBe(0);
     await expect(page.locator('.shell')).toHaveAttribute('inert', '');
@@ -153,7 +158,7 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
     expect(errors).toEqual([]);
   });
 
-  test('Esc at the password prompt cancels it, as the dim line says, and nothing of the show is fetched', async ({ page }) => {
+  test('Esc at the password prompt cancels it, as the dim line says, and the show fetches nothing of its own', async ({ page }) => {
     const { errors, requests } = await arrive(page);
     const cancelChip = page.getByRole('option', { name: 'Cancel the password prompt' });
 
@@ -165,13 +170,15 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
       await expect(show(page)).toHaveCount(0);
       await expect(entryOf(page, 'sudo ls')).not.toContainText(SUDOERS);
       await expect(audio(page)).toHaveCount(0);
-      expect(requests).toEqual([]);
+      // The idle warm-up (services/warm-show.ts) may have fetched the show's files by now; the prompt itself asks for nothing.
+      expect(requests.filter((path) => path !== TRACK && path !== FRAMES)).toEqual([]);
       expect(await page.evaluate((secret) => document.documentElement.outerHTML.includes(secret), SECRET)).toBe(false);
     }
 
     await sudoPrompt(page);
-    // On a phone the dock offers the Cancel chip the hint names.
+    // On a phone the dock offers a Cancel chip; on a keyboard nothing shows under the prompt.
     if (isPhone()) await expect(cancelChip).toBeVisible();
+    else await expect(cancelChip).toHaveCount(0);
     await prompt(page).pressSequentially(SECRET);
     await page.keyboard.press('Escape');
     await cancelled();
@@ -193,19 +200,18 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
     const { errors } = await arrive(page);
     const home = page.url();
     await sudoLs(page);
-    // Where the browser lets the sound run, m mutes it and says so; where it waits for a gesture
-    // of its own, the status line asks for one instead.
+    // Where the browser lets the sound run, m mutes it; either way the one line says only how to
+    // leave, even where the browser waits for a gesture of its own.
     const sound = await show(page).getAttribute('data-sound');
     expect(['on', 'waiting', 'off']).toContain(sound);
     if (sound === 'on') {
-      await expect(status(page)).toHaveText('Esc, ^C or q to leave; m to mute');
+      await expect(status(page)).toHaveText('Ctrl+C, q or Esc to exit');
       await page.keyboard.press('m');
-      await expect(status(page)).toHaveText('Esc, ^C or q to leave; m to unmute');
       expect(await audio(page).evaluate((element: HTMLAudioElement) => element.muted)).toBe(true);
+      await expect(status(page)).toHaveText('Ctrl+C, q or Esc to exit');
       await page.keyboard.press('m');
-      await expect(status(page)).toHaveText('Esc, ^C or q to leave; m to mute');
     } else if (sound === 'waiting') {
-      await expect(status(page)).toHaveText('tap or press any key for sound; Esc, ^C or q to leave');
+      await expect(status(page)).toHaveText('Ctrl+C, q or Esc to exit');
     }
     await page.keyboard.press('q');
     await reported(page, home);
@@ -275,7 +281,10 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
     const { errors } = await arrive(page);
     const home = page.url();
     await sudoLs(page);
+    // The owner's frames, once they are in: the first of them, standing still.
+    await expect(show(page)).toHaveAttribute('data-frames', 'file', { timeout: 15_000 });
     await expect(show(page)).toHaveAttribute('data-motion', 'still');
+    await expect(frame(page)).not.toHaveText('');
     const first = await frame(page).textContent();
     await page.waitForTimeout(400);
     expect(await frame(page).textContent()).toBe(first);
@@ -289,14 +298,16 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
     const { errors, requests } = await arrive(page);
     await prompt(page).fill('sudo ls > /tmp/out.txt');
     await prompt(page).press('Enter');
-    await expect(readPrompt(page)).toHaveText('[sudo] password for guest: ');
+    await expect(readPrompt(page)).toHaveText('Password: ');
     await prompt(page).pressSequentially(SECRET);
     await prompt(page).press('Enter');
     await expect(log(page)).toHaveAttribute('aria-busy', 'false');
     await expect(page.locator('.app-host')).toHaveCount(0);
     await expect(entryOf(page, 'sudo ls > /tmp/out.txt')).toContainText(SUDOERS);
     await expect(audio(page)).toHaveCount(0);
-    expect(requests).toEqual([]);
+    // Only the idle warm-up's requests (services/warm-show.ts), if it has run yet: the show fetched nothing of its own.
+    expect(requests.filter((path) => path !== TRACK && path !== FRAMES)).toEqual([]);
+    expect(requests.filter((path) => path === FRAMES).length).toBeLessThanOrEqual(1);
     expect(errors).toEqual([]);
   });
 });

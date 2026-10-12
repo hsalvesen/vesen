@@ -360,8 +360,9 @@ describe('swatches, markers and grid notes', () => {
   it('swatches checks every colour, and gives a pipe its blocks of text', () => {
     const strip = out.swatches('#222235', ['#FFFFFF', '#f60055']);
     expect(strip.swatches).toEqual({ background: '#222235', colours: ['#ffffff', '#f60055'] });
-    expect(strip.text).toBe(' #### ');
-    expect(plain(out.lines([[strip]]))).toBe(' #### \n');
+    // Two full blocks a colour, as a terminal paints a palette.
+    expect(strip.text).toBe(' \u2588\u2588\u2588\u2588 ');
+    expect(plain(out.lines([[strip]]))).toBe(' \u2588\u2588\u2588\u2588 \n');
     expect(() => out.swatches('red', [])).toThrow(TypeError);
     expect(() => out.swatches('#000000', ['url(x)'])).toThrow(TypeError);
     expect(hexColour('#ABCDEF')).toBe('#abcdef');

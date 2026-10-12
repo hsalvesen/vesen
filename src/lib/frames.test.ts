@@ -1,8 +1,8 @@
 // The frames file (sudo's show): the header's numbers, frames of rows × cols characters with rows
 // padded or cut to fit, any character allowed; and the ways a file is malformed or over its caps,
-// each of which reads as null so the drawn dancer plays.
+// each of which reads as null so the show's stage stays empty.
 import { describe, expect, it } from 'vitest';
-import { FRAMES_MAX_CHARS, FRAMES_MAX_FRAMES, parseFramesFile, parseFramesHeader } from './frames';
+import { FRAMES_MAX_CHARS, FRAMES_MAX_FRAMES, parseFramesFile, parseFramesHeader, STILL_SAMPLES, stillFrameIndex } from './frames';
 
 const HEADER = 'vesen-frames fps=12 cols=3 rows=2';
 /** Two frames: a short row padded and a long one cut, then a mostly blank one. */
@@ -82,5 +82,24 @@ describe('parseFramesFile', () => {
     for (const bad of [null, undefined, 12, {}, [], '\u0000', '===\n===\n']) {
       expect(parseFramesFile(bad as unknown as string)).toBeNull();
     }
+  });
+});
+
+describe('stillFrameIndex', () => {
+  const file = (...frames: string[]) => parseFramesFile(`vesen-frames fps=1 cols=4 rows=1\n${frames.join('\n===\n')}\n`)?.frames ?? [];
+
+  it('picks the frame with the most detail: not black, not blown out', () => {
+    expect(stillFrameIndex(file('    ', '@@@@', '@e:.', '@@e.'))).toBe(2);
+    // The first of equals; a single frame is its own still.
+    expect(stillFrameIndex(file('ab  ', 'cd  '))).toBe(0);
+    expect(stillFrameIndex(file('    '))).toBe(0);
+    expect(stillFrameIndex([])).toBe(0);
+  });
+
+  it('looks at an even sample of a long file, at most STILL_SAMPLES frames', () => {
+    const frames = Array.from({ length: 1000 }, (_, i) => (i === 500 ? 'abcd' : '    '));
+    // Every fifth frame is looked at, so the 500th is.
+    expect(Math.ceil(1000 / STILL_SAMPLES)).toBe(5);
+    expect(stillFrameIndex(file(...frames))).toBe(500);
   });
 });

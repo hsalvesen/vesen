@@ -10,24 +10,26 @@
    device pixels (--crt-scan-period, --crt-scan-line).
 
    Two things combine to sell the effect:
-     1. Glow and colour fringing on the scrolled content (.scrollback), so
-        they track each themed colour. Never on the scrolling container
-        itself, which would repaint on every scroll.
+     1. Glow and colour fringing on the scrolled content (.scrollback), and
+        on an app's window (.app-host, ui/AppHost.svelte), so they track each
+        themed colour. Never on the scrolling container itself, which would
+        repaint on every scroll.
      2. A pointer-events:none overlay of stacked layers (scanlines, shadow
         mask, refresh sweep, flicker, vignette) over the screen frame only
         (it is absolute inside .screen-frame), never the gutter or the dock,
-        so its sizes are percentages of the frame.
+        so its sizes are percentages of the frame; an app's window carries
+        one of its own, inside its frame.
    ========================================================================== */
 
 /* --- Text treatments ------------------------------------------------------ */
 
 /* Phosphor and vintage: a soft bloom in each element's own colour. */
-:is(html.crt-phosphor, html.crt-vintage) .scrollback {
+:is(html.crt-phosphor, html.crt-vintage) :is(.scrollback, .app-host) {
   text-shadow: 0 0 1px currentColor, 0 0 6px currentColor;
 }
 
 /* Vintage also splits the colour channels, like a mistuned tube, and lifts saturation. */
-html.crt-vintage .scrollback {
+html.crt-vintage :is(.scrollback, .app-host) {
   text-shadow:
     0.6px 0 0 rgba(255, 45, 90, 0.5),
     -0.6px 0 0 rgba(60, 190, 255, 0.5),
@@ -37,7 +39,7 @@ html.crt-vintage .scrollback {
 
 /* The glow is inherited, and the browsers' own stylesheets turn it off on buttons (`text-shadow:
    none`), so every tappable name (a button) and link in the output takes its parent's again. */
-:is(html.crt-phosphor, html.crt-vintage) .scrollback :is(button, a) {
+:is(html.crt-phosphor, html.crt-vintage) :is(.scrollback, .app-host) :is(button, a) {
   text-shadow: inherit;
 }
 

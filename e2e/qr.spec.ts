@@ -115,6 +115,12 @@ async function servedLikeFirebase(page: Page, origin: string): Promise<string[]>
 }
 
 test.describe('the QR card', { tag: '@smoke' }, () => {
+  // The page warms sudo's show at idle (services/warm-show.ts), and a test may end while that
+  // download still runs through the route above: let it go quietly.
+  test.afterEach(async ({ page }) => {
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  });
+
   test('draws, presents and saves under the production content security policy', async ({ page, baseURL }) => {
     const problems = await servedLikeFirebase(page, new URL(baseURL ?? '').origin);
     await open(page);

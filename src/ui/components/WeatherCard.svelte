@@ -7,12 +7,14 @@
 
   Everything is drawn with text interpolation from the view model, which comes only from the
   weather command, and everything drawn is the text itself, on the character grid at the
-  terminal's line height: the pictogram is ASCII art, and a range bar is its characters
-  ('--==|=----'), each cell its own span, the = cells shaded from the cold role to the hot one by
-  where they sit on the scale. Colours are role and palette tokens. Screen readers hear one
-  summary, not the art. The chips are the command's trusted actions only; under 'Matches:' the
-  place shown comes first, marked * in the terminal's foreground, so which of the same-named
-  places this is stays plain.
+  terminal's line height: the pictogram is wttr.in's text art (services/weather/wmo.ts; three of
+  its glyphs are outside the terminal font, and each is pinned to one cell so the grid holds), and
+  a range bar is its characters ('--==|=----'), each cell its own span, the = cells shaded from the
+  cold role to the hot one by where they sit on the scale. Colours are role and palette tokens.
+  Screen readers hear one summary, not the art. The chips are the command's trusted actions only,
+  drawn as bracketed words in the text, [°F] and [7 days], not boxes; under 'Matches:' the place
+  shown comes first, marked * in the terminal's foreground, so which of the same-named places
+  this is stays plain.
 
   Markup inside the text blocks is written without whitespace between tags on purpose: they
   preserve whitespace, so any space Svelte kept there would show.
@@ -21,6 +23,7 @@
   import { colourVar, isTrustedAction, type Action, type ChipItem } from '../../output/model';
   import type { Line, WeatherCardProps } from '../../services/weather/types';
   import { BAR_NOW, BAR_RANGE, CHOSEN_MARK, MATCHES_LABEL, ROLE_COLOUR } from '../../services/weather/view';
+  import { ART_FALLBACK_GLYPHS } from '../../services/weather/wmo';
   import type { ComponentBlockProps } from './registry';
 
   let { view, alt, onaction }: ComponentBlockProps = $props();
@@ -71,6 +74,18 @@
     return cells;
   }
 
+  /** A segment's text as runs: a glyph the terminal font lacks is a run of its own, pinned to one cell. */
+  function runs(text: string): { readonly text: string; readonly cell: boolean }[] {
+    const out: { text: string; cell: boolean }[] = [];
+    for (const ch of text) {
+      const cell = ART_FALLBACK_GLYPHS.includes(ch);
+      const last = out[out.length - 1];
+      if (last !== undefined && !last.cell && !cell) last.text += ch;
+      else out.push({ text: ch, cell });
+    }
+    return out;
+  }
+
   function colour(role: string): string {
     const token = Object.prototype.hasOwnProperty.call(ROLE_COLOUR, role) ? ROLE_COLOUR[role as keyof typeof ROLE_COLOUR] : 'fg';
     return `color: ${colourVar(token)}`;
@@ -82,13 +97,13 @@
 </script>
 
 <!-- One line per row; no whitespace between tags, which the pre-formatted blocks would show. -->
-{#snippet lines(rows: readonly Line[])}{#each rows as row}<div class="wx-line">{#if row.length === 0}<br />{:else}{#each row as segment}{#if segment[0] === 'bar'}{#each barCells(segment[1]) as cell}{#if cell.kind === 'range'}<span class="wx-range" style="--cold: {cell.cold}%">{cell.text}</span>{:else}<span class={cell.kind === 'now' ? 'wx-now' : 'wx-track'}>{cell.text}</span>{/if}{/each}{:else}<span style={colour(segment[0])}>{segment[1]}</span>{/if}{/each}{/if}</div>{/each}{/snippet}
+{#snippet lines(rows: readonly Line[])}{#each rows as row}<div class="wx-line">{#if row.length === 0}<br />{:else}{#each row as segment}{#if segment[0] === 'bar'}{#each barCells(segment[1]) as cell}{#if cell.kind === 'range'}<span class="wx-range" style="--cold: {cell.cold}%">{cell.text}</span>{:else}<span class={cell.kind === 'now' ? 'wx-now' : 'wx-track'}>{cell.text}</span>{/if}{/each}{:else}<span style={colour(segment[0])}>{#each runs(segment[1]) as run}{#if run.cell}<span class="wx-cell">{run.text}</span>{:else}{run.text}{/if}{/each}</span>{/if}{/each}{/if}</div>{/each}{/snippet}
 
 {#snippet chip(item: ChipItem)}
   {#if onaction && isTrustedAction(item.action)}
-    <button type="button" class="wx-chip" onmousedown={(event) => event.preventDefault()} onclick={() => run(item.action)}>{item.label}</button>
+    <button type="button" class="wx-chip" onmousedown={(event) => event.preventDefault()} onclick={() => run(item.action)}><span class="wx-chip-label">{item.label}</span></button>
   {:else}
-    <span class="wx-chip">{item.label}</span>
+    <span class="wx-chip"><span class="wx-chip-label">{item.label}</span></span>
   {/if}
 {/snippet}
 
@@ -156,6 +171,17 @@
     }
   }
 
+  /* A glyph the terminal font lacks (the art's figure dash, psili and lightning) comes from another
+     font, whose advance is not a cell: pinned to one cell, centred, so the rows beside it line up. */
+  .wx-cell {
+    display: inline-block;
+    width: 1ch;
+    overflow: hidden;
+    text-align: center;
+    vertical-align: top;
+    font-variant-emoji: text;
+  }
+
   /* A range bar's cells: the scale muted, the mark at the current temperature strong. */
   .wx-track {
     color: var(--role-muted, var(--theme-bright-black));
@@ -190,19 +216,42 @@
     color: var(--role-muted, var(--theme-bright-black));
   }
 
+  /* A chip is a word in brackets, as a terminal would print a choice: no box, no fill. The
+     brackets are drawn by the style, so the word alone is the button's name. */
   .wx-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 0 1ch;
-    border: 1px solid var(--role-chip-fg, var(--theme-foreground));
-    border-radius: 4px;
-    background: var(--role-chip-bg, transparent);
+    display: inline;
+    padding: 0;
+    border: 0;
+    background: none;
     color: var(--role-chip-fg, var(--theme-foreground));
     font: inherit;
+    white-space: pre;
+  }
+
+  .wx-chip::before,
+  .wx-chip::after {
+    color: var(--role-muted, var(--theme-bright-black));
+  }
+
+  .wx-chip::before {
+    content: '[';
+  }
+
+  .wx-chip::after {
+    content: ']';
   }
 
   button.wx-chip {
     cursor: pointer;
+  }
+
+  button.wx-chip:hover .wx-chip-label,
+  button.wx-chip:focus-visible .wx-chip-label {
+    text-decoration: underline;
+  }
+
+  button.wx-chip:focus-visible {
+    outline: none;
   }
 
   /* The place shown, among its namesakes: the same chip as the others, bold, with its * mark;
@@ -216,16 +265,17 @@
     white-space: pre;
   }
 
-  button.wx-chip:active {
+  button.wx-chip:active .wx-chip-label {
     background: var(--role-chip-fg, var(--theme-foreground));
     color: var(--theme-background);
   }
 
-  /* A thumb's target on a touch screen. */
+  /* A thumb's target on a touch screen: the word still, with room above and below it. */
   @media (pointer: coarse) {
     .wx-chip {
+      display: inline-flex;
+      align-items: center;
       min-height: 44px;
-      padding: 0 1.5ch;
     }
   }
 </style>

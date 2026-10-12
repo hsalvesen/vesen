@@ -4,136 +4,59 @@
 
 $ help
 [terminal at 40 columns]
-Vesen    Files     Text       Shell
-about    basename  base64     alias
-banner   cat       bc         apropos
-cathode  cd        column     bg
-contact  chgrp     cut        clear
-qr       chmod     diff       command
-repo     chown     echo       env
-theme    cp        expr       exit
-whoami   df        fold       export
-         dirname   grep       fail
-         du        head       false
-         file      md5sum     fg
-         find      nl         hang
-         ln        printf     help
-         ls        rev        history
-         mkdir     sed        jobs
-         mktemp    seq        kill
-         mv        sha1sum    late
-         pwd       sha256sum  man
-         readlink  sha512sum  nohup
-         realpath  sort       printenv
-         rm        tail       read
-         rmdir     tee        reset
-         stat      tr         set
-         sync      uniq       sleep
-         touch     wc         source
-         tree      xargs      sudo
-         truncate  yes        test
-                              time
-                              timeout
-                              true
-                              type
-                              unalias
-                              unset
-                              wait
-                              watch
-                              whatis
-                              which
+Vesen    Files  Text  Shell    System
+about    cat    echo  alias    cal
+banner   cd     grep  clear    date
+cathode  cp     head  exit     fastfetch
+contact  ls     sed   help     privacy
+qr       mkdir  sort  history  ps
+repo     mv     tail  man      top
+theme    pwd    uniq  sudo     uname
+whoami   rm     wc    which    uptime
+         ...    ...   ...      ...
 
-System       Network    Fun       Editor
-arch         curl       cmatrix   less
-cal          dig        cowsay    more
-date         fetch      cowthink  nano
-debug        git        factor
-dmesg        host       figlet
-fastfetch    ifconfig   fortune
-finger       ip         lolcat
-free         nslookup   sl
-groups       ping
-hostname     speedtest
-id           stock
-keys         weather
-locale       wget
-lsb_release  whois
-lscpu
-nproc
-open
-pgrep
-pkill
-poweroff
-privacy
-ps
-reboot
-shutdown
-top
-tty
-uname
-uptime
-w
-who
+Network  Fun       Editor
+curl     cmatrix   less
+dig      cowsay    more
+ip       cowthink  nano
+ping     factor
+stock    figlet
+weather  fortune
+wget     lolcat
+whois    sl
+...
 
-help --all lists every command with what it does.
+help files lists every command in a category; add -v to say what each does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
 privacy says what vesen sends, and where.
 ? 0
 [terminal at 80, 120 columns]
-Vesen    Files     Text       Shell     System       Network    Fun       Editor
-about    basename  base64     alias     arch         curl       cmatrix   less
-banner   cat       bc         apropos   cal          dig        cowsay    more
-cathode  cd        column     bg        date         fetch      cowthink  nano
-contact  chgrp     cut        clear     debug        git        factor
-qr       chmod     diff       command   dmesg        host       figlet
-repo     chown     echo       env       fastfetch    ifconfig   fortune
-theme    cp        expr       exit      finger       ip         lolcat
-whoami   df        fold       export    free         nslookup   sl
-         dirname   grep       fail      groups       ping
-         du        head       false     hostname     speedtest
-         file      md5sum     fg        id           stock
-         find      nl         hang      keys         weather
-         ln        printf     help      locale       wget
-         ls        rev        history   lsb_release  whois
-         mkdir     sed        jobs      lscpu
-         mktemp    seq        kill      nproc
-         mv        sha1sum    late      open
-         pwd       sha256sum  man       pgrep
-         readlink  sha512sum  nohup     pkill
-         realpath  sort       printenv  poweroff
-         rm        tail       read      privacy
-         rmdir     tee        reset     ps
-         stat      tr         set       reboot
-         sync      uniq       sleep     shutdown
-         touch     wc         source    top
-         tree      xargs      sudo      tty
-         truncate  yes        test      uname
-                              time      uptime
-                              timeout   w
-                              true      who
-                              type
-                              unalias
-                              unset
-                              wait
-                              watch
-                              whatis
-                              which
+Vesen    Files  Text  Shell    System     Network  Fun       Editor
+about    cat    echo  alias    cal        curl     cmatrix   less
+banner   cd     grep  clear    date       dig      cowsay    more
+cathode  cp     head  exit     fastfetch  ip       cowthink  nano
+contact  ls     sed   help     privacy    ping     factor
+qr       mkdir  sort  history  ps         stock    figlet
+repo     mv     tail  man      top        weather  fortune
+theme    pwd    uniq  sudo     uname      wget     lolcat
+whoami   rm     wc    which    uptime     whois    sl
+         ...    ...   ...      ...        ...
 
-help --all lists every command with what it does.
+help files lists every command in a category; add -v to say what each does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
 privacy says what vesen sends, and where.
 ? 0
 [pipe]
 Vesen: about banner cathode contact qr repo theme whoami
-Files: basename cat cd chgrp chmod chown cp df dirname du file find ln ls mkdir mktemp mv pwd readlink realpath rm rmdir stat sync touch tree truncate
-Text: base64 bc column cut diff echo expr fold grep head md5sum nl printf rev sed seq sha1sum sha256sum sha512sum sort tail tee tr uniq wc xargs yes
-Shell: alias apropos bg clear command env exit export fail false fg hang help history jobs kill late man nohup printenv read reset set sleep source sudo test time timeout true type unalias unset wait watch whatis which
-System: arch cal date debug dmesg fastfetch finger free groups hostname id keys locale lsb_release lscpu nproc open pgrep pkill poweroff privacy ps reboot shutdown top tty uname uptime w who
-Network: curl dig fetch git host ifconfig ip nslookup ping speedtest stock weather wget whois
+Files: cat cd cp ls mkdir mv pwd rm ...
+Text: echo grep head sed sort tail uniq wc ...
+Shell: alias clear exit help history man sudo which ...
+System: cal date fastfetch privacy ps top uname uptime ...
+Network: curl dig ip ping stock weather wget whois ...
 Fun: cmatrix cowsay cowthink factor figlet fortune lolcat sl
 Editor: less more nano
 
-help --all lists every command with what it does.
+help files lists every command in a category; add -v to say what each does.
 Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.
 privacy says what vesen sends, and where.
 ? 0

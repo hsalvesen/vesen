@@ -404,7 +404,7 @@ describe('the session snapshot and the alternate screen', () => {
     // sudo's password, half typed when the page is put away, goes nowhere.
     await type('sudo ls');
     const input = document.querySelector('input.command-input') as HTMLInputElement;
-    await vi.waitFor(() => expect(document.querySelector('.read-prompt')?.textContent).toBe('[sudo] password for guest: '));
+    await vi.waitFor(() => expect(document.querySelector('.read-prompt')?.textContent).toBe('Password: '));
     await fireEvent.input(input, { target: { value: 'hunter2' } });
     window.dispatchEvent(new Event('pagehide'));
     const during = session.items.get(SNAPSHOT_KEY) ?? '';

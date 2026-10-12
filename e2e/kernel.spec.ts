@@ -58,8 +58,8 @@ test.describe('the shell kernel', { tag: '@smoke' }, () => {
 
     await run(page, 'which rev');
     await expect(lastEntry(page).locator('.command-output')).toHaveText('/usr/bin/rev');
-    await run(page, 'help | cat');
-    // In a pipe the index names every command on one line per category, by name, rev among the text tools.
+    await run(page, 'help text | cat');
+    // In a pipe help text names every command in Text on one line, by name, rev among them.
     await expect(lastEntry(page)).toContainText(/Text: base64 bc column cut .*\brev sed seq\b/);
     await run(page, 'help --all | grep rev');
     await expect(lastEntry(page).locator('.command-output')).toHaveText(/^rev\s+reverse the characters of each line$/);

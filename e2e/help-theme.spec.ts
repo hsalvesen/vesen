@@ -55,8 +55,9 @@ test.describe('the help index', { tag: '@smoke' }, () => {
     for (const heading of CATEGORIES) {
       await expect(output.getByText(heading, { exact: true })).toBeVisible();
     }
-    // Every category is a column: its title over every one of its commands, by name, nothing
-    // cut and nothing counted, and no summaries (they are in help --all).
+    // Every category is a column: its title over eight of its commands (the everyday ones), by
+    // name, a muted ... under a category with more, nothing counted, and no summaries (they are in
+    // help -v).
     await expect(output.locator('.grid')).toHaveCount(0);
     await expect(output.getByText('change the colour theme')).toHaveCount(0);
     const columns = output.locator('.lists .list');
@@ -74,8 +75,11 @@ test.describe('the help index', { tag: '@smoke' }, () => {
       expect(column.names.length, column.title).toBeGreaterThan(0);
       expect(column.names, column.title).toEqual([...column.names].sort((a, b) => a.localeCompare(b)));
     }
-    expect(shape.find((column) => column.title === 'Files')?.names).toEqual(expect.arrayContaining(['cat', 'cd', 'find', 'ls', 'tree']));
+    for (const column of shape) expect(column.names.length, column.title).toBeLessThanOrEqual(8);
+    expect(shape.find((column) => column.title === 'Files')?.names).toEqual(['cat', 'cd', 'cp', 'ls', 'mkdir', 'mv', 'pwd', 'rm']);
     expect(shape.find((column) => column.title === 'Editor')?.names).toEqual(['less', 'more', 'nano']);
+    await expect(output.locator('.lists .list').filter({ hasText: 'Files' }).getByText('...', { exact: true })).toBeVisible();
+    await expect(output.getByRole('button', { name: 'help files', exact: true })).toBeVisible();
     expect(await output.getByText(/\+\d+ more/).count()).toBe(0);
     // A desktop shows the eight side by side; a phone three or four a band.
     const bands = new Set(shape.map((column) => column.top)).size;
@@ -113,8 +117,8 @@ test.describe('the help index', { tag: '@smoke' }, () => {
         const style = getComputedStyle(node);
         return style.textShadow.split(style.color).join('currentcolor');
       };
-      // The hint line: the tappable `help --all`, then plain text, on one line.
-      const hint = Array.from(element.querySelectorAll('.lines .text')).find((line) => line.textContent?.startsWith('help --all lists'));
+      // The hint line: the tappable `help files`, then plain text, on one line.
+      const hint = Array.from(element.querySelectorAll('.lines .text')).find((line) => line.textContent?.startsWith('help files lists'));
       const button = hint?.querySelector('button.action');
       const span = hint?.querySelector('span');
       const buttons = Array.from(element.querySelectorAll('button.action'));
@@ -141,9 +145,8 @@ test.describe('help and theme', { tag: '@smoke' }, () => {
   test('help shows the portfolio heading, and a tapped name brings the prompt into view', async ({ page, hasTouch }) => {
     await page.goto('/');
     if (hasTouch) {
-      // As a visitor on a phone runs it: a tap on help in the banner, with the keyboard down. The
-      // index is taller than a phone's screen now that the catalogue has arrived, and a long
-      // output is shown from its start there (ui/actions/stickToBottom.ts).
+      // As a visitor on a phone runs it: a tap on help in the banner, with the keyboard down. A
+      // long output is shown from its start there (ui/actions/stickToBottom.ts).
       const echoes = page.locator('[role="log"] .command-input-display');
       const help = page.locator('[role="log"]').getByRole('button', { name: 'help', exact: true }).first();
       await expect(help).toBeVisible();
@@ -154,13 +157,13 @@ test.describe('help and theme', { tag: '@smoke' }, () => {
     } else await run(page, 'help');
     const output = lastEntry(page).locator('.command-output');
     // Vesen's own commands come first. A phone shows a long output from its start, so the title
-    // is in view; a desktop follows the prompt, and the index, every command in columns, is
-    // taller than its screen, so there the title is in view once the output is scrolled to its start.
+    // is in view; a desktop follows the prompt, so there the title is in view at the latest once
+    // the output is scrolled to its start.
     const heading = output.getByText('Vesen', { exact: true });
     await expect(heading).toBeVisible();
     await expect(output.locator('.list-title').first()).toHaveText('Vesen');
     if (hasTouch) await expect(heading).toBeInViewport();
-    await expect(output.getByRole('button', { name: 'help --all', exact: true })).toBeVisible();
+    await expect(output.getByRole('button', { name: 'help files', exact: true })).toBeVisible();
 
     // Scroll the prompt out of sight, to the start of the output, then tap a name: the prompt
     // comes back with the name in it.

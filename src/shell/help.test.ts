@@ -3,10 +3,12 @@ import { isTrustedAction, lineText, type Block } from '../output/model';
 import { plain } from '../output/plain';
 import {
   apropos,
+  categoryHelp,
   CATEGORY_TITLES,
   commandHelp,
   flagLabel,
   helpIndex,
+  INDEX_PER_CATEGORY,
   keysHelp,
   manPage,
   usageLines,
@@ -67,7 +69,7 @@ describe('the help index', () => {
         'Text',
         'head',
         '',
-        'help --all lists every command with what it does.',
+        'help vesen lists every command in a category; add -v to say what each does.',
         "Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.",
         '',
       ].join('\n'),
@@ -94,7 +96,7 @@ describe('the help index', () => {
         'Files: cd ls',
         'Text: head',
         '',
-        'help --all lists every command with what it does.',
+        'help vesen lists every command in a category; add -v to say what each does.',
         "Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.",
         '',
       ].join('\n'),
@@ -102,18 +104,49 @@ describe('the help index', () => {
     expect(helpIndex(registry).some((block) => block.type === 'lists')).toBe(false);
   });
 
-  it('names every command of a long category, by name, with nothing cut', () => {
-    const many: CommandSpec[] = Array.from({ length: 30 }, (_, i) => ({
-      name: `cmd${String(i).padStart(2, '0')}`,
-      category: 'text',
-      summary: 'a command',
-      run: () => 0,
-    }));
-    const big = new CommandRegistry([...many, { name: 'aardvark', category: 'text', summary: 'first by name', featured: true, run: () => 0 }]);
-    const names = ['aardvark', ...many.map((spec) => spec.name)];
-    expect(columnsOf(helpIndex(big, { tty: true }))).toEqual([['Text', ...names]]);
+  /** A Text category of 32: thirty numbered, aardvark first by name, and grep, an everyday one. */
+  const big = new CommandRegistry([
+    ...Array.from({ length: 30 }, (_, i): CommandSpec => ({ name: `cmd${String(i).padStart(2, '0')}`, category: 'text', summary: 'a command', run: () => 0 })),
+    { name: 'aardvark', category: 'text', summary: 'first by name', run: () => 0 },
+    { name: 'grep', category: 'text', summary: 'print lines that match patterns', run: () => 0 },
+  ]);
+
+  it('shows eight of a long category, the everyday ones first, by name, then ... and how to see the rest', () => {
+    // grep is everyday; the other seven are the first by name.
+    const eight = ['aardvark', 'cmd00', 'cmd01', 'cmd02', 'cmd03', 'cmd04', 'cmd05', 'grep'];
+    expect(INDEX_PER_CATEGORY).toBe(8);
+    expect(columnsOf(helpIndex(big, { tty: true }))).toEqual([['Text', ...eight, '...']]);
+    const lists = helpIndex(big, { tty: true }).find((block) => block.type === 'lists');
+    const mark = lists?.type === 'lists' ? lists.columns[0]?.items[8] : undefined;
+    // The mark is muted text, not a tap.
+    expect(mark).toMatchObject({ text: '...', style: { fg: 'muted' } });
+    expect(mark?.action).toBeUndefined();
+    expect(`\n${text(helpIndex(big))}`).toContain(`\nText: ${eight.join(' ')} ...\n`);
+    // The note names the category the index cut short, as a tap that runs it.
+    expect(text(helpIndex(big))).toContain('help text lists every command in a category; add -v to say what each does.');
+    const note = helpIndex(big, { tty: true }).flatMap((block) => (block.type === 'lines' ? block.lines.flat() : [])).find((span) => span.text === 'help text');
+    expect(note?.action).toMatchObject({ kind: 'run', line: 'help text' });
     expect(text(helpIndex(big, { tty: true }))).not.toMatch(/\+\d+ more/);
-    expect(`\n${text(helpIndex(big))}`).toContain(`\nText: ${names.join(' ')}\n`);
+  });
+
+  it('lists every command of a category for help CATEGORY, and with -v what each does', () => {
+    const names = big.list({ category: 'text' }).map((spec) => spec.name);
+    expect(names).toHaveLength(32);
+    // On a terminal: the heading, every name in a grid of taps, and how to see what each does.
+    const listed = categoryHelp(big, 'text', { tty: true });
+    const grid = listed.find((block) => block.type === 'grid');
+    expect(grid?.type === 'grid' ? grid.items.map((item) => item.text) : []).toEqual(names);
+    expect(grid?.type === 'grid' ? grid.items[0]?.action : undefined).toMatchObject({ kind: 'insert', text: 'aardvark ' });
+    expect(grid?.type === 'grid' ? grid.notes : []).toBeUndefined();
+    expect(text(listed)).toMatch(/^Text\n/);
+    expect(text(listed)).toContain('help -v text says what each does.');
+    // In a pipe: one line of every name, and the same note.
+    expect(text(categoryHelp(big, 'text'))).toBe(`Text: ${names.join(' ')}\n\nhelp -v text says what each does.\n`);
+    // -v: every name with its summary, as --all lays a category out.
+    const verbose = text(categoryHelp(big, 'text', { verbose: true }));
+    expect(verbose).toMatch(/^grep +print lines that match patterns$/m);
+    expect(verbose).toMatch(/^cmd29 +a command$/m);
+    expect(verbose).not.toContain('help -v');
   });
 
   it('groups every visible command by category with --all, vesen\'s own first, each with its summary', () => {

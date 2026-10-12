@@ -46,6 +46,12 @@ async function servedLikeFirebase(page: Page, origin: string) {
 }
 
 test.describe('production headers', { tag: '@smoke' }, () => {
+  // The page warms sudo's show at idle (services/warm-show.ts), and a test may end while that
+  // download still runs through the route above: let it go quietly.
+  test.afterEach(async ({ page }) => {
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  });
+
   test('the app boots and runs help under the production CSP', async ({ page, baseURL }) => {
     const problems = await servedLikeFirebase(page, new URL(baseURL ?? '').origin);
     await page.goto('/');
@@ -91,7 +97,7 @@ test.describe('production headers', { tag: '@smoke' }, () => {
     const prompt = page.locator('input.command-input');
     await prompt.fill('sudo ls');
     await prompt.press('Enter');
-    await expect(page.locator('.edit-row .read-prompt')).toHaveText('[sudo] password for guest: ');
+    await expect(page.locator('.edit-row .read-prompt')).toHaveText('Password: ');
     await prompt.pressSequentially('x');
     await prompt.press('Enter');
     const show = page.getByRole('dialog', { name: 'You have been rickrolled' });

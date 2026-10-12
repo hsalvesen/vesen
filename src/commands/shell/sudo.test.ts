@@ -1,8 +1,8 @@
-// sudo: the password prompt in sudo's words, with how to cancel in the dim line above it (for a
-// keyboard, or for a touch screen), masked and dropped; then the show (the Rick app with the
-// dancer, the owner's track and the frames file to look for) on the terminal, and the sudoers
-// line after it; the message alone in a pipe or where no app can show; ^C at either stage; and
-// --help and man that read like sudo's own, with nothing of the show in them.
+// sudo: the password prompt as a Unix terminal asks it, `Password: ` and nothing else, an
+// asterisk for each key and the answer dropped; then the show (the Rick app with the owner's
+// track and the frames file to look for) on the terminal, and the sudoers line after it; the
+// message alone in a pipe or where no app can show; ^C at either stage; and --help and man that
+// read like sudo's own, with nothing of the show in them.
 import { describe, expect, it, vi } from 'vitest';
 import type { Block } from '../../output/model';
 import { plain } from '../../output/plain';
@@ -12,10 +12,10 @@ import type { Shell } from '../../shell/index';
 import type { FullscreenView } from '../../shell/types';
 import { harness } from '../../testing/shell-harness';
 import rm from '../files/rm';
-import { RICK_CLOSED, RICK_FRAMES, RICK_SONG, RICK_TRACK, rickFrames, type RickView } from '../lib/rick';
+import { RICK_CLOSED, RICK_FRAMES, RICK_SONG, RICK_TRACK, type RickView } from '../lib/rick';
 import man from './man';
 import sudo from './sudo';
-import { doc, SUDO_HINT, SUDO_TOUCH_HINT } from './sudo.run';
+import { doc, SUDO_PROMPT } from './sudo.run';
 
 const SECRET = 'hunter2-correct-horse';
 /** Words that would give the show away before it opens. */
@@ -73,24 +73,24 @@ async function asked(shell: Shell) {
 const text = (blocks: readonly Block[]): string => blocks.map((block) => plain(block)).join('');
 
 describe('sudo', () => {
-  it("asks for guest's password in sudo's words, with how to cancel above it, never echoes the answer, then puts on the show and reports the incident", async () => {
+  it("asks 'Password: ' and nothing else, echoes an asterisk for each key and never the answer, then puts on the show and reports the incident", async () => {
     const storage = memoryStorage();
     const term = terminal();
     const h = harness({ specs: [sudo], storage, terminal: term.info });
     const job = h.shell.start('sudo ls');
     const request = await asked(h.shell);
-    expect(request).toMatchObject({ prompt: '[sudo] password for guest: ', secret: true, hint: SUDO_HINT });
-    expect(SUDO_HINT).toBe('Ctrl+C or Esc to cancel');
+    // sudo's pwfeedback: an asterisk for each key, while typed and on the line after.
+    expect(request).toMatchObject({ prompt: 'Password: ', secret: true, feedback: true, hint: null });
+    expect(SUDO_PROMPT).toBe('Password: ');
     expect(term.fullscreen).not.toHaveBeenCalled();
 
     h.shell.answerRead(request.id, SECRET);
     const result = await job.done;
 
-    // The show: the Rick app, with the dancer's frames, the track and the tune, after the password.
+    // The show: the Rick app, with the track, the frames file and the tune, after the password.
     expect(term.shown).toHaveLength(1);
     expect(term.shown[0]?.view).toBe('rick');
     const view = term.shown[0]?.props;
-    expect(view?.frames).toBe(rickFrames());
     expect(view?.song).toBe(RICK_SONG);
     expect(view?.track).toBe(RICK_TRACK);
     expect(view?.framesFile).toBe(RICK_FRAMES);
@@ -99,7 +99,9 @@ describe('sudo', () => {
 
     expect(result.status).toBe(1);
     const shown = text(result.blocks);
-    expect(shown).toContain(`${SUDO_HINT}\n[sudo] password for guest: \n`);
+    // The prompt is the first thing on the screen: nothing above it, an asterisk a key after it.
+    expect(shown.startsWith(`Password: ${'*'.repeat(SECRET.length)}\n`)).toBe(true);
+    expect(shown).not.toMatch(/cancel|Esc/);
     expect(shown).toContain('guest is not in the sudoers file. This incident will be reported.');
     // No link, no card: the video is gone. Nothing before the answer names the show.
     expect(result.blocks.some((block) => block.type === 'card')).toBe(false);
@@ -114,14 +116,12 @@ describe('sudo', () => {
     expect(h.shell.history.list().map((entry) => entry.line)).toEqual(['sudo ls']);
   });
 
-  it('on a touch screen words the hint for the Cancel chip and a keyboard\'s Esc, and tells the app', async () => {
+  it('on a touch screen asks the same, with no hint, and tells the app', async () => {
     const term = terminal({ touch: true });
     const h = harness({ specs: [sudo], terminal: term.info });
     const job = h.shell.start('sudo -i');
     const request = await asked(h.shell);
-    expect(request.hint).toBe(SUDO_TOUCH_HINT);
-    expect(SUDO_TOUCH_HINT).toBe('Tap Cancel or press Esc to cancel');
-    expect(SUDO_TOUCH_HINT).not.toMatch(TELLING);
+    expect(request).toMatchObject({ prompt: 'Password: ', hint: null });
     h.shell.answerRead(request.id, '');
     await job.done;
     expect(term.shown[0]?.props.touch).toBe(true);

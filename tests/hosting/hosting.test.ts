@@ -98,6 +98,8 @@ describe('firebase.json', () => {
     expect(header('/assets/**', 'Cache-Control')).toBe('public, max-age=31536000, immutable');
     expect(header('/icons/**', 'Cache-Control')).toBe('public, max-age=86400');
     expect(header('/fonts/**', 'Cache-Control')).toMatch(/^public, max-age=\d+$/);
+    // sudo's track and frames: fetched only when the show opens, and kept a day for the next time.
+    expect(header('/audio/**', 'Cache-Control')).toBe('public, max-age=86400');
   });
 
   // Neither has a hash in its name, and a stale boot script would paint retired theme colours.

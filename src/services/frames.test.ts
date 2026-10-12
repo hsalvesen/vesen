@@ -1,6 +1,6 @@
 // The frames loader (sudo's show): a 200 with a well-formed file gives its frames; anything else
 // (a 404, a malformed body, a body over the cap, a fetch that fails, no URL) gives null and never
-// throws, so the drawn dancer plays.
+// throws, so the show's stage stays empty.
 import { describe, expect, it, vi } from 'vitest';
 import { FRAMES_MAX_CHARS } from '../lib/frames';
 import { loadFrames, type FramesFetch } from './frames';

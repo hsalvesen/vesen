@@ -46,8 +46,8 @@ describe('fastfetch on the page', () => {
     for (let i = 0; i < 5; i += 1) await tick();
 
     const columns = container.querySelector('.columns');
-    expect(logoCh).toBe(26);
-    expect(columns?.getAttribute('style')).toContain('--stack-at: 60ch; --left: 26ch');
+    expect(logoCh).toBe(30);
+    expect(columns?.getAttribute('style')).toContain('--stack-at: 60ch; --left: 30ch');
     expect(columns?.classList.contains('sized')).toBe(true);
     expect(columns?.querySelectorAll(':scope > .column')).toHaveLength(2);
     // Art drawn with letters and punctuation: at the terminal's line height, not squashed.

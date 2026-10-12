@@ -8,7 +8,8 @@ const BENIGN = [
 
 /**
  * Files the app asks for that need not exist: sudo's show looks for the owner's frames file
- * (src/services/frames.ts) and plays its drawn dancer when there is none, so its 404 is expected.
+ * (src/services/frames.ts) and leaves its stage empty when there is none (as e2e/sudo.spec.ts
+ * arranges), so its 404 is expected.
  */
 const OPTIONAL = ['/audio/incident-report.frames'];
 

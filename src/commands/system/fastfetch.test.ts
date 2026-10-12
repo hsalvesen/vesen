@@ -125,8 +125,8 @@ describe('fastfetch on the terminal', () => {
     expect(status).toBe(0);
     const columns = columnsOf(blocks);
     expect(columns.stackBelowCols).toBe(60);
-    // The details start just past the logo: the apple's widest row, 26 cells.
-    expect(columns.leftCh).toBe(26);
+    // The details start just past the logo: the apple's widest row, 30 cells.
+    expect(columns.leftCh).toBe(30);
     expect(columns.left).toEqual([expect.objectContaining({ type: 'art', alt: 'macOS logo', fit: 'scale' })]);
     const details = columns.right[0] as LinesBlock;
     const text = details.lines.map(lineText);
@@ -142,16 +142,16 @@ describe('fastfetch on the terminal', () => {
     expect(columnsOf(blocks).left).toEqual([expect.objectContaining({ alt: 'Windows logo', style: { fg: 'blue', bold: true } })]);
   });
 
-  it('draws every logo in printable ASCII without a backtick, 25 to 28 columns wide and 13 or 14 rows tall', () => {
-    // Letters and punctuation only, so the art is drawn at the terminal's line height (ui/art-class.ts).
+  it("draws every logo as vesen 1.0 did, in printable ASCII, 30 to 42 columns wide and 16 to 26 rows tall", () => {
+    // Letters and punctuation only (backticks included: the art is a plain string), so the art is drawn at the terminal's line height (ui/art-class.ts).
     const ASCII = /^[ -~]*$/;
     for (const [os, alt, colour, width, height] of [
-      ['macOS', 'macOS logo', 'green', 26, 14],
-      ['iOS', 'iOS logo', 'green', 26, 14],
-      ['Android', 'Android logo', 'green', 25, 14],
-      ['Windows', 'Windows logo', 'blue', 28, 13],
-      ['Linux', 'Linux logo', 'yellow', 26, 14],
-      ['unknown', 'Linux logo', 'yellow', 26, 14],
+      ['macOS', 'macOS logo', 'green', 30, 17],
+      ['iOS', 'iOS logo', 'green', 30, 17],
+      ['Android', 'Android logo', 'green', 33, 18],
+      ['Windows', 'Windows logo', 'blue', 33, 16],
+      ['Linux', 'Linux logo', 'yellow', 42, 26],
+      ['unknown', 'Linux logo', 'yellow', 42, 26],
     ] as const) {
       const logo = logoFor(os);
       const rows = logo.art.split('\n');
@@ -161,13 +161,12 @@ describe('fastfetch on the terminal', () => {
       expect(Math.max(...rows.map(textWidth)), os).toBe(width);
       for (const row of rows) {
         expect(row, os).toMatch(ASCII);
-        expect(row, os).not.toContain('`');
         expect(row, os).toBe(row.trimEnd());
       }
     }
   });
 
-  it("ends with the theme's sixteen colours as two strips of ## swatches in palette tokens, which a screen reader passes over", async () => {
+  it("ends with the theme's sixteen colours as two strips of block swatches in palette tokens, which a screen reader passes over", async () => {
     const { blocks } = await runLine('fastfetch');
     const lines = (columnsOf(blocks).right[0] as LinesBlock).lines;
     const palette = lines.slice(-2);
@@ -178,7 +177,7 @@ describe('fastfetch on the terminal', () => {
     // Tokens, not hex, so the strips follow the theme; on the terminal's own background.
     for (const strip of palette.flat()) {
       expect(strip.swatches?.background).toBeNull();
-      expect(strip.text).toBe(` ${'##'.repeat(8)} `);
+      expect(strip.text).toBe(` ${'\u2588\u2588'.repeat(8)} `);
     }
     // The title's rule is ASCII.
     expect(lines[1]?.map((span) => span.text).join('')).toBe('-----------');

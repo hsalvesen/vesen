@@ -1,38 +1,27 @@
-// sudo's show, drawn and written for vesen: a singer in a long coat with a tall quiff dances with
-// a microphone, side-stepping and swinging arms and hips, to the owner's own track, with an 8-bit
-// tune of vesen's own as the fallback. sudo hands all of it to the Rick app (src/ui/apps/Rick.svelte)
-// through tty.fullscreen after the password prompt; the app draws the frames in theme colours,
-// plays the track through an audio element it makes when it opens (never before), and plays the
-// song through Web Audio where the track cannot load or play.
+// sudo's show: the owner's video, traced to text (public/audio/incident-report.frames, in the
+// format src/lib/frames.ts reads; scripts/ascii-video.py writes it), played to the owner's own
+// track, with an 8-bit tune of vesen's own as the fallback where the track cannot play. sudo
+// hands all of it to the Rick app (src/ui/apps/Rick.svelte) through tty.fullscreen after the
+// password prompt; the app fetches the frames when it opens (the boot warmed the cache at idle,
+// services/warm-show.ts), draws them in the foreground colour at the pace the file names, keeps
+// them to the track, and shows nothing else but how to leave. Until the file comes, or where it
+// is missing or malformed, the stage is empty; nothing else is drawn.
 //
-// The dancer is composed from sprites (hair, face, coat, arms, legs, microphone, floor), each with
-// a colour role, placed a little differently in each frame, so every frame is the same size and
-// every cell knows what it is; it is drawn in plain ASCII. The tune is an original chiptune in the
-// style of a handheld's sound chip: it quotes nothing.
+// The frames file is a header line, then the frames, each `rows` lines of `cols` characters,
+// with a line of `===` between frames:
 //
-// The owner may supply frames of their own (RICK_FRAMES): a text file the app fetches when the
-// show opens, and plays in the dancer's place when it is there and well formed, started together
-// with the track. The format (src/lib/frames.ts reads it; scripts/ascii-frames.mjs writes it from
-// a folder of PNG frames) is a header line, then the frames, each `rows` lines of `cols`
-// characters, with a line of `===` between frames:
-//
-//   vesen-frames fps=12 cols=60 rows=17
-//   ...17 rows of 60 characters...
+//   vesen-frames fps=16.3908 cols=120 rows=45
+//   ...45 rows of 120 characters...
 //   ===
 //   ...the next frame...
 //
-// Missing, malformed or over its caps (4 MB, 10,000 frames), the file is ignored and the drawn
-// dancer plays. This project ships no such file.
+// The file shipped is the owner's video at fifteen frames a second, written at the rate that
+// makes one loop of the frames one loop of the track. Over its caps (32 MB, 10,000 frames) it
+// is ignored. The tune is an original chiptune in the style of a handheld's sound chip: it
+// quotes nothing.
 
-import type { Role } from '../../output/model';
 import { loopSeconds, type Song } from '../../lib/chiptune';
-
-/** The size of every frame, in cells. */
-export const FRAME_COLS = 24;
-export const FRAME_ROWS = 14;
-
-/** Frames a second: a sixteenth note at the song's tempo, so the steps land on the beat. */
-export const RICK_FPS = (113 * 4) / 60;
+import { SHOW_FRAMES, SHOW_TRACK } from '../../lib/show-files';
 
 /** The Rick app's result when it was closed, by whatever means. */
 export const RICK_CLOSED = 'rickrolled';
@@ -40,199 +29,34 @@ export const RICK_CLOSED = 'rickrolled';
 /** The meme's name, which is the show's title. */
 export const RICK_TITLE = 'You have been rickrolled';
 
-/** How the dancer reads to a screen reader. */
-export const RICK_ALT = 'A singer in a long coat with a tall quiff dances with a microphone, side-stepping and swinging their arms.';
+/** How the show reads to a screen reader. */
+export const RICK_ALT = "The owner's video, traced to text, plays on the terminal to their track.";
 
 /**
- * The owner's track (public/audio/incident-report.mp3, served from this origin), fetched only when
- * the show opens. An empty string means no track: the song alone.
+ * The owner's track (public/audio/incident-report.mp3, served from this origin; lib/show-files.ts),
+ * warmed at idle after boot and played when the show opens. An empty string means no track: the
+ * song alone.
  */
-export const RICK_TRACK = '/audio/incident-report.mp3';
+export const RICK_TRACK = SHOW_TRACK;
 
 /**
- * The owner's frames file, if they add one (public/audio/incident-report.frames, in the format
- * above), fetched only when the show opens. An empty string means the drawn dancer alone.
+ * The owner's frames file (public/audio/incident-report.frames, in the format above), warmed into
+ * the browser's cache at idle and fetched when the show opens. An empty string means an empty
+ * stage.
  */
-export const RICK_FRAMES = '/audio/incident-report.frames';
-
-/** A run of same-coloured cells in a frame row. */
-export interface FrameSpan {
-  readonly text: string;
-  readonly role: Role;
-}
-
-export interface RickFrame {
-  /** The frame as text, FRAME_ROWS rows of FRAME_COLS cells. */
-  readonly text: string;
-  /** Each row as coloured spans. */
-  readonly rows: readonly (readonly FrameSpan[])[];
-}
+export const RICK_FRAMES = SHOW_FRAMES;
 
 /** What sudo hands the Rick app. */
 export interface RickView {
   readonly title: string;
   readonly alt: string;
-  readonly frames: readonly RickFrame[];
-  readonly fps: number;
   /** The path of the track to play, on this origin; '' for none. */
   readonly track: string;
-  /** The path of the owner's frames file, on this origin; '' for none. */
+  /** The path of the owner's frames file, on this origin; '' for an empty stage. */
   readonly framesFile: string;
   /** The tune played where the track cannot be. */
   readonly song: Song;
   readonly touch: boolean;
-}
-
-// ── Sprites ────────────────────────────────────────────────────────────────────────────────
-
-interface Sprite {
-  readonly rows: readonly string[];
-  readonly role: Role;
-}
-
-interface Placed {
-  readonly sprite: Sprite;
-  readonly x: number;
-  readonly y: number;
-}
-
-const sprite = (role: Role, ...rows: string[]): Sprite => ({ rows, role });
-
-/** The quiff: tall, swept up from the left temple to a curl at the top. Ten cells wide, like the face. */
-const HAIR = sprite(
-  'fg',
-  "   _,.-=-.",
-  " ,'_,-'  \\",
-  "|,'      |",
-);
-
-/** The face, mouth closed, and singing. */
-const FACE = sprite('fg-strong', '|  o  o  |', '|    L   |', ' \\__--__/ ');
-const FACE_SINGING = sprite('fg-strong', '|  o  o  |', '|    L   |', ' \\__()__/ ');
-
-/** The long coat: shoulders, lapels, and a hem below the hips. Fourteen cells wide. */
-const COAT = sprite(
-  'accent',
-  " _.-'\\  /'-._ ",
-  '|    \\  /    |',
-  '|    |  |    |',
-  '|    |__|    |',
-  '|____|  |____|',
-);
-
-/** The shirt between the lapels: a collar and buttons. */
-const SHIRT = sprite('fg', "''", '::');
-
-/** The trousers and shoes: standing, and a foot planted out to the left or the right. */
-const LEGS = sprite('fg', '|  |', '|  |');
-const LEGS_LEFT = sprite('fg', '/  |', '   |');
-const LEGS_RIGHT = sprite('fg', '|  \\', '|   ');
-const SHOES = sprite('fg-strong', '_|  |_');
-const SHOES_LEFT = sprite('fg-strong', '_/   |_');
-const SHOES_RIGHT = sprite('fg-strong', '_|   \\_');
-
-/** Sleeves swung out from the coat, and hands. */
-const SLEEVE_OUT = sprite('accent', '--');
-const SLEEVE_OUT_R = sprite('accent', '-');
-const SLEEVE_UP_L = sprite('accent', ' \\', '\\ ');
-const SLEEVE_UP_R = sprite('accent', '/');
-const HAND_L = sprite('fg-strong', ')');
-const HAND_R = sprite('fg-strong', '(');
-/** The microphone: its head and its handle. */
-const MIC = sprite('fg-strong', 'o', '|');
-const MIC_FLAT = sprite('fg-strong', 'o');
-
-/** The stage: a row of equals signs, in plain ASCII like the rest of the dancer. */
-export const FLOOR_CHAR = '=';
-const FLOOR = sprite('muted', FLOOR_CHAR.repeat(FRAME_COLS));
-
-// ── Composing ──────────────────────────────────────────────────────────────────────────────
-
-/** Draws the placed sprites, in order, onto a blank frame. A sprite's spaces are transparent. */
-export function compose(parts: readonly Placed[]): RickFrame {
-  const cells: string[][] = Array.from({ length: FRAME_ROWS }, () => Array.from({ length: FRAME_COLS }, () => ' '));
-  const roles: (Role | null)[][] = Array.from({ length: FRAME_ROWS }, () => Array.from({ length: FRAME_COLS }, () => null));
-  for (const { sprite: part, x, y } of parts) {
-    part.rows.forEach((row, dy) => {
-      Array.from(row).forEach((ch, dx) => {
-        const r = y + dy;
-        const c = x + dx;
-        if (ch === ' ' || r < 0 || r >= FRAME_ROWS || c < 0 || c >= FRAME_COLS) return;
-        (cells[r] as string[])[c] = ch;
-        (roles[r] as (Role | null)[])[c] = part.role;
-      });
-    });
-  }
-  const rows = cells.map((row, r) => {
-    const spans: FrameSpan[] = [];
-    row.forEach((ch, c) => {
-      const role = roles[r]?.[c] ?? 'fg';
-      const last = spans[spans.length - 1];
-      if (last !== undefined && last.role === role) spans[spans.length - 1] = { text: last.text + ch, role };
-      else spans.push({ text: ch, role });
-    });
-    return spans;
-  });
-  return { text: cells.map((row) => row.join('')).join('\n'), rows };
-}
-
-type LeftArm = 'down' | 'out' | 'up';
-type RightArm = 'down' | 'out' | 'mic';
-type Legs = 'stand' | 'left' | 'right';
-
-interface Pose {
-  /** Where the hips are, in columns from the frame's centre. */
-  readonly hips: number;
-  /** Where the head is, in columns from the frame's centre: the sway. */
-  readonly head: number;
-  readonly left: LeftArm;
-  readonly right: RightArm;
-  readonly legs: Legs;
-  readonly singing: boolean;
-}
-
-/** The dancer in one pose. The coat is 14 columns wide, the head 10, the frame 24. */
-export function dancer(pose: Pose): RickFrame {
-  const body = 5 + pose.hips;
-  const head = body + 2 + (pose.head - pose.hips);
-  const parts: Placed[] = [{ sprite: FLOOR, x: 0, y: FRAME_ROWS - 1 }];
-  // Legs and shoes under the coat's hem, a foot planted out when stepping.
-  const legs = pose.legs === 'stand' ? LEGS : pose.legs === 'left' ? LEGS_LEFT : LEGS_RIGHT;
-  parts.push({ sprite: legs, x: body + 5, y: 11 });
-  if (pose.legs === 'stand') parts.push({ sprite: SHOES, x: body + 4, y: 12 });
-  else if (pose.legs === 'left') parts.push({ sprite: SHOES_LEFT, x: body + 3, y: 12 });
-  else parts.push({ sprite: SHOES_RIGHT, x: body + 4, y: 12 });
-  parts.push({ sprite: COAT, x: body, y: 6 }, { sprite: SHIRT, x: body + 6, y: 7 });
-  // The viewer's-left arm: a hand below the hem, swung out level, or raised.
-  if (pose.left === 'down') parts.push({ sprite: HAND_L, x: body + 1, y: 11 });
-  else if (pose.left === 'out') parts.push({ sprite: SLEEVE_OUT, x: body - 2, y: 7 }, { sprite: HAND_L, x: body - 3, y: 7 });
-  else parts.push({ sprite: SLEEVE_UP_L, x: body - 2, y: 5 }, { sprite: HAND_L, x: body - 3, y: 4 });
-  // The viewer's-right arm holds the microphone: hanging, swung out, or up beside the mouth.
-  if (pose.right === 'down') parts.push({ sprite: HAND_R, x: body + 12, y: 11 }, { sprite: MIC, x: body + 13, y: 11 });
-  else if (pose.right === 'out') parts.push({ sprite: SLEEVE_OUT_R, x: body + 14, y: 7 }, { sprite: HAND_R, x: body + 15, y: 7 }, { sprite: MIC_FLAT, x: body + 16, y: 7 });
-  else parts.push({ sprite: SLEEVE_UP_R, x: body + 13, y: 6 }, { sprite: HAND_R, x: body + 12, y: 6 }, { sprite: MIC, x: body + 12, y: 4 });
-  parts.push({ sprite: HAIR, x: head, y: 0 }, { sprite: pose.singing ? FACE_SINGING : FACE, x: head, y: 3 });
-  return compose(parts);
-}
-
-/** The dance: two beats of side-steps, the hips swinging, the arms following, singing into the mic. */
-const POSES: readonly Pose[] = [
-  { hips: 0, head: 0, left: 'down', right: 'mic', legs: 'stand', singing: true },
-  { hips: -1, head: -1, left: 'out', right: 'mic', legs: 'left', singing: true },
-  { hips: -2, head: -2, left: 'up', right: 'out', legs: 'left', singing: false },
-  { hips: -1, head: -2, left: 'down', right: 'out', legs: 'stand', singing: false },
-  { hips: 0, head: 0, left: 'down', right: 'mic', legs: 'stand', singing: true },
-  { hips: 1, head: 1, left: 'out', right: 'mic', legs: 'right', singing: true },
-  { hips: 2, head: 2, left: 'up', right: 'out', legs: 'right', singing: false },
-  { hips: 1, head: 2, left: 'down', right: 'down', legs: 'stand', singing: false },
-];
-
-let frames: readonly RickFrame[] | null = null;
-
-/** The dancer's frames, drawn once. */
-export function rickFrames(): readonly RickFrame[] {
-  if (frames === null) frames = POSES.map(dancer);
-  return frames;
 }
 
 // ── The tune ───────────────────────────────────────────────────────────────────────────────
@@ -337,5 +161,5 @@ export function rickLoopSeconds(): number {
 
 /** What sudo hands the app. */
 export function rickView(touch: boolean): RickView {
-  return { title: RICK_TITLE, alt: RICK_ALT, frames: rickFrames(), fps: RICK_FPS, track: RICK_TRACK, framesFile: RICK_FRAMES, song: RICK_SONG, touch };
+  return { title: RICK_TITLE, alt: RICK_ALT, track: RICK_TRACK, framesFile: RICK_FRAMES, song: RICK_SONG, touch };
 }

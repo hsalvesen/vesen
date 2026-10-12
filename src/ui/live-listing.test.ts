@@ -64,7 +64,7 @@ describe('theme ls on the screen', () => {
     expect(cockatoo?.getAttribute('aria-hidden')).toBe('true');
     expect(cockatoo?.getAttribute('style')).toMatch(/background-color: #e8ddd0/);
     expect(cockatoo?.querySelectorAll('span')).toHaveLength(8);
-    expect(cockatoo?.textContent).toBe(` ${'##'.repeat(8)} `);
+    expect(cockatoo?.textContent).toBe(` ${'\u2588\u2588'.repeat(8)} `);
   });
 
   it('refuses a strip with a colour that is not #rrggbb, drawing nothing for it', async () => {

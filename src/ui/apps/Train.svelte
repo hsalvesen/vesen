@@ -188,7 +188,7 @@
   }
 
   .still .train {
-    font-size: min(var(--term-fs, 13px), calc((100vw - 32px) / (var(--train-cols) * 0.62)));
+    font-size: min(var(--term-fs, 13px), calc((100vw - 36px) / (var(--train-cols) * 0.62)));
     will-change: auto;
   }
 </style>

@@ -10,9 +10,11 @@
     with the input.
   - On touch: the native input shows, really 16px so iOS never zooms, drawn at the terminal's
     size by --input-scale (platform/measure.ts). There is no mirror.
-  - A secret (sudo's password) is masked: the input holds only asterisks (the controller keeps
-    the password), drawn as discs on touch; the mirror shows nothing but the cursor. The read's dim
-    hint (how to cancel) describes the input to screen readers.
+  - A secret is masked: the input holds only asterisks (the controller keeps the password). With
+    feedback (sudo's) the asterisks show, one an entered character, in the mirror and in the touch
+    input, so the typist sees something going in and nothing of what; without (`read -s`) the
+    mirror shows only the cursor, and the touch input draws discs. A read's dim hint, where it has
+    one, describes the input to screen readers.
   - The input is keyed on controller.inputEpoch: after a password an input method typed into, a
     fresh input, with no undo history, takes its place.
 -->
@@ -29,6 +31,8 @@
 
   const mirrored = $derived(!controller.touch);
   const secret = $derived(controller.mode === 'secret');
+  /** sudo's asterisks: the mask is shown, not hidden. */
+  const feedback = $derived(secret && controller.read?.feedback === true);
   // While a line runs the cursor is an outline: what is typed waits for the next prompt.
   const hollow = $derived(!controller.focused || controller.mode === 'busy');
   const selecting = $derived(controller.selEnd !== controller.cursor);
@@ -137,6 +141,7 @@
     class="input-box"
     class:mirrored
     class:secret
+    class:feedback
     class:focused={controller.focused}
     data-completion={controller.completion === null ? undefined : 'ready'}
   >
@@ -144,7 +149,8 @@
       <!-- At the end of the line the block cursor sits on the first character of what follows,
            the ghost or the search's line, as a terminal draws it. -->
       <span class="mirror" aria-hidden="true" bind:this={mirror}
-        >{#if secret}<span class="cursor" class:hollow class:steady>{' '}</span
+        >{#if feedback}{parts.before}<span class="cursor" class:hollow class:steady>{parts.under === '' ? ' ' : parts.under}</span
+          >{parts.after}{:else if secret}<span class="cursor" class:hollow class:steady>{' '}</span
           >{:else}{parts.before}{#if ghost}<span class="ghost-zone" bind:this={ghostElement}
               ><span class="cursor on-tail" class:hollow class:steady class:selecting>{ghost.first}</span
               ><span class="ghost" class:hint={!ghost.acceptable}>{ghost.rest}</span></span
@@ -323,13 +329,14 @@
     color: var(--role-fg-strong);
   }
 
-  /* A secret is never shown: discs on touch, where the input is visible. */
-  .secret .command-input {
+  /* A secret without feedback is never shown: discs on touch, where the input is visible. With
+     feedback (sudo's) the input's asterisks show as they are. */
+  .secret:not(.feedback) .command-input {
     -webkit-text-security: disc;
   }
 
   @supports not (-webkit-text-security: disc) {
-    .secret .command-input {
+    .secret:not(.feedback) .command-input {
       color: transparent;
       -webkit-text-fill-color: transparent;
     }

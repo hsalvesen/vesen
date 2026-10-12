@@ -4,17 +4,24 @@
 // far, and answers with what was typed, or null for ^C or ^D.
 // DOM-free: the UI subscribes to `request` and calls `answer`.
 //
-// A secret answer (sudo's password) is handed to the command and to nothing else: it is never
-// kept here, never written to the screen, history or storage, and the prompt clears it.
+// A secret answer (sudo's password, `read -s`) is handed to the command and to nothing else: it
+// is never kept here, never written to the screen, history or storage, and the prompt clears it.
+// With feedback (sudo's, as sudoers' pwfeedback gives it) each character typed shows as an
+// asterisk, and the asterisks stay on the line when it is answered; without, nothing shows.
 
 import { readonly, writable, type Readable } from './observable';
+
+/** What each character of a secret read with feedback shows as, while typed and after. */
+export const FEEDBACK_MASK = '*';
 
 export interface ReadOptions {
   /** Shown where PS1 would be, and echoed with the answer: `rm: remove regular file 'a'? `. */
   readonly prompt: string;
   /** Masked as it is typed, never echoed and never stored: a password. */
   readonly secret?: boolean;
-  /** A dim line above the prompt: sudo's `Ctrl+C or Esc to cancel`. */
+  /** For a secret: an asterisk for each character, as it is typed and on the line after, as sudo's pwfeedback shows. */
+  readonly feedback?: boolean;
+  /** A dim line above the prompt. */
   readonly hint?: string;
   /** Aborts the read (with null) when the job is interrupted. */
   readonly signal?: AbortSignal;
@@ -31,6 +38,8 @@ export interface ReadRequest {
   readonly id: number;
   readonly prompt: string;
   readonly secret: boolean;
+  /** A secret whose characters show as asterisks (ReadOptions.feedback). */
+  readonly feedback: boolean;
   readonly hint: string | null;
 }
 
@@ -83,7 +92,7 @@ export function createLineReader(preflight?: (url: string) => 'opened' | 'blocke
         };
         pending = entry;
         signal?.addEventListener('abort', onAbort, { once: true });
-        request.set({ id, prompt: options.prompt, secret: options.secret === true, hint: options.hint ?? null });
+        request.set({ id, prompt: options.prompt, secret: options.secret === true, feedback: options.secret === true && options.feedback === true, hint: options.hint ?? null });
       });
     },
   };

@@ -1,6 +1,7 @@
 // A frames file: text animation frames the owner supplies for sudo's show, read defensively.
 // DOM-free; services/frames.ts fetches the file and the Rick app (ui/apps/Rick.svelte) plays what
-// parses. scripts/ascii-frames.mjs writes one from a folder of PNG frames.
+// parses. scripts/ascii-video.py writes one from a video, scripts/ascii-frames.mjs from a folder
+// of PNG frames.
 //
 // The format, line by line:
 //
@@ -15,11 +16,11 @@
 // Any character may appear in a row (it is the owner's file); a row shorter than cols is padded
 // with spaces and a longer one is cut, so an editor trimming trailing spaces does no harm. A
 // frame with the wrong number of rows, a header that does not parse, or a file over FRAMES_MAX_CHARS
-// is malformed: parseFramesFile returns null and the drawn dancer plays. Only the first
+// is malformed: parseFramesFile returns null and the show's stage stays empty. Only the first
 // FRAMES_MAX_FRAMES frames are kept.
 
-/** The most characters a frames file may hold: about 4 MB of ASCII. */
-export const FRAMES_MAX_CHARS = 4 * 1024 * 1024;
+/** The most characters a frames file may hold: 32 MB of ASCII, room for a few minutes at 15 fps over a hundred columns wide. */
+export const FRAMES_MAX_CHARS = 32 * 1024 * 1024;
 /** The most frames read from a file. */
 export const FRAMES_MAX_FRAMES = 10_000;
 /** The bounds of a frame's size and pace. */
@@ -118,4 +119,43 @@ export function parseFramesFile(text: string): FramesFile | null {
   if (frames.length < FRAMES_MAX_FRAMES && !finish(true)) return null;
   if (frames.length === 0) return null;
   return { ...header, frames };
+}
+
+/** How many frames stillFrameIndex looks at, at most: an even sample across the file. */
+export const STILL_SAMPLES = 200;
+
+/** The spread of a frame's characters, in bits: 0 for a frame of one character (black, or blown out), more the more detail it holds. */
+function detail(text: string): number {
+  const counts = new Map<string, number>();
+  let cells = 0;
+  for (const ch of text) {
+    if (ch === '\n') continue;
+    counts.set(ch, (counts.get(ch) ?? 0) + 1);
+    cells += 1;
+  }
+  let bits = 0;
+  for (const count of counts.values()) {
+    const share = count / cells;
+    bits -= share * Math.log2(share);
+  }
+  return bits;
+}
+
+/**
+ * The frame a still stage shows (under reduced motion): the one with the most detail of an even
+ * sample of at most STILL_SAMPLES, the first of them on a tie. A video often opens on black, or
+ * fades up through white, so its first frame would show nothing.
+ */
+export function stillFrameIndex(frames: readonly AsciiFrame[]): number {
+  const step = Math.max(1, Math.ceil(frames.length / STILL_SAMPLES));
+  let best = 0;
+  let most = -1;
+  for (let i = 0; i < frames.length; i += step) {
+    const bits = detail(frames[i]?.text ?? '');
+    if (bits > most) {
+      best = i;
+      most = bits;
+    }
+  }
+  return best;
 }

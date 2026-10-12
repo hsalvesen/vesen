@@ -2,15 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { textWidth } from '../../output/model';
 import type { ArtKey, IconKey, WeatherRole } from './types';
 import { ROLE_COLOUR } from './view';
-import { ART, ART_HEIGHT, ART_ROLES, ART_WIDTH, MEDIUM_MAX, SHORT_MAX, WMO, WMO_CODES, artFor, compass16, isArtRole, wmo } from './wmo';
+import { ART, ART_FALLBACK_GLYPHS, ART_HEIGHT, ART_ROLES, ART_WIDTH, MEDIUM_MAX, SHORT_MAX, WMO, WMO_CODES, artFor, compass16, isArtRole, wmo } from './wmo';
 
 /** Every weather_code Open-Meteo documents (https://open-meteo.com/en/docs, "WMO Weather interpretation codes"). */
 const DOCUMENTED = [0, 1, 2, 3, 45, 48, 51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99];
 
+/** wttr.in's icons: wego's names, in its table's order. */
 const ICONS: readonly IconKey[] = [
-  'clear', 'partly', 'cloudy', 'fog', 'drizzle', 'rain', 'heavyRain', 'sleet', 'snow', 'heavySnow', 'thunder', 'unknown',
+  'sunny', 'partlyCloudy', 'cloudy', 'veryCloudy', 'fog', 'lightRain', 'heavyRain', 'lightShowers', 'heavyShowers',
+  'lightSleet', 'lightSleetShowers', 'lightSnow', 'heavySnow', 'lightSnowShowers', 'heavySnowShowers',
+  'thunderyShowers', 'thunderyHeavyRain', 'thunderySnowShowers', 'unknown',
 ];
-const ART_KEYS: readonly ArtKey[] = [...ICONS, 'clearNight', 'partlyNight'];
+const ART_KEYS: readonly ArtKey[] = ICONS;
 
 describe('wmo', () => {
   it('maps exactly the documented codes', () => {
@@ -37,68 +40,73 @@ describe('wmo', () => {
     expect(wmo(2.5).icon).toBe('unknown');
   });
 
-  it('groups codes into the expected icons', () => {
+  it("groups codes into wego's icons, as wttr.in groups the like conditions", () => {
     const icon = (code: number): IconKey => (WMO[code] ?? wmo(null)).icon;
-    expect([0, 1].map(icon)).toEqual(['clear', 'clear']);
-    expect(icon(2)).toBe('partly');
-    expect(icon(3)).toBe('cloudy');
+    expect([0, 1].map(icon)).toEqual(['sunny', 'sunny']);
+    expect(icon(2)).toBe('partlyCloudy');
+    expect(icon(3)).toBe('veryCloudy');
     expect([45, 48].map(icon)).toEqual(['fog', 'fog']);
-    expect([56, 57, 66, 67].map(icon)).toEqual(['sleet', 'sleet', 'sleet', 'sleet']);
-    expect([65, 82].map(icon)).toEqual(['heavyRain', 'heavyRain']);
-    expect([75, 86].map(icon)).toEqual(['heavySnow', 'heavySnow']);
-    expect([95, 96, 99].map(icon)).toEqual(['thunder', 'thunder', 'thunder']);
+    expect([51, 53, 55, 61].map(icon)).toEqual(['lightRain', 'lightRain', 'lightRain', 'lightRain']);
+    expect([63, 65].map(icon)).toEqual(['heavyRain', 'heavyRain']);
+    expect([56, 57, 66, 67].map(icon)).toEqual(['lightSleet', 'lightSleet', 'lightSleet', 'lightSleet']);
+    expect([71, 77].map(icon)).toEqual(['lightSnow', 'lightSnow']);
+    expect([73, 75].map(icon)).toEqual(['heavySnow', 'heavySnow']);
+    expect(icon(80)).toBe('lightShowers');
+    expect([81, 82].map(icon)).toEqual(['heavyShowers', 'heavyShowers']);
+    expect([85, 86].map(icon)).toEqual(['lightSnowShowers', 'heavySnowShowers']);
+    expect(icon(95)).toBe('thunderyShowers');
+    expect([96, 99].map(icon)).toEqual(['thunderyHeavyRain', 'thunderyHeavyRain']);
   });
 });
 
 describe('art', () => {
-  it('has art for every icon and night variant', () => {
+  const text = (key: ArtKey): string => ART[key].map((row) => row.map(([, s]) => s).join('')).join('\n');
+  const rows = (key: ArtKey): string[] => text(key).split('\n');
+
+  it('has art for every icon, and nothing else', () => {
     expect(Object.keys(ART).sort()).toEqual([...ART_KEYS].sort());
   });
 
-  /** What the art may be drawn with: printable ASCII, the backtick left out (it would end a template literal). */
-  const ART_CHARS = /^[ -_a-~]*$/;
+  /** What wttr.in's art is drawn with: printable ASCII and its six glyphs from outside it. */
+  const ART_CHARS = /^[ -~ʻ᾿‒‚•⚡]*$/;
 
-  it.each(ART_KEYS)('%s is 5 rows of exactly 13 columns of printable ASCII', (key) => {
-    const rows = ART[key];
-    expect(rows).toHaveLength(ART_HEIGHT);
-    for (const row of rows) {
-      const text = row.map(([, s]) => s).join('');
-      expect(textWidth(text)).toBe(ART_WIDTH);
-      expect(text).toMatch(ART_CHARS);
+  it.each(ART_KEYS)('%s is 5 rows of exactly 13 columns', (key) => {
+    const art = ART[key];
+    expect(art).toHaveLength(ART_HEIGHT);
+    for (const row of art) {
+      const line = row.map(([, s]) => s).join('');
+      expect(textWidth(line)).toBe(ART_WIDTH);
+      expect(Array.from(line)).toHaveLength(ART_WIDTH);
+      expect(line).toMatch(ART_CHARS);
       for (const [, piece] of row) expect(piece.length, 'no segment is empty').toBeGreaterThan(0);
     }
   });
 
-  it('draws every pictogram with letters and punctuation, nothing from outside ASCII', () => {
+  it("is wttr.in's table, row for row: the sun, the clouds, the showers, the fog and the unknown mark", () => {
+    expect(rows('sunny')).toEqual(['    \\   /    ', '     .-.     ', '  ‒ (   ) ‒  ', '     `-᾿     ', '    /   \\    ']);
+    expect(rows('partlyCloudy')).toEqual(['   \\  /      ', ' _ /"".-.    ', '   \\_(   ).  ', '   /(___(__) ', '             ']);
+    expect(rows('cloudy')).toEqual(['             ', '     .--.    ', '  .-(    ).  ', ' (___.__)__) ', '             ']);
+    expect(rows('veryCloudy')).toEqual(rows('cloudy'));
+    expect(rows('fog')).toEqual(['             ', ' _ - _ - _ - ', '  _ - _ - _  ', ' _ - _ - _ - ', '             ']);
+    expect(rows('lightRain')).toEqual(['     .-.     ', '    (   ).   ', '   (___(__)  ', '    ʻ ʻ ʻ ʻ  ', '   ʻ ʻ ʻ ʻ   ']);
+    expect(rows('heavyRain')).toEqual(['     .-.     ', '    (   ).   ', '   (___(__)  ', '  ‚ʻ‚ʻ‚ʻ‚ʻ   ', '  ‚ʻ‚ʻ‚ʻ‚ʻ   ']);
+    expect(rows('lightShowers')).toEqual([' _`/"".-.    ', '  ,\\_(   ).  ', '   /(___(__) ', '     ʻ ʻ ʻ ʻ ', '    ʻ ʻ ʻ ʻ  ']);
+    expect(rows('thunderyShowers')).toEqual([' _`/"".-.    ', '  ,\\_(   ).  ', '   /(___(__) ', '    ⚡ʻ ʻ⚡ʻ ʻ ', '    ʻ ʻ ʻ ʻ  ']);
+    expect(rows('lightSleet')).toEqual(['     .-.     ', '    (   ).   ', '   (___(__)  ', '    ʻ * ʻ *  ', '   * ʻ * ʻ   ']);
+    expect(rows('heavySnow')).toEqual(['     .-.     ', '    (   ).   ', '   (___(__)  ', '   * * * *   ', '  * * * *    ']);
+    expect(rows('unknown')).toEqual(['    .-.      ', '     __)     ', '    (        ', '     `-᾿     ', '      •      ']);
+    // Every shower has the sun peeping over the cloud; every other cloud stands alone.
     for (const key of ART_KEYS) {
-      const text = ART[key].map((row) => row.map(([, s]) => s).join('')).join('\n');
-      expect(text, key).toMatch(/[^ \n]/);
-      expect(text, key).toMatch(/^[\x20-\x7e\n]*$/);
-      expect(text, key).not.toContain('`');
+      if (key.endsWith('Showers') || key === 'partlyCloudy') expect(text(key), key).toMatch(/\//);
+      else if (key !== 'sunny' && key !== 'fog' && key !== 'unknown') expect(rows(key)[0], key).toMatch(/^ *(\.-\.|\.--\.)? *$/);
     }
   });
 
-  it('traces each shape with the strokes of its kind', () => {
-    const text = (key: ArtKey): string => ART[key].map((row) => row.map(([, s]) => s).join('')).join('\n');
-    // The sun: a shaded disc between its rays.
-    expect(text('clear')).toMatch(/\\ {3}\| {3}\//);
-    expect(text('clear')).toContain('(:::::)');
-    expect(text('clear')).toMatch(/\/ {3}\| {3}\\/);
-    // The moon: a shaded crescent and dot stars.
-    expect(text('clearNight')).toContain('(::(');
-    expect(text('clearNight').match(/\./g)?.length).toBeGreaterThanOrEqual(5);
-    // Clouds: a rounded top and a flat base.
-    for (const key of ['partly', 'partlyNight', 'cloudy', 'drizzle', 'rain', 'thunder'] as const) {
-      expect(text(key), key).toContain('.-');
-      expect(text(key), key).toContain('(__________)');
-    }
-    // Fog: bands of ~ and -.
-    expect(text('fog')).toMatch(/~{9}/);
-    expect(text('fog')).toMatch(/-{4}/);
-    // Thunder: a bolt of _ and / under the cloud.
-    expect(text('thunder')).toContain('____/');
-    // The unknown mark: a question mark with a dot under its stem.
-    expect(text('unknown').split('\n').slice(2)).toEqual(["      .'     ", '      |      ', '      o      ']);
+  it('uses the font for all but three glyphs, which the card pins to one cell', () => {
+    const outside = new Set<string>();
+    for (const key of ART_KEYS) for (const ch of text(key)) if (ch.codePointAt(0)! > 0x7e) outside.add(ch);
+    expect([...outside].sort()).toEqual(['ʻ', '᾿', '‒', '‚', '•', '⚡']);
+    expect([...ART_FALLBACK_GLYPHS].sort()).toEqual(['᾿', '‒', '⚡']);
   });
 
   it('carries only art roles, which no text role shares, so the card can tell the art lines apart', () => {
@@ -117,40 +125,30 @@ describe('art', () => {
     expect(ROLE_COLOUR.fog).toBe(ROLE_COLOUR.dim);
   });
 
-  it('colours the sun, the cloud and the rain in their own roles, and the night sky in the moon', () => {
+  it("colours each run as wego does: the sun, the cloud, the rain, the snow and the bolt in their own roles", () => {
     const roles = (key: ArtKey) => new Set(ART[key].flatMap((row) => row.map(([role]) => role)));
-    expect(roles('clear')).toEqual(new Set(['sun']));
-    expect(roles('clearNight')).toEqual(new Set(['moon']));
-    expect(roles('partly')).toEqual(new Set(['sun', 'cloud']));
-    expect(roles('partlyNight')).toEqual(new Set(['moon', 'cloud']));
-    expect(roles('rain')).toEqual(new Set(['cloud', 'rain']));
-    expect(roles('sleet')).toEqual(new Set(['cloud', 'rain', 'snow']));
-    expect(roles('thunder')).toEqual(new Set(['cloud', 'rain', 'bolt']));
+    expect(roles('sunny')).toEqual(new Set(['sun']));
+    expect(roles('partlyCloudy')).toEqual(new Set(['sun', 'cloud']));
     expect(roles('cloudy')).toEqual(new Set(['cloud']));
-    expect(roles('snow')).toEqual(new Set(['cloud', 'snow']));
     expect(roles('fog')).toEqual(new Set(['fog']));
+    expect(roles('lightRain')).toEqual(new Set(['cloud', 'rain']));
+    expect(roles('lightShowers')).toEqual(new Set(['sun', 'cloud', 'rain']));
+    expect(roles('lightSleet')).toEqual(new Set(['cloud', 'rain', 'snow']));
+    expect(roles('heavySnow')).toEqual(new Set(['cloud', 'snow']));
+    expect(roles('thunderyShowers')).toEqual(new Set(['sun', 'cloud', 'rain', 'bolt']));
+    expect(roles('thunderySnowShowers')).toEqual(new Set(['sun', 'cloud', 'snow', 'bolt']));
     expect(roles('unknown')).toEqual(new Set(['fog']));
+    // The sleet's rows alternate drop and flake, each in its own role.
+    expect(ART.lightSleet[3]).toEqual([['rain', '    ʻ '], ['snow', '*'], ['rain', ' ʻ '], ['snow', '*  ']]);
+    // The sun of a shower and its cloud split within the row.
+    expect(ART.lightShowers[0]).toEqual([['sun', ' _`/""'], ['cloud', '.-.    ']]);
   });
 
-  it('draws the rain heavier from drizzle to heavy rain, and the snow thicker', () => {
-    const fall = (key: ArtKey) => ART[key].slice(3).map((row) => row.map(([, s]) => s).join(''));
-    expect(fall('drizzle').join('')).toMatch(/^[ '.]+$/);
-    expect(fall('rain').join('')).toMatch(/^[ ',]+$/);
-    expect(fall('heavyRain').join('')).toMatch(/^[ ',]+$/);
-    expect(fall('snow').join('')).toMatch(/^[ *.]+$/);
-    expect(fall('heavySnow').join('')).toMatch(/^[ *.]+$/);
-    expect(fall('sleet').join('')).toMatch(/^[ ',*]+$/);
-    const marks = (key: ArtKey) => fall(key).join('').replace(/ /g, '').length;
-    expect(marks('drizzle')).toBeLessThan(marks('rain'));
-    expect(marks('rain')).toBeLessThan(marks('heavyRain'));
-    expect(marks('snow')).toBeLessThan(marks('heavySnow'));
-  });
-
-  it('draws the moon at night for clear and partly cloudy skies only', () => {
-    expect(artFor('clear', true)).toBe(ART.clear);
-    expect(artFor('clear', false)).toBe(ART.clearNight);
-    expect(artFor('partly', false)).toBe(ART.partlyNight);
-    expect(artFor('rain', false)).toBe(ART.rain);
+  it('draws the same art by day and by night, as wttr.in does', () => {
+    for (const key of ART_KEYS) {
+      expect(artFor(key, true)).toBe(ART[key]);
+      expect(artFor(key, false)).toBe(ART[key]);
+    }
   });
 });
 

@@ -1,6 +1,8 @@
 // WMO weather interpretation codes as Open-Meteo reports them, with labels, icons and art.
 // The codes are the 28 that Open-Meteo documents for `weather_code`; any other value in 0-99
-// falls back to 'Unknown'.
+// falls back to 'Unknown'. Each code's icon is the one wego gives the like World Weather Online
+// condition (moderate rain and snow count as heavy there; a thunderstorm is thundery showers,
+// one with hail thundery heavy rain), so the card reads as wttr.in did.
 
 import type { ArtKey, ArtRow, IconKey, WeatherRole, WmoInfo } from './types';
 
@@ -15,34 +17,34 @@ export const SHORT_MAX = 9;
 const info = (label: string, medium: string, short: string, icon: IconKey): WmoInfo => ({ label, medium, short, icon });
 
 export const WMO: Readonly<Record<number, WmoInfo>> = {
-  0: info('Clear sky', 'Clear sky', 'Clear', 'clear'),
-  1: info('Mainly clear', 'Mainly clear', 'Clear', 'clear'),
-  2: info('Partly cloudy', 'Partly cloudy', 'Pt cloudy', 'partly'),
-  3: info('Overcast', 'Overcast', 'Overcast', 'cloudy'),
+  0: info('Clear sky', 'Clear sky', 'Clear', 'sunny'),
+  1: info('Mainly clear', 'Mainly clear', 'Clear', 'sunny'),
+  2: info('Partly cloudy', 'Partly cloudy', 'Pt cloudy', 'partlyCloudy'),
+  3: info('Overcast', 'Overcast', 'Overcast', 'veryCloudy'),
   45: info('Fog', 'Fog', 'Fog', 'fog'),
   48: info('Depositing rime fog', 'Rime fog', 'Rime fog', 'fog'),
-  51: info('Light drizzle', 'Light drizzle', 'Drizzle', 'drizzle'),
-  53: info('Drizzle', 'Drizzle', 'Drizzle', 'drizzle'),
-  55: info('Dense drizzle', 'Dense drizzle', 'Drizzle', 'drizzle'),
-  56: info('Light freezing drizzle', 'Lt frz drizzle', 'Frz drzl', 'sleet'),
-  57: info('Dense freezing drizzle', 'Freezing drizzle', 'Frz drzl', 'sleet'),
-  61: info('Light rain', 'Light rain', 'Lt rain', 'rain'),
-  63: info('Rain', 'Rain', 'Rain', 'rain'),
+  51: info('Light drizzle', 'Light drizzle', 'Drizzle', 'lightRain'),
+  53: info('Drizzle', 'Drizzle', 'Drizzle', 'lightRain'),
+  55: info('Dense drizzle', 'Dense drizzle', 'Drizzle', 'lightRain'),
+  56: info('Light freezing drizzle', 'Lt frz drizzle', 'Frz drzl', 'lightSleet'),
+  57: info('Dense freezing drizzle', 'Freezing drizzle', 'Frz drzl', 'lightSleet'),
+  61: info('Light rain', 'Light rain', 'Lt rain', 'lightRain'),
+  63: info('Rain', 'Rain', 'Rain', 'heavyRain'),
   65: info('Heavy rain', 'Heavy rain', 'Hvy rain', 'heavyRain'),
-  66: info('Light freezing rain', 'Lt freezing rain', 'Frz rain', 'sleet'),
-  67: info('Heavy freezing rain', 'Freezing rain', 'Frz rain', 'sleet'),
-  71: info('Light snow', 'Light snow', 'Lt snow', 'snow'),
-  73: info('Snow', 'Snow', 'Snow', 'snow'),
+  66: info('Light freezing rain', 'Lt freezing rain', 'Frz rain', 'lightSleet'),
+  67: info('Heavy freezing rain', 'Freezing rain', 'Frz rain', 'lightSleet'),
+  71: info('Light snow', 'Light snow', 'Lt snow', 'lightSnow'),
+  73: info('Snow', 'Snow', 'Snow', 'heavySnow'),
   75: info('Heavy snow', 'Heavy snow', 'Hvy snow', 'heavySnow'),
-  77: info('Snow grains', 'Snow grains', 'Sn grains', 'snow'),
-  80: info('Light rain showers', 'Light showers', 'Showers', 'rain'),
-  81: info('Rain showers', 'Showers', 'Showers', 'rain'),
-  82: info('Violent rain showers', 'Heavy showers', 'Hvy shwrs', 'heavyRain'),
-  85: info('Light snow showers', 'Snow showers', 'Snow shwr', 'snow'),
-  86: info('Heavy snow showers', 'Hvy snow showers', 'Snow shwr', 'heavySnow'),
-  95: info('Thunderstorm', 'Thunderstorm', 'T-storm', 'thunder'),
-  96: info('Thunderstorm with light hail', 'Thunder and hail', 'T-storm', 'thunder'),
-  99: info('Thunderstorm with heavy hail', 'Heavy hail storm', 'T-storm', 'thunder'),
+  77: info('Snow grains', 'Snow grains', 'Sn grains', 'lightSnow'),
+  80: info('Light rain showers', 'Light showers', 'Showers', 'lightShowers'),
+  81: info('Rain showers', 'Showers', 'Showers', 'heavyShowers'),
+  82: info('Violent rain showers', 'Heavy showers', 'Hvy shwrs', 'heavyShowers'),
+  85: info('Light snow showers', 'Snow showers', 'Snow shwr', 'lightSnowShowers'),
+  86: info('Heavy snow showers', 'Hvy snow showers', 'Snow shwr', 'heavySnowShowers'),
+  95: info('Thunderstorm', 'Thunderstorm', 'T-storm', 'thunderyShowers'),
+  96: info('Thunderstorm with light hail', 'Thunder and hail', 'T-storm', 'thunderyHeavyRain'),
+  99: info('Thunderstorm with heavy hail', 'Heavy hail storm', 'T-storm', 'thunderyHeavyRain'),
 };
 
 /** Every code Open-Meteo documents, in order. */
@@ -55,108 +57,166 @@ export function wmo(code: number | null | undefined): WmoInfo {
 }
 
 // ── Art ────────────────────────────────────────────────────────────────────────────────────
-// Original pictograms, 13 columns by 5 rows, drawn by hand in printable ASCII and shown at the
-// terminal's line height, as text is. Each segment carries the role that colours it: the sun's
-// disc is shaded with colons and has eight rays, the moon is a shaded crescent among dot stars,
-// a cloud has rounded tops drawn with . - ' ( ) and a flat base of underscores, rain is ' and ,
-// strokes at an angle (drizzle sparser and lighter, heavy rain denser), snow is * and . flakes,
-// sleet a mix of both, fog layered ~ and - bands, thunder a bolt of _ and / with rain either side,
-// and the unknown mark a question mark in the same hand, drawn in fog, which is muted like dim.
+// wttr.in's pictograms, as the site drew them before this rewrite (it showed wttr.in's own text
+// then): the icon table of wego 2.1 (github.com/schachmat/wego, frontends/ascii-art-table.go,
+// ISC licence, copyright 2014-2017 its author, Markus Teich), which wttr.in renders with, row for row.
+// Thirteen columns by five rows; each run carries the role of the colour wego gives it: the sun
+// (yellow), a cloud (grey; heavy weather's is darker and bold there), rain (blue), snow (white),
+// the bolt (yellow, blinking there) and fog (grey); the unknown mark is drawn in fog. Six glyphs
+// are outside ASCII: the okina ʻ of the rain drops is in the terminal font; the figure dash ‒
+// of the sun's rays, the Greek psili ᾿ of the sun's and the unknown mark's chins and the ⚡ of
+// thunder are not, so the card pins each to one cell (WeatherCard.svelte). wttr.in has no night
+// variants: the sun shines at night too.
 
 /** The roles the art is drawn in; every art segment carries one, so each has a colour. */
-export const ART_ROLES: ReadonlySet<WeatherRole> = new Set<WeatherRole>(['sun', 'moon', 'cloud', 'rain', 'snow', 'bolt', 'fog']);
+export const ART_ROLES: ReadonlySet<WeatherRole> = new Set<WeatherRole>(['sun', 'cloud', 'rain', 'snow', 'bolt', 'fog']);
 
 /** Whether a segment's role is one the art is drawn in. */
 export function isArtRole(role: unknown): boolean {
   return typeof role === 'string' && (ART_ROLES as ReadonlySet<string>).has(role);
 }
 
-/** The cloud, three rows: a bump between two shoulders, over a flat base; the weather falls from it. */
-const CLOUD: readonly ArtRow[] = [
-  [['cloud', '     .--.    ']],
-  [['cloud', '  .-(    )-. ']],
-  [['cloud', ' (__________)']],
-];
+/** The glyphs of the art that the terminal font lacks, each pinned to one cell by the card. */
+export const ART_FALLBACK_GLYPHS: readonly string[] = ['\u2012', '\u1fbf', '\u26a1'];
 
 export const ART: Readonly<Record<ArtKey, readonly ArtRow[]>> = {
-  // The sun: a shaded disc with its shoulders, and eight rays with a gap between them.
-  clear: [
-    [['sun', '  \\   |   /  ']],
-    [['sun', '   _.---._   ']],
-    [['sun', '-  (:::::)  -']],
-    [['sun', "   '-___-'   "]],
-    [['sun', '  /   |   \\  ']],
+  sunny: [
+    [['sun', '    \\   /    ']],
+    [['sun', '     .-.     ']],
+    [['sun', '  ‒ (   ) ‒  ']],
+    [['sun', '     `-᾿     ']],
+    [['sun', '    /   \\    ']],
   ],
-  // A crescent lit on the left, shaded, and three stars.
-  clearNight: [
-    [['moon', '    .--.   . ']],
-    [['moon', "   /::.'     "]],
-    [['moon', '  (::(     . ']],
-    [['moon', "   \\::'.     "]],
-    [['moon', "    '--'   . "]],
+  partlyCloudy: [
+    [['sun', '   \\  /      ']],
+    [['sun', ' _ /""'], ['cloud', '.-.    ']],
+    [['sun', '   \\_'], ['cloud', '(   ).  ']],
+    [['sun', '   /'], ['cloud', '(___(__) ']],
+    [['cloud', '             ']],
   ],
-  // The sun at the top left, its lower half behind a cloud whose bump cuts into the disc.
-  partly: [
-    [['sun', '   \\ | /     ']],
-    [['sun', ' - .---. -   ']],
-    [['sun', '  (::::'], ['cloud', '.--.  ']],
-    [['cloud', " .'        '."]],
-    [['cloud', ' (__________)']],
-  ],
-  partlyNight: [
-    [['moon', '    .-.   .  ']],
-    [['moon', "   /::'     ."]],
-    [['moon', '  (::( '], ['cloud', '.--.  ']],
-    [['cloud', " .'        '."]],
-    [['cloud', ' (__________)']],
-  ],
-  // One large cloud, five rows tall.
   cloudy: [
-    [['cloud', '      .-.    ']],
-    [['cloud', '   .-(   )-. ']],
-    [['cloud', '  (        ) ']],
-    [['cloud', ' (          )']],
-    [['cloud', ' (__________)']],
+    [['cloud', '             ']],
+    [['cloud', '     .--.    ']],
+    [['cloud', '  .-(    ).  ']],
+    [['cloud', ' (___.__)__) ']],
+    [['cloud', '             ']],
   ],
-  // Layers of haze.
+  veryCloudy: [
+    [['cloud', '             ']],
+    [['cloud', '     .--.    ']],
+    [['cloud', '  .-(    ).  ']],
+    [['cloud', ' (___.__)__) ']],
+    [['cloud', '             ']],
+  ],
   fog: [
-    [['fog', '  ~~~~~~~~~  ']],
-    [['fog', ' ---- ------ ']],
-    [['fog', '  ~~~~~~~~~~ ']],
-    [['fog', ' ------ ---- ']],
-    [['fog', '  ~~~~~~~~~  ']],
+    [['fog', '             ']],
+    [['fog', ' _ - _ - _ - ']],
+    [['fog', '  _ - _ - _  ']],
+    [['fog', ' _ - _ - _ - ']],
+    [['fog', '             ']],
   ],
-  // Rain by intensity: a few light drops, three slanting strokes, then five.
-  drizzle: [...CLOUD, [['rain', "    '    '   "]], [['rain', '  .    .     ']]],
-  rain: [...CLOUD, [['rain', "   '  '  '   "]], [['rain', '  ,  ,  ,    ']]],
-  heavyRain: [...CLOUD, [['rain', "  ' ' ' ' '  "]], [['rain', ' , , , , ,   ']]],
-  sleet: [
-    ...CLOUD,
-    [['rain', "   ' "], ['snow', '* '], ['rain', "' "], ['snow', '*   ']],
-    [['snow', '  * '], ['rain', ', '], ['snow', '* '], ['rain', ',    ']],
+  lightRain: [
+    [['cloud', '     .-.     ']],
+    [['cloud', '    (   ).   ']],
+    [['cloud', '   (___(__)  ']],
+    [['rain', '    ʻ ʻ ʻ ʻ  ']],
+    [['rain', '   ʻ ʻ ʻ ʻ   ']],
   ],
-  snow: [...CLOUD, [['snow', '   *   .   * ']], [['snow', ' .   *   .   ']]],
-  heavySnow: [...CLOUD, [['snow', '  * . * . *  ']], [['snow', ' . * . * . * ']]],
-  // A bolt with a kink, down to its tip, rain either side of it.
-  thunder: [
-    ...CLOUD,
-    [['rain', " '  "], ['bolt', '____/'], ['rain', "  ' "]],
-    [['rain', '  ,  '], ['bolt', '/'], ['rain', '    ,  ']],
+  heavyRain: [
+    [['cloud', '     .-.     ']],
+    [['cloud', '    (   ).   ']],
+    [['cloud', '   (___(__)  ']],
+    [['rain', '  ‚ʻ‚ʻ‚ʻ‚ʻ   ']],
+    [['rain', '  ‚ʻ‚ʻ‚ʻ‚ʻ   ']],
   ],
-  // A question mark.
+  lightShowers: [
+    [['sun', ' _`/""'], ['cloud', '.-.    ']],
+    [['sun', '  ,\\_'], ['cloud', '(   ).  ']],
+    [['sun', '   /'], ['cloud', '(___(__) ']],
+    [['rain', '     ʻ ʻ ʻ ʻ ']],
+    [['rain', '    ʻ ʻ ʻ ʻ  ']],
+  ],
+  heavyShowers: [
+    [['sun', ' _`/""'], ['cloud', '.-.    ']],
+    [['sun', '  ,\\_'], ['cloud', '(   ).  ']],
+    [['sun', '   /'], ['cloud', '(___(__) ']],
+    [['rain', '   ‚ʻ‚ʻ‚ʻ‚ʻ  ']],
+    [['rain', '   ‚ʻ‚ʻ‚ʻ‚ʻ  ']],
+  ],
+  lightSleet: [
+    [['cloud', '     .-.     ']],
+    [['cloud', '    (   ).   ']],
+    [['cloud', '   (___(__)  ']],
+    [['rain', '    ʻ '], ['snow', '*'], ['rain', ' ʻ '], ['snow', '*  ']],
+    [['snow', '   *'], ['rain', ' ʻ '], ['snow', '*'], ['rain', ' ʻ   ']],
+  ],
+  lightSleetShowers: [
+    [['sun', ' _`/""'], ['cloud', '.-.    ']],
+    [['sun', '  ,\\_'], ['cloud', '(   ).  ']],
+    [['sun', '   /'], ['cloud', '(___(__) ']],
+    [['rain', '     ʻ '], ['snow', '*'], ['rain', ' ʻ '], ['snow', '* ']],
+    [['snow', '    *'], ['rain', ' ʻ '], ['snow', '*'], ['rain', ' ʻ  ']],
+  ],
+  lightSnow: [
+    [['cloud', '     .-.     ']],
+    [['cloud', '    (   ).   ']],
+    [['cloud', '   (___(__)  ']],
+    [['snow', '    *  *  *  ']],
+    [['snow', '   *  *  *   ']],
+  ],
+  heavySnow: [
+    [['cloud', '     .-.     ']],
+    [['cloud', '    (   ).   ']],
+    [['cloud', '   (___(__)  ']],
+    [['snow', '   * * * *   ']],
+    [['snow', '  * * * *    ']],
+  ],
+  lightSnowShowers: [
+    [['sun', ' _`/""'], ['cloud', '.-.    ']],
+    [['sun', '  ,\\_'], ['cloud', '(   ).  ']],
+    [['sun', '   /'], ['cloud', '(___(__) ']],
+    [['snow', '     *  *  * ']],
+    [['snow', '    *  *  *  ']],
+  ],
+  heavySnowShowers: [
+    [['sun', ' _`/""'], ['cloud', '.-.    ']],
+    [['sun', '  ,\\_'], ['cloud', '(   ).  ']],
+    [['sun', '   /'], ['cloud', '(___(__) ']],
+    [['snow', '    * * * *  ']],
+    [['snow', '   * * * *   ']],
+  ],
+  thunderyShowers: [
+    [['sun', ' _`/""'], ['cloud', '.-.    ']],
+    [['sun', '  ,\\_'], ['cloud', '(   ).  ']],
+    [['sun', '   /'], ['cloud', '(___(__) ']],
+    [['bolt', '    ⚡'], ['rain', 'ʻ ʻ'], ['bolt', '⚡'], ['rain', 'ʻ ʻ ']],
+    [['rain', '    ʻ ʻ ʻ ʻ  ']],
+  ],
+  thunderyHeavyRain: [
+    [['cloud', '     .-.     ']],
+    [['cloud', '    (   ).   ']],
+    [['cloud', '   (___(__)  ']],
+    [['rain', '  ‚ʻ'], ['bolt', '⚡'], ['rain', 'ʻ‚'], ['bolt', '⚡'], ['rain', '‚ʻ   ']],
+    [['rain', '  ‚ʻ‚ʻ'], ['bolt', '⚡'], ['rain', 'ʻ‚ʻ   ']],
+  ],
+  thunderySnowShowers: [
+    [['sun', ' _`/""'], ['cloud', '.-.    ']],
+    [['sun', '  ,\\_'], ['cloud', '(   ).  ']],
+    [['sun', '   /'], ['cloud', '(___(__) ']],
+    [['snow', '     *'], ['bolt', '⚡'], ['snow', ' *'], ['bolt', '⚡'], ['snow', ' * ']],
+    [['snow', '    *  *  *  ']],
+  ],
   unknown: [
-    [['fog', '    .--.     ']],
-    [['fog', '   (    )    ']],
-    [['fog', "      .'     "]],
-    [['fog', '      |      ']],
-    [['fog', '      o      ']],
+    [['fog', '    .-.      ']],
+    [['fog', '     __)     ']],
+    [['fog', '    (        ']],
+    [['fog', '     `-᾿     ']],
+    [['fog', '      •      ']],
   ],
 };
 
-/** The art for an icon, using the moon at night for clear and partly cloudy skies. */
-export function artFor(icon: IconKey, isDay: boolean): readonly ArtRow[] {
-  if (!isDay && icon === 'clear') return ART.clearNight;
-  if (!isDay && icon === 'partly') return ART.partlyNight;
+/** The art for an icon. The day flag stays for the view's call; wttr.in draws the same art at night. */
+export function artFor(icon: IconKey, _isDay: boolean): readonly ArtRow[] {
   return ART[icon];
 }
 

@@ -649,8 +649,11 @@ describe('the legend', () => {
     const r = rig();
     const result = await r.run('weather --legend');
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain('clearNight');
-    expect(result.stdout).toContain('thunder  WMO 95 96 99');
+    expect(result.stdout).toContain('sunny  WMO 0 1');
+    expect(result.stdout).toContain('thunderyShowers  WMO 95');
+    expect(result.stdout).toContain('thunderyHeavyRain  WMO 96 99');
+    // wttr.in's art: the rain's okina, and the three glyphs the card pins to a cell, are in the plain text too.
+    expect(result.stdout).toContain('\u02bb \u02bb \u02bb \u02bb');
     expect(r.network.calls).toEqual([]);
     r.stop();
   });

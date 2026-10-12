@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Writes the frames file sudo's show plays in place of its drawn dancer (the format is in
+// Writes the frames file sudo's show plays (the format is in
 // src/lib/frames.ts; src/commands/lib/rick.ts says where the app looks for it) from a folder of
 // PNG frames. Each image is decoded in Playwright's Chromium (as og.mjs and theme-screenshots.mjs
 // drive it: `npx playwright install chromium`), its pixels box-averaged over a grid of cells, and
@@ -17,8 +17,8 @@
 //   --invert    the ramp the other way, for frames meant for a light theme
 //   --out PATH  where to write (public/audio/incident-report.frames)
 //
-// The video, the images and the frames file they make are the owner's: this project ships none,
-// and the app plays its drawn dancer where the file is missing or malformed.
+// scripts/ascii-video.py traces a video straight into the file, with no PNGs between, and is how
+// the shipped file was made. The show's stage stays empty where the file is missing or malformed.
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';

@@ -32,15 +32,17 @@ const SKIPPED_DIRS = new Set(['__snapshots__', 'node_modules']);
  * @type {readonly { from: number, to: number, why: string }[]}
  */
 export const ALLOWED = [
-  { from: 0x02bb, to: 0x02bc, why: 'the okina and modifier apostrophe are folded out of place searches (services/weather/places.ts)' },
+  { from: 0x02bc, to: 0x02bc, why: 'the modifier apostrophe is folded out of place searches (services/weather/places.ts); the okina U+02BB beside it is in the font, for the weather art' },
   { from: 0x0300, to: 0x036f, why: 'combining marks are stripped from figlet input (commands/lib/block-font.ts)' },
   { from: 0x200e, to: 0x200f, why: 'bidirectional marks are removed from upstream text (lib/upstream-text.ts)' },
-  { from: 0x2012, to: 0x2012, why: 'the figure dash is folded out of place searches (services/weather/places.ts)' },
+  { from: 0x1fbf, to: 0x1fbf, why: "the Greek psili of wttr.in's weather art (services/weather/wmo.ts), pinned to one cell by the card" },
+  { from: 0x2012, to: 0x2012, why: "the figure dash is folded out of place searches (services/weather/places.ts) and is the sun's rays in wttr.in's weather art (services/weather/wmo.ts), pinned to one cell by the card" },
   { from: 0x201f, to: 0x201f, why: 'a smart quote made plain as it is typed (shell/editor/normalize.ts)' },
   { from: 0x202a, to: 0x202e, why: 'bidirectional overrides are removed from upstream text (lib/upstream-text.ts)' },
   { from: 0x202f, to: 0x202f, why: 'the narrow no-break space is made plain as it is typed (shell/editor/normalize.ts)' },
   { from: 0x2038, to: 0x2038, why: 'the caret marks the cursor in test lines (src/testing/completion-env.ts)' },
   { from: 0x2066, to: 0x2069, why: 'bidirectional isolates are removed from upstream text (lib/upstream-text.ts)' },
+  { from: 0x26a1, to: 0x26a1, why: "the lightning of wttr.in's weather art (services/weather/wmo.ts), from the system's symbol font, pinned to one cell by the card" },
 ];
 
 /**

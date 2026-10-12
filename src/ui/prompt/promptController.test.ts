@@ -3,7 +3,6 @@ import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RICK_CLOSED } from '../../commands/lib/rick';
 import sudo from '../../commands/shell/sudo';
-import { SUDO_HINT } from '../../commands/shell/sudo.run';
 import rm from '../../commands/files/rm';
 import theme from '../../commands/portfolio/theme';
 import sleep from '../../commands/shell/sleep';
@@ -840,8 +839,8 @@ describe('sudo’s password', () => {
   it('is masked, and reaches no history, screen, storage or kill ring', async () => {
     const { input, controller, h, view } = setup();
     await sudoPrompt(input, controller);
-    expect(view.container.textContent).toContain('[sudo] password for guest:');
-    expect(view.container.querySelector('.hint')?.textContent).toBe(SUDO_HINT);
+    expect(view.container.textContent).toContain('Password:');
+    expect(view.container.querySelector('.hint')).toBeNull();
     expect(input.type).toBe('text');
     expect(input.closest('.input-box')?.classList.contains('secret')).toBe(true);
     expect(controller.chipList.chips.map((chip) => chip.label)).toEqual(['Cancel']);
@@ -896,14 +895,13 @@ describe('sudo’s password', () => {
     expect(input.value).not.toContain('hunter');
   });
 
-  it('is described by its dim hint, so a screen reader says how to cancel', async () => {
+  it('has no dim hint: the prompt is the word alone, described by the keys as any line is', async () => {
     const { input, controller } = setup();
     expect(input.getAttribute('aria-describedby')).toBe('prompt-keys');
     await sudoPrompt(input, controller);
     const ids = (input.getAttribute('aria-describedby') ?? '').split(' ');
-    const said = ids.map((id) => document.getElementById(id)?.textContent ?? '').join(' ');
-    expect(said).toContain(SUDO_HINT);
-    expect(ids).toContain(READ_HINT_ID);
+    expect(ids).not.toContain(READ_HINT_ID);
+    expect(document.getElementById(READ_HINT_ID)).toBeNull();
   });
 
   it('is cancelled by Escape, as the hint says: the read ends, the line is interrupted, and nothing was kept', async () => {

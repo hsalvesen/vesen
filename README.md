@@ -19,7 +19,7 @@ Version 2.0.0 is a rewrite of the whole app; [CHANGELOG.md](CHANGELOG.md) says w
 ## A short tour
 
 ```bash
-help                      # every command by category; help --all lists them all, man NAME explains one
+help                      # eight commands of each category; help files lists all of Files, -v says what each does
 cat README.md             # the owner's README, in colour
 ls -la ~ | grep bash      # pipes, options and globs work as on Linux
 fastfetch                 # this device, as a terminal sees it
@@ -28,7 +28,7 @@ stock AAPL CBA.AX         # quotes in a table; stock AAPL draws a card with a ch
 qr https://www.vesen.app  # a scannable QR card; tap it to present it full screen
 dig vesen.app +short      # DNS over HTTPS, and it says so
 man ls | less             # the pager; nano notes.txt is the editor
-fortune | cowsay          # the fun ones are under Fun in help --all
+fortune | cowsay          # the fun ones are under Fun: help -v fun
 theme ls                  # every theme with its colours; theme wombat switches
 privacy                   # every service a command talks to, and what it is sent
 ```

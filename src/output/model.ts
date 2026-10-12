@@ -112,7 +112,7 @@ export interface Swatches {
 }
 
 /** One swatch as text: two cells of ink on the character grid. */
-export const SWATCH = '##';
+export const SWATCH = '\u2588\u2588';
 
 export interface Span {
   readonly text: string;
@@ -442,7 +442,7 @@ export const out = {
   live: (text: string, live: LiveBinding, style?: SpanStyle): Span => ({ ...span(text, style), live }),
 
   /**
-   * A strip of colour swatches, `##` each, in `colours` (each `#rrggbb`, or a palette token) on
+   * A strip of colour swatches, two full blocks (██) each, in `colours` (each `#rrggbb`, or a palette token) on
    * `background` (`#rrggbb`, or null for the terminal's own), with a space either side; see
    * Swatches.
    */

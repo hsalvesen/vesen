@@ -1,9 +1,8 @@
 // fastfetch's logos: art for the visitor's system, loaded only when fastfetch draws one, so they
-// stay out of every other chunk. Each is one colour, as the art block draws it, and is traced in
-// ASCII letters and punctuation (ui/art-class.ts draws it at the terminal's line height) from a
-// silhouette drawn for vesen with scripts/art/logos.py: one fill glyph for the inside (M for the
-// apple and the bugdroid, # for the panes, W for the penguin with a . belly) and, at the edges,
-// whichever glyph's ink best matches the cell. 25 to 28 columns by 13 or 14 rows.
+// stay out of every other chunk. Each is one colour, as the art block draws it, and is the
+// pictogram vesen 1.0 showed (src/utils/osLogos.ts there, drawn with letters and punctuation in
+// neofetch's style: an apple, a bugdroid, four panes, Tux), brought back as it was. 30 to 42
+// columns by 16 to 26 rows; the art block scales a logo down where the room is narrower.
 
 import type { Colour } from '../../output/model';
 
@@ -16,75 +15,97 @@ export interface Logo {
 
 const art = (rows: readonly string[]): string => rows.join('\n');
 
-/** An apple: two lobes with a dip between them, a leaf leaning right above it, a bite out of the upper right, a notch between two feet. */
+/** The apple, as vesen 1.0 drew it (neofetch's): the leaf, two lobes, the bite out of the right side. */
 const APPLE = art([
-  '               -g@.',
-  '              gMM\\',
-  '             g@M-',
-  '    -gggggg- .-gggggg-',
-  '  -gMMMMMMMMggMMMMMMMM.',
-  '  @MMMMMMMMMMMMMMMM@-',
-  '  $MMMMMMMMMMMMMMMM@',
-  ' .gMMMMMMMMMMMMMMMM@_',
-  '.@MMMMMMMMMMMMMMMMMMMg,.',
-  'JMMMMMMMMMMMMMMMMMMMMMMM@L',
-  ' $MMMMMMMMMMMMMMMMMMMMMMM',
-  '  -M@MMMMMMMMMMMMMMMM@M\\',
-  '     M@MMMM@MM@MMMM@M',
-  '       -]7M-  -MM[-',
+  '                    \'c.',
+  '                 ,xNMM.',
+  '               .OMMMMo',
+  '               OMMM0,',
+  '     .;loddo:\' loolloddol;.',
+  '   cKMMMMMMMMMMNWMMMMMMMMMM0:',
+  ' .KMMMMMMMMMMMMMMMMMMMMMMMWd.',
+  ' XMMMMMMMMMMMMMMMMMMMMMMMX.',
+  ';MMMMMMMMMMMMMMMMMMMMMMMM:',
+  ':MMMMMMMMMMMMMMMMMMMMMMMM:',
+  '.MMMMMMMMMMMMMMMMMMMMMMMMX.',
+  ' kMMMMMMMMMMMMMMMMMMMMMMMMWd.',
+  ' .XMMMMMMMMMMMMMMMMMMMMMMMMMMk',
+  '  .XMMMMMMMMMMMMMMMMMMMMMMMMK.',
+  '    kMMMMMMMMMMMMMMMMMMMMMMd',
+  '     ;KMMMMMMMWXXWMMMMMMMk.',
+  '       .cooc,.    .,coo:.',
 ]);
 
-/** A bugdroid: the dome with two antennae and two eyes, a body, two arms beside it and two legs. */
+/** The bugdroid, as vesen 1.0 drew it: antennae, the dome with two eyes, the body, an arm either side and two legs. */
 const ANDROID = art([
-  '       \\          /',
-  '        \\ -,__,- /',
-  '       gg@MMMMMM@gg',
-  '     _@MMMMMMMMMMMM@_',
-  '     @MMM MMMMMM MMM@',
-  '     ----------------',
-  ' @M@ MMMMMMMMMMMMMMMM @M@',
-  ' MMM MMMMMMMMMMMMMMMM MMM',
-  ' MMM MMMMMMMMMMMMMMMM MMM',
-  ' ]M[ MMMMMMMMMMMMMMMM ]M[',
-  '     %MMMMMMMMMMMMMM@',
-  '        ]MM@  ]MM@',
-  '        ]MM@  ]MM@',
-  '        JWW%  JWW%',
+  '           -o         o-',
+  '           +hydNNNNdyh+',
+  '         +mMMMMMMMMMMMMm+',
+  '       `dM{  }mMMMMm{  }Md`',
+  '       hMMMMMMMMMMMMMMMMMMh',
+  '   ..  yyyyyyyyyyyyyyyyyyyy  ..',
+  ' .mMMm`MMMMMMMMMMMMMMMMMMMM`mMMm.',
+  ' :MMMM-MMMMMMMMMMMMMMMMMMMM-MMMM:',
+  ' :MMMM-MMMMMMMMMMMMMMMMMMMM-MMMM:',
+  ' :MMMM-MMMMMMMMMMMMMMMMMMMM-MMMM:',
+  ' :MMMM-MMMMMMMMMMMMMMMMMMMM-MMMM:',
+  ' -MMMM-MMMMMMMMMMMMMMMMMMMM-MMMM-',
+  '  +yy+ MMMMMMMMMMMMMMMMMMMM +yy+',
+  '       mMMMMMMMMMMMMMMMMMMm',
+  '        `++MMMMh+++hMMMM++`',
+  '           MMMMo   oMMMM',
+  '           MMMMo   oMMMM',
+  '           oNMm-   -mMNo',
 ]);
 
-/** Four window panes in perspective, the left edge nearer the vanishing point, so the upper-left pane is the smallest, with a gap between them. */
+/** The four panes, as vesen 1.0 drew them: two rows of two blocks with a gap between. */
 const WINDOWS = art([
-  '                 -,__]######',
-  '     .-,__J  ###############',
-  '###########  ###############',
-  '###########  ###############',
-  '###########  ###############',
-  '###########  ###############',
   '',
-  '###########  ###############',
-  '###########  ###############',
-  '###########  ###############',
-  '7##########  ###############',
-  '      --]T7  ###############',
-  '                 --[]777####',
+  '###############   ###############',
+  '###############   ###############',
+  '###############   ###############',
+  '###############   ###############',
+  '###############   ###############',
+  '###############   ###############',
+  '###############   ###############',
+  '',
+  '###############   ###############',
+  '###############   ###############',
+  '###############   ###############',
+  '###############   ###############',
+  '###############   ###############',
+  '###############   ###############',
+  '###############   ###############',
 ]);
 
-/** A penguin: a black head with a lighter face, two eyes and a beak; a body with a lighter belly; flippers out past it; two flat feet. */
+/** Tux, as vesen 1.0 drew him: a shaded head and body, the belly in colons, the feet along the bottom. */
 const LINUX = art([
-  '         -g@WWW@g-',
-  '        .@@[-.-]$@.',
-  '        .@-O...O-@.',
-  '       .ggg..V..ggg',
-  '      g@@$-.....-7%@g',
-  '    -g@\\.........../$g_',
-  '   gW@-.............-@Wy',
-  '  qWWF...............qWW-',
-  '  4WW@...............gWWF',
-  '  JMWWp.............qWW%L',
-  '    $WWg-.........-gWWM',
-  '     ]%WWggg_,_gg@WW@[',
-  '       -]MMW@@@WMM[-',
-  ' .=========     =========.',
+  '                 .88888888:.',
+  '                88888888.88888.',
+  '              .8888888888888888.',
+  '              888888888888888888',
+  '              88\' _`88\'_  `88888',
+  '              88 88 88 88  88888',
+  '              88_88_::_88_:88888',
+  '              88:::,::,:::::8888',
+  '              88`:::::::::\'`8888',
+  '             .88  `::::\'    8:88.',
+  '            8888            `8:888.',
+  '          .8888\'             `888888.',
+  '         .8888:..  .::.  ...:\'8888888:.',
+  '        .8888.\'     :\'     `\'::`88:88888',
+  '       .8888        \'         `.888:8888.',
+  '      888:8         .           888:88888',
+  '    .888:88        .:           888:88888:',
+  '    8888888.       ::           88:888888',
+  '    `.::.888.      ::          .88888888',
+  '   .::::::.888.    ::         :::`8888\'.:.',
+  '  ::::::::::.888   \'         .::::::::::::',
+  '  ::::::::::::.8    \'      .:8::::::::::::',
+  ' .::::::::::::::.        .:888:::::::::::',
+  ' :::::::::::::::88:.__..:88888::::::::::',
+  '  `\'.:::::::::::88888888888.88:::::::::',
+  '       `\':::_:\' -- \'\' -\'-\' `\':_::::\'`',
 ]);
 
 /** The logo for an OS as SysSnapshot names it; Linux's for anything else. */

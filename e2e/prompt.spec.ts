@@ -209,21 +209,22 @@ test.describe('sudo', { tag: '@smoke' }, () => {
     await prompt(page).fill('sudo ls');
     await prompt(page).press('Enter');
 
-    await expect(page.locator('.edit-row .read-prompt')).toHaveText('[sudo] password for guest: ');
-    // The dim line says how to cancel, in the words of what the screen offers, and nothing more.
-    await expect(page.locator('.prompt-line .hint')).toHaveText(isPhone() ? 'Tap Cancel or press Esc to cancel' : 'Ctrl+C or Esc to cancel');
+    await expect(page.locator('.edit-row .read-prompt')).toHaveText('Password: ');
+    // The word alone, as a Unix terminal asks: no dim line above it.
+    await expect(page.locator('.prompt-line .hint')).toHaveCount(0);
     await expect(prompt(page)).toHaveAttribute('type', 'text');
     await expect(prompt(page)).toHaveAttribute('autocomplete', 'off');
     await expect(prompt(page)).toHaveAttribute('data-1p-ignore', '');
     await expect(prompt(page)).toHaveAttribute('data-lpignore', 'true');
     await prompt(page).pressSequentially(SECRET);
-    // Masked: discs on touch, nothing at all in the desktop's mirror.
+    // Masked: one asterisk a character, in the input (which is what shows on touch) and in the
+    // desktop's mirror, with the cursor's cell after them.
     const masked = await prompt(page).evaluate((input) => ({
-      security: getComputedStyle(input).getPropertyValue('-webkit-text-security'),
+      value: (input as HTMLInputElement).value,
       mirror: document.querySelector('.mirror')?.textContent ?? null,
     }));
-    if (isPhone()) expect(masked.security).toBe('disc');
-    else expect(masked.mirror).toBe(' ');
+    expect(masked.value).toBe('*'.repeat(SECRET.length));
+    if (!isPhone()) expect(masked.mirror).toBe(`${'*'.repeat(SECRET.length)} `);
 
     // The Enter that answers opens the show over the terminal; nothing opens anywhere else. Esc
     // ends it, and the sudoers line follows (e2e/sudo.spec.ts has the rest of the show).
@@ -255,17 +256,15 @@ test.describe('sudo', { tag: '@smoke' }, () => {
     await open(page);
     await prompt(page).fill('sudo ls');
     await prompt(page).press('Enter');
-    await expect(page.locator('.edit-row .read-prompt')).toHaveText('[sudo] password for guest: ');
+    await expect(page.locator('.edit-row .read-prompt')).toHaveText('Password: ');
     await prompt(page).pressSequentially(SECRET);
     await expect(prompt(page)).toHaveValue('*'.repeat(SECRET.length));
     const client = await page.context().newCDPSession(page);
     await client.send('Accessibility.enable');
     const { nodes } = (await client.send('Accessibility.getFullAXTree')) as { nodes: { role?: { value?: string }; name?: { value?: string }; value?: { value?: unknown }; description?: { value?: string } }[] };
     const field = nodes.find((node) => node.role?.value === 'combobox');
-    expect(field?.name?.value).toBe('[sudo] password for guest:');
+    expect(field?.name?.value).toBe('Password:');
     expect(String(field?.value?.value ?? '')).not.toContain('hunter');
-    // Described by the dim line that says how to cancel.
-    expect(field?.description?.value ?? '').toContain('Ctrl+C or Esc to cancel');
     expect(JSON.stringify(nodes)).not.toContain(SECRET);
   });
 
@@ -274,7 +273,7 @@ test.describe('sudo', { tag: '@smoke' }, () => {
     await open(page);
     await prompt(page).fill('sudo ls');
     await prompt(page).press('Enter');
-    await expect(page.locator('.edit-row .read-prompt')).toHaveText('[sudo] password for guest: ');
+    await expect(page.locator('.edit-row .read-prompt')).toHaveText('Password: ');
     await prompt(page).pressSequentially(SECRET);
     for (let i = 0; i < SECRET.length; i += 1) await prompt(page).press('Backspace');
     await prompt(page).press('Control+c');

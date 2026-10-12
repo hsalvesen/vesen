@@ -80,7 +80,7 @@ describe('layout widths', () => {
 
   it('starts each art row with exactly the 13 art columns', () => {
     const view = buildView(sydney, gadigal, UNIT_PRESETS.metric, NOW);
-    const artRows = ART.clear.map((row) => row.map(([, s]) => s).join(''));
+    const artRows = ART.sunny.map((row) => row.map(([, s]) => s).join(''));
     expect(toPlain(view.compact).split('\n').slice(1, 6).map((l) => l.slice(0, ART_WIDTH))).toEqual(artRows);
     expect(toPlain(view.wide).split('\n').slice(2, 7).map((l) => l.slice(0, ART_WIDTH))).toEqual(artRows);
   });
@@ -95,7 +95,8 @@ describe('cards', () => {
 
   it('draws the Oslo card at night in imperial units over seven days', () => {
     const view = buildView(oslo, osloPlace, UNIT_PRESETS.imperial, NOW, { days: 7 });
-    expect(view.current.art).toBe(ART.clearNight);
+    // wttr.in draws the sun at night too.
+    expect(view.current.art).toBe(ART.sunny);
     expect(renderPlain(view, 'compact')).toMatchSnapshot();
     expect(renderPlain(view)).toMatchSnapshot();
   });
@@ -123,7 +124,8 @@ describe('cards', () => {
     for (const text of [renderPlain(view, 'compact'), renderPlain(view), renderOneLine(view)]) {
       // Nothing drawn or punctuating from outside ASCII: only ° in readings, · in the place name
       // and © in OpenStreetMap's credit remain, which are not drawings.
-      expect(text.replace(/[°·©]/g, '')).toMatch(/^[\x20-\x7e\n]*$/);
+      // (and wttr.in's art keeps its okina, low quote, bullet, figure dash, psili and lightning).
+      expect(text.replace(/[°·©\u02bb\u1fbf\u2012\u201a\u2022\u26a1]/g, '')).toMatch(/^[\x20-\x7e\n]*$/);
     }
     expect(renderPlain(view)).toContain('Gadigal Country · Sydney');
   });
@@ -131,7 +133,7 @@ describe('cards', () => {
   it('converts current conditions and days into the chosen units', () => {
     const metric = buildView(sydney, gadigal, UNIT_PRESETS.metric, NOW);
     expect(metric.current).toMatchObject({ temp: 24, feels: 26, humidity: 51, wind: 6, gust: 25, windFrom: 'W', uv: 7.6 });
-    expect(metric.current).toMatchObject({ sunrise: '06:26', sunset: '19:01', label: 'Clear sky', icon: 'clear' });
+    expect(metric.current).toMatchObject({ sunrise: '06:26', sunset: '19:01', label: 'Clear sky', icon: 'sunny' });
 
     const imperial = buildView(sydney, gadigal, UNIT_PRESETS.imperial, NOW);
     expect(imperial.current).toMatchObject({ temp: 76, feels: 80, wind: 3, gust: 15, precip: 0 });

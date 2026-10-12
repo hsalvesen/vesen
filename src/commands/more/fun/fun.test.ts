@@ -137,7 +137,7 @@ describe('help', () => {
     for (const name of FUN) expect(all.stdoutPlain).toMatch(new RegExp(`^${name} `, 'm'));
   });
 
-  it('gives them a column of their own on a terminal, a phone included, with every one of them', async () => {
+  it('gives them a column of their own on a terminal, a phone included, with every one of them (there are eight)', async () => {
     const phone = await runLine('help', { cols: 44, touch: true });
     const lists = phone.blocks.filter((block) => block.type === 'lists');
     const fun = lists[0]?.type === 'lists' ? lists[0].columns.find((column) => column.title.text === 'Fun') : undefined;
@@ -145,7 +145,7 @@ describe('help', () => {
     // The columns fit the screen's width, in bands.
     for (const row of renderScreen(lists, 44)) expect(row.length, row).toBeLessThanOrEqual(44);
     expect(phone.stdoutPlain).not.toMatch(/\+\d+ more/);
-    expect(phone.stdoutPlain).toContain('help --all lists every command with what it does.');
+    expect(phone.stdoutPlain).toContain('help files lists every command in a category; add -v to say what each does.');
     expect((await runLine('help --all', { cols: 44 })).stdoutPlain).toMatch(/^Fun$/m);
   });
 });
@@ -154,7 +154,7 @@ describe('easter eggs', () => {
   it('sudo makes a sandwich, after the password prompt, and says so kindly', async () => {
     const result = await runLine('sudo make me a sandwich', { answer: () => 'hunter2' });
     expect(result.status).toBe(0);
-    expect(result.prompts).toEqual(['[sudo] password for guest: ']);
+    expect(result.prompts).toEqual(['Password: ']);
     expect(result.stdoutPlain).toContain('Okay. One sandwich, made with superuser care.');
     expect(result.stdoutPlain).not.toContain('hunter2');
     expect(result.stderrPlain).not.toContain('sudoers file. This incident');

@@ -39,6 +39,7 @@ import {
   type TabStep,
 } from '../../shell/complete/types';
 import { joinContinuation, type ContinuationReason } from '../../shell/editor/continuation';
+import { FEEDBACK_MASK } from '../../shell/reader';
 import { NAV_IDLE, searchLabel, searchResult, startSearch, stepHistory, stepSearch, updateSearch, type HistoryNav, type SearchState } from '../../shell/editor/history';
 import { chordOf, isModifierKey, resolveKey, type Action, type KeyChord, type KeyCtx, type KeyPlatform } from '../../shell/editor/keymap';
 import { normalizePaste, normalizeTyped } from '../../shell/editor/normalize';
@@ -75,7 +76,7 @@ const OWN_READ = -1;
 export const READ_HINT_ID = 'prompt-read-hint';
 
 /** What the input shows for each character of a secret. */
-export const SECRET_MASK = '*';
+export const SECRET_MASK = FEEDBACK_MASK;
 
 const EMPTY_LINE: EditState = { text: '', cursor: 0 };
 
@@ -120,9 +121,11 @@ export interface PromptDeps {
 /** A line a command, or the prompt itself, is waiting for. */
 export interface PromptRead {
   readonly id: number;
-  /** Where PS1 would be: `[sudo] password for guest: `. */
+  /** Where PS1 would be: sudo's `Password: `. */
   readonly prompt: string;
   readonly secret: boolean;
+  /** A secret whose characters show as asterisks, sudo's: the line editor draws the mask. */
+  readonly feedback: boolean;
   /** A dim line above the prompt. */
   readonly hint: string | null;
   /** The first key answers: `Display all N possibilities? (y or n)`. */
@@ -1123,7 +1126,7 @@ export class PromptController {
     if (asking.phase === 'asking') {
       const engine = this.completion?.engine;
       this.beginRead(
-        { id: OWN_READ, prompt: effect.question ?? '', secret: false, hint: null, oneKey: true, keepLine: true },
+        { id: OWN_READ, prompt: effect.question ?? '', secret: false, feedback: false, hint: null, oneKey: true, keepLine: true },
         (answer) => {
           if (engine !== undefined) this.applyTab(engine.answer(asking, answer === 'y'));
         },
@@ -1199,7 +1202,7 @@ export class PromptController {
     }
     if (this.read?.id === request.id) return;
     this.beginRead(
-      { id: request.id, prompt: request.prompt, secret: request.secret, hint: request.hint, oneKey: false, keepLine: false },
+      { id: request.id, prompt: request.prompt, secret: request.secret, feedback: request.feedback, hint: request.hint, oneKey: false, keepLine: false },
       (text) => this.shell.answerRead(request.id, text),
     );
   }

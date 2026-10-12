@@ -1,15 +1,16 @@
 // The Rick app (sudo): when it opens it makes the audio element for the owner's track, looping at
 // a modest volume, and plays it, with the synth as the fallback where the track cannot load or
 // play; where the browser holds the sound back until a gesture, the status line says so and the
-// first key or tap starts it. The dancer steps on animation frames and rests while the page is
-// hidden; the owner's frames file, when it is there, takes the stage, fitted to its size and
-// started with the track; missing or malformed, the drawn dancer plays. Esc, q, ^C, Back and the
-// Close button end it with the same result, stopping the sound with a short fade; m and the Mute
-// button mute whichever plays; under reduced motion one frame stands still while the sound plays.
+// first key or tap starts it. The owner's frames file takes the stage when it comes, fitted to its
+// size and started with the track, stepping on animation frames and resting while the page is
+// hidden; until then, and where the file is missing or malformed, the stage is empty. Nothing is
+// shown but the frames and the way out. Esc, q, ^C, Back and the Close button end it with the same
+// result, stopping the sound with a short fade; m mutes whichever plays, unannounced; under reduced
+// motion the first frame stands still while the sound plays.
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { RICK_ALT, RICK_CLOSED, RICK_FPS, RICK_FRAMES, RICK_TITLE, RICK_TRACK, rickFrames, rickView, type RickView } from '../../commands/lib/rick';
+import { RICK_ALT, RICK_CLOSED, RICK_FRAMES, RICK_TITLE, RICK_TRACK, rickView, type RickView } from '../../commands/lib/rick';
 import type { Song } from '../../lib/chiptune';
 import { parseFramesFile, type FramesFile } from '../../lib/frames';
 import type { Chiptune, ChiptuneOptions } from '../../services/chiptune';
@@ -186,22 +187,20 @@ afterEach(() => {
 });
 
 describe('the Rick app', () => {
-  it('shows the title, the first frame in colour with a text alternative, and the keys in the status line', async () => {
+  it('shows an empty stage with a text alternative and the way out, and nothing else, until the file comes', async () => {
     frames();
     const { dialog, fake } = await show();
-    expect(dialog.querySelector('.title')?.textContent).toBe('You have been rickrolled');
+    expect(dialog.getAttribute('aria-label')).toBe(RICK_TITLE);
+    expect(dialog.querySelector('.title')).toBeNull();
+    expect(dialog.textContent?.replace(/\s+/g, ' ').trim()).toBe(`${RICK_ALT} Ctrl+C, q or Esc to exit`);
     const frame = frameOf(dialog);
     expect(frame.getAttribute('aria-hidden')).toBe('true');
-    expect(drawn(dialog)).toBe(rickFrames()[0]?.text);
-    expect(frame.querySelectorAll('span[style*="--role-accent"]').length).toBeGreaterThan(0);
-    expect(frame.querySelectorAll('span[style*="--role-muted"]').length).toBeGreaterThan(0);
-    expect(frame.style.getPropertyValue('--cols')).toBe('24');
-    expect(frame.style.getPropertyValue('--rows')).toBe('14');
+    expect(drawn(dialog)).toBe('');
     expect(dialog.querySelector('.sr-only')?.textContent).toBe(RICK_ALT);
-    expect(status(dialog)).toBe('Esc, ^C or q to leave; m to mute');
+    expect(status(dialog)).toBe('Ctrl+C, q or Esc to exit');
     expect(status(dialog)).toMatch(/^[\x20-\x7e]*$/);
-    expect(dialog.dataset.motion).toBe('running');
-    expect(dialog.dataset.frames).toBe('drawn');
+    expect(dialog.dataset.motion).toBe('still');
+    expect(dialog.dataset.frames).toBe('none');
     expect(dialog.querySelector('.toolbar')).toBeNull();
     // The track plays; the synth is not even made.
     expect(dialog.dataset.sound).toBe('on');
@@ -244,11 +243,11 @@ describe('the Rick app', () => {
     expect(dialog.dataset).toMatchObject({ sound: 'on', source: 'synth' });
   });
 
-  it('asks for a key or a tap when the browser holds the track back, and starts it at the first one', async () => {
+  it('starts the track at the first key when the browser holds it back, saying nothing of it', async () => {
     frames();
     const { dialog, sound, fake, close } = await show({ audio: 'blocked' });
     expect(dialog.dataset).toMatchObject({ sound: 'waiting', source: 'track' });
-    expect(status(dialog)).toBe('tap or press any key for sound; Esc, ^C or q to leave');
+    expect(status(dialog)).toBe('Ctrl+C, q or Esc to exit');
     expect(fake.synth.play).not.toHaveBeenCalled();
     // The browser is satisfied by the next gesture.
     sound.setMode('plays');
@@ -256,7 +255,7 @@ describe('the Rick app', () => {
     await settle();
     expect(sound.play).toHaveBeenCalledTimes(2);
     expect(dialog.dataset.sound).toBe('on');
-    expect(status(dialog)).toBe('Esc, ^C or q to leave; m to mute');
+    expect(status(dialog)).toBe('Ctrl+C, q or Esc to exit');
     expect(close).not.toHaveBeenCalled();
   });
 
@@ -292,23 +291,26 @@ describe('the Rick app', () => {
     expect(fake.synth.play).toHaveBeenCalledTimes(1);
     expect(fake.synth.mute).toHaveBeenCalledTimes(1);
     expect(dialog.dataset).toMatchObject({ sound: 'muted', source: 'synth' });
-    expect(status(dialog)).toBe('Esc, ^C or q to leave; m to unmute');
+    expect(status(dialog)).toBe('Ctrl+C, q or Esc to exit');
   });
 
-  it('steps through the drawn frames at the song\'s pace on animation frames, and rests while the page is hidden', async () => {
+  it("steps through the file's frames at its pace on animation frames, and rests while the page is hidden", async () => {
     const raf = frames();
-    const { dialog } = await show();
+    // The browser holds the sound back, so the frames start at once from the first.
+    const { dialog } = await show({ file: FILE, audio: 'blocked' });
     raf.frame(0);
     await tick();
     const first = drawn(dialog);
-    const stepMs = 1000 / RICK_FPS;
-    raf.frame(stepMs * 0.5);
+    expect(first).toBe('abc\ndef');
+    // Two frames a second, stepped a quarter of a second at a time (a step never advances more).
+    raf.frame(250);
     await tick();
     expect(drawn(dialog)).toBe(first);
-    raf.frame(stepMs * 1.1);
+    raf.frame(500);
     await tick();
-    expect(drawn(dialog)).toBe(rickFrames()[1]?.text);
-    for (let i = 2; i <= rickFrames().length; i += 1) raf.frame(stepMs * (i + 0.1));
+    expect(drawn(dialog)).toBe('ghi\njkl');
+    raf.frame(750);
+    raf.frame(1000);
     await tick();
     // Round the loop, back to the first frame.
     expect(drawn(dialog)).toBe(first);
@@ -331,7 +333,7 @@ describe('the Rick app', () => {
   ] as const) {
     it(`closes at ${name}, stopping the track with a short fade, and only once`, async () => {
       const raf = frames();
-      const { close, sound, dialog } = await show();
+      const { close, sound, dialog } = await show({ file: FILE });
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
       await fireEvent.keyDown(window, { key: 'Shift' });
       await fireEvent.keyDown(window, { key: 'Escape', repeat: true });
@@ -364,46 +366,44 @@ describe('the Rick app', () => {
     expect(close).not.toHaveBeenCalled();
   });
 
-  it('mutes and unmutes the track with m, saying so in the status line', async () => {
+  it('mutes and unmutes the track with m, saying nothing of it', async () => {
     frames();
     const { dialog, sound } = await show();
     await fireEvent.keyDown(window, { key: 'm' });
     expect(sound.element?.muted).toBe(true);
     expect(dialog.dataset.sound).toBe('muted');
-    expect(status(dialog)).toBe('Esc, ^C or q to leave; m to unmute');
+    expect(status(dialog)).toBe('Ctrl+C, q or Esc to exit');
     await fireEvent.keyDown(window, { key: 'M' });
     expect(sound.element?.muted).toBe(false);
     expect(dialog.dataset.sound).toBe('on');
-    expect(status(dialog)).toBe('Esc, ^C or q to leave; m to mute');
+    expect(status(dialog)).toBe('Ctrl+C, q or Esc to exit');
   });
 
-  it('on a touch screen has a Close and a Mute button of 44 px, and no key hint', async () => {
+  it('on a touch screen has a Close button of 44 px, no Mute button and no key hint', async () => {
     frames();
-    const { dialog, close, sound } = await show({ touch: true });
+    const { dialog, close } = await show({ touch: true });
     expect(status(dialog)).toBe('');
-    const mute = screen.getByRole('button', { name: 'Mute' });
-    expect(mute.classList.contains('tool')).toBe(true);
-    await fireEvent.click(mute);
-    expect(sound.element?.muted).toBe(true);
-    expect(screen.getByRole('button', { name: 'Unmute' })).toBeInTheDocument();
-    await fireEvent.click(screen.getByRole('button', { name: 'Unmute' }));
-    expect(sound.element?.muted).toBe(false);
-    await fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('button', { name: /mute/i })).toBeNull();
+    const button = screen.getByRole('button', { name: 'Close' });
+    expect(button.classList.contains('tool')).toBe(true);
+    expect(dialog.querySelectorAll('button')).toHaveLength(1);
+    await fireEvent.click(button);
     expect(close).toHaveBeenCalledWith(RICK_CLOSED);
   });
 
-  it('on a touch screen asks for a tap while the browser waits, and says nothing else', async () => {
+  it('on a touch screen says nothing while the browser waits for a tap', async () => {
     frames();
     const { dialog } = await show({ touch: true, audio: 'blocked' });
-    expect(status(dialog)).toBe('tap or press any key for sound');
+    expect(dialog.dataset.sound).toBe('waiting');
+    expect(status(dialog)).toBe('');
   });
 
   it('stands still under reduced motion while the track plays, and leaves the same way', async () => {
     reducedMotion();
     const raf = frames();
-    const { dialog, close, sound } = await show();
+    const { dialog, close, sound } = await show({ file: FILE });
     expect(dialog.dataset.motion).toBe('still');
-    expect(drawn(dialog)).toBe(rickFrames()[0]?.text);
+    expect(drawn(dialog)).toBe('abc\ndef');
     expect(raf.request).not.toHaveBeenCalled();
     expect(sound.play).toHaveBeenCalledTimes(1);
     expect(dialog.dataset.sound).toBe('on');
@@ -415,14 +415,13 @@ describe('the Rick app', () => {
     expect(close).toHaveBeenCalledWith(RICK_CLOSED);
   });
 
-  it('says nothing about muting where nothing can play, and disables the Mute button', async () => {
+  it('says only how to leave where nothing can play', async () => {
     frames();
     const { dialog } = await show({ touch: true, audio: 'none', starts: false, synthAvailable: false });
     expect(dialog.dataset).toMatchObject({ sound: 'off', source: 'synth' });
     expect(status(dialog)).toBe('');
-    expect((screen.getByRole('button', { name: 'Mute' }) as HTMLButtonElement).disabled).toBe(true);
     const keys = await show({ audio: 'none', starts: false, synthAvailable: false });
-    expect(status(keys.dialog)).toBe('Esc, ^C or q to leave');
+    expect(status(keys.dialog)).toBe('Ctrl+C, q or Esc to exit');
   });
 
   describe("the owner's frames", () => {
@@ -430,7 +429,8 @@ describe('the Rick app', () => {
       const raf = frames();
       // The track has been playing for a second and a half when the file arrives.
       const { dialog, deliver } = await show({ file: 'later', onElement: (element) => (element.currentTime = 1.5) });
-      expect(dialog.dataset).toMatchObject({ sound: 'on', frames: 'drawn' });
+      expect(dialog.dataset).toMatchObject({ sound: 'on', frames: 'none', motion: 'still' });
+      expect(drawn(dialog)).toBe('');
       deliver(FILE);
       await settle();
       expect(dialog.dataset.frames).toBe('file');
@@ -466,30 +466,35 @@ describe('the Rick app', () => {
       expect(drawn(dialog)).toBe('abc\ndef');
     });
 
-    it('stay drawn when the file is missing or malformed, or the fetch fails', async () => {
-      frames();
+    it('leave the stage empty when the file is missing or malformed, or the fetch fails', async () => {
+      const raf = frames();
       const missing = await show({ file: null });
-      expect(missing.dialog.dataset.frames).toBe('drawn');
-      expect(drawn(missing.dialog)).toBe(rickFrames()[0]?.text);
+      expect(missing.dialog.dataset).toMatchObject({ frames: 'none', motion: 'still' });
+      expect(drawn(missing.dialog)).toBe('');
       expect(missing.fetchFrames).toHaveBeenCalledTimes(1);
+      expect(raf.request).not.toHaveBeenCalled();
       const failed = await show({ file: 'rejects' });
-      expect(failed.dialog.dataset.frames).toBe('drawn');
+      expect(failed.dialog.dataset.frames).toBe('none');
+      expect(drawn(failed.dialog)).toBe('');
     });
 
     it('are not asked for when the view names no file', async () => {
       frames();
       const { fetchFrames, dialog } = await show({ view: { framesFile: '' } });
       expect(fetchFrames).not.toHaveBeenCalled();
-      expect(dialog.dataset.frames).toBe('drawn');
+      expect(dialog.dataset.frames).toBe('none');
     });
 
-    it('stand still under reduced motion too', async () => {
+    it('stand still under reduced motion too, on the most detailed frame, not a black first one', async () => {
       reducedMotion();
       const raf = frames();
       const { dialog } = await show({ file: FILE });
       expect(dialog.dataset).toMatchObject({ frames: 'file', motion: 'still' });
       expect(drawn(dialog)).toBe('abc\ndef');
       expect(raf.request).not.toHaveBeenCalled();
+      const black = parseFramesFile('vesen-frames fps=2 cols=3 rows=2\n   \n   \n===\nab.\n.cd\n===\naaa\naaa\n') as FramesFile;
+      const fades = await show({ file: black });
+      expect(drawn(fades.dialog)).toBe('ab.\n.cd');
     });
   });
 

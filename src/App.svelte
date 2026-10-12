@@ -66,8 +66,11 @@
     );
   }
   // Under the prompt: every chip but Stop (the status line stops a command), unless the dock
-  // draws them.
-  const inlineChips = $derived(Dock === null ? prompt.chipList.chips.filter((chip) => chip.action.kind !== 'interrupt') : []);
+  // draws them. On a keyboard the password prompt has no Cancel chip either: ^C and Esc cancel it,
+  // and nothing but `Password: ` shows, as on a Unix terminal.
+  const inlineChips = $derived(
+    Dock === null ? prompt.chipList.chips.filter((chip) => chip.action.kind !== 'interrupt' && (prompt.touch || chip.action.kind !== 'cancel')) : [],
+  );
 
   // Tab's list and the chips under the prompt load in their own chunk just after the first
   // paint, as the status line does: nothing completes before the kernel is here.

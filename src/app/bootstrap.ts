@@ -182,8 +182,12 @@ export function bootstrap({ window: win, build, banner }: BootOptions): Booted |
       // command's code comes with its first run instead (app.prefetch).
       idle(win, () => {
         void app.prefetch().then((fetched) => {
+          if (!fetched) return;
           // The weather card too, so the first card draws at once rather than after its plain text.
-          if (fetched) void import('../ui/components/registry').then(({ loadComponent }) => loadComponent('weather-card')).catch(() => {});
+          void import('../ui/components/registry').then(({ loadComponent }) => loadComponent('weather-card')).catch(() => {});
+          // And sudo's show: its track loaded into an element kept for it, its frames into the
+          // cache, so a first sudo starts at once (services/warm-show.ts).
+          void import('../services/warm-show').then(({ warmShow }) => warmShow(win)).catch(() => {});
         });
       });
       return app.shell;

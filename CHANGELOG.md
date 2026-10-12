@@ -4,6 +4,18 @@ All notable changes to vesen are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Changed
+
+- `sudo`'s show plays the owner's video, traced to ASCII: 3,189 frames of 120 columns by 45 rows in `public/audio/incident-report.frames`, made by the new `scripts/ascii-video.py` straight from the video (OpenCV and numpy, no PNGs between, tones stretched per frame and eased so cuts land and steady shots do not flicker). Fifteen frames a second of the video, written at the rate that makes one loop the track's 194.56 s (`--fit`), so the picture runs a little faster and loops with the music; while it plays, the frames are set to where the track is every couple of seconds, so the two never part. The drawn dancer is gone. The screen shows the picture and one line, "Ctrl+C, q or Esc to exit" (a Close button on a phone), and nothing else; m still mutes. Under reduced motion the most detailed frame stands still, not the black first one. The frame scales to the window, down to a 4 px font so the whole picture fits a phone. The frames file's cap is 32 MB, and `/audio/**` is cached a day.
+- The show's files are warmed once the page is idle after boot (`src/services/warm-show.ts`, not on Data Saver or mobile data): the track into an audio element kept out of the page and never played until `sudo`, the frames into the browser's cache. A first `sudo` then starts its music and its picture at once instead of after their downloads. `sudo --help` still fetches nothing.
+- `sudo` asks `Password:` and nothing more, as a Unix terminal does: no dim line above it and, on a keyboard, no Cancel chip under it (^C and Esc cancel; a phone's dock keeps its Cancel chip). Each key shows as `*`, as sudo's pwfeedback shows it, and the asterisks stay on the line once it is answered. `read -s` stays silent.
+- `help` shows eight commands of each category, the everyday ones, with `...` under a category that has more. `help files` (or any category: vesen, text, shell, system, network, fun, editor) lists all of its commands, and `-v` says what each does: `help -v files`, or `help -v` for every category, as `help --all` does.
+- Every full-screen app (`sudo`'s show, `sl`, `cmatrix`, the pager of `man` and `less`, `nano`) opens inside the terminal's frame: the same gutter and green border, the cathode overlay, and the text glow of the phosphor and vintage modes. The QR presenter alone stays a plain white sheet, to be scanned.
+- The weather card's pictograms are wttr.in's again, as the site drew them before 2.0: the icon table of wego 2.1 (the program wttr.in renders with; ISC licence), row for row, each run in the role of the colour wego gives it. Open-Meteo's codes map to wego's icons as wttr.in groups the like conditions, and the sun shines at night as it does there. The okina of the rain drops joins the terminal font; the figure dash, the Greek psili and the lightning come from a fallback font and are pinned to one cell each, so the grid holds. `weather --legend` lists wego's names.
+- The weather card's `°F`, `7 days` and `my location` chips are words in brackets in the text, `[°F] [7 days] [my location]`, underlined under the pointer, not boxes.
+- `fastfetch`'s OS logos are vesen 1.0's again: the apple, the bugdroid, the four panes and Tux, as they were.
+- Colour swatches are blocks again (`██`), as before 2.0's ASCII pass: fastfetch's palette and `theme ls`.
+
 ## [2.0.0] - 2026-10-08
 
 A rewrite of the whole app, built from the audit and plan in [docs/plan](docs/plan). [docs/plan/STATUS.md](docs/plan/STATUS.md) records what was built in each phase and where it differs from the plan; [ADR 0001](docs/adr/0001-architecture.md) records the shared contracts.

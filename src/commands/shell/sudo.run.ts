@@ -1,20 +1,18 @@
 // The body of sudo; its spec, in sudo.ts, loads this the first time sudo runs, so the kernel's
 // chunk carries only the spec. The password read here is dropped: never compared, kept, shown or
-// sent anywhere. After it, on a terminal, comes the show (the Rick app: a dancer drawn for vesen
-// to the owner's own track, commands/lib/rick.ts; the app's chunk comes with its first showing),
-// and then what sudo says to a user who is not in the sudoers file. The command never runs. In a
-// pipe or a script there is no show, only the message. Nothing a visitor sees before the answer
-// gives the show away: the long help below reads like sudo's own.
+// sent anywhere. The prompt is `Password: ` and nothing else, as a Unix terminal asks, each key
+// shown as an asterisk. After it, on a terminal, comes the show (the Rick app: the owner's video
+// traced to text, to their track, commands/lib/rick.ts; the app's chunk comes with its first
+// showing), and then what sudo says to a user who is not in the sudoers file. The command never
+// runs. In a pipe or a script there is no show, only the message. Nothing a visitor sees before
+// the answer gives the show away: the long help below reads like sudo's own.
 
 import { out } from '../../output/model';
 import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
 import { rickView } from '../lib/rick';
 
-/** The dim line above the password prompt on a keyboard: how to leave it, as the status line says it. */
-export const SUDO_HINT = 'Ctrl+C or Esc to cancel';
-
-/** The same on a touch screen, where the dock offers a Cancel chip, and a keyboard, if there is one, Esc. */
-export const SUDO_TOUCH_HINT = 'Tap Cancel or press Esc to cancel';
+/** The password prompt: sudo's word alone, as a Unix terminal prints it. */
+export const SUDO_PROMPT = 'Password: ';
 
 /** What --help, help and man say about sudo, besides its spec (sudo.ts). */
 export const doc: CommandDoc = {
@@ -35,8 +33,9 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   if (ctx.args.length === 0 && !shell) return ctx.usage('a command is required');
   if (!ctx.tty.interactive) return ctx.fail('a terminal is required to read the password');
 
-  const hint = ctx.tty.touch ? SUDO_TOUCH_HINT : SUDO_HINT;
-  const password = await ctx.tty.readLine({ prompt: `[sudo] password for ${ctx.user.name}: `, secret: true, hint });
+  // No hint above it: Esc and ^C cancel, as they cancel any read, and on a touch screen the dock
+  // offers its Cancel chip.
+  const password = await ctx.tty.readLine({ prompt: SUDO_PROMPT, secret: true, feedback: true });
   if (password === null) {
     if (ctx.signal.aborted) throw ctx.signal.reason;
     return ctx.fail('a password is required');

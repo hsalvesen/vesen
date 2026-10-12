@@ -9,6 +9,24 @@ import type { CatalogueLoader, Category, CommandSpec, Registry } from './types';
 /** The order help lists the categories in: the portfolio first. */
 export const CATEGORY_ORDER: readonly Category[] = ['portfolio', 'files', 'text', 'shell', 'system', 'network', 'fun', 'editor'];
 
+/** The word `help` takes for each category: its title in lower case, so vesen's own (the portfolio) is `vesen`. */
+export const CATEGORY_WORDS: Readonly<Record<Category, string>> = {
+  portfolio: 'vesen',
+  files: 'files',
+  text: 'text',
+  shell: 'shell',
+  system: 'system',
+  network: 'network',
+  fun: 'fun',
+  editor: 'editor',
+};
+
+/** The category a word names, in any case (`portfolio` too), or undefined. */
+export function categoryNamed(word: string): Category | undefined {
+  const lower = word.toLowerCase();
+  return CATEGORY_ORDER.find((category) => category === lower || CATEGORY_WORDS[category] === lower);
+}
+
 export const MAX_SUMMARY = 50;
 
 const EDITOR = "vesen's editor is nano.";

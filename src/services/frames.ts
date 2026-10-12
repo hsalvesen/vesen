@@ -1,7 +1,8 @@
 // Fetches the owner's frames file for sudo's show (lib/frames.ts has the format) from this
-// origin, when the Rick app (ui/apps/Rick.svelte) opens and never before: not at boot, and not on
-// `sudo --help`. Anything but a 200 with a well-formed file under the size cap gives null, and
-// the app plays the drawn dancer; no error ever leaves here.
+// origin when the Rick app (ui/apps/Rick.svelte) opens; the boot warmed the browser's cache for
+// it at idle (services/warm-show.ts), so this is usually answered from there, and nothing is
+// fetched on `sudo --help`. Anything but a 200 with a well-formed file under the size cap gives
+// null, and the show's stage stays empty; no error ever leaves here.
 
 import { FRAMES_MAX_CHARS, parseFramesFile, type FramesFile } from '../lib/frames';
 

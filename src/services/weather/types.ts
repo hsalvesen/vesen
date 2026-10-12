@@ -151,11 +151,14 @@ export class WeatherError extends Error {
 // ── Icons and art ──────────────────────────────────────────────────────────────────────────
 
 export type IconKey =
-  | 'clear' | 'partly' | 'cloudy' | 'fog' | 'drizzle' | 'rain' | 'heavyRain'
-  | 'sleet' | 'snow' | 'heavySnow' | 'thunder' | 'unknown';
+  | 'sunny' | 'partlyCloudy' | 'cloudy' | 'veryCloudy' | 'fog'
+  | 'lightRain' | 'heavyRain' | 'lightShowers' | 'heavyShowers'
+  | 'lightSleet' | 'lightSleetShowers'
+  | 'lightSnow' | 'heavySnow' | 'lightSnowShowers' | 'heavySnowShowers'
+  | 'thunderyShowers' | 'thunderyHeavyRain' | 'thunderySnowShowers' | 'unknown';
 
-/** Art is drawn per variant: the clear and partly icons have night versions. */
-export type ArtKey = IconKey | 'clearNight' | 'partlyNight';
+/** One drawing per icon: wttr.in's set (wmo.ts), which has no night variants. */
+export type ArtKey = IconKey;
 
 export interface WmoInfo {
   /** The full description: 'Thunderstorm with heavy hail'. */

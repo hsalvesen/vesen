@@ -27,7 +27,7 @@ import { createFmt } from './fmt';
 import { createGlobber, type GlobFs } from './glob';
 import { dataCostQuestion } from './data-cost';
 import { describeIncomplete, parse } from './parser';
-import type { ReadOptions } from './reader';
+import { FEEDBACK_MASK, type ReadOptions } from './reader';
 import { catalogueFailure, settleCommands } from './registry';
 import { loginFiles, type Scope, type Session } from './session';
 import {
@@ -998,11 +998,12 @@ export class Executor {
 
   /**
    * Reads a line at the prompt for a running command, then echoes it into the job's output as a
-   * terminal does: the hint, the prompt and what was typed, or for a secret the prompt alone.
+   * terminal does: the hint, the prompt and what was typed; for a secret the prompt alone, or with
+   * feedback the prompt and an asterisk for each character typed (sudo's pwfeedback).
    */
   private async readLine(
     job: Job,
-    options: { prompt: string; secret?: boolean; hint?: string; opens?: string; signal?: AbortSignal },
+    options: { prompt: string; secret?: boolean; feedback?: boolean; hint?: string; opens?: string; signal?: AbortSignal },
   ): Promise<string | null> {
     const read = this.deps.terminal.readLine;
     if (read === undefined || job.signal.aborted || job.sink.ended || options.signal?.aborted === true) return null;
@@ -1010,6 +1011,7 @@ export class Executor {
     const answer = await read({
       prompt: options.prompt,
       ...(options.secret === true ? { secret: true } : {}),
+      ...(options.secret === true && options.feedback === true ? { feedback: true } : {}),
       ...(options.hint === undefined ? {} : { hint: options.hint }),
       signal: options.signal === undefined ? job.signal : combineSignals(job.signal, options.signal),
       ...(url === undefined
@@ -1024,7 +1026,7 @@ export class Executor {
     });
     if (job.signal.aborted || job.sink.ended) return null;
     if (options.hint !== undefined) await job.sink.line('stdout', [span(options.hint, MUTED)]);
-    const echoed = options.secret === true || answer === null ? '' : answer;
+    const echoed = answer === null ? '' : options.secret !== true ? answer : options.feedback === true ? FEEDBACK_MASK.repeat(answer.length) : '';
     await job.sink.line('stdout', [span(options.prompt + echoed)]);
     return answer;
   }

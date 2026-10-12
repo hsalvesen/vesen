@@ -470,7 +470,7 @@ export interface Tty {
    * inside the key press that answers, as `opens()` is inside the Enter that runs a line, for
    * tty.open to report. `signal` ends the read early with null, as ^C does: `read -t`.
    */
-  readLine(options: { prompt: string; secret?: boolean; hint?: string; opens?: string; signal?: AbortSignal }): Promise<string | null>;
+  readLine(options: { prompt: string; secret?: boolean; feedback?: boolean; hint?: string; opens?: string; signal?: AbortSignal }): Promise<string | null>;
   /** Asks yes or no at the prompt; null on ^C. */
   confirm(message: string, options?: { defaultAnswer?: boolean }): Promise<boolean | null>;
   /**

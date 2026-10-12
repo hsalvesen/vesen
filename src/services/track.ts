@@ -1,9 +1,10 @@
 // A recorded track for sudo's show (public/audio/incident-report.mp3), played through an
 // HTMLAudioElement behind the Chiptune interface, so the Rick app (ui/apps/Rick.svelte) drives the
-// track and the synth alike and falls back from one to the other. The app makes the element when
-// the show opens and never before: the file must not be fetched at boot or on `sudo --help`. The
-// track loops at a modest volume; m mutes it; stop() fades it out and releases the element, so
-// nothing plays on after the show; position() says how far in it is, so frames can follow it.
+// track and the synth alike and falls back from one to the other. The app takes the element the
+// boot warmed at idle (services/warm-show.ts: loaded, never played), or makes one when the show
+// opens; nothing is fetched on `sudo --help`. The track loops at a modest volume; m mutes it;
+// stop() fades it out and releases the element, so nothing plays on after the show; position()
+// says how far in it is, so frames can follow it.
 //
 // Autoplay: a browser that has seen no gesture of its own rejects play() with NotAllowedError;
 // then play() resolves false and the app asks for a key or a tap, and plays again inside it. Any
@@ -12,6 +13,7 @@
 // the synth.
 
 import type { Chiptune } from './chiptune';
+import { takeWarmedAudio } from './warm-show';
 
 /** The track's volume: modest, under the terminal's own sounds. */
 export const TRACK_VOLUME = 0.6;
@@ -59,7 +61,9 @@ export interface Track extends Chiptune {
 }
 
 /** A fresh audio element, or null where there is no document (and so no sound). */
-export function audioElement(): TrackElement | null {
+export function audioElement(src = ''): TrackElement | null {
+  const warmed = src === '' ? null : takeWarmedAudio(src);
+  if (warmed !== null) return warmed;
   if (typeof document === 'undefined' || typeof document.createElement !== 'function') return null;
   try {
     return document.createElement('audio');
@@ -164,9 +168,10 @@ export function createTrack(src: string, element: TrackElement, options: TrackOp
   element.loop = true;
   element.muted = false;
   setVolume(volume);
-  // Set last: the browser may start the download as soon as it has a source.
+  // Set last: the browser may start the download as soon as it has a source. A warmed element
+  // already has this source, and setting it again would throw its download away.
   element.preload = 'auto';
-  element.src = src;
+  if (element.src !== src && !element.src.endsWith(src)) element.src = src;
 
   return {
     get available() {

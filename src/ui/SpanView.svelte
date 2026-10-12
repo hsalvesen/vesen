@@ -2,8 +2,8 @@
   One span of output, drawn with text interpolation only. A trusted action becomes a button, a
   checked http, https or mailto href becomes a link, and live bindings read the theme and cathode
   stores, so old output stays true after either changes: the marker moves to the current theme or
-  CRT mode, and the name of the current one says so to a screen reader. Swatches are `##` cells
-  drawn in their own colours (hex, checked again here, or palette tokens), for the eye only. A
+  CRT mode, and the name of the current one says so to a screen reader. Swatches are two full
+  blocks (██) each, drawn in their own colours (hex, checked again here, or palette tokens), for the eye only. A
   press on an action never takes focus from the prompt, so a phone's keyboard stays as it was
   (02, section 5), as the dock's chips do.
 -->

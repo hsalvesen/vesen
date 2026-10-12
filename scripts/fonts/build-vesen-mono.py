@@ -53,6 +53,7 @@ RANGES: list[tuple[int, int]] = [
     (0x0020, 0x007E),  # Basic Latin
     (0x00A0, 0x00FF),  # Latin-1 Supplement
     (0x0100, 0x017F),  # Latin Extended-A: ā ē ī ō ū Ā Ē Ī Ō Ū (Ōtautahi, Tāmaki Makaurau)
+    (0x02BB, 0x02BB),  # ʻ okina: the rain drops of wttr.in's weather art (services/weather/wmo.ts)
     (0x1E00, 0x1EFF),  # Latin Extended Additional (in part)
     (0x2000, 0x206F),  # General Punctuation (in part)
     (0x2070, 0x209F),  # Superscripts and Subscripts (in part)
@@ -76,7 +77,8 @@ REQUIRED: list[tuple[int, int]] = [
     (0x00A0, 0x017F),  # Latin-1 and Latin Extended-A
     (0x2013, 0x2015),  # – — ― (dashes)
     (0x2018, 0x201D),  # ‘ ’ ‚ ‛ “ ” (quotes)
-    (0x2022, 0x2022),  # Bullet (snow in the weather art; · U+00B7 above draws its stars)
+    (0x02BB, 0x02BB),  # ʻ okina (the weather art's rain)
+    (0x2022, 0x2022),  # Bullet (the weather art's unknown mark; · U+00B7 above draws its stars)
     (0x2026, 0x2026),  # Ellipsis
     (0x2190, 0x2195),  # ← ↑ → ↓ ↔ ↕
     (0x23CE, 0x23CE),  # Return symbol

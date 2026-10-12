@@ -1,28 +1,31 @@
 <!--
-  The Rick app, for sudo (src/commands/shell/sudo.run.ts): after the password prompt, the dancer
-  from commands/lib/rick.ts dances in theme colours (the coat in the accent, the face in the
-  strong foreground, the floor muted) to the owner's own track, played through an <audio> element
-  made here when the show opens and never before (services/track.ts); where the track cannot load
-  or play, vesen's own 8-bit tune takes over (services/chiptune.ts, through the page's one
-  AudioContext). Frames change on animation frames at their own pace, and rest while the page is
-  hidden. Esc, ^C, q and Back close it, with a short fade; m mutes whichever plays; on a touch
-  screen a row of 44 px buttons does both. Under reduced motion one frame stands still while the
-  sound plays (sound is not motion), with the same way out.
+  The Rick app, for sudo (src/commands/shell/sudo.run.ts): after the password prompt, the owner's
+  video traced to text (commands/lib/rick.ts, RICK_FRAMES: 120 columns by 45 rows) plays in the
+  foreground colour to the owner's own track, through an <audio> element the boot warmed at idle
+  (services/warm-show.ts) or one made here when the show opens (services/track.ts); where the
+  track cannot load or play, vesen's own 8-bit tune takes over (services/chiptune.ts, through the
+  page's one AudioContext). Nothing else is on the screen: the frames, and one line saying how to
+  leave (on a touch screen, a Close button instead). Esc, ^C, q and Back close it, with a short
+  fade; m still mutes whichever plays, unannounced. A browser that holds the sound back until it
+  has seen a gesture of its own gets one from the first key or tap, which starts the sound (and
+  the frames from the top with it); nothing on the screen asks for it.
 
-  The owner may supply frames of their own (commands/lib/rick.ts, RICK_FRAMES): the file is
-  fetched when the show opens (services/frames.ts), and when it is there and well formed its frames
-  take the dancer's place, started together with the track (from where the track is, if it is
-  already playing; at once where no sound plays). Missing or malformed, the drawn dancer plays on.
-
-  A browser may hold the sound back until it has seen a gesture of its own; then the status line
-  asks for a key or a tap, and the first one starts it, and the file's frames with it.
+  The frames are fetched when the show opens (services/frames.ts); until they come, and where the
+  file is missing or malformed, the stage is empty. They start together with the track (from where
+  the track is, if it is already playing; at once where no sound plays) and keep to it: every
+  couple of seconds the frames are set to where the track is, so the two loop as one (the file's
+  rate is fitted to the track's length; scripts/ascii-video.py --fit). Frames change on animation
+  frames at the file's pace, and rest while the page is hidden; under reduced motion one frame
+  stands still while the sound plays (sound is not motion): the most detailed, since the video
+  opens on black. The frame's font shrinks to fit
+  the window, inside the app host's frame, so the picture fits a phone and shows at the terminal's
+  own size on a laptop.
 -->
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { RICK_ALT, RICK_CLOSED, RICK_FPS, RICK_TITLE, FRAME_COLS, FRAME_ROWS, type FrameSpan, type RickFrame, type RickView } from '../../commands/lib/rick';
+  import { RICK_ALT, RICK_CLOSED, RICK_TITLE, type RickView } from '../../commands/lib/rick';
   import type { Song } from '../../lib/chiptune';
-  import type { FramesFile } from '../../lib/frames';
-  import { isRole, type Role } from '../../output/model';
+  import { stillFrameIndex, type AsciiFrame, type FramesFile } from '../../lib/frames';
   import { createChiptune, type Chiptune, type ChiptuneOptions } from '../../services/chiptune';
   import { loadFrames, type FramesLoader } from '../../services/frames';
   import { audioElement, createTrack, type Track, type TrackElement } from '../../services/track';
@@ -38,54 +41,36 @@
   }: AppProps & {
     /** Makes the synth; tests give a fake. */
     synth?: (song: Song, options: ChiptuneOptions) => Chiptune;
-    /** Makes the audio element the track plays through, or null for none; tests give a fake. */
-    audio?: () => TrackElement | null;
+    /** Makes (or takes, when warmed) the audio element the track plays through, or null for none; tests give a fake. */
+    audio?: (src: string) => TrackElement | null;
     /** Fetches the owner's frames file; tests give a fake. */
     fetchFrames?: FramesLoader;
   } = $props();
 
   /** The most one step may advance, so a page that was hidden does not skip ahead. */
   const MAX_STEP_MS = 250;
+  /** How often the file's frames are set to where the track is, and how far off they may be first. */
+  const SYNC_EVERY_MS = 2000;
+  const SYNC_SLACK_MS = 120;
   /** Keys that are not a key press on their own. */
   const MODIFIERS = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'];
-  const BLANK: RickFrame = { text: '', rows: [] };
+  const BLANK: AsciiFrame = { text: '', rows: [] };
 
-  /** The frames on the stage: the drawn dancer, or the owner's file. */
+  /** The owner's frames on the stage, once the file has come. */
   interface Shown {
-    readonly frames: readonly RickFrame[];
+    readonly frames: readonly AsciiFrame[];
     readonly fps: number;
     readonly cols: number;
     readonly rows: number;
-    readonly source: 'drawn' | 'file';
-  }
-
-  function spansOf(value: unknown): readonly FrameSpan[] {
-    if (!Array.isArray(value)) return [];
-    return value.flatMap((span: unknown): FrameSpan[] => {
-      const raw = (typeof span === 'object' && span !== null ? span : {}) as Partial<FrameSpan>;
-      if (typeof raw.text !== 'string') return [];
-      const role: Role = typeof raw.role === 'string' && isRole(raw.role) ? raw.role : 'fg';
-      return [{ text: raw.text, role }];
-    });
-  }
-
-  function framesOf(value: unknown): readonly RickFrame[] {
-    if (!Array.isArray(value)) return [];
-    return value.flatMap((frame: unknown): RickFrame[] => {
-      const raw = (typeof frame === 'object' && frame !== null ? frame : {}) as Partial<RickFrame>;
-      if (typeof raw.text !== 'string' || !Array.isArray(raw.rows)) return [];
-      return [{ text: raw.text, rows: raw.rows.map(spansOf) }];
-    });
+    /** The frame a still stage shows: the most detailed (lib/frames.ts), not the first, which a video opens on black. */
+    readonly still: number;
   }
 
   function viewOf(value: unknown): RickView {
     const raw = (typeof value === 'object' && value !== null ? value : {}) as Partial<RickView>;
-    const frames = framesOf(raw.frames);
     return {
       title: typeof raw.title === 'string' && raw.title !== '' ? raw.title : RICK_TITLE,
       alt: typeof raw.alt === 'string' && raw.alt !== '' ? raw.alt : RICK_ALT,
-      frames: frames.length > 0 ? frames : [BLANK],
-      fps: typeof raw.fps === 'number' && raw.fps > 0 ? raw.fps : RICK_FPS,
       track: typeof raw.track === 'string' ? raw.track : '',
       framesFile: typeof raw.framesFile === 'string' ? raw.framesFile : '',
       song: (typeof raw.song === 'object' && raw.song !== null ? raw.song : { title: '', bpm: 0, stepsPerBeat: 0, duty: {}, envelope: {}, patterns: {} }) as Song,
@@ -98,11 +83,12 @@
   const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const canAnimate = typeof requestAnimationFrame === 'function';
 
-  let shown: Shown = $state.raw({ frames: view.frames, fps: view.fps, cols: FRAME_COLS, rows: FRAME_ROWS, source: 'drawn' });
-  const still = $derived(reduce || !canAnimate || shown.frames.length < 2);
+  /** Null until the file has come: an empty stage. */
+  let shown = $state.raw<Shown | null>(null);
+  const still = $derived(reduce || !canAnimate || (shown !== null && shown.frames.length < 2));
 
   let frame = $state(0);
-  let motion: 'running' | 'paused' | 'still' = $state(reduce || !canAnimate || view.frames.length < 2 ? 'still' : 'running');
+  let motion: 'running' | 'paused' | 'still' = $state('still');
   /** off: nothing plays (no track, no Web Audio); waiting: the browser wants a gesture first; on; muted. */
   let sound: 'off' | 'waiting' | 'on' | 'muted' = $state('off');
   /** What the sound comes from: the owner's track, the synth, or nothing. */
@@ -114,18 +100,16 @@
   let raf = 0;
   let elapsed = 0;
   let last: number | null = null;
+  let synced = 0;
   let done = false;
 
-  const current = $derived(shown.frames[still ? 0 : frame] ?? BLANK);
-  const status = $derived.by(() => {
-    const parts: string[] = [];
-    if (sound === 'waiting') parts.push('tap or press any key for sound');
-    if (!view.touch) {
-      parts.push('Esc, ^C or q to leave');
-      if (sound === 'on' || sound === 'muted') parts.push(`m to ${sound === 'muted' ? 'unmute' : 'mute'}`);
-    }
-    return parts.join('; ');
-  });
+  const current = $derived(shown === null ? BLANK : (shown.frames[still ? shown.still : frame] ?? BLANK));
+  /**
+   * The one line under the frames: how to leave. A touch screen has its Close button instead. A
+   * browser that holds the sound back until a gesture of its own gets one from the first key or
+   * tap (onKey, onTap), and the screen says nothing of it.
+   */
+  const status = $derived(view.touch ? '' : 'Ctrl+C, q or Esc to exit');
 
   function soundNow(): void {
     if (player === null) sound = 'off';
@@ -145,7 +129,7 @@
         return;
       }
       soundNow();
-      if (asked === track && shown.source === 'file') restartFrames(0);
+      if (asked === track && shown !== null) restartFrames(0);
     });
   }
 
@@ -172,7 +156,7 @@
     if (view.track === '') return false;
     let element: TrackElement | null = null;
     try {
-      element = audio();
+      element = audio(view.track);
     } catch {
       element = null;
     }
@@ -206,6 +190,7 @@
   }
 
   function frameAt(ms: number): number {
+    if (shown === null) return 0;
     return Math.floor((ms / 1000) * shown.fps) % shown.frames.length;
   }
 
@@ -213,12 +198,19 @@
     if (done) return;
     if (last !== null) elapsed += Math.min(MAX_STEP_MS, Math.max(0, now - last));
     last = now;
+    // The file's frames follow the track: set to where it is every couple of seconds, so a loop
+    // of the track is a loop of the frames, and a stall in either does not part them.
+    if (shown !== null && track !== null && track.playing && now - synced >= SYNC_EVERY_MS) {
+      synced = now;
+      const at = track.position() * 1000;
+      if (Math.abs(at - elapsed) > SYNC_SLACK_MS) elapsed = at;
+    }
     frame = frameAt(elapsed);
     raf = requestAnimationFrame(step);
   }
 
   function startFrames(): void {
-    if (done || still || raf !== 0) return;
+    if (done || still || raf !== 0 || shown === null) return;
     motion = 'running';
     raf = requestAnimationFrame(step);
   }
@@ -232,7 +224,8 @@
 
   /** The owner's frames take the stage, together with the track. */
   function useFile(file: FramesFile): void {
-    shown = { frames: file.frames, fps: file.fps, cols: file.cols, rows: file.rows, source: 'file' };
+    // The still frame is looked for only where the stage will stand still.
+    shown = { frames: file.frames, fps: file.fps, cols: file.cols, rows: file.rows, still: reduce || !canAnimate ? stillFrameIndex(file.frames) : 0 };
     restartFrames(track !== null && track.playing ? track.position() : 0);
     if (still) {
       stopFrames();
@@ -254,15 +247,15 @@
     finish();
   }
 
-  /** Nothing is drawn while the page is hidden; the dance goes on when it is back, with the track. */
+  /** Nothing is drawn while the page is hidden; the frames go on when it is back, with the track. */
   function onVisibility(): void {
-    if (done || still) return;
+    if (done || still || shown === null) return;
     if (document.visibilityState === 'hidden') {
       stopFrames();
       motion = 'paused';
       return;
     }
-    if (shown.source === 'file' && track !== null && track.playing) restartFrames(track.position());
+    if (track !== null && track.playing) restartFrames(track.position());
     startFrames();
   }
 
@@ -292,15 +285,14 @@
   onMount(() => {
     if (!playTrack()) playSynth();
     document.addEventListener('visibilitychange', onVisibility);
-    if (!still && document.visibilityState !== 'hidden') startFrames();
-    else if (!still) motion = 'paused';
+    // The frames: the stage stays empty until they come, and where they never do.
     if (view.framesFile !== '') {
       fetchFrames(view.framesFile).then(
         (file) => {
           if (!done && file !== null) useFile(file);
         },
         () => {
-          // The loader never throws; the drawn dancer plays anyway.
+          // The loader never throws; the stage stays empty anyway.
         },
       );
     }
@@ -328,20 +320,18 @@
   data-motion={motion}
   data-sound={sound}
   data-source={source}
-  data-frames={shown.source}
+  data-frames={shown === null ? 'none' : 'file'}
   onclick={onTap}
   bind:this={root}
 >
-  <h1 class="title">{view.title}</h1>
   <div class="stage">
-    <pre class="frame" aria-hidden="true" style:--cols={shown.cols} style:--rows={shown.rows}>{#each current.rows as row, r (r)}{#if r > 0}{'\n'}{/if}{#each row as span, s (s)}<span style:color={cssColour(span.role)}>{span.text}</span>{/each}{/each}</pre>
+    <pre class="frame" aria-hidden="true" style:--cols={shown?.cols ?? 1} style:--rows={shown?.rows ?? 1}>{#each current.rows as row, r (r)}{#if r > 0}{'\n'}{/if}{#each row as span, s (s)}<span style:color={cssColour(span.role)}>{span.text}</span>{/each}{/each}</pre>
     <p class="sr-only">{view.alt}</p>
   </div>
   <p class="status" role="status">{status}</p>
   {#if view.touch}
     <div class="toolbar" role="toolbar" aria-label="Show">
       <button type="button" class="tool" onclick={finish}>Close</button>
-      <button type="button" class="tool" onclick={toggleMute} disabled={sound === 'off'}>{sound === 'muted' ? 'Unmute' : 'Mute'}</button>
     </div>
   {/if}
 </div>
@@ -365,14 +355,6 @@
     outline: none;
   }
 
-  .title {
-    margin: 0;
-    color: var(--role-accent, var(--theme-cyan));
-    font: inherit;
-    font-weight: 700;
-    text-align: center;
-  }
-
   .stage {
     display: flex;
     justify-content: center;
@@ -382,15 +364,17 @@
 
   /*
     As large as the screen allows, within reason, for a frame of --cols by --rows cells: a cell is
-    about 0.62 em wide in the terminal's font and the rows are 1.15 em tall, and the title, the
-    status line and the buttons take about 220 px.
+    about 0.62 em wide in the terminal's font and the rows are 1.15 em tall; the app host's frame
+    and this padding take 68 px of the width, and with the status line or the Close button about
+    256 px of the height. The floor of 4 px lets 120 columns fit a phone's width (390 px
+    less all that), where the frame reads as a picture, not as text.
   */
   .frame {
     --cols: 24;
     --rows: 14;
     margin: 0;
     font: inherit;
-    font-size: clamp(5px, min(calc((100vw - 32px) / (var(--cols) * 0.62)), calc((100vh - 220px) / (var(--rows) * 1.15))), 30px);
+    font-size: clamp(4px, min(calc((100vw - 68px) / (var(--cols) * 0.62)), calc((100vh - 256px) / (var(--rows) * 1.15))), 30px);
     line-height: 1.15;
     white-space: pre;
   }
@@ -416,7 +400,7 @@
 
   .toolbar {
     display: grid;
-    grid-template-columns: repeat(2, minmax(44px, 160px));
+    grid-template-columns: minmax(44px, 160px);
     gap: 8px;
     justify-content: center;
     width: 100%;

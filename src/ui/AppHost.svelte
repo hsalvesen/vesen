@@ -2,7 +2,12 @@
   The alternate screen (docs/plan/designs/shell-architecture.md, "AppHost"): a command's
   full-screen app, drawn over the whole terminal, dock included, until it closes. It sits outside
   <main>, whose vintage CRT filter would capture a fixed child, and the shell under it is inert
-  meanwhile, so keys, taps and screen readers reach only the app.
+  meanwhile, so keys, taps and screen readers reach only the app. It keeps the terminal's look: the
+  same gutter, the same green frame (edge to edge under a thin rule on a phone, as the terminal
+  is there), and the cathode overlay (Cathode.svelte, as the screen frame has it; crt.css gives
+  the app's text the same glow), so sudo's show, sl, cmatrix and the pager open as a window of
+  the terminal, not a sheet over it. The QR presenter alone goes without:
+  it is a white sheet to be scanned, and scanlines would get in the way.
 
   Each app has one history entry while it shows (apps/history-entry.ts), so Back (Android's
   button, iOS's edge swipe) closes the app rather than leaving vesen: Back calls the app's own
@@ -14,6 +19,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { AppRequest } from '../shell/index';
+  import Cathode from './Cathode.svelte';
   import { holdHistoryEntry, type HistoryEntry } from './apps/history-entry';
   import { appLoader, type AppExports } from './apps/registry';
 
@@ -92,19 +98,44 @@
       <button type="button" onclick={() => close()}>Back to the terminal</button>
     </div>
   {/await}
+  <Cathode />
 </div>
 
 <style>
+  /* The shell's gutter (styles/shell.css) and the screen frame's border, so the window sits where the terminal does. */
   .app-host {
     position: absolute;
-    inset: 0;
+    inset: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
     z-index: 20;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    border: 2px solid var(--theme-green);
+    border-radius: 6px;
     background: var(--theme-background);
     color: var(--role-fg, var(--theme-foreground));
     outline: none;
+  }
+
+  /* On a phone the terminal runs edge to edge under a thin rule (styles/shell.css): so does the window. */
+  @media (max-width: 639px), (pointer: coarse) and (max-width: 767px), (pointer: coarse) and (max-height: 479px) {
+    .app-host {
+      inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      border-width: 1px 0 0;
+      border-radius: 0;
+    }
+  }
+
+  /* The QR presenter is a sheet to scan: edge to edge, no frame, no overlay. */
+  .app-host:has(:global(.qr-present)) {
+    inset: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .app-host:has(:global(.qr-present)) :global(.crt-overlay) {
+    display: none;
   }
 
   .app-failed {

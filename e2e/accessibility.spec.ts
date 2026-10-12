@@ -106,7 +106,7 @@ test.describe('accessibility', { tag: '@smoke' }, () => {
     // Banner alt is "Vesen logo, version …"; fastfetch's OS art ends in " logo".
     await expect(page.locator('.sr-only', { hasText: /^Vesen logo, version \S+$/ })).toHaveCount(1);
     await expect(page.locator('.sr-only', { hasText: /^(macOS|iOS|Android|Windows|Linux) logo$/ })).toHaveCount(1);
-    // fastfetch's palette is two strips of ## swatches, hidden like the logo.
+    // fastfetch's palette is two strips of block swatches, hidden like the logo.
     await expect(page.locator('[role="log"] .entry').last().locator('.swatches')).toHaveCount(2);
 
     await run(page, 'theme ls');
