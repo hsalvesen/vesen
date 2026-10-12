@@ -73,11 +73,11 @@ test.describe('the help index', { tag: '@smoke' }, () => {
     expect(shape.map((column) => column.title)).toEqual(CATEGORIES);
     for (const column of shape) {
       expect(column.names.length, column.title).toBeGreaterThan(0);
-      expect(column.names, column.title).toEqual([...column.names].sort((a, b) => a.localeCompare(b)));
     }
     for (const column of shape) expect(column.names.length, column.title).toBeLessThanOrEqual(8);
-    expect(shape.find((column) => column.title === 'Files')?.names).toEqual(['cat', 'cd', 'cp', 'ls', 'mkdir', 'mv', 'pwd', 'rm']);
-    expect(shape.find((column) => column.title === 'Editor')?.names).toEqual(['less', 'more', 'nano']);
+    expect(shape.find((column) => column.title === 'Files')?.names).toEqual(['tree', 'ls', 'cat', 'find', 'du', 'df', 'stat', 'file']);
+    expect(shape.find((column) => column.title === 'Editor')?.names).toEqual(['nano', 'less', 'more']);
+    expect(shape.find((column) => column.title === 'System')?.names.slice(0, 2)).toEqual(['fastfetch', 'cal']);
     await expect(output.locator('.lists .list').filter({ hasText: 'Files' }).getByText('...', { exact: true })).toBeVisible();
     await expect(output.getByRole('button', { name: 'help files', exact: true })).toBeVisible();
     expect(await output.getByText(/\+\d+ more/).count()).toBe(0);

@@ -15,7 +15,7 @@ const literal = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, 
 const COLUMNS = CATEGORY_ORDER;
 
 describe('help', () => {
-  it("is a column of eight names for each category, the everyday ones, vesen's own first, with ... where there are more", async () => {
+  it("is a column of eight names for each category, the standout ones first, vesen's own first, with ... where there are more", async () => {
     const s = await session({ cols: 40 });
     const result = await s.run('help');
     expect(result.status).toBe(0);
@@ -25,7 +25,8 @@ describe('help', () => {
       expect(listed, spec.name).not.toContain(spec.summary);
     }
     // One lists block: a column per category, headed by its name, with eight of its commands
-    // under it by name, each a tap that puts it at the prompt, and a muted ... where it has more.
+    // under it, the ones with the most to see first, each a tap that puts it at the prompt, and a
+    // muted ... where it has more.
     const lists = result.blocks.filter((block) => block.type === 'lists');
     expect(lists).toHaveLength(1);
     const columns = lists[0]?.type === 'lists' ? lists[0].columns : [];
@@ -36,7 +37,6 @@ describe('help', () => {
       const items = columns[i]?.items ?? [];
       const names = items.filter((item) => item.action !== undefined).map((item) => item.text);
       expect(names, category).toHaveLength(Math.min(8, all.length));
-      expect(names, category).toEqual([...names].sort((a, b) => a.localeCompare(b)));
       for (const name of names) expect(all, category).toContain(name);
       expect(items.map((item) => item.text).slice(names.length), category).toEqual(all.length > 8 ? ['...'] : []);
       for (const item of items.slice(0, names.length)) {
@@ -44,9 +44,11 @@ describe('help', () => {
         expect(isTrustedAction(item.action), item.text).toBe(true);
       }
     });
-    // The everyday ones: the commands a visitor reaches for first.
-    expect(columns[1]?.items.map((item) => item.text)).toEqual(['cat', 'cd', 'cp', 'ls', 'mkdir', 'mv', 'pwd', 'rm', '...']);
-    expect(columns[0]?.items.map((item) => item.text)).toEqual(['about', 'banner', 'cathode', 'contact', 'qr', 'repo', 'theme', 'whoami']);
+    // The standout ones: the commands with the most to see when run.
+    expect(columns[1]?.items.map((item) => item.text)).toEqual(['tree', 'ls', 'cat', 'find', 'du', 'df', 'stat', 'file', '...']);
+    expect(columns[0]?.items.map((item) => item.text)).toEqual(['theme', 'cathode', 'qr', 'banner', 'whoami', 'about', 'contact', 'repo']);
+    expect(columns[4]?.items.map((item) => item.text).slice(0, 3)).toEqual(['fastfetch', 'cal', 'top']);
+    expect(columns[5]?.items.map((item) => item.text)[0]).toBe('weather');
     expect(listed).not.toMatch(/\+\d+ more/);
     expect(listed).not.toContain('list directory contents');
     // How to see the rest: help with a category, and -v for what each does.
@@ -57,9 +59,9 @@ describe('help', () => {
     // row of them is wider than the screen.
     const screen = renderScreen(lists, 40);
     for (const row of screen) expect(row.length, row).toBeLessThanOrEqual(40);
-    const titles = screen.filter((row) => /^(Vesen|Network)\b/.test(row));
-    expect(titles[0]).toMatch(/^Vesen +Files +Text +Shell +System$/);
-    expect(titles[1]).toMatch(/^Network +Fun +Editor$/);
+    const titles = screen.filter((row) => /^(Vesen|System)\b/.test(row));
+    expect(titles[0]).toMatch(/^Vesen +Files +Text +Shell$/);
+    expect(titles[1]).toMatch(/^System +Network +Fun +Editor$/);
     s.stop();
   });
 
@@ -126,7 +128,7 @@ describe('help', () => {
 
   it('is plain text in a pipe', async () => {
     expect((await runLine('help -a', { tty: false })).stdoutPlain).toMatch(/^ls +list directory contents$/m);
-    expect((await runLine('help', { tty: false })).stdoutPlain).toMatch(/^Files: cat cd cp ls mkdir mv pwd rm \.\.\.$/m);
+    expect((await runLine('help', { tty: false })).stdoutPlain).toMatch(/^Files: tree ls cat find du df stat file \.\.\.$/m);
   });
 
   it("shows a command's panels for help NAME, and says so for a topic it does not know", async () => {

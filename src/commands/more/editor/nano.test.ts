@@ -145,7 +145,7 @@ describe('vi and vim', () => {
   });
 
   it('is left out of help and the first Tab list, but has a man page', async () => {
-    expect((await runLine('help', { tty: false })).stdoutPlain).toMatch(/^Editor: less more nano$/m);
+    expect((await runLine('help', { tty: false })).stdoutPlain).toMatch(/^Editor: nano less more$/m);
     expect((await runLine('man vim', { tty: false })).stdoutPlain).toContain('vi, vim - open nano, since vesen has no vi');
   });
 });

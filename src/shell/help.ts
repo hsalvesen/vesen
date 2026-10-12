@@ -1,6 +1,6 @@
 // Help generated from command specs (docs/plan/02-architecture-and-contracts.md, section 11):
 //
-// - the help index: every category as a column of eight of its names (the everyday ones), with
+// - the help index: every category as a column of eight of its names (the ones with the most to see), with
 //   `...` under a category that has more, vesen's own commands first, side by side as many as fit
 //   (a lists block, which reflows on its own); `help CATEGORY` lists all of a category's names,
 //   and -v (or --all, for every category) adds what each does. Each name is tappable (it inserts
@@ -48,32 +48,31 @@ export const INDEX_PER_CATEGORY = 8;
 export const MORE_MARK = '...';
 
 /**
- * The commands each category's column shows first: the ones a visitor reaches for most. The rest
- * fill the column by name; a name that is not a command here is passed over. The eight shown are
- * listed by name, as everywhere else.
+ * The commands each category's column shows, in this order: the ones with the most to see when
+ * run (a calendar, a forecast, a full-screen app, a picture), then the everyday ones. A category
+ * with fewer than eight here fills up by name; a name that is not a command here is passed over.
  */
 const EVERYDAY: Readonly<Record<Category, readonly string[]>> = {
-  portfolio: ['about', 'banner', 'cathode', 'contact', 'qr', 'repo', 'theme', 'whoami'],
-  files: ['ls', 'cd', 'pwd', 'cat', 'cp', 'mv', 'rm', 'mkdir'],
-  text: ['echo', 'grep', 'head', 'tail', 'sort', 'uniq', 'wc', 'sed'],
-  shell: ['help', 'man', 'history', 'clear', 'alias', 'sudo', 'which', 'exit'],
-  system: ['fastfetch', 'date', 'cal', 'uname', 'uptime', 'top', 'ps', 'privacy'],
-  network: ['weather', 'stock', 'curl', 'ping', 'wget', 'ip', 'dig', 'whois'],
-  fun: ['cmatrix', 'sl', 'cowsay', 'fortune', 'figlet', 'lolcat', 'factor', 'cowthink'],
+  portfolio: ['theme', 'cathode', 'qr', 'banner', 'whoami', 'about', 'contact', 'repo'],
+  files: ['tree', 'ls', 'cat', 'find', 'du', 'df', 'stat', 'file'],
+  text: ['bc', 'diff', 'grep', 'column', 'rev', 'sort', 'sed', 'yes'],
+  shell: ['sudo', 'man', 'history', 'watch', 'help', 'alias', 'sleep', 'clear'],
+  system: ['fastfetch', 'cal', 'top', 'date', 'uptime', 'ps', 'free', 'privacy'],
+  network: ['weather', 'stock', 'speedtest', 'curl', 'ping', 'dig', 'ip', 'whois'],
+  fun: ['cmatrix', 'sl', 'cowsay', 'figlet', 'fortune', 'lolcat', 'cowthink', 'factor'],
   editor: ['nano', 'less', 'more'],
 };
 
-/** The index's share of a category: up to eight of its commands, the everyday ones first, in the registry's order (by name), and whether it has more. */
+/** The index's share of a category: up to eight of its commands, the standout ones first and in EVERYDAY's order, then by name, and whether it has more. */
 export function indexShare(category: Category, specs: readonly CommandSpec[]): { readonly shown: readonly CommandSpec[]; readonly more: boolean } {
-  if (specs.length <= INDEX_PER_CATEGORY) return { shown: specs, more: false };
   const everyday = EVERYDAY[category];
   const rank = (name: string): number => {
     const at = everyday.indexOf(name);
     return at === -1 ? everyday.length : at;
   };
   // A stable sort: commands of the same rank keep the registry's order, by name.
-  const chosen = new Set([...specs].sort((a, b) => rank(a.name) - rank(b.name)).slice(0, INDEX_PER_CATEGORY).map((spec) => spec.name));
-  return { shown: specs.filter((spec) => chosen.has(spec.name)), more: true };
+  const ranked = [...specs].sort((a, b) => rank(a.name) - rank(b.name));
+  return { shown: ranked.slice(0, INDEX_PER_CATEGORY), more: specs.length > INDEX_PER_CATEGORY };
 }
 
 // ── The index ──────────────────────────────────────────────────────────────────────────────
@@ -128,7 +127,7 @@ function moreNote(word: string): Line {
 }
 
 /**
- * The help index: every category as a column of eight of its names (the everyday ones, by name)
+ * The help index: every category as a column of eight of its names (the ones with the most to see first)
  * and `...` where there are more, vesen's own commands (the `portfolio` category, titled Vesen)
  * first, side by side as many as fit and the rest in a band below (one lists block, which reflows
  * on its own: a desktop shows them all at once, a phone three or four a band). The note under it

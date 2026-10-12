@@ -64,8 +64,8 @@ describe('the help index', () => {
         'theme',
         'whoami',
         'Files',
-        'cd',
         'ls',
+        'cd',
         'Text',
         'head',
         '',
@@ -74,26 +74,26 @@ describe('the help index', () => {
         '',
       ].join('\n'),
     );
-    // One lists block, a column per category in the categories' order, the names by name; a
+    // One lists block, a column per category in the categories' order, the standout names first; a
     // hidden command and an empty category are left out.
     expect(blocks.filter((block) => block.type === 'lists')).toHaveLength(1);
     expect(columnsOf(blocks)).toEqual([
       ['Vesen', 'theme', 'whoami'],
-      ['Files', 'cd', 'ls'],
+      ['Files', 'ls', 'cd'],
       ['Text', 'head'],
     ]);
     const lists = blocks.find((block) => block.type === 'lists');
     const files = lists?.type === 'lists' ? lists.columns[1] : undefined;
     expect(files?.title).toMatchObject({ text: 'Files', style: { fg: 'accent', bold: true } });
-    expect(files?.items[1]).toMatchObject({ text: 'ls', action: { kind: 'insert', text: 'ls ' } });
-    expect(isTrustedAction(files?.items[1]?.action)).toBe(true);
+    expect(files?.items[0]).toMatchObject({ text: 'ls', action: { kind: 'insert', text: 'ls ' } });
+    expect(isTrustedAction(files?.items[0]?.action)).toBe(true);
   });
 
   it('is plain text in a pipe: one line of names per category', () => {
     expect(text(helpIndex(registry))).toBe(
       [
         'Vesen: theme whoami',
-        'Files: cd ls',
+        'Files: ls cd',
         'Text: head',
         '',
         'help vesen lists every command in a category; add -v to say what each does.',
@@ -111,9 +111,9 @@ describe('the help index', () => {
     { name: 'grep', category: 'text', summary: 'print lines that match patterns', run: () => 0 },
   ]);
 
-  it('shows eight of a long category, the everyday ones first, by name, then ... and how to see the rest', () => {
-    // grep is everyday; the other seven are the first by name.
-    const eight = ['aardvark', 'cmd00', 'cmd01', 'cmd02', 'cmd03', 'cmd04', 'cmd05', 'grep'];
+  it('shows eight of a long category, the standout ones first, then by name, then ... and how to see the rest', () => {
+    // grep stands out, so it leads; the other seven are the first by name.
+    const eight = ['grep', 'aardvark', 'cmd00', 'cmd01', 'cmd02', 'cmd03', 'cmd04', 'cmd05'];
     expect(INDEX_PER_CATEGORY).toBe(8);
     expect(columnsOf(helpIndex(big, { tty: true }))).toEqual([['Text', ...eight, '...']]);
     const lists = helpIndex(big, { tty: true }).find((block) => block.type === 'lists');
