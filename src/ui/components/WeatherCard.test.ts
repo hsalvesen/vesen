@@ -85,8 +85,8 @@ describe('WeatherCard', () => {
     const view = card();
     const { root } = show(view);
     const rows = Array.from(root.querySelectorAll<HTMLElement>('.wx-compact .wx-line')).filter((row) => row.querySelector('.wx-range'));
-    expect(rows).toHaveLength(3);
-    expect(rows.map((row) => row.querySelectorAll('.wx-now').length)).toEqual([1, 0, 0]);
+    expect(rows).toHaveLength(7);
+    expect(rows.map((row) => row.querySelectorAll('.wx-now').length)).toEqual([1, 0, 0, 0, 0, 0, 0]);
     expect(root.querySelector('.wx-now')?.textContent).toBe('|');
     for (const [i, row] of rows.entries()) {
       const bar = view.compact.find((line) => line.some((s) => s[0] === 'bar') && line[0]?.[1].startsWith(view.days[i]?.label ?? '\0'));

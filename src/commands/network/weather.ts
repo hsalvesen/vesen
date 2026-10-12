@@ -58,7 +58,7 @@ const spec: CommandSpec & RawArgsSpec & RunnerChoice = {
     { short: 'u', long: 'imperial', description: 'imperial units: °F, mph and inches' },
     { short: 'm', long: 'metric', description: 'metric units: °C, km/h and millimetres' },
     { long: 'units', description: 'metric, imperial or uk (°C with mph)', value: { name: 'UNITS', source: { kind: 'enum', values: () => UNITS } } },
-    { short: 'd', long: 'days', description: 'days of forecast, 1 to 7 (3 unless given)', value: { name: 'N', source: { kind: 'int' } } },
+    { short: 'd', long: 'days', description: 'days of forecast, 1 to 7 (7 unless given)', value: { name: 'N', source: { kind: 'int' } } },
     { long: 'here', description: "this device's location (the browser asks first)" },
     { long: 'json', description: 'the forecast as JSON' },
     { long: 'oneline', description: 'the forecast in one line of text' },

@@ -14,7 +14,7 @@ import { ART_WIDTH, artFor, compass16, wmo } from './wmo';
 
 export const COMPACT_COLS = 36;
 export const WIDE_COLS = 72;
-export const DEFAULT_DAYS = 3;
+export const DEFAULT_DAYS = 7;
 export const MAX_DAYS = 7;
 
 /** Bar widths in columns. */

@@ -187,7 +187,8 @@ describe('days', () => {
   it('clamps the day count to 1-7 and to what the forecast has', () => {
     expect(buildView(sydney, gadigal, UNIT_PRESETS.metric, NOW, { days: 0 }).days).toHaveLength(1);
     expect(buildView(sydney, gadigal, UNIT_PRESETS.metric, NOW, { days: 12 }).days).toHaveLength(7);
-    expect(buildView(sydney, gadigal, UNIT_PRESETS.metric, NOW).days).toHaveLength(3);
+    // Seven days unless asked for fewer.
+    expect(buildView(sydney, gadigal, UNIT_PRESETS.metric, NOW).days).toHaveLength(7);
     const short = { ...sydney, daily: sydney.daily.slice(0, 2) };
     expect(buildView(short, gadigal, UNIT_PRESETS.metric, NOW, { days: 7 }).days).toHaveLength(2);
   });

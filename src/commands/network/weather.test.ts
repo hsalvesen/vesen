@@ -229,7 +229,7 @@ describe('arguments', () => {
     expect(parse('-')).toMatchObject({ args: { target: { kind: 'previous' } } });
     expect(parse('-u', '-')).toMatchObject({ args: { units: 'imperial', target: { kind: 'previous' } } });
     expect(parse('--', '--here')).toMatchObject({ args: { target: { kind: 'query', text: '--here' } } });
-    expect(parse()).toMatchObject({ args: { target: { kind: 'none' }, days: 3, units: null } });
+    expect(parse()).toMatchObject({ args: { target: { kind: 'none' }, days: 7, units: null } });
     expect(parse('--here')).toMatchObject({ args: { target: { kind: 'here' } } });
     expect(parse('Springfield,', 'IL')).toMatchObject({ args: { target: { kind: 'query', text: 'Springfield, IL' } } });
   });
@@ -263,7 +263,6 @@ describe('a curated place', () => {
     expect(result.chips.every((chip) => isTrustedAction(chip.action))).toBe(true);
     expect(labelled(result.chips)).toEqual({
       '°F': 'weather -u Gadigal Country',
-      '7 days': 'weather -d 7 Gadigal Country',
       'my location': 'weather --here',
     });
     expect(result.labels).toEqual(['Searching for "Gadigal"...', 'Fetching forecast for Gadigal Country...']);
@@ -307,7 +306,7 @@ describe('a curated place', () => {
     const au = rig({ languages: ['en-AU'] });
     const metric = await au.run('weather -d 7 --units uk Gadigal');
     expect(metric.card?.props.days).toHaveLength(7);
-    expect(labelled(metric.chips)).toEqual({ '°F': 'weather -u -d 7 Gadigal Country', 'my location': 'weather --here --units uk' });
+    expect(labelled(metric.chips)).toEqual({ '°F': 'weather -u Gadigal Country', 'my location': 'weather --here --units uk' });
     au.stop();
   });
 
@@ -323,7 +322,7 @@ describe('a curated place', () => {
       current: { label: 'Clear sky', temp: 24 },
       attribution: ['Weather data by Open-Meteo.com (CC BY 4.0)'],
     });
-    expect(parsed.days).toHaveLength(3);
+    expect(parsed.days).toHaveLength(7);
     expect(JSON.stringify(parsed)).not.toContain('art');
     r.stop();
   });
@@ -422,7 +421,6 @@ describe('location', () => {
     expect(result.card?.props.notes).toContain('~ Sydney, New South Wales, AU (approximate, from your network)');
     expect(labelled(result.chips)).toEqual({
       '°F': 'weather -u',
-      '7 days': 'weather -d 7',
       'use precise location': 'weather --here',
     });
     expect(result.labels).toContain('Locating you (approximate)...');
@@ -469,7 +467,7 @@ describe('location', () => {
     expect(result.card?.props.place).toMatchObject({ name: 'Sydney', source: 'device', lat: -33.87, lon: 151.21 });
     expect(result.card?.props.attribution.osm).toBe('Place search © OpenStreetMap contributors');
     // The chips never carry the device's position.
-    expect(lines(result.chips)).toEqual(['weather -u', 'weather -d 7']);
+    expect(lines(result.chips)).toEqual(['weather -u']);
     expect(r.service.recent()).toEqual([]);
     // Neither the position nor its name is kept in storage.
     const stored = r.kv.get(STORAGE_KEYS.weather.key) ?? '';
