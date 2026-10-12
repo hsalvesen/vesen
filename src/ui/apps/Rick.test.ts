@@ -384,23 +384,34 @@ describe('the Rick app', () => {
     expect(status(dialog)).toBe('Ctrl+C, q or Esc to exit');
   });
 
-  it('on a touch screen has a Close button of 44 px, no Mute button and no key hint', async () => {
+  it('on a touch screen says Tap to exit, has no buttons, and a tap leaves', async () => {
     frames();
     const { dialog, close } = await show({ touch: true });
-    expect(status(dialog)).toBe('');
-    expect(screen.queryByRole('button', { name: /mute/i })).toBeNull();
-    const button = screen.getByRole('button', { name: 'Close' });
-    expect(button.classList.contains('tool')).toBe(true);
-    expect(dialog.querySelectorAll('button')).toHaveLength(1);
-    await fireEvent.click(button);
+    expect(status(dialog)).toBe('Tap to exit');
+    expect(dialog.querySelectorAll('button')).toHaveLength(0);
+    await fireEvent.click(dialog);
     expect(close).toHaveBeenCalledWith(RICK_CLOSED);
   });
 
-  it('on a touch screen says nothing while the browser waits for a tap', async () => {
+  it('on a keyboard a click on the stage does not leave', async () => {
     frames();
-    const { dialog } = await show({ touch: true, audio: 'blocked' });
+    const { dialog, close } = await show();
+    await fireEvent.click(dialog);
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  it('on a touch screen the first tap starts held-back sound, and the next leaves', async () => {
+    frames();
+    const { dialog, sound, close } = await show({ touch: true, audio: 'blocked' });
     expect(dialog.dataset.sound).toBe('waiting');
-    expect(status(dialog)).toBe('');
+    expect(status(dialog)).toBe('Tap to exit');
+    sound.setMode('plays');
+    await fireEvent.click(dialog);
+    await settle();
+    expect(dialog.dataset.sound).toBe('on');
+    expect(close).not.toHaveBeenCalled();
+    await fireEvent.click(dialog);
+    expect(close).toHaveBeenCalledWith(RICK_CLOSED);
   });
 
   it('plays under reduced motion too, as a video does, with the track, and leaves the same way', async () => {
@@ -440,7 +451,7 @@ describe('the Rick app', () => {
     frames();
     const { dialog } = await show({ touch: true, audio: 'none', starts: false, synthAvailable: false });
     expect(dialog.dataset).toMatchObject({ sound: 'off', source: 'synth' });
-    expect(status(dialog)).toBe('');
+    expect(status(dialog)).toBe('Tap to exit');
     const keys = await show({ audio: 'none', starts: false, synthAvailable: false });
     expect(status(keys.dialog)).toBe('Ctrl+C, q or Esc to exit');
   });

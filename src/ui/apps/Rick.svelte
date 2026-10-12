@@ -5,7 +5,7 @@
   (services/warm-show.ts) or one made here when the show opens (services/track.ts); where the
   track cannot load or play, vesen's own 8-bit tune takes over (services/chiptune.ts, through the
   page's one AudioContext). Nothing else is on the screen: the frames, and one line saying how to
-  leave (on a touch screen, a Close button instead). Esc, ^C, q and Back close it, with a short
+  leave (Tap to exit on a touch screen, where a tap leaves). Esc, ^C, q and Back close it, with a short
   fade; m still mutes whichever plays, unannounced. A browser that holds the sound back until it
   has seen a gesture of its own gets one from the first key or tap, which starts the sound (and
   the frames from the top with it); nothing on the screen asks for it.
@@ -116,7 +116,7 @@
    * browser that holds the sound back until a gesture of its own gets one from the first key or
    * tap (onKey, onTap), and the screen says nothing of it.
    */
-  const status = $derived(view.touch ? '' : 'Ctrl+C, q or Esc to exit');
+  const status = $derived(view.touch ? 'Tap to exit' : 'Ctrl+C, q or Esc to exit');
 
   function soundNow(): void {
     if (player === null) sound = 'off';
@@ -287,6 +287,8 @@
   /** A tap on the stage starts the sound where the browser was waiting for one. */
   function onTap(): void {
     if (sound === 'waiting') tryPlay();
+    // On a touch screen a tap leaves (the first one starts the sound, where the browser held it back).
+    else if (view.touch) finish();
   }
 
   onMount(() => {
@@ -336,12 +338,7 @@
     <pre class="frame" aria-hidden="true" style:--cols={shown?.cols ?? 1} style:--rows={shown?.rows ?? 1}>{#each current.rows as row, r (r)}{#if r > 0}{'\n'}{/if}{#each row as span, s (s)}<span style:color={cssColour(span.role)}>{span.text}</span>{/each}{/each}</pre>
     <p class="sr-only">{view.alt}</p>
   </div>
-  <p class="status" class:empty={status === ''} role="status">{status}</p>
-  {#if view.touch}
-    <div class="toolbar" role="toolbar" aria-label="Show">
-      <button type="button" class="tool" onclick={finish}>Close</button>
-    </div>
-  {/if}
+  <p class="status" role="status">{status}</p>
 </div>
 
 <style>
@@ -393,16 +390,10 @@
     text-align: center;
   }
 
-  /* A touch screen has its Close button instead: no empty line takes the picture's room. */
-  .status.empty {
-    display: none;
-  }
-
   /*
     A screen taller than wide (a phone held upright): the picture covers the screen edge to edge,
     as large as it must be in both directions, centred, so what overflows is cut evenly from both
-    sides (the portrait cut is a little wider than most phones), and the Close button, or the
-    status line, sits beneath it. The stage is a size container, so the font follows the stage's
+    sides (the portrait cut is a little wider than most phones), and the status line sits beneath it. The stage is a size container, so the font follows the stage's
     own width and height: a cell is 0.585 em wide (Vesen Mono's advance, 1200 of 2048) and 1.15 em
     tall. Where container units are missing (iOS 15), the viewport stands in for the stage.
   */
@@ -435,9 +426,6 @@
       padding: 8px 16px;
     }
 
-    .toolbar {
-      padding: 12px 16px;
-    }
   }
 
   .sr-only {
@@ -452,39 +440,8 @@
     border: 0;
   }
 
-  .toolbar {
-    display: grid;
-    grid-template-columns: minmax(44px, 160px);
-    gap: 8px;
-    justify-content: center;
-    width: 100%;
-  }
 
-  .tool {
-    min-height: 44px;
-    min-width: 44px;
-    padding: 0 12px;
-    border: 1px solid var(--role-muted);
-    border-radius: 8px;
-    background: var(--role-chip-bg);
-    color: var(--role-chip-fg);
-    font: inherit;
-    cursor: pointer;
-    touch-action: manipulation;
-  }
 
-  .tool:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
 
-  .tool:active:not(:disabled) {
-    background: var(--role-fg, var(--theme-foreground));
-    color: var(--theme-background);
-  }
 
-  .tool:focus-visible {
-    outline: 2px solid var(--role-accent);
-    outline-offset: 2px;
-  }
 </style>

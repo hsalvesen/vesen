@@ -6,7 +6,7 @@ import { isBenignConsoleMessage } from './console';
 // idle after boot, and --help fetches nothing more. After the password the Rick app opens over
 // the terminal, with the owner's frames and their track, and nothing opens anywhere else; the
 // screen shows the frames and one line saying how to leave. Esc, q and ^C end it on a keyboard,
-// the Close button and Back on a phone; the audio element goes with it, and the sudoers line
+// a tap and Back on a phone; the audio element goes with it, and the sudoers line
 // follows in the transcript. Without the frames file the stage is empty. Under reduced motion
 // one frame stands still. No console errors anywhere.
 
@@ -100,6 +100,12 @@ async function coversTheStage(page: Page): Promise<void> {
   expect(Math.abs(picture.top + picture.bottom - stage.top - stage.bottom)).toBeLessThanOrEqual(2);
 }
 
+/** On a phone a tap leaves the show; where the browser held the sound back, the first tap starts it and the next leaves. */
+async function tapToLeave(page: Page): Promise<void> {
+  if ((await show(page).getAttribute('data-sound')) === 'waiting') await show(page).tap();
+  await show(page).tap();
+}
+
 /** The show is gone, with its audio element, the line has ended with the sudoers message, and nothing else opened. */
 async function reported(page: Page, home: string): Promise<void> {
   await expect(show(page)).toBeHidden();
@@ -141,9 +147,9 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
     // Nothing on the screen but the stage and the way out: no title, no mute button.
     await expect(show(page)).not.toContainText('rickrolled');
     if (isPhone()) {
-      await expect(show(page).getByRole('button', { name: 'Close' })).toBeVisible();
-      await expect(show(page).getByRole('button')).toHaveCount(1);
-      await expect(status(page)).not.toContainText('Esc');
+      // No buttons on a phone: a tap leaves, as the one line says.
+      await expect(show(page).getByRole('button')).toHaveCount(0);
+      await expect(status(page)).toHaveText('Tap to exit');
     } else {
       await expect(status(page)).toHaveText('Ctrl+C, q or Esc to exit');
     }
@@ -179,7 +185,7 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
     // The password is not on the page.
     expect(await page.evaluate((secret) => document.documentElement.outerHTML.includes(secret), SECRET)).toBe(false);
 
-    if (isPhone()) await show(page).getByRole('button', { name: 'Close' }).tap();
+    if (isPhone()) await tapToLeave(page);
     else await page.keyboard.press('Escape');
     await reported(page, home);
     if (!isPhone()) await expect(prompt(page)).toBeFocused();
@@ -301,7 +307,7 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
     );
     expect(changed, 'the frames change').toBe(true);
     expect(await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - window.innerWidth))).toBe(0);
-    if (isPhone()) await show(page).getByRole('button', { name: 'Close' }).tap();
+    if (isPhone()) await tapToLeave(page);
     else await page.keyboard.press('Escape');
     await reported(page, home);
     expect(errors).toEqual([]);
@@ -322,7 +328,7 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
       await coversTheStage(page);
       expect(await frame(page).evaluate((element) => [element.style.getPropertyValue('--cols'), element.style.getPropertyValue('--rows')])).toEqual(['72', '56']);
     }
-    if (isPhone()) await show(page).getByRole('button', { name: 'Close' }).tap();
+    if (isPhone()) await tapToLeave(page);
     else await page.keyboard.press('Escape');
     await reported(page, home);
     expect(errors).toEqual([]);
