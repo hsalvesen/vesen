@@ -269,6 +269,8 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
       [out.lines(detailLines(ctx.user.name, rows))],
       STACK_BELOW_COLS,
       logoCh,
+      // On a phone, stacked: the details first, as fastfetch prints them, and the logo under them.
+      true,
     ),
   );
   if (note !== null) await ctx.stdout.line(out.span(note, { fg: 'muted' }));
