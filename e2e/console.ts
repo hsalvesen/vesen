@@ -18,5 +18,8 @@ export function isBenignConsoleMessage(text: string, url = ''): boolean {
   const trimmed = text.trim();
   if (BENIGN.some((pattern) => pattern.test(trimmed))) return true;
   const notFound = /^Failed to load resource: the server responded with a status of 404\b/.test(trimmed);
-  return notFound && OPTIONAL.some((path) => url.includes(path) || trimmed.includes(path));
+  // WebKit's words for a fetch cut off by leaving the page: the show's frames, warmed at idle
+  // (services/warm-show.ts), may still be on their way when a test navigates away.
+  const cutOff = /^Fetch API cannot load \S+ due to access control checks\.?$/.test(trimmed);
+  return (notFound || cutOff) && OPTIONAL.some((path) => url.includes(path) || trimmed.includes(path));
 }
