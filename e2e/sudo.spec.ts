@@ -81,19 +81,21 @@ async function sudoLs(page: Page): Promise<void> {
 }
 
 /**
- * On a phone, upright or on its side, the picture covers the stage, the whole screen inside its
- * frame, as large as it must be, and is cut evenly about its centre: as much from the left as from
- * the right, and from the top as from the bottom.
+ * On a phone, upright or on its side, the picture covers the stage, which is the whole screen,
+ * edge to edge (no gutter, frame or line under it), as large as it must be, and is cut evenly
+ * about its centre: as much from the left as from the right, and from the top as from the bottom.
  */
 async function coversTheStage(page: Page): Promise<void> {
   const box = await show(page).evaluate((dialog) => {
-    const rect = (selector: string) => (dialog.querySelector(selector) as HTMLElement).getBoundingClientRect().toJSON() as DOMRect;
-    return { stage: rect('.stage'), frame: rect('.frame') };
+    const rect = (element: Element | null) => (element as HTMLElement).getBoundingClientRect().toJSON() as DOMRect;
+    return { host: rect(dialog.closest('.app-host')), stage: rect(dialog.querySelector('.stage')), frame: rect(dialog.querySelector('.frame')) };
   });
-  const { stage, frame: picture } = box;
-  // The screen less the frame: 4px of gutter and 2px of border each side, and no line under the picture.
-  expect(stage.width).toBeGreaterThanOrEqual((page.viewportSize()?.width ?? 0) - 14);
-  expect(stage.height).toBeGreaterThanOrEqual((page.viewportSize()?.height ?? 0) - 14);
+  const { host, stage, frame: picture } = box;
+  const screenSize = page.viewportSize() ?? { width: 0, height: 0 };
+  // The whole screen: the window has no gutter and no border here.
+  expect([host.left, host.top, host.width, host.height]).toEqual([0, 0, screenSize.width, screenSize.height]);
+  expect(stage.width).toBeGreaterThanOrEqual(screenSize.width - 1);
+  expect(stage.height).toBeGreaterThanOrEqual(screenSize.height - 1);
   expect(picture.left).toBeLessThanOrEqual(stage.left + 1);
   expect(picture.right).toBeGreaterThanOrEqual(stage.right - 1);
   expect(picture.top).toBeLessThanOrEqual(stage.top + 1);

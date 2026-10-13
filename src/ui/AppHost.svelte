@@ -6,8 +6,9 @@
   same gutter, the same green frame (4px in from the edges on a phone, as the terminal
   is there), and the cathode overlay (Cathode.svelte, as the screen frame has it; crt.css gives
   the app's text the same glow), so sudo's show, sl, cmatrix and the pager open as a window of
-  the terminal, not a sheet over it. The QR presenter alone goes without:
-  it is a white sheet to be scanned, and scanlines would get in the way.
+  the terminal, not a sheet over it. The QR presenter goes without: it is a white sheet to be
+  scanned, and scanlines would get in the way. sudo's show on a touch screen goes edge to edge
+  too, over the safe areas, so the picture covers the whole screen; its cathode overlay stays.
 
   Each app has one history entry while it shows (apps/history-entry.ts), so Back (Android's
   button, iOS's edge swipe) closes the app rather than leaving vesen: Back calls the app's own
@@ -135,6 +136,13 @@
 
   .app-host:has(:global(.qr-present)) :global(.crt-overlay) {
     display: none;
+  }
+
+  /* sudo's show on a touch screen covers the whole screen: no gutter, no frame, no safe areas. */
+  .app-host:has(:global(.rick.touch)) {
+    inset: 0;
+    border: 0;
+    border-radius: 0;
   }
 
   .app-failed {
