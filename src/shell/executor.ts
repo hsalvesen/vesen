@@ -1003,7 +1003,7 @@ export class Executor {
    */
   private async readLine(
     job: Job,
-    options: { prompt: string; secret?: boolean; feedback?: boolean; hint?: string; opens?: string; signal?: AbortSignal },
+    options: { prompt: string; secret?: boolean; feedback?: boolean; hint?: string; opens?: string; unlocks?: string; signal?: AbortSignal },
   ): Promise<string | null> {
     const read = this.deps.terminal.readLine;
     if (read === undefined || job.signal.aborted || job.sink.ended || options.signal?.aborted === true) return null;
@@ -1013,6 +1013,7 @@ export class Executor {
       ...(options.secret === true ? { secret: true } : {}),
       ...(options.secret === true && options.feedback === true ? { feedback: true } : {}),
       ...(options.hint === undefined ? {} : { hint: options.hint }),
+      ...(options.unlocks === undefined ? {} : { unlocks: options.unlocks }),
       signal: options.signal === undefined ? job.signal : combineSignals(job.signal, options.signal),
       ...(url === undefined
         ? {}

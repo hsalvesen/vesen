@@ -65,6 +65,8 @@ export interface AppShellOptions {
   /** The page's recent errors (platform/errors.ts), for debug report. */
   readonly errors?: () => readonly string[];
   readonly bell?: Bell;
+  /** Readies the audio element a track will play through, inside the key press that answers a read naming it. */
+  readonly unlockAudio?: (track: string) => void;
   /** Hashes for sha256sum and the other checksums; the browser's WebCrypto by default. */
   readonly digest?: Digest;
   readonly opener?: Opener;
@@ -167,6 +169,7 @@ export function createAppShell(options: AppShellOptions): AppShell {
     ...(options.opener ? { opener: options.opener } : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.bell ? { bell: options.bell } : {}),
+    ...(options.unlockAudio ? { unlockAudio: options.unlockAudio } : {}),
     ...(options.yieldToHost ? { yieldToHost: options.yieldToHost } : {}),
     // What a new session should not inherit beyond the shell: weather's places, nano's kept buffers.
     onReset: () => {

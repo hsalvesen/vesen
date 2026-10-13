@@ -151,9 +151,15 @@ export function bootstrap({ window: win, build, banner }: BootOptions): Booted |
       // is here.
       void import('../shell/help').catch(() => {});
       void loadRichBlock().catch(() => {});
-      const { createAppShell } = await import('./shell');
+      const [{ createAppShell }, show] = await Promise.all([
+        import('./shell'),
+        // sudo readies its show's track inside the key press that answers the password, where
+        // Safari, iOS and in-app browsers allow sound to start (services/warm-show.ts).
+        import('../services/warm-show').catch(() => null),
+      ]);
       const app = createAppShell({
         ...services,
+        ...(show ? { unlockAudio: (track: string) => show.unlockAudio(track, win.document) } : {}),
         sysHost: win,
         errors: () => errors.recent(),
         // The weather service, its sources and the device's location load when weather first runs.

@@ -210,6 +210,11 @@ export interface ShellDeps {
   readonly opener?: Opener;
   readonly clipboard?: Clipboard;
   readonly bell?: Bell;
+  /**
+   * Readies the audio element a track will play through; called synchronously inside the key
+   * press that answers a read naming it (ReadOptions.unlocks).
+   */
+  readonly unlockAudio?: (track: string) => void;
   readonly digest?: Digest;
   readonly user?: User;
   /** Lets the browser run between large writes to the screen; tests pass a resolved promise. */
@@ -269,7 +274,10 @@ export function createShell(deps: ShellDeps): Shell {
   const terminal = deps.terminal ?? DEFAULT_TERMINAL;
   const session = new Session({ storage: deps.storage ?? null, ...(deps.user ? { user: deps.user } : {}), size: () => terminal.size() });
   // A command reading a line waits on the prompt, unless the terminal answers reads itself.
-  const reader = createLineReader((url) => deps.opener?.preflight(url) ?? 'skipped');
+  const reader = createLineReader(
+    (url) => deps.opener?.preflight(url) ?? 'skipped',
+    (track) => deps.unlockAudio?.(track),
+  );
   const apps = createAppRunner();
   const tty: TerminalInfo = {
     size: () => terminal.size(),

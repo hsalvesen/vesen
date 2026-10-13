@@ -468,9 +468,19 @@ export interface Tty {
    * into the output, as a terminal does, except a secret answer, which is masked as it is typed
    * and never echoed or stored. `hint` is a dim line above the prompt; `opens` is a URL opened
    * inside the key press that answers, as `opens()` is inside the Enter that runs a line, for
-   * tty.open to report. `signal` ends the read early with null, as ^C does: `read -t`.
+   * tty.open to report. `unlocks` is a track the command will play once answered, readied inside
+   * that key press, so a browser that starts sound only from a gesture lets it play then.
+   * `signal` ends the read early with null, as ^C does: `read -t`.
    */
-  readLine(options: { prompt: string; secret?: boolean; feedback?: boolean; hint?: string; opens?: string; signal?: AbortSignal }): Promise<string | null>;
+  readLine(options: {
+    prompt: string;
+    secret?: boolean;
+    feedback?: boolean;
+    hint?: string;
+    opens?: string;
+    unlocks?: string;
+    signal?: AbortSignal;
+  }): Promise<string | null>;
   /** Asks yes or no at the prompt; null on ^C. */
   confirm(message: string, options?: { defaultAnswer?: boolean }): Promise<boolean | null>;
   /**

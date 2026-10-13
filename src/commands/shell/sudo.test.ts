@@ -117,6 +117,38 @@ describe('sudo', () => {
     expect(h.shell.history.list().map((entry) => entry.line)).toEqual(['sudo ls']);
   });
 
+  it("readies the show's track inside the answer, before the show opens, and not where there is no show", async () => {
+    const term = terminal();
+    const unlocked: string[] = [];
+    const unlockAudio = vi.fn((track: string) => {
+      // Inside the key press: the show has not opened yet.
+      expect(term.fullscreen).not.toHaveBeenCalled();
+      unlocked.push(track);
+    });
+    const h = harness({ specs: [sudo], terminal: term.info, unlockAudio });
+    const job = h.shell.start('sudo ls');
+    const request = await asked(h.shell);
+    expect(unlockAudio).not.toHaveBeenCalled();
+    h.shell.answerRead(request.id, SECRET);
+    // At once, in the same call as the answer.
+    expect(unlocked).toEqual([RICK_TRACK]);
+    await job.done;
+    expect(term.shown).toHaveLength(1);
+
+    // ^D, ^C and a file get no show, and readies nothing.
+    const eof = h.shell.start('sudo ls');
+    h.shell.answerRead((await asked(h.shell)).id, null);
+    await eof.done;
+    const cancelled = h.shell.start('sudo ls');
+    await asked(h.shell);
+    h.shell.abort();
+    await cancelled.done;
+    const file = h.shell.start('sudo ls > out.txt');
+    h.shell.answerRead((await asked(h.shell)).id, 'x');
+    await file.done;
+    expect(unlockAudio).toHaveBeenCalledTimes(1);
+  });
+
   it('on a touch screen asks the same, with no hint, and tells the app', async () => {
     const term = terminal({ touch: true });
     const h = harness({ specs: [sudo], terminal: term.info });

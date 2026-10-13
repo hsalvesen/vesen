@@ -9,7 +9,7 @@
 
 import { out } from '../../output/model';
 import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
-import { rickView } from '../lib/rick';
+import { RICK_TRACK, rickView } from '../lib/rick';
 
 /** The password prompt: sudo's word alone, as a Unix terminal prints it. */
 export const SUDO_PROMPT = 'Password: ';
@@ -34,8 +34,10 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   if (!ctx.tty.interactive) return ctx.fail('a terminal is required to read the password');
 
   // No hint above it: Esc and ^C cancel, as they cancel any read, and on a touch screen the dock
-  // offers its Cancel chip.
-  const password = await ctx.tty.readLine({ prompt: SUDO_PROMPT, secret: true, feedback: true });
+  // offers its Cancel chip. Where the show follows, the key press that answers readies its track:
+  // Safari, iOS and in-app browsers start sound only inside one, and the show opens after it.
+  const unlocks = ctx.stdout.isTTY ? { unlocks: RICK_TRACK } : {};
+  const password = await ctx.tty.readLine({ prompt: SUDO_PROMPT, secret: true, feedback: true, ...unlocks });
   if (password === null) {
     if (ctx.signal.aborted) throw ctx.signal.reason;
     return ctx.fail('a password is required');

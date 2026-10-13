@@ -301,6 +301,8 @@ export interface HarnessOptions {
   readonly storage?: KV<'local'> | null;
   readonly opener?: Opener;
   readonly terminal?: TerminalInfo;
+  /** Hears each track a read unlocks, inside the answer (sudo's password). */
+  readonly unlockAudio?: (track: string) => void;
   /** Commands that arrive after the kernel, as the catalogue does; none by default. */
   readonly catalogue?: CatalogueLoader;
 }
@@ -345,6 +347,7 @@ export function harness(options: HarnessOptions = {}) {
     yieldToHost: () => Promise.resolve(),
     ...(options.opener ? { opener: options.opener } : {}),
     ...(options.terminal ? { terminal: options.terminal } : {}),
+    ...(options.unlockAudio ? { unlockAudio: options.unlockAudio } : {}),
   });
   const run = async (line: string): Promise<RunResult> => {
     const result = await shell.run(line);

@@ -56,4 +56,23 @@ describe('the line reader', () => {
     await eof;
     expect(preflight).toHaveBeenCalledTimes(1);
   });
+
+  it('unlocks its track inside the answer, before the command hears it, unless the answer is ^D', async () => {
+    const unlock = vi.fn();
+    const reader = createLineReader(undefined, unlock);
+    const answer = reader.read({ prompt: 'Password: ', secret: true, unlocks: '/audio/track.mp3' });
+    expect(unlock).not.toHaveBeenCalled();
+    reader.answer(reader.request.get()?.id ?? -1, 'x');
+    expect(unlock).toHaveBeenCalledWith('/audio/track.mp3');
+    await answer;
+
+    const eof = reader.read({ prompt: 'Password: ', secret: true, unlocks: '/audio/track.mp3' });
+    reader.answer(reader.request.get()?.id ?? -1, null);
+    await eof;
+    // A read that names no track unlocks nothing.
+    const plain = reader.read({ prompt: 'p ' });
+    reader.answer(reader.request.get()?.id ?? -1, 'y');
+    await plain;
+    expect(unlock).toHaveBeenCalledTimes(1);
+  });
 });

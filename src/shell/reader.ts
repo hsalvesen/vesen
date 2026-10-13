@@ -31,6 +31,12 @@ export interface ReadOptions {
    */
   readonly opens?: string;
   readonly opened?: (result: 'opened' | 'blocked' | 'skipped') => void;
+  /**
+   * A track the command will play once answered, readied inside the key press that answers:
+   * Safari, every browser on iOS and in-app browsers let a page start sound only inside a gesture
+   * (services/warm-show.ts unlockAudio).
+   */
+  readonly unlocks?: string;
 }
 
 /** A read waiting for the prompt, as the UI sees it. */
@@ -50,12 +56,15 @@ export interface LineReader {
   read(options: ReadOptions): Promise<string | null>;
   /**
    * The prompt's answer to read `id`: what was typed, or null for ^D. Call it synchronously
-   * inside the key press, so a URL the read opens may open.
+   * inside the key press, so a URL the read opens may open, and a track it unlocks may play.
    */
   answer(id: number, text: string | null): void;
 }
 
-export function createLineReader(preflight?: (url: string) => 'opened' | 'blocked' | 'skipped'): LineReader {
+export function createLineReader(
+  preflight?: (url: string) => 'opened' | 'blocked' | 'skipped',
+  unlock?: (track: string) => void,
+): LineReader {
   const request = writable<ReadRequest | null>(null);
   let nextId = 0;
   let pending: { readonly id: number; readonly options: ReadOptions; settle(text: string | null): void } | null = null;
@@ -63,8 +72,9 @@ export function createLineReader(preflight?: (url: string) => 'opened' | 'blocke
   const answer = (id: number, text: string | null): void => {
     const current = pending;
     if (current === null || current.id !== id) return;
-    const { opens, opened } = current.options;
+    const { opens, opened, unlocks } = current.options;
     if (opens !== undefined && text !== null) opened?.(preflight?.(opens) ?? 'skipped');
+    if (unlocks !== undefined && text !== null) unlock?.(unlocks);
     current.settle(text);
   };
 
