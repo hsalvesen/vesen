@@ -76,7 +76,7 @@ describe('pressTab', () => {
     expect(run.steps[0]?.tab.phase).toBe('listed');
     expect(run.state.text).toBe('cat "documents/linux.txt');
     const entered = menuKey(run.tab, 'enter');
-    expect(entered.effect.edit?.text).toBe('cat "documents/linux.txt" ');
+    expect(entered.effect.edit?.text).toBe('cat "documents/linux.txt"');
     expect(entered.tab).toEqual(TAB_IDLE);
   });
 
@@ -86,6 +86,19 @@ describe('pressTab', () => {
     const committed = menuKey(run.tab, 'commit');
     expect(committed.effect.edit).toBeUndefined();
     expect(committed.tab).toEqual(TAB_IDLE);
+  });
+
+  it("completes 'the' to theme with no space, then a second Tab lists what follows, and the menu adds it", () => {
+    const run = presses(at('the'), ['tab']);
+    expect(run.state).toEqual({ text: 'theme', cursor: 5 });
+    const listed = presses(run.state, ['tab', 'tab']);
+    expect(listed.steps[0]?.tab.phase).toBe('listed');
+    expect(listed.steps[0]?.effect.edit).toBeUndefined();
+    expect(listed.state.text).toBe('theme ls');
+    // Escape puts back the word as it was, with no space.
+    expect(menuKey(listed.tab, 'escape').effect.edit).toEqual({ text: 'theme', cursor: 5 });
+    // A finished word with nothing after it stays as it is.
+    expect(presses(at('pwd'), ['tab']).state).toEqual({ text: 'pwd', cursor: 3 });
   });
 
   it('accepts a unique match and goes back to idle, so the next Tab descends', () => {
@@ -101,7 +114,7 @@ describe('pressTab', () => {
   it("completes 'cat doc', then 'li', to cat documents/linux.txt (03, acceptance)", () => {
     const first = presses(at('cat doc'), ['tab']);
     const typed = { text: `${first.state.text}li`, cursor: first.state.text.length + 2 };
-    expect(presses(typed, ['tab']).state.text).toBe('cat documents/linux.txt ');
+    expect(presses(typed, ['tab']).state.text).toBe('cat documents/linux.txt');
   });
 
   it('rings the bell and says so when nothing completes', () => {
@@ -121,7 +134,7 @@ describe('pressTab', () => {
     const listed = pressTab(TAB_IDLE, at('theme k'), env);
     // The visitor typed 'a' in between: Tab completes the new line instead of opening the menu.
     const step = pressTab(listed.tab, at('theme ka'), env);
-    expect(step.effect.edit?.text).toBe('theme kangaroo ');
+    expect(step.effect.edit?.text).toBe('theme kangaroo');
   });
 
   it("asks 'Display all N possibilities? (y or n)' over 100, then lists on yes", async () => {

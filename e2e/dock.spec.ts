@@ -97,9 +97,9 @@ for (const size of [
       await focusPrompt(page);
       await prompt(page).fill('the');
       await chip(page, 'Insert: theme').tap();
-      await expect(prompt(page)).toHaveValue('theme ');
+      await expect(prompt(page)).toHaveValue('theme');
       await expect(prompt(page)).toBeFocused();
-      // After `theme `: ls, then every theme, each labelled with the word only and named with the whole line.
+      // After `theme`, with no space: ls, then every theme, each labelled with the word only and named with the whole line.
       await expect(chip(page, 'Run: theme ls')).toBeVisible();
       await expect(dock(page).getByRole('option', { name: /^Run: theme (?!ls$)/ })).toHaveCount(15);
       const wombat = chip(page, 'Run: theme wombat');
@@ -124,7 +124,7 @@ for (const size of [
       // A folder offers what is inside it next.
       await expect(chip(page, 'Insert: linux.txt')).toBeVisible();
       await chip(page, 'Insert: linux.txt').tap();
-      await expect(prompt(page)).toHaveValue('cat documents/linux.txt ');
+      await expect(prompt(page)).toHaveValue('cat documents/linux.txt');
       await chip(page, 'Run: cat documents/linux.txt').tap();
       await expect(lastEntry(page)).toContainText('Linux');
       await expect(prompt(page)).toBeFocused();
@@ -311,7 +311,7 @@ test.describe('the dock on a desktop', { tag: '@smoke' }, () => {
     await expect(prompt(page)).toBeFocused();
     await page.keyboard.type('theme sw');
     await key(page, 'Tab: complete').click();
-    await expect(prompt(page)).toHaveValue('theme swamphen ');
+    await expect(prompt(page)).toHaveValue('theme swamphen');
     await expect(prompt(page)).toBeFocused();
   });
 });

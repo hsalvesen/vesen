@@ -428,7 +428,7 @@ test.describe('focus', { tag: '@smoke' }, () => {
     // Tab alone completes, and keeps focus in the prompt.
     await page.keyboard.type('hel');
     await page.keyboard.press('Tab');
-    await expect(prompt(page)).toHaveValue('help ');
+    await expect(prompt(page)).toHaveValue('help');
     await expect(prompt(page)).toBeFocused();
 
     // Tab leaves within a second of Escape. The clock stands still between the two presses, so a

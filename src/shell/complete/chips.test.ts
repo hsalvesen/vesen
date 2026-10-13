@@ -48,8 +48,8 @@ describe('chipsFor', () => {
     expect(chips.slice(0, 4).map((c) => c.label)).toEqual(['ls', 'cassowary', 'cockatoo', 'crocodile']);
     expect(chips.at(-1)?.label).toBe('wombat');
     expect(more).toBe(0);
-    expect(applyChip(chips[0]!)?.text).toBe('theme ls ');
-    expect(applyChip(chips[1]!)?.text).toBe('theme cassowary ');
+    expect(applyChip(chips[0]!)?.text).toBe('theme ls');
+    expect(applyChip(chips[1]!)?.text).toBe('theme cassowary');
   });
 
   it('shows the whole list after Tab, and marks the menu choice', () => {
@@ -83,7 +83,7 @@ describe('chipsFor', () => {
   it('offers a near command for an unknown word while typing, which only edits the line', () => {
     const { chips } = chipsFor(input('fastfecth'));
     expect(chips.map((c) => [c.label, c.kind])).toEqual([['fastfetch', 'didyoumean']]);
-    expect(applyChip(chips[0]!)).toEqual({ text: 'fastfetch ', cursor: 10 });
+    expect(applyChip(chips[0]!)).toEqual({ text: 'fastfetch', cursor: 9 });
   });
 
   it('shows cancel ^C while a command runs, and Cancel at a secret prompt', () => {
@@ -229,7 +229,7 @@ describe('the dock: building a line by tapping', () => {
     expect(wombat?.action).toMatchObject({ kind: 'apply', run: true });
     expect(wombat?.line).toBe('theme wombat');
     // Exactly what Tab would put on the line.
-    expect(wombat === undefined ? null : applyChip(wombat)).toEqual({ text: 'theme wombat ', cursor: 13 });
+    expect(wombat === undefined ? null : applyChip(wombat)).toEqual({ text: 'theme wombat', cursor: 12 });
   });
 
   it("offers ls and every one of the fifteen themes to run after 'theme ', the line itself first, whatever max says", () => {

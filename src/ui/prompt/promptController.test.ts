@@ -286,7 +286,7 @@ describe('Tab and the chips', () => {
     controller.pressTab();
     expect(input.value).toBe('ca');
     input.dispatchEvent(new CompositionEvent('compositionend'));
-    expect(input.value).toBe('cat ');
+    expect(input.value).toBe('cat');
   });
 });
 
@@ -313,7 +313,7 @@ describe('Tab while the catalogue is on its way', () => {
     expect(input.value).toBe('hu');
     press(input, 'Tab');
     catalogue.arrive([hush]);
-    await vi.waitFor(() => expect(input.value).toBe('hush '));
+    await vi.waitFor(() => expect(input.value).toBe('hush'));
   });
 
   it('lists what there is after the wait, and fills the list in when the rest lands', async () => {
@@ -343,7 +343,7 @@ describe('Tab while the catalogue is on its way', () => {
     expect(controller.announce.trim()).not.toBe('No completions');
     expect(input.value).toBe('hu');
     catalogue.arrive([hush]);
-    await vi.waitFor(() => expect(input.value).toBe('hush '));
+    await vi.waitFor(() => expect(input.value).toBe('hush'));
     expect(controller.announce.trim()).not.toBe('No completions');
   });
 
@@ -356,7 +356,7 @@ describe('Tab while the catalogue is on its way', () => {
     await new Promise((resolve) => setTimeout(resolve, TAB_CATALOGUE_WAIT_MS + 150));
     expect(controller.announce.trim()).not.toBe('No completions');
     catalogue.arrive([hush]);
-    await vi.waitFor(() => expect(input.value).toBe('hush '));
+    await vi.waitFor(() => expect(input.value).toBe('hush'));
   });
 
   it("says 'No completions' once the catalogue fails, or once a line would have stopped waiting for it", async () => {
@@ -413,7 +413,7 @@ describe('Tab while the catalogue is on its way', () => {
     await engineReady(controller);
     await type(input, 'cat a.');
     press(input, 'Tab');
-    expect(input.value).toBe('cat a.txt ');
+    expect(input.value).toBe('cat a.txt');
   });
 });
 
@@ -475,7 +475,7 @@ describe('the dock', () => {
     const wombat = controller.chipList.chips.find((chip) => chip.label === 'wombat');
     if (wombat === undefined) throw new Error('no wombat chip');
     controller.choose(wombat, { insert: true });
-    expect(input.value).toBe('theme wombat ');
+    expect(input.value).toBe('theme wombat');
     expect(h.commits).toHaveLength(0);
     await type(input, 'theme w');
     controller.choose(wombat);

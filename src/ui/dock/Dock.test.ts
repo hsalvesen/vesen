@@ -159,8 +159,8 @@ describe('Dock', () => {
     input.dispatchEvent(new Event('input', { bubbles: true }));
     await tick();
     await tap(screen.getByRole('option', { name: 'Insert: theme' }));
-    expect(input.value).toBe('theme ');
-    // After `theme `: the line itself, ls, then every theme, each a line to run.
+    expect(input.value).toBe('theme');
+    // After `theme`, with no space: the line itself, ls, then every theme, each a line to run.
     expect(chipLabels(dock)).toEqual(['theme', 'ls', 'swamphen', 'wombat']);
     await tap(screen.getByRole('option', { name: 'Run: theme wombat' }));
     await vi.waitFor(() => expect(h.commits.map((c) => c.line)).toContain('theme wombat'));

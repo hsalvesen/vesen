@@ -119,7 +119,7 @@ export function complete(state: EditState, env: CompletionEnv): CompletionResult
     const { result } = resolve(st, env);
     const only = result.candidates[0];
     if (result.total !== 1 || only === undefined || only.value !== result.prefix || !only.terminal) return result;
-    const after = resolve(accept(result, only, 'final'), env);
+    const after = resolve(spaceAfter(accept(result, only, 'final')), env);
     return after.result.total > 0 && enumerable(after) ? { ...result, next: after.result } : result;
   } catch {
     // A source that failed offers nothing, rather than breaking the prompt.
@@ -130,9 +130,9 @@ export function complete(state: EditState, env: CompletionEnv): CompletionResult
 /**
  * Puts a candidate on the line. What was typed stays as typed when the candidate starts with it;
  * only the rest is added, escaped for the quote it lands in. A candidate matched by ignoring case
- * rewrites what differs. 'final' finishes a whole word: it closes an open quote and adds a space
- * (or steps over one already there); a folder ('/') or `--opt=` gets nothing, so completion goes
- * on. 'cycle', for the Tab menu, adds nothing.
+ * rewrites what differs. 'final' finishes a whole word: it closes an open quote, and adds no space
+ * after it, so the visitor types the space themselves (Tab, the ghost and a chip alike); a folder
+ * ('/') or `--opt=` is not closed, so completion goes on. 'cycle', for the Tab menu, adds nothing.
  */
 export function accept(result: CompletionResult, candidate: Candidate, mode: AcceptMode = 'final'): EditState {
   const { text, cursor } = result.state;
@@ -149,19 +149,26 @@ export function accept(result: CompletionResult, candidate: Candidate, mode: Acc
   const added = result.slot === 'var' ? tail : escapeTail(tail, cut.quote, result.atWordStart && cut.index === 0 && k === 0);
   const body = raw.slice(0, cut.index) + added;
 
-  // A quote already closed after the cursor, or a space already there, is stepped over.
+  // A quote already closed after the cursor is stepped over.
   let rest = text.slice(cursor);
   let inserted = body;
-  if (mode === 'final' && candidate.terminal) {
-    if (cut.quote !== null) {
-      inserted += cut.quote;
-      if (rest.startsWith(cut.quote)) rest = rest.slice(1);
-    }
-    inserted += ' ';
-    if (rest.startsWith(' ')) rest = rest.slice(1);
+  if (mode === 'final' && candidate.terminal && cut.quote !== null) {
+    inserted += cut.quote;
+    if (rest.startsWith(cut.quote)) rest = rest.slice(1);
   }
   const head = text.slice(0, from) + inserted;
   return { text: head + rest, cursor: head.length };
+}
+
+/**
+ * The line as it will be once the visitor types the space after a finished word (accept() adds
+ * none): the cursor steps over a space already there, or one goes in. What comes next is read
+ * from here.
+ */
+export function spaceAfter(state: EditState): EditState {
+  const { text, cursor } = state;
+  if (text.charAt(cursor) === ' ') return { text, cursor: cursor + 1 };
+  return { text: `${text.slice(0, cursor)} ${text.slice(cursor)}`, cursor: cursor + 1 };
 }
 
 /** The line with the word extended to the prefix every candidate shares, or null when that adds nothing. */

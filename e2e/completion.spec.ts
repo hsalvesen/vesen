@@ -24,7 +24,7 @@ test.describe('Tab completion', { tag: '@smoke' }, () => {
     await expect(prompt(page)).toHaveValue('cat documents/');
     await page.keyboard.type('li');
     await page.keyboard.press('Tab');
-    await expect(prompt(page)).toHaveValue('cat documents/linux.txt ');
+    await expect(prompt(page)).toHaveValue('cat documents/linux.txt');
     await page.keyboard.press('Enter');
     await expect(page.getByRole('log')).toContainText('Linux');
   });
@@ -71,7 +71,7 @@ test.describe('Tab completion', { tag: '@smoke' }, () => {
     await page.keyboard.press('Tab');
     await expect(prompt(page)).toHaveValue('theme kookaburra');
     await page.keyboard.press('Enter');
-    await expect(prompt(page)).toHaveValue('theme kookaburra ');
+    await expect(prompt(page)).toHaveValue('theme kookaburra');
     await expect(page.locator('[role="log"] .command-input-display')).toHaveCount(1);
   });
 
@@ -80,7 +80,7 @@ test.describe('Tab completion', { tag: '@smoke' }, () => {
     await page.keyboard.type('theme w');
     const chip = page.getByRole('listbox', { name: 'Suggestions' }).getByRole('option', { name: 'wombat' });
     await chip.click();
-    await expect(prompt(page)).toHaveValue('theme wombat ');
+    await expect(prompt(page)).toHaveValue('theme wombat');
     await expect(prompt(page)).toBeFocused();
   });
 });
@@ -111,7 +111,7 @@ test.describe('Tab before the catalogue arrives', () => {
     await expect(prompt(page)).toHaveValue('gre');
     await expect(page.locator('[aria-live]').filter({ hasText: 'No completions' })).toHaveCount(0);
     release();
-    await expect(prompt(page)).toHaveValue('grep ');
+    await expect(prompt(page)).toHaveValue('grep');
     await expect(prompt(page)).toBeFocused();
   });
 });
@@ -204,7 +204,7 @@ test.describe("Tab's list", { tag: '@smoke' }, () => {
     await ready(page);
     await page.keyboard.type('the');
     await page.keyboard.press('Tab');
-    await expect(prompt(page)).toHaveValue('theme ');
+    await expect(prompt(page)).toHaveValue('theme');
     await page.keyboard.press('Tab');
     const options = page.getByRole('listbox', { name: 'Completions' }).getByRole('option');
     await expect(options).toHaveCount(16);

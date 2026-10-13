@@ -2,7 +2,8 @@
 // terminal-input.md, "TAB STATE MACHINE"). Pure: each press takes the state and the line and
 // returns the next state and what the editor should do.
 //
-//   idle      Tab: 0 candidates -> bell and 'No completions'; 1 -> accept it; a longer common
+//   idle      Tab: 0 candidates -> bell and 'No completions'; 1 -> accept it, with no space after
+//             it, or list what follows a word already finished (listed); a longer common
 //             prefix -> extend to it (extended); otherwise -> list (listed), or over ASK_ABOVE
 //             first ask 'Display all N possibilities? (y or n)' (asking)
 //   extended  Tab on the same line -> list
@@ -66,8 +67,11 @@ export function pressTab(tab: TabState, state: EditState, env: CompletionEnv, re
   if (result.total === 0) return { tab: TAB_IDLE, effect: { bell: true, announce: NO_COMPLETIONS, list: 'hide', question: null } };
   const only = result.candidates[0];
   if (result.total === 1 && only !== undefined) {
+    const edit = accept(result, only, 'final');
+    // A word already finished: list what can follow it, as Tab after its space would.
+    if (result.next !== undefined && tabKey(edit) === key) return listOf(result.next, key);
     // So the next Tab goes on from here: into a folder, or on to the next word.
-    return { tab: TAB_IDLE, effect: { edit: accept(result, only, 'final'), list: 'hide', question: null } };
+    return { tab: TAB_IDLE, effect: { edit, list: 'hide', question: null } };
   }
   const extended = extendToCommon(result);
   if (extended !== null) return { tab: { phase: 'extended', key: tabKey(extended) }, effect: { edit: extended, list: 'hide', question: null } };

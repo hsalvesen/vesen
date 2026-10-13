@@ -24,7 +24,7 @@ import { lex } from '../lexer';
 import type { RedirOp } from '../lexer-types';
 import type { Candidate, NextContext } from '../types';
 import { cursorContext } from './context';
-import { accept } from './engine';
+import { accept, spaceAfter } from './engine';
 import type { Chip, ChipInput, ChipKind, ChipList, CompletionEnv, CompletionResult } from './types';
 
 const NONE: ChipList = { chips: [], more: 0 };
@@ -132,7 +132,8 @@ export function readyToRun(text: string, env: CompletionEnv): boolean {
  */
 function finishedLine(result: CompletionResult, candidate: Candidate, env: CompletionEnv): string | null {
   if (!candidate.terminal || !FINISHING.has(candidate.kind)) return null;
-  const after = accept(result, candidate, 'final');
+  // Read as if the visitor had typed the space after the word.
+  const after = spaceAfter(accept(result, candidate, 'final'));
   if (after.text.slice(after.cursor).trim() !== '') return null;
   if (!readyToRun(after.text, env)) return null;
   const at = cursorContext({ text: after.text, cursor: after.text.length }, env);

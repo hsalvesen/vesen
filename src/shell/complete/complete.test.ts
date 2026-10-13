@@ -45,26 +45,30 @@ describe('command names', () => {
   it.each([
     ['ca', 'cat'],
     ['c', ['cat', 'cathode', 'cd', 'clear', 'command', 'contact', 'cp', 'curl']],
-    ['he', 'help '],
-    ['the', 'theme '],
-    ['theme', 'theme '],
-    ['logo', 'logout '],
-    ['my-s', 'my-script '],
-    ['CATH', 'cathode '],
+    ['he', 'help'],
+    ['the', 'theme'],
+    ['logo', 'logout'],
+    ['my-s', 'my-script'],
+    ['CATH', 'cathode'],
     ['constructor', 'BELL'],
     ['__proto__', 'BELL'],
-    ['~/bin/d', '~/bin/deploy '],
+    ['~/bin/d', '~/bin/deploy'],
   ])('%s -> %j', (line, expected) => {
     expect(tab(line)).toEqual(expected);
   });
 
+  it('lists what can follow a name already finished, with no space typed', () => {
+    expect(tab('theme')).toEqual(tab('theme '));
+    expect(tab('pwd')).toBe('pwd');
+  });
+
   it('completes after | || && ; & and inside $( )', () => {
     expect(tab('ls | ca')).toBe('ls | cat');
-    expect(tab('ls || he')).toBe('ls || help ');
-    expect(tab('ls && he')).toBe('ls && help ');
-    expect(tab('ls; he')).toBe('ls; help ');
-    expect(tab('sleep 1 & he')).toBe('sleep 1 & help ');
-    expect(tab('echo $(he')).toBe('echo $(help ');
+    expect(tab('ls || he')).toBe('ls || help');
+    expect(tab('ls && he')).toBe('ls && help');
+    expect(tab('ls; he')).toBe('ls; help');
+    expect(tab('sleep 1 & he')).toBe('sleep 1 & help');
+    expect(tab('echo $(he')).toBe('echo $(help');
     // Nothing is called gr: still a command name, so the bell.
     expect(complete(at('ls | gr'), env).slot).toBe('command');
     expect(tab('ls | gr')).toBe('BELL');
@@ -72,11 +76,11 @@ describe('command names', () => {
 
   it('treats sudo, time, env and command as running the rest, and skips assignments', () => {
     expect(tab('sudo ca')).toBe('sudo cat');
-    expect(tab('sudo he')).toBe('sudo help ');
-    expect(tab('time he')).toBe('time help ');
-    expect(tab('env FOO=1 he')).toBe('env FOO=1 help ');
-    expect(tab('command he')).toBe('command help ');
-    expect(tab('FOO=1 he')).toBe('FOO=1 help ');
+    expect(tab('sudo he')).toBe('sudo help');
+    expect(tab('time he')).toBe('time help');
+    expect(tab('env FOO=1 he')).toBe('env FOO=1 help');
+    expect(tab('command he')).toBe('command help');
+    expect(tab('FOO=1 he')).toBe('FOO=1 help');
     expect(tab('sudo theme k')).toEqual(['kangaroo', 'kookaburra']);
   });
 
@@ -99,31 +103,31 @@ describe('subcommands and enums', () => {
   it.each([
     // Where a subcommand goes, the first operand may stand instead: the subcommands, then the themes by name.
     ['theme ', ['ls', 'cassowary', 'cockatoo', 'crocodile', 'galah', 'kangaroo', 'kookaburra', 'lorikeet', 'magpie', 'petroica', 'platypus', 'quokka', 'swamphen', 'treefrog', 'wallaby', 'wombat']],
-    ['theme s', 'theme swamphen '],
+    ['theme s', 'theme swamphen'],
     ['theme l', ['ls', 'lorikeet']],
-    ['theme ls', 'theme ls '],
-    ['theme lo', 'theme lorikeet '],
-    ['theme sw', 'theme swamphen '],
-    ['theme SW', 'theme swamphen '],
+    ['theme ls', 'theme ls'],
+    ['theme lo', 'theme lorikeet'],
+    ['theme sw', 'theme swamphen'],
+    ['theme SW', 'theme swamphen'],
     ['theme k', ['kangaroo', 'kookaburra']],
     ['theme w', ['wallaby', 'wombat']],
-    ['theme wa', 'theme wallaby '],
+    ['theme wa', 'theme wallaby'],
     ['theme zz', 'BELL'],
     // `set` is no subcommand and no theme.
     ['theme set', 'BELL'],
     ['theme set w', 'BELL'],
     ['cathode ', ['ls', 'set', 'off', 'quality', 'phosphor', 'scanlines', 'vintage']],
-    ['cathode q', 'cathode quality '],
-    ['cathode o', 'cathode off '],
+    ['cathode q', 'cathode quality'],
+    ['cathode o', 'cathode off'],
     ['cathode s', ['set', 'scanlines']],
-    ['cathode v', 'cathode vintage '],
+    ['cathode v', 'cathode vintage'],
     ['cathode quality ', ['auto', 'full', 'lite', 'off']],
-    ['cathode quality l', 'cathode quality lite '],
-    ['cathode set p', 'cathode set phosphor '],
-    ['ls --color=al', 'ls --color=always '],
+    ['cathode quality l', 'cathode quality lite'],
+    ['cathode set p', 'cathode set phosphor'],
+    ['ls --color=al', 'ls --color=always'],
     ['ls --color=', ['always', 'auto', 'never']],
     ['set -o ', 'set -o no'],
-    ['set -o noc', 'set -o noclobber '],
+    ['set -o noc', 'set -o noclobber'],
   ])('%s -> %j', (line, expected) => {
     expect(tab(line)).toEqual(expected);
   });
@@ -157,9 +161,9 @@ describe('flags', () => {
   });
 
   it.each([
-    ['ls --alm', 'ls --almost-all '],
-    ['rm --rec', 'rm --recursive '],
-    ['ls --he', 'ls --help '],
+    ['ls --alm', 'ls --almost-all'],
+    ['rm --rec', 'rm --recursive'],
+    ['ls --he', 'ls --help'],
     ['mkdir --mo', 'mkdir --mode='],
     ['cat -- -', 'BELL'],
   ])('%s -> %j', (line, expected) => {
@@ -193,28 +197,28 @@ describe('paths', () => {
   it.each([
     ['cd doc', 'cd documents/'],
     ['cd do', ['documents/', 'downloads/']],
-    ['cat documents/li', 'cat documents/linux.txt '],
+    ['cat documents/li', 'cat documents/linux.txt'],
     ['cd ../../e', 'cd ../../etc/'],
     ['cat ~/.s', 'cat ~/.ssh/'],
-    ['cat ~/.ssh/c', 'cat ~/.ssh/config '],
+    ['cat ~/.ssh/c', 'cat ~/.ssh/config'],
     ['cd ~/doc', 'cd ~/documents/'],
     ['cd ~', 'cd ~/'],
     ['cd ..', 'cd ../'],
-    ['cat readme', 'cat README.md '],
-    ['cat Documents/li', 'cat documents/linux.txt '],
-    ['cat /etc/hostn', 'cat /etc/hostname '],
+    ['cat readme', 'cat README.md'],
+    ['cat Documents/li', 'cat documents/linux.txt'],
+    ['cat /etc/hostn', 'cat /etc/hostname'],
     ['ls /usr/b', 'ls /usr/bin/'],
-    ['cat $HOME/documents/li', 'cat $HOME/documents/linux.txt '],
-    ['cat ${HOME}/documents/li', 'cat ${HOME}/documents/linux.txt '],
-    ['cat README.md', 'cat README.md '],
-    ['cat README.md‸ x', 'cat README.md ‸x'],
+    ['cat $HOME/documents/li', 'cat $HOME/documents/linux.txt'],
+    ['cat ${HOME}/documents/li', 'cat ${HOME}/documents/linux.txt'],
+    ['cat README.md', 'cat README.md'],
+    ['cat README.md‸ x', 'cat README.md‸ x'],
     ['cd docu‸ ls', 'cd documents/‸ ls'],
     ['FOO=~/doc', 'FOO=~/documents/'],
     ['echo ~/doc', 'echo ~/documents/'],
     // Free text may still name a file, as bash completes one: echo, printf, test and [.
-    ['echo REA', 'echo README.md '],
-    ['printf %s REA', 'printf %s README.md '],
-    ['test -f REA', 'test -f README.md '],
+    ['echo REA', 'echo README.md'],
+    ['printf %s REA', 'printf %s README.md'],
+    ['test -f REA', 'test -f README.md'],
     ['[ -d doc', '[ -d documents/'],
     // And past the = of export's and env's NAME=VALUE, the value is a path.
     ['export DOCS=~/doc', 'export DOCS=~/documents/'],
@@ -222,7 +226,7 @@ describe('paths', () => {
     ['export PA', ['PAGER', 'PATH']],
     ['cat /root/', 'BELL'],
     ['cat nope/', 'BELL'],
-    ['nosuchcmd READ', 'nosuchcmd README.md '],
+    ['nosuchcmd READ', 'nosuchcmd README.md'],
     ['pwd ', 'BELL'],
     ['ls # READ', 'BELL'],
   ])('%s -> %j', (line, expected) => {
@@ -232,8 +236,8 @@ describe('paths', () => {
   it('completes redirection targets as paths', () => {
     expect(tab('echo hi > ~/do')).toEqual(['documents/', 'downloads/']);
     expect(tab('echo hi >~/doc')).toBe('echo hi >~/documents/');
-    expect(tab('cat < READ')).toBe('cat < README.md ');
-    expect(tab('ls 2>/dev/nu')).toBe('ls 2>/dev/null ');
+    expect(tab('cat < READ')).toBe('cat < README.md');
+    expect(tab('ls 2>/dev/nu')).toBe('ls 2>/dev/null');
     expect(complete(at('echo hi > ~/do'), env).slot).toBe('redirect');
   });
 
@@ -264,36 +268,36 @@ describe('paths', () => {
   });
 
   it('quotes and escapes names with spaces and quotes', () => {
-    expect(tab('cat "documents/my no')).toBe('cat "documents/my notes.txt" ');
-    expect(tab('cat documents/my')).toBe('cat documents/my\\ notes.txt ');
-    expect(tab("cat 'documents/my")).toBe("cat 'documents/my notes.txt' ");
-    expect(tab('cat documents/my\\ n')).toBe('cat documents/my\\ notes.txt ');
-    expect(tab('cat documents/it')).toBe("cat documents/it\\'s.txt ");
-    expect(tab('cat "documents/it')).toBe('cat "documents/it\'s.txt" ');
-    expect(tab("cat 'documents/it")).toBe("cat 'documents/it'\\''s.txt' ");
+    expect(tab('cat "documents/my no')).toBe('cat "documents/my notes.txt"');
+    expect(tab('cat documents/my')).toBe('cat documents/my\\ notes.txt');
+    expect(tab("cat 'documents/my")).toBe("cat 'documents/my notes.txt'");
+    expect(tab('cat documents/my\\ n')).toBe('cat documents/my\\ notes.txt');
+    expect(tab('cat documents/it')).toBe("cat documents/it\\'s.txt");
+    expect(tab('cat "documents/it')).toBe('cat "documents/it\'s.txt"');
+    expect(tab("cat 'documents/it")).toBe("cat 'documents/it'\\''s.txt'");
     expect(tab('cd my')).toBe('cd my\\ dir/');
     expect(tab('cd "my')).toBe('cd "my dir/');
-    expect(tab('cat "my dir/')).toBe('cat "my dir/a.txt" ');
+    expect(tab('cat "my dir/')).toBe('cat "my dir/a.txt"');
   });
 
   it('escapes what the shell would read: $ * & ! and a # only at the start of a word', () => {
-    expect(tab('cat odd/a')).toBe('cat odd/a\\$b ');
-    expect(tab('cat odd/x')).toBe('cat odd/x\\*y ');
-    expect(tab('cat odd/q')).toBe('cat odd/q\\&a ');
-    expect(tab('cat odd/b')).toBe('cat odd/big\\! ');
-    expect(tab('cat odd/%23'.replace('%23', '#'))).toBe('cat odd/#tag ');
-    expect(tab('cat "odd/b')).toBe('cat "odd/big"\\!"" ');
+    expect(tab('cat odd/a')).toBe('cat odd/a\\$b');
+    expect(tab('cat odd/x')).toBe('cat odd/x\\*y');
+    expect(tab('cat odd/q')).toBe('cat odd/q\\&a');
+    expect(tab('cat odd/b')).toBe('cat odd/big\\!');
+    expect(tab('cat odd/%23'.replace('%23', '#'))).toBe('cat odd/#tag');
+    expect(tab('cat "odd/b')).toBe('cat "odd/big"\\!""');
   });
 
   it('closes a quote the cursor is already before, without doubling it', () => {
-    expect(tab('cat "README‸"')).toBe('cat "README.md" ');
+    expect(tab('cat "README‸"')).toBe('cat "README.md"');
   });
 
   it("completes from where cd went: 'cd ../../../e' from ~/documents", async () => {
     await h.run('cd documents');
     try {
       expect(tab('cd ../../../e')).toBe('cd ../../../etc/');
-      expect(tab('cat li')).toBe('cat linux.txt ');
+      expect(tab('cat li')).toBe('cat linux.txt');
     } finally {
       await h.run('cd');
     }
@@ -315,15 +319,15 @@ describe('paths', () => {
 describe('variables, aliases and commands as values', () => {
   it.each([
     ['echo $HO', ['$HOME', '$HOSTNAME']],
-    ['echo $HOM', 'echo $HOME '],
-    ['echo "$HOM', 'echo "$HOME" '],
-    ['echo ${HOM', 'echo ${HOME} '],
+    ['echo $HOM', 'echo $HOME'],
+    ['echo "$HOM', 'echo "$HOME"'],
+    ['echo ${HOM', 'echo ${HOME}'],
     ["echo '$HOM", 'BELL'],
     ['echo \\$HOM', 'BELL'],
-    ['export HOM', 'export HOME '],
+    ['export HOM', 'export HOME'],
     ['unalias l', ['l', 'la', 'll']],
     ['help ca', 'help cat'],
-    ['which the', 'which theme '],
+    ['which the', 'which theme'],
   ])('%s -> %j', (line, expected) => {
     expect(tab(line)).toEqual(expected);
   });
@@ -338,13 +342,13 @@ describe('variables, aliases and commands as values', () => {
 describe('examples and history', () => {
   it("offers weather's curated places, and places from history", () => {
     expect(complete(at('weather '), env).candidates.map((c) => c.value)).toEqual(['Aotearoa', 'Gadigal', 'Oslo', 'Paris']);
-    expect(tab('weather o')).toBe('weather Oslo ');
-    expect(tab('weather p')).toBe('weather Paris ');
+    expect(tab('weather o')).toBe('weather Oslo');
+    expect(tab('weather p')).toBe('weather Paris');
   });
 
   it.each([
-    ['stock t', 'stock TEAM '],
-    ['qr https://t', 'qr https://tldr.sh '],
+    ['stock t', 'stock TEAM'],
+    ['qr https://t', 'qr https://tldr.sh'],
   ])('%s -> %j', (line, expected) => {
     expect(tab(line)).toEqual(expected);
   });
@@ -403,7 +407,8 @@ describe('accept round-trips through the lexer', () => {
         if (word?.kind !== 'word') return;
         expect(word.parts.every((part) => part.kind === 'lit')).toBe(true);
         expect(word.parts.map((part) => (part.kind === 'lit' ? part.text : '')).join('')).toBe(file);
-        expect(done.text.endsWith(' ')).toBe(true);
+        // The word ends the line, with the cursor after it: the visitor types the space.
+        expect(done.cursor).toBe(done.text.length);
       }),
       { numRuns: 500 },
     );

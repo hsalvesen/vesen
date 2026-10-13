@@ -33,8 +33,8 @@ describe('ghostFor', () => {
   });
 
   it('offers the rest of the one candidate, or of the shared prefix', () => {
-    expect(ghost('the')).toEqual({ text: 'me ', source: 'completion', acceptable: true });
-    expect(ghost('cat documents/li')?.text).toBe('nux.txt ');
+    expect(ghost('the')).toEqual({ text: 'me', source: 'completion', acceptable: true });
+    expect(ghost('cat documents/li')?.text).toBe('nux.txt');
     expect(ghost('set -o ')).toEqual({ text: 'no', source: 'completion', acceptable: true });
   });
 

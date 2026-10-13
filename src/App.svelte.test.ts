@@ -217,9 +217,9 @@ describe('Tab completion and the completion row', () => {
     expect(shell.registry.complete).toBe(false);
     await type('rev');
     await press('Tab');
-    // rev is in the catalogue, which the Tab asked for.
-    await vi.waitFor(() => expect(promptBox().value).toBe('rev '));
-    expect(shell.registry.complete).toBe(true);
+    // rev is in the catalogue, which the Tab asked for; the finished word gets no space after it.
+    await vi.waitFor(() => expect(shell.registry.complete).toBe(true));
+    expect(promptBox().value).toBe('rev');
   });
 
   it("completes 'cat doc', then 'li', to cat documents/linux.txt", async () => {
@@ -229,8 +229,8 @@ describe('Tab completion and the completion row', () => {
     expect(promptBox().value).toBe('cat documents/');
     await type('cat documents/li');
     await press('Tab');
-    expect(promptBox().value).toBe('cat documents/linux.txt ');
-    expect(promptBox().selectionStart).toBe(24);
+    expect(promptBox().value).toBe('cat documents/linux.txt');
+    expect(promptBox().selectionStart).toBe(23);
   });
 
   it('extends, lists on the second Tab, cycles on the next, and Escape puts back what was typed', async () => {
@@ -272,7 +272,7 @@ describe('Tab completion and the completion row', () => {
     expect(promptBox().value).toBe('theme kookaburra');
     await press('Enter');
     await settle();
-    expect(promptBox().value).toBe('theme kookaburra ');
+    expect(promptBox().value).toBe('theme kookaburra');
     expect(transcript.entries()).toEqual([]);
   });
 
@@ -288,7 +288,7 @@ describe('Tab completion and the completion row', () => {
     expect(await fireEvent.mouseDown(options[1] as HTMLElement)).toBe(false);
     await fireEvent.click(options[1] as HTMLElement);
     await settle();
-    expect(promptBox().value).toBe('theme kookaburra ');
+    expect(promptBox().value).toBe('theme kookaburra');
     expect(document.activeElement).toBe(promptBox());
   });
 
