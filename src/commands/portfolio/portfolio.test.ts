@@ -10,7 +10,7 @@ import { createStorage } from '../../services/storage';
 import { STORAGE_KEYS } from '../../services/storage-keys';
 import { cathode, cathodeQuality, crtTier, DEFAULT_CATHODE_MODE, persistCathode } from '../../stores/cathode';
 import { defaultTheme, persistTheme, theme } from '../../stores/theme';
-import { BANNER_ART, BANNER_ROWS, bannerBlocks, KEYS_HINT, TOUCH_HINT } from '../lib/banner';
+import { BANNER_ART, BANNER_ROWS, bannerBlocks } from '../lib/banner';
 
 afterEach(() => {
   // The stores are the app's, shared by every session in this file.
@@ -165,7 +165,7 @@ describe('cathode', () => {
 });
 
 describe('banner', () => {
-  it('draws the logo as art with the version on its last row, then who made it and the first steps', async () => {
+  it('draws the logo as art with the version on its last row, then what this is and the first steps', async () => {
     const { status, blocks } = await runLine('banner', { cols: 80 });
     expect(status).toBe(0);
     expect(blocks[0]).toMatchObject({ type: 'art', fit: 'scale' });
@@ -177,12 +177,12 @@ describe('banner', () => {
     expect(art?.tail).toEqual({ text: `  v${version}`, style: { fg: 'muted' } });
     expect(art?.text.split('\n')).toHaveLength(BANNER_ART.split('\n').length);
     const lines = rows(blocks).map(lineText);
-    expect(lines[0]).toBe('A terminal in your browser, by Has\u00a0Salvesen.');
+    expect(lines[0]).toBe('A virtual Linux terminal, with its own file system to explore.');
     expect(lines[1]).toBe('');
-    expect(lines[2]).toBe('New here? Type help to see all available commands.');
-    // The next step says there is a file system, and where to start exploring it.
-    expect(lines[3]).toBe('Then try tree to look around the virtual file system, or cat README.md for the story behind it.');
-    expect(lines[4]).toBe(KEYS_HINT);
+    // Spelt out for someone who has never used a terminal: type it, then press Enter.
+    expect(lines[2]).toBe('Type help and press Enter to see all available commands.');
+    expect(lines[3]).toBe('Then try tree to explore the file system, or cat README.md for the story behind it.');
+    expect(lines).toHaveLength(4);
     const spans = rows(blocks).flat();
     expect(spans.find((span) => span.text === 'help')?.action).toMatchObject({ kind: 'run', line: 'help' });
     expect(spans.find((span) => span.text === 'cat README.md')?.action).toMatchObject({ kind: 'run', line: 'cat ~/README.md' });
@@ -198,7 +198,7 @@ describe('banner', () => {
       const version = /^Vesen logo, version (\S+)$/.exec(art?.alt ?? '')?.[1] ?? '';
       // Scaled to fit by the art block, never swapped.
       expect(art, String(cols)).toMatchObject({ text: BANNER_ART, fit: 'scale', tail: { text: `  v${version}` } });
-      expect(lineText(rows(blocks)[0] ?? [])).toBe('A terminal in your browser, by Has\u00a0Salvesen.');
+      expect(lineText(rows(blocks)[0] ?? [])).toBe('A virtual Linux terminal, with its own file system to explore.');
     }
   });
 
@@ -213,12 +213,10 @@ describe('banner', () => {
     expect(BANNER_ROWS[4]).toMatch(/o888  888o$/);
   });
 
-  it('points a touch screen at the chips, where a keyboard gets the keys (F074)', () => {
-    const hint = (touch: boolean) => lineText(rows(bannerBlocks({ version: '1.2.0', touch })).at(-1) ?? []);
-    expect(hint(true)).toBe(TOUCH_HINT);
-    expect(TOUCH_HINT).toBe('Tap a chip below to run it, or type a command.');
-    expect(hint(false)).toBe(KEYS_HINT);
-    expect(KEYS_HINT).toBe('Tab completes a command, the up arrow brings the last one back, and help <cmd> explains any of them.');
+  it("tells a touch screen to tap the keyboard's Go key, where a keyboard presses Enter", () => {
+    const start = (touch: boolean) => lineText(rows(bannerBlocks({ version: '1.2.0', touch }))[2] ?? []);
+    expect(start(true)).toBe('Type help and tap Go to see all available commands.');
+    expect(start(false)).toBe('Type help and press Enter to see all available commands.');
     const touch = bannerBlocks({ version: '1.2.0', touch: true });
     expect(touch[0]).toMatchObject({ type: 'art', text: BANNER_ART, tail: { text: '  v1.2.0' }, alt: 'Vesen logo, version 1.2.0' });
   });

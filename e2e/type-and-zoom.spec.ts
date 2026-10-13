@@ -90,15 +90,15 @@ test.describe('the terminal font', { tag: '@smoke' }, () => {
     expect(widths.arrow).toBeCloseTo(widths.regular, 0);
   });
 
-  test('the banner says whose terminal it is, and how to start: the keys, or the chips on touch (F074)', async ({ page }) => {
+  test('the banner says what this is, and how to start: press Enter, or tap Go on touch', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText(/^A terminal in your browser, by Has\u00a0Salvesen\.$/).first()).toBeVisible();
+    await expect(page.getByText('A virtual Linux terminal, with its own file system to explore.', { exact: true }).first()).toBeVisible();
     await expect(page.locator('.sr-only', { hasText: /^Vesen logo, version \S+$/ })).toHaveCount(1);
-    const keys = 'Tab completes a command, the up arrow brings the last one back, and help <cmd> explains any of them.';
-    const chips = 'Tap a chip below to run it, or type a command.';
+    const keys = 'Type help and press Enter to see all available commands.';
+    const touch = 'Type help and tap Go to see all available commands.';
     const phone = PHONES.includes(test.info().project.name);
-    await expect(page.getByText(phone ? chips : keys, { exact: true }).first()).toBeVisible();
-    await expect(page.getByText(phone ? keys : chips, { exact: true })).toHaveCount(0);
+    await expect(page.getByText(phone ? touch : keys, { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(phone ? keys : touch, { exact: true })).toHaveCount(0);
   });
 
   test('the prompt names the brand as the host', async ({ page }) => {

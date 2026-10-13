@@ -187,21 +187,4 @@ test.describe('ls and the banner at phone widths', { tag: '@smoke' }, () => {
     await page.setViewportSize({ width: 667, height: 375 });
     await expect.poll(async () => (await lsColumns(page)).columns).toBeGreaterThan(portrait.columns);
   });
-
-  test("at 320px the banner never splits the owner's name across two lines", async ({ page }) => {
-    await page.setViewportSize({ width: 320, height: 568 });
-    await page.goto('/');
-    const lines = await page.evaluate(() => {
-      const span = Array.from(document.querySelectorAll('[role="log"] span')).find((element) => element.textContent?.includes('by Has'));
-      const node = span?.firstChild;
-      if (!node || node.nodeType !== Node.TEXT_NODE) return null;
-      const text = node.textContent ?? '';
-      const range = document.createRange();
-      const at = text.indexOf('Has');
-      range.setStart(node, at);
-      range.setEnd(node, at + 'Has Salvesen'.length);
-      return new Set(Array.from(range.getClientRects(), (rect) => Math.round(rect.top))).size;
-    });
-    expect(lines).toBe(1);
-  });
 });

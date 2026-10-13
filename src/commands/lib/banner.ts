@@ -1,6 +1,6 @@
-// The welcome banner: the VESEN logo as art (screen readers hear "Vesen logo"), the version and
-// author, how to start (the keys on a keyboard, the chips on touch), and three tappable first
-// steps (F074): help, the README and the file system. `banner` prints it, the app shows it at boot
+// The welcome banner: the vesen logo as art (screen readers hear "Vesen logo") with its version,
+// what this is, and how to start: type help and press Enter (tap Go on a phone), then tree or the
+// README, each a tap away. `banner` prints it, the app shows it at boot
 // before the shell has loaded, and `reset` and `login` put it back, so it lives here, small and
 // DOM-free, for the initial chunk to import.
 
@@ -31,37 +31,27 @@ export interface BannerOptions {
   readonly touch: boolean;
 }
 
-/** Under the first steps on a keyboard: the keys a terminal has. */
-export const KEYS_HINT = 'Tab completes a command, the up arrow brings the last one back, and help <cmd> explains any of them.';
-/** Under the first steps on touch, where the dock's chips run commands. */
-export const TOUCH_HINT = 'Tap a chip below to run it, or type a command.';
-
-/** The owner's name, never split across lines. */
-const OWNER = 'Has\u00a0Salvesen';
-
 const MUTED: SpanStyle = { fg: 'muted' };
 const STRONG: SpanStyle = { fg: 'fg-strong' };
 const ACCENT: SpanStyle = { fg: 'accent' };
 
 /**
- * The banner's blocks: the logo with the version, then who made it, the first steps for someone
- * new (help, then tree and the README), and the keys, or the chips on touch.
+ * The banner's blocks: the logo with the version, what this is, how to start (type help and press
+ * Enter, or tap Go on a phone's keyboard), and where to go next.
  */
 export function bannerBlocks({ version, touch }: BannerOptions): Block[] {
   const lines: Line[] = [
-    // No-break spaces keep the name whole when the line wraps on a 320px screen.
-    [out.span(`A terminal in your browser, by ${OWNER}.`, MUTED)],
+    [out.span('A virtual Linux terminal, with its own file system to explore.', MUTED)],
     [],
-    [out.span('New here? Type ', STRONG), out.run('help', 'help', ACCENT), out.span(' to see all available commands.', STRONG)],
+    [out.span('Type ', STRONG), out.run('help', 'help', ACCENT), out.span(touch ? ' and tap Go to see all available commands.' : ' and press Enter to see all available commands.', STRONG)],
     [
       out.span('Then try ', STRONG),
       out.run('tree', 'tree', ACCENT),
-      out.span(' to look around the virtual file system, or ', STRONG),
+      out.span(' to explore the file system, or ', STRONG),
       // From home, so the link works from whatever folder it is tapped in.
       out.run('cat README.md', 'cat ~/README.md', ACCENT),
       out.span(' for the story behind it.', STRONG),
     ],
-    [out.span(touch ? TOUCH_HINT : KEYS_HINT, MUTED)],
   ];
   // The version after the logo's last row, muted like the line under it.
   return [out.art(BANNER_ART, `Vesen logo, version ${version}`, 'scale', undefined, out.span(`  v${version}`, MUTED)), out.lines(lines)];

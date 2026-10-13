@@ -402,7 +402,8 @@ test.describe('focus', { tag: '@smoke' }, () => {
     test.skip(isPhone(), 'desktop only');
     await page.goto('/');
     await prompt(page).evaluate((input) => input.blur());
-    await page.getByText('to see all available commands.').dblclick();
+    // On the word 'virtual', a few characters in.
+    await page.getByText('A virtual Linux terminal').first().dblclick({ position: { x: 24, y: 5 } });
 
     expect(await page.evaluate(() => window.getSelection()?.toString().trim())).not.toBe('');
     await expect(prompt(page)).not.toBeFocused();

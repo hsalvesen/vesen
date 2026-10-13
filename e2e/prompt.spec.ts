@@ -148,7 +148,8 @@ test.describe('the line editor on a desktop', { tag: '@smoke' }, () => {
     const prevented = () => page.evaluate(() => (window as Window & { ctrlC?: boolean[] }).ctrlC ?? []);
 
     // Text selected in the output, with focus on it.
-    await page.getByText('to see all available commands.').dblclick();
+    // On the word 'virtual', a few characters in.
+    await page.getByText('A virtual Linux terminal').first().dblclick({ position: { x: 24, y: 5 } });
     expect(await page.evaluate(() => window.getSelection()?.toString().trim())).not.toBe('');
     await page.keyboard.press('Control+c');
 
