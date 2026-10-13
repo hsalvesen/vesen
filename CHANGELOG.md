@@ -26,14 +26,15 @@ All notable changes to vesen are recorded here. The format follows [Keep a Chang
 - Colour swatches are blocks again (`██`), as before 2.0's ASCII pass: fastfetch's palette and `theme ls`.
 - The CRT effect starts in phosphor mode for anyone who has not chosen one, and a phone shows the same phosphor glow as a desktop (the lite tier still drops the sweep and flicker). A `scanlines` saved by the old store, which saved its default on every load, is still dropped, so those visitors get phosphor too.
 - `tree` draws box-drawing lines again, as one art block with the rows touching so the lines join, scrolling sideways on a narrow screen. `--charset ascii` draws the ASCII set as ordinary lines.
-- The banner says what this is, "A virtual Linux terminal, with its own file system to explore.", and how to start: type help and press Enter (tap Go on a phone). The Tab and arrow-key line and the owner's byline are gone.
-- The theme chips mark each theme with a block (`█`) in its colour, not a round swatch.
+- The banner says what this is, "A virtual Linux terminal, with its own file system to explore.", and how to start: type help and press Enter, on every device (a phone's keyboard may label that key go, send, return or an arrow, so the banner names none of them). The Tab and arrow-key line and the owner's byline are gone.
+- The theme chips, and the Tab list on a keyboard, mark each theme with a small circle in place of a coloured swatch: hollow (`◦`), or filled (`•`) for the theme in use, whose name is bold in the theme's accent (on a phone the whole chip is filled with it). The mark moves the moment the theme changes.
 - Tab, the ghost and a chip complete a word without a space after it. A second Tab on a finished word lists what can follow it, and the chips offer the next word as before.
-- On a phone or tablet `sudo`'s show fills the whole screen, upright or on its side, and turns with it: the other cut takes over from where the picture had got to. The "Tap to exit" line is gone (a tap still leaves, and a screen reader still hears how).
+- On a phone or tablet `sudo`'s show covers the whole screen, edge to edge, upright or on its side: no frame or gutter around it, and under the notch and the home indicator too. It turns with the screen: the other cut takes over from where the picture had got to. The "Tap to exit" line is gone (a tap still leaves, and a screen reader still hears how).
 - On a keyboard `sudo`'s show says "Press q or Esc to exit" once it has played for three seconds, and nothing before that.
 - `sudo`'s track starts without a tap in Safari, on an iPhone or iPad, and in Instagram's and other apps' browsers: the key press that answers the password readies it (they let a page start sound only inside a tap or key press, and the show opens after one).
 - The banner has a blank line between the logo and "A virtual Linux terminal, with its own file system to explore."
 - Scrolling up while output arrives keeps the view where it was put, with the new output pill, even where the browser reports the scroll late (a slow screen).
+- galah wears its bird's colours: its green is a rose pink and its yellow a soft grey, so the frame, the prompt, and fastfetch's logo and title are pink and grey. Success, gains and executables are aqua there, so they never look like its pink errors, and warnings and the weather's sun stay gold.
 
 ## [2.0.0] - 2026-10-08
 
