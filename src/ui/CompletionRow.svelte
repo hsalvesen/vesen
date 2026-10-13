@@ -19,9 +19,9 @@
 
   /** A Tab list longer than this is names only, with the choice's description on its own line. */
   const LONG_LIST = 16;
-  /** In ch: the `>` before a chip that runs with its gap, a swatch (0.9em) with its gap, and a chip's padding. */
+  /** In ch: the `>` before a chip that runs with its gap, a swatch (one block cell) with its gap, and a chip's padding. */
   const RUN_WIDTH = 2;
-  const SWATCH_WIDTH = 2.1;
+  const SWATCH_WIDTH = 2;
   const PADDING = 1;
 
   let {
@@ -107,7 +107,7 @@
           onmousedown={(event) => event.preventDefault()}
           onclick={() => onchoose?.(chip)}
         >
-          {#if runs(chip)}<span class="run" aria-hidden="true">&gt;</span>{/if}{#if chip.swatch}<span class="swatch" style:background={chip.swatch} aria-hidden="true"></span>{/if}<span class="label"
+          {#if runs(chip)}<span class="run" aria-hidden="true">&gt;</span>{/if}{#if chip.swatch}<span class="swatch" style:color={chip.swatch} aria-hidden="true">█</span>{/if}<span class="label"
             ><b>{chip.label.slice(0, chip.matchLen)}</b>{chip.label.slice(chip.matchLen)}</span
           >{#if listed && !long && chip.summary}<span class="summary">{chip.summary}</span>{/if}
         </button>
@@ -186,12 +186,9 @@
     color: var(--role-link);
   }
 
+  /* A theme's colour as a block cell, as fastfetch's and theme ls's swatches draw it. */
   .swatch {
     flex: none;
-    width: 0.9em;
-    height: 0.9em;
-    border: 1px solid var(--role-muted);
-    border-radius: 50%;
   }
 
   .run {

@@ -23,12 +23,16 @@ describe('CompletionRow', () => {
     });
     const list = screen.getByRole('listbox', { name: 'Suggestions' });
     const options = screen.getAllByRole('option');
-    expect(options.map((o) => o.textContent)).toEqual(['kangaroo', 'kookaburra']);
+    // The swatch is a block in the theme's colour, before the name.
+    expect(options.map((o) => o.textContent)).toEqual(['█kangaroo', 'kookaburra']);
     expect(list.id).toBe('completion-list');
     expect(options[0]?.id).toBe('completion-list-0');
     expect(options[0]?.getAttribute('tabindex')).toBe('-1');
     expect(options[0]?.querySelector('b')?.textContent).toBe('k');
-    expect((options[0]?.querySelector('.swatch') as HTMLElement | null)?.style.background).toBe('#262626');
+    // A block glyph in the theme's colour, not a tinted circle.
+    const swatch = options[0]?.querySelector('.swatch') as HTMLElement | null;
+    expect(swatch?.textContent).toBe('█');
+    expect(swatch?.style.color).toBe('#262626');
     expect(options[0]?.getAttribute('title')).toBe('kangaroo');
     expect(container.querySelector('.more')?.textContent).toBe('+3 more');
     // The quiet row has no descriptions and no line for a choice.
@@ -82,7 +86,7 @@ describe('CompletionRow', () => {
       props: { chips: [chip('help', { kind: 'starter', action: { kind: 'run', line: 'help' } }), chip('kangaroo', { swatch: '#262626' })], listed: true },
     });
     // kangaroo (8) with its swatch (2.1) and the padding, wider than help (4) with its > (2).
-    expect(column()).toBe('11.1ch');
+    expect(column()).toBe('11ch');
     // On a phone the dock draws the chips: the choice comes alone, and is still named.
     await rerender({ chips: [], listed: true, choice: chip('date', { selected: true, summary: 'print the date and time' }) });
     expect(screen.queryByRole('listbox')).toBeNull();

@@ -25,7 +25,7 @@ describe('ChipRow', () => {
     expect(list.id).toBe('completion-list');
     const options = screen.getAllByRole('option');
     expect(options.map((o) => o.getAttribute('aria-label'))).toEqual(['Run: theme', 'Run: theme wombat', 'Insert: documents/', 'Run: help']);
-    expect(options.map((o) => o.textContent)).toEqual(['>theme', '>wombat', 'documents/', '>help']);
+    expect(options.map((o) => o.textContent)).toEqual(['>theme', '>█wombat', 'documents/', '>help']);
     expect(options[1]?.querySelector('b')?.textContent).toBe('w');
     expect(options.every((o) => o.getAttribute('tabindex') === '-1')).toBe(true);
     expect(list.textContent).toContain('+2');

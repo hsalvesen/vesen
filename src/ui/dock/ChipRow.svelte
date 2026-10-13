@@ -62,11 +62,7 @@
             ...(runs ? { longPress: () => onchoose?.(chip, { insert: true }) } : {}),
           }}
         >
-          {#if lead}<span class="glyph" aria-hidden="true">{lead}</span>{/if}{#if chip.swatch}<span
-              class="swatch"
-              style:background={chip.swatch}
-              aria-hidden="true"
-            ></span>{/if}<span class="label"><b>{chip.label.slice(0, chip.matchLen)}</b>{chip.label.slice(chip.matchLen)}</span>
+          {#if lead}<span class="glyph" aria-hidden="true">{lead}</span>{/if}{#if chip.swatch}<span class="swatch" style:color={chip.swatch} aria-hidden="true">█</span>{/if}<span class="label"><b>{chip.label.slice(0, chip.matchLen)}</b>{chip.label.slice(chip.matchLen)}</span>
         </button>
       {/each}
       {#if more > 0}
@@ -145,12 +141,9 @@
     flex: none;
   }
 
+  /* A theme's colour as a block cell, as fastfetch's and theme ls's swatches draw it. */
   .swatch {
     flex: none;
-    width: 0.9em;
-    height: 0.9em;
-    border: 1px solid var(--role-muted);
-    border-radius: 50%;
   }
 
   .kind-current {

@@ -282,7 +282,8 @@ describe('Tab completion and the completion row', () => {
     await type('theme k');
     await settle();
     const options = screen.getAllByRole('option');
-    expect(options.map((o) => o.textContent)).toEqual(['kangaroo', 'kookaburra']);
+    // Each theme's swatch is a block in its colour before the name.
+    expect(options.map((o) => o.textContent)).toEqual(['█kangaroo', '█kookaburra']);
     expect(options[1]?.querySelector('.swatch')).not.toBeNull();
     expect(await fireEvent.mouseDown(options[1] as HTMLElement)).toBe(false);
     await fireEvent.click(options[1] as HTMLElement);
