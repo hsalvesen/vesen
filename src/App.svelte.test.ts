@@ -28,7 +28,7 @@ let shell: Shell;
 let stopShell: () => void = () => {};
 
 beforeEach(() => {
-  const app = createAppShell({ banner: () => bannerBlocks({ version: '0.0.0-test', touch: false }), yieldToHost: () => Promise.resolve() });
+  const app = createAppShell({ banner: () => bannerBlocks({ version: '0.0.0-test' }), yieldToHost: () => Promise.resolve() });
   shell = app.shell;
   stopShell = app.stop;
   // stock's client, as bootstrap provides it, with no Worker whatever .env.local says; each test
@@ -46,7 +46,7 @@ afterEach(() => {
 });
 
 const renderApp = () => render(App, { props: { shell } });
-const banner = () => bannerBlocks({ version: '0.0.0-test', touch: false });
+const banner = () => bannerBlocks({ version: '0.0.0-test' });
 
 describe('App', () => {
   it('is a column of the screen frame, holding the transcript and the CRT overlay, then the dock slot', () => {

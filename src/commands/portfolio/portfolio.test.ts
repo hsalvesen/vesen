@@ -215,11 +215,10 @@ describe('banner', () => {
     expect(BANNER_ROWS[4]).toMatch(/o888  888o$/);
   });
 
-  it("tells a touch screen to tap the keyboard's Go key, where a keyboard presses Enter", () => {
-    const start = (touch: boolean) => lineText(rows(bannerBlocks({ version: '1.2.0', touch }))[3] ?? []);
-    expect(start(true)).toBe('Type help and tap Go to see all available commands.');
-    expect(start(false)).toBe('Type help and press Enter to see all available commands.');
-    const touch = bannerBlocks({ version: '1.2.0', touch: true });
-    expect(touch[0]).toMatchObject({ type: 'art', text: BANNER_ART, tail: { text: '  v1.2.0' }, alt: 'Vesen logo, version 1.2.0' });
+  it('says press Enter on every device, naming no key a phone may not have', () => {
+    const blocks = bannerBlocks({ version: '1.2.0' });
+    expect(lineText(rows(blocks)[3] ?? [])).toBe('Type help and press Enter to see all available commands.');
+    expect(rows(blocks).map(lineText).join('\n')).not.toMatch(/\bGo\b|\btap\b/);
+    expect(blocks[0]).toMatchObject({ type: 'art', text: BANNER_ART, tail: { text: '  v1.2.0' }, alt: 'Vesen logo, version 1.2.0' });
   });
 });

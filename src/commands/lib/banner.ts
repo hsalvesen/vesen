@@ -1,5 +1,5 @@
 // The welcome banner: the vesen logo as art (screen readers hear "Vesen logo") with its version,
-// what this is, and how to start: type help and press Enter (tap Go on a phone), then tree or the
+// what this is, and how to start: type help and press Enter, then tree or the
 // README, each a tap away. `banner` prints it, the app shows it at boot
 // before the shell has loaded, and `reset` and `login` put it back, so it lives here, small and
 // DOM-free, for the initial chunk to import.
@@ -27,8 +27,6 @@ export const BANNER_ART = BANNER_ROWS.join('\n');
 
 export interface BannerOptions {
   readonly version: string;
-  /** A touch screen has no Tab or arrow keys to mention; it has the chips in the dock. */
-  readonly touch: boolean;
 }
 
 const MUTED: SpanStyle = { fg: 'muted' };
@@ -37,15 +35,16 @@ const ACCENT: SpanStyle = { fg: 'accent' };
 
 /**
  * The banner's blocks: the logo with the version, a blank line, what this is, how to start (type
- * help and press Enter, or tap Go on a phone's keyboard), and where to go next.
+ * help and press Enter, the same on every keyboard: a phone's names its key go, send, return or
+ * an arrow), and where to go next.
  */
-export function bannerBlocks({ version, touch }: BannerOptions): Block[] {
+export function bannerBlocks({ version }: BannerOptions): Block[] {
   const lines: Line[] = [
     // A blank line between the logo and the words.
     [],
     [out.span('A virtual Linux terminal, with its own file system to explore.', MUTED)],
     [],
-    [out.span('Type ', STRONG), out.run('help', 'help', ACCENT), out.span(touch ? ' and tap Go to see all available commands.' : ' and press Enter to see all available commands.', STRONG)],
+    [out.span('Type ', STRONG), out.run('help', 'help', ACCENT), out.span(' and press Enter to see all available commands.', STRONG)],
     [
       out.span('Then try ', STRONG),
       out.run('tree', 'tree', ACCENT),

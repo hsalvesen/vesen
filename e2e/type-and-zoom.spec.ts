@@ -90,15 +90,13 @@ test.describe('the terminal font', { tag: '@smoke' }, () => {
     expect(widths.arrow).toBeCloseTo(widths.regular, 0);
   });
 
-  test('the banner says what this is, and how to start: press Enter, or tap Go on touch', async ({ page }) => {
+  test('the banner says what this is, and how to start: press Enter, on every device', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByText('A virtual Linux terminal, with its own file system to explore.', { exact: true }).first()).toBeVisible();
     await expect(page.locator('.sr-only', { hasText: /^Vesen logo, version \S+$/ })).toHaveCount(1);
-    const keys = 'Type help and press Enter to see all available commands.';
-    const touch = 'Type help and tap Go to see all available commands.';
-    const phone = PHONES.includes(test.info().project.name);
-    await expect(page.getByText(phone ? touch : keys, { exact: true }).first()).toBeVisible();
-    await expect(page.getByText(phone ? keys : touch, { exact: true })).toHaveCount(0);
+    // A phone's keyboard names its key go, send, return or an arrow: the banner names none of them.
+    await expect(page.getByText('Type help and press Enter to see all available commands.', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(/tap Go/)).toHaveCount(0);
   });
 
   test('the prompt names the brand as the host', async ({ page }) => {

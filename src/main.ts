@@ -12,8 +12,7 @@ try {
     window,
     build: import.meta.url,
     // At boot, and again for reset and a new login: the same logo on every screen, scaled to fit.
-    banner: () =>
-      bannerBlocks({ version: __APP_VERSION__, touch: window.matchMedia?.('(pointer: coarse)').matches ?? false }),
+    banner: () => bannerBlocks({ version: __APP_VERSION__ }),
   });
   if (booted) {
     if (!target) throw new Error('#app is missing from the page');
