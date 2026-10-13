@@ -52,12 +52,17 @@ async function slowCurl(page: Page): Promise<{ hold(): void; release(): void; li
 /**
  * Scrolls the transcript to the top as a visitor does, with a wheel turn and the scroll it makes.
  * The input matters: a scroll with none, in the frame new output arrives, is taken as the
- * engine's own (ui/actions/stickToBottom.ts).
+ * engine's own (ui/actions/stickToBottom.ts). It waits for the scroll event, as a visitor's own
+ * scrolling lands before anything else happens: a browser slow to paint (WebKit on Linux, with
+ * the phosphor glow) can otherwise deliver it after the next output.
  */
 async function scrollToTop(page: Page): Promise<void> {
-  await page.locator('main').evaluate((main) => {
+  await page.locator('main').evaluate(async (main) => {
+    if (main.scrollTop === 0) return;
+    const scrolled = new Promise((resolve) => main.addEventListener('scroll', resolve, { once: true }));
     main.dispatchEvent(new WheelEvent('wheel', { deltaY: -main.scrollHeight, bubbles: true }));
     main.scrollTop = 0;
+    await scrolled;
   });
 }
 
