@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cathodeModes, DEFAULT_CATHODE_MODE } from '../stores/cathode';
+import { cathodeModes, LEGACY_DEFAULT_CATHODE_MODE } from '../stores/cathode';
 import { DEFAULT_THEME_NAME, themes } from '../stores/theme';
 import { createStorage, runMigrations, type MigrationCatalogue, type StorageHost } from './storage';
 import { STORAGE_KEYS } from './storage-keys';
@@ -45,7 +45,7 @@ const catalogue: MigrationCatalogue = {
   themes: themes.map((t) => t.name),
   defaultTheme: DEFAULT_THEME_NAME,
   cathodeModes,
-  defaultCathode: DEFAULT_CATHODE_MODE,
+  defaultCathode: LEGACY_DEFAULT_CATHODE_MODE,
 };
 
 describe('createStorage', () => {
@@ -201,6 +201,8 @@ describe('runMigrations', () => {
   it('turns a chosen CRT mode into the new shape', () => {
     expect(migrate({ cathode: 'vintage' })).toEqual({ [CATHODE]: '{"mode":"vintage"}' });
     expect(migrate({ cathode: 'off' })).toEqual({ [CATHODE]: '{"mode":"off"}' });
+    // Phosphor was a choice back then, even though it is the default now.
+    expect(migrate({ cathode: 'phosphor' })).toEqual({ [CATHODE]: '{"mode":"phosphor"}' });
   });
 
   it.each([

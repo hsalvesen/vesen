@@ -53,7 +53,7 @@ describe('stores', () => {
     const { screen } = await import('./screen');
 
     expect(get(theme).name).toBe('swamphen');
-    expect(get(cathode)).toBe('scanlines');
+    expect(get(cathode)).toBe('phosphor');
     expect(get(screen)).toEqual([]);
   });
 });

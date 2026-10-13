@@ -26,9 +26,12 @@ export const cathodeModeInfo: CathodeModeInfo[] = [
   { name: 'vintage', summary: 'The full retro set: glow, flicker, RGB fringing and a heavy vignette.' },
 ];
 
-// Scanlines greet visitors who have not chosen, on every device; the tier tones them down on
-// phones. A saved choice takes priority.
-export const DEFAULT_CATHODE_MODE: CathodeMode = 'scanlines';
+// The phosphor glow greets visitors who have not chosen, on every device; the tier tones the
+// flicker down on phones. A saved choice takes priority.
+export const DEFAULT_CATHODE_MODE: CathodeMode = 'phosphor';
+
+/** The default before the storage overhaul, which the old store saved on every page load. */
+export const LEGACY_DEFAULT_CATHODE_MODE: CathodeMode = 'scanlines';
 
 export function isCathodeMode(value: unknown): value is CathodeMode {
   return typeof value === 'string' && (cathodeModes as readonly string[]).includes(value);

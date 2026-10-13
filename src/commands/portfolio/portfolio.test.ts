@@ -113,7 +113,7 @@ describe('cathode', () => {
     expect(status).toBe(0);
     const listing = text(blocks);
     expect(listing).toContain('Cathode variations (* marks the current one):');
-    expect(listing).toContain('* scanlines  Subtle horizontal scanlines');
+    expect(listing).toContain('* phosphor   Glowing phosphor text');
     expect(listing).toContain('  vintage    The full retro set');
     expect(listing).toContain('Quality: lite (auto: a touch screen)');
     const vintage = rows(blocks).find((line) => line[1]?.text === 'vintage') ?? [];

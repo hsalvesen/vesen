@@ -23,7 +23,7 @@ import { createStorage, runMigrations } from '../services/storage';
 import type { Clipboard, Opener, StorageService } from '../services/types';
 import type { ShellPort, TerminalInfo } from '../shell/index';
 import { promptLine } from '../shell/prompt';
-import { cathode, cathodeModes, cathodeQuality, crtTier, DEFAULT_CATHODE_MODE, persistCathode } from '../stores/cathode';
+import { cathode, cathodeModes, cathodeQuality, crtTier, LEGACY_DEFAULT_CATHODE_MODE, persistCathode } from '../stores/cathode';
 import { screen } from '../stores/screen';
 import { columns } from '../stores/term';
 import { persistPrefs } from '../stores/prefs';
@@ -77,7 +77,7 @@ export function bootstrap({ window: win, build, banner }: BootOptions): Booted |
     themes: themes.map((t) => t.name),
     defaultTheme: DEFAULT_THEME_NAME,
     cathodeModes,
-    defaultCathode: DEFAULT_CATHODE_MODE,
+    defaultCathode: LEGACY_DEFAULT_CATHODE_MODE,
   });
 
   const doc = win.document;

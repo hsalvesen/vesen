@@ -100,11 +100,11 @@ describe('persistCathode', () => {
     ['an unknown mode', '{"mode":"hologram"}'],
     ['the legacy bare value', 'vintage'],
     ['the wrong shape', '[]'],
-  ])('falls back to scanlines for %s', async (_, value) => {
+  ])('falls back to phosphor for %s', async (_, value) => {
     const { cathode, persistCathode } = await import('./cathode');
     const { storage } = storageWith({ [CATHODE]: value });
     persistCathode(storage.local);
-    expect(get(cathode)).toBe('scanlines');
+    expect(get(cathode)).toBe('phosphor');
   });
 
   it('saves nothing until the mode changes, so the default can follow the device', async () => {
@@ -138,7 +138,7 @@ describe('persistCathode', () => {
     vi.resetModules();
     const fresh = await import('./cathode');
     fresh.persistCathode(storageWith({ [CATHODE]: '{"mode":"hologram","quality":"off"}' }).storage.local);
-    expect([get(fresh.cathode), get(fresh.cathodeQuality)]).toEqual(['scanlines', 'off']);
+    expect([get(fresh.cathode), get(fresh.cathodeQuality)]).toEqual(['phosphor', 'off']);
   });
 });
 

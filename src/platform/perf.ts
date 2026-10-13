@@ -3,7 +3,7 @@
 // the device and its settings call for:
 //   off   reduced motion, increased contrast, forced colours or reduced transparency
 //   lite  touch screens, in-app browsers, Save-Data and low memory: a static vignette and fine
-//         scanlines, no filter, sweep or flicker, and a small glow
+//         scanlines, no filter, sweep or flicker, and the phosphor glow (vintage's is smaller)
 //   full  everything else, a desktop with a fine pointer
 // `cathode quality` overrides the choice. decideTier is pure; startPerf watches the settings.
 import type { CrtQuality, CrtTier, TierDecision } from '../stores/cathode';

@@ -92,7 +92,7 @@ describe('bootstrap', () => {
     expect(themeColor()).toBe('#222235');
     expect(svgIcon()).toBe('/icons/theme/swamphen.svg');
     expect(document.documentElement.style.colorScheme).toBe('dark');
-    expect([...document.documentElement.classList].sort()).toEqual(['crt-on', 'crt-scanlines', 'crt-tier-full']);
+    expect([...document.documentElement.classList].sort()).toEqual(['crt-on', 'crt-phosphor', 'crt-tier-full']);
 
     // Themes still change for the session.
     setTheme('cockatoo');
@@ -162,7 +162,7 @@ describe('bootstrap', () => {
     const { boot, cathodeQuality, crtTier } = await load();
     boot();
     const classes = () => [...document.documentElement.classList].sort();
-    expect(classes()).toEqual(['crt-on', 'crt-scanlines', 'crt-tier-lite']);
+    expect(classes()).toEqual(['crt-on', 'crt-phosphor', 'crt-tier-lite']);
     expect(get(crtTier)).toEqual({ tier: 'lite', reason: 'a touch screen', quality: 'auto' });
 
     // Reduced motion switched on while the page is open.
@@ -173,8 +173,8 @@ describe('bootstrap', () => {
     expect(classes()).toEqual(['crt-tier-off']);
 
     cathodeQuality.set('full');
-    expect(classes()).toEqual(['crt-on', 'crt-scanlines', 'crt-tier-full']);
-    expect(localStorage.getItem('vesen:cathode:v1')).toBe('{"mode":"scanlines","quality":"full"}');
+    expect(classes()).toEqual(['crt-on', 'crt-phosphor', 'crt-tier-full']);
+    expect(localStorage.getItem('vesen:cathode:v1')).toBe('{"mode":"phosphor","quality":"full"}');
   });
 
   it('pauses the CRT animations while the page is hidden', async () => {

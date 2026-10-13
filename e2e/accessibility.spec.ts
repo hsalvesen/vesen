@@ -174,12 +174,15 @@ test.describe('CRT tiers', { tag: '@smoke' }, () => {
     await page.goto('/');
     const tier = test.info().project.name === 'desktop-chrome' ? 'full' : 'lite';
     await expect(page.locator('html')).toHaveClass(new RegExp(`\\bcrt-tier-${tier}\\b`));
-    await expect(page.locator('html')).toHaveClass(/\bcrt-scanlines\b/);
+    await expect(page.locator('html')).toHaveClass(/\bcrt-phosphor\b/);
     if (tier === 'lite') {
       // No animation and no filter on phones.
       const sweep = await page.locator('.crt-layer-sweep').evaluate((el) => getComputedStyle(el).display);
       expect(sweep).toBe('none');
     }
+    // The phosphor glow is the same on every device.
+    const glow = await page.locator('.scrollback').evaluate((el) => getComputedStyle(el).textShadow);
+    expect(glow).toContain('6px');
 
     await run(page, 'cathode ls');
     const reason = test.info().project.name === 'iphone-instagram' ? "in Instagram's in-app browser" : tier === 'lite' ? 'a touch screen' : 'a desktop';

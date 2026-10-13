@@ -135,6 +135,7 @@ export interface MigrationCatalogue {
   readonly themes: readonly string[];
   readonly defaultTheme: string;
   readonly cathodeModes: readonly string[];
+  /** The old store's default mode, which is not the current one. */
   readonly defaultCathode: string;
 }
 
