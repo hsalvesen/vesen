@@ -33,6 +33,7 @@ All notable changes to vesen are recorded here. The format follows [Keep a Chang
 - On a keyboard `sudo`'s show says "Press q or Esc to exit" once it has played for three seconds, and nothing before that.
 - `sudo`'s track starts without a tap in Safari, on an iPhone or iPad, and in Instagram's and other apps' browsers: the key press that answers the password readies it (they let a page start sound only inside a tap or key press, and the show opens after one).
 - The banner has a blank line between the logo and "A virtual Linux terminal, with its own file system to explore."
+- Scrolling up while output arrives keeps the view where it was put, with the new output pill, even where the browser reports the scroll late (a slow screen).
 
 ## [2.0.0] - 2026-10-08
 
