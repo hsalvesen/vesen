@@ -24,6 +24,11 @@ All notable changes to vesen are recorded here. The format follows [Keep a Chang
 - The banner's logo is a new wordmark: VESEN in figlet's Roman style (`o` serifs, `888` stems), drawn narrower than the font draws it, five rows of 46 columns, with the version after its last row. It is the same on every screen, scaled down to fit a phone rather than swapped for a smaller logo, and the link preview (`public/og.png`) is drawn from it. `scripts/art/wordmark.py`, which drew the old logo's shadow, is gone.
 - `fastfetch`'s OS logos are vesen 1.0's again: the apple, the bugdroid, the four panes and Tux, as they were.
 - Colour swatches are blocks again (`██`), as before 2.0's ASCII pass: fastfetch's palette and `theme ls`.
+- The CRT effect starts in phosphor mode for anyone who has not chosen one, and a phone shows the same phosphor glow as a desktop (the lite tier still drops the sweep and flicker). A `scanlines` saved by the old store, which saved its default on every load, is still dropped, so those visitors get phosphor too.
+- `tree` draws box-drawing lines again, as one art block with the rows touching so the lines join, scrolling sideways on a narrow screen. `--charset ascii` draws the ASCII set as ordinary lines.
+- The banner says what this is, "A virtual Linux terminal, with its own file system to explore.", and how to start: type help and press Enter (tap Go on a phone). The Tab and arrow-key line and the owner's byline are gone.
+- The theme chips mark each theme with a block (`█`) in its colour, not a round swatch.
+- Tab, the ghost and a chip complete a word without a space after it. A second Tab on a finished word lists what can follow it, and the chips offer the next word as before.
 
 ## [2.0.0] - 2026-10-08
 
