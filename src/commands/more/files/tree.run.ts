@@ -1,8 +1,9 @@
 // The body of tree; its spec, in tree.ts, loads this the first time tree runs.
 //
-// The drawing is ordinary lines on the terminal, at its line height, with the connectors of
-// `tree --charset=ascii` unless --charset asks for the box-drawing set. A screen reader hears
-// every path instead of the connectors. A pipe receives the same text as tree prints.
+// The drawing is one art block on the terminal, in tree's box-drawing lines, with its rows
+// touching so the lines join up, and it never wraps: a narrow screen scrolls it sideways instead of
+// breaking the lines apart. --charset ascii draws tree's ASCII set as ordinary lines instead. A
+// screen reader hears every path instead of the lines. A pipe receives the same text as tree prints.
 
 import { out, type Line } from '../../../output/model';
 import type { CommandContext, CommandDoc, ExitCode } from '../../../shell/types';
@@ -14,7 +15,7 @@ import { humanSize, modeString } from '../../lib/listing';
 /** What --help, help and man say about tree, besides its spec (tree.ts). */
 export const doc: CommandDoc = {
   description:
-    'Draws each DIRECTORY (the working directory when none is given) and everything inside it as a tree, sorted by name, then counts the folders and files it showed. Hidden names are left out unless -a asks for them; a link is shown with what it points to and is not followed.',
+    'Draws each DIRECTORY (the working directory when none is given) and everything inside it as a tree, sorted by name, then counts the folders and files it showed. Hidden names are left out unless -a asks for them; a link is shown with what it points to and is not followed. On a narrow screen the drawing scrolls sideways rather than wrapping.',
   man: [
     {
       heading: 'PATTERNS',
@@ -22,7 +23,7 @@ export const doc: CommandDoc = {
     },
     {
       heading: 'CHARSETS',
-      body: "--charset NAME chooses the lines of the drawing: ascii draws them with |, ` and -, as tree --charset=ascii does; utf-8 draws box-drawing lines. ascii is the default here, unlike tree's, because this terminal draws every line at its normal line height, where box-drawing pieces no longer join up and the rows crowd each other. Any other NAME is drawn as ascii, as tree draws a charset it does not know.",
+      body: "--charset NAME chooses the lines of the drawing: utf-8, the default, draws box-drawing lines, which join up as the rows touch; ascii draws them with |, ` and -, as tree --charset=ascii does. Any other NAME is drawn as utf-8.",
     },
     {
       heading: 'FILE DETAILS',
@@ -43,16 +44,16 @@ export interface Charset {
   readonly gap: string;
 }
 
-/** The charsets --charset takes: tree's ascii set, the default here, and its box-drawing utf-8 set. */
+/** The charsets --charset takes: tree's box-drawing utf-8 set, the default, and its ascii set. */
 export const CHARSETS: Readonly<Record<'ascii' | 'utf-8', Charset>> = {
   ascii: { tee: '|-- ', last: '`-- ', bar: '|   ', gap: '    ' },
   'utf-8': { tee: '├── ', last: '└── ', bar: '│   ', gap: '    ' },
 };
 
-/** The charset NAME names, in any case (utf8 too); ascii for one tree does not know, as tree falls back. */
+/** The charset NAME names, in any case: ascii for ascii, the box-drawing utf-8 set for anything else (and none). */
 export function charsetNamed(name: unknown): Charset {
-  const key = typeof name === 'string' ? name.trim().toLowerCase() : 'ascii';
-  return key === 'utf-8' || key === 'utf8' ? CHARSETS['utf-8'] : CHARSETS.ascii;
+  const key = typeof name === 'string' ? name.trim().toLowerCase() : 'utf-8';
+  return key === 'ascii' ? CHARSETS.ascii : CHARSETS['utf-8'];
 }
 
 interface Options {
@@ -215,9 +216,11 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   }
   const report = options.dirsOnly ? plural(tally.dirs, 'directory', 'directories') : `${plural(tally.dirs, 'directory', 'directories')}, ${plural(tally.files, 'file', 'files')}`;
   const alt = `Tree of ${roots.join(', ')}, ${report}${tally.spoken.length > 0 ? `: ${tally.spoken.join(', ')}` : ''}`;
-  // Ordinary lines, so the drawing sits at the terminal's line height; the alt is what a screen
-  // reader hears instead of the connectors.
-  await ctx.stdout.block(out.lines(tally.lines.map((row): Line => [out.span(row)]), 'stdout', alt));
+  // Box-drawing lines are art, with the rows touching so they join, scrolling sideways rather than
+  // wrapping; the ascii set is ordinary lines. Either way the alt is what a screen reader hears.
+  await ctx.stdout.block(
+    options.charset === CHARSETS.ascii ? out.lines(tally.lines.map((row): Line => [out.span(row)]), 'stdout', alt) : out.art(tally.lines.join('\n'), alt, 'scroll'),
+  );
   if (ctx.opts.noreport !== true) await ctx.stdout.write(`\n${report}\n`);
   return status;
 }
