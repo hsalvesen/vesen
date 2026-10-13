@@ -78,16 +78,16 @@
     "name": "galah",
     "black": "#aab1be",
     "red": "#ffa9bc",
-    "green": "#a8dca8",
-    "yellow": "#f5d78e",
+    "green": "#f590a9",
+    "yellow": "#d3d7de",
     "blue": "#a9c6f5",
     "purple": "#ffb3d1",
     "cyan": "#9fd9de",
     "white": "#f6f1f3",
     "brightBlack": "#bdc3cf",
     "brightRed": "#ff93ab",
-    "brightGreen": "#bde8bd",
-    "brightYellow": "#fbe4a8",
+    "brightGreen": "#f9b3c6",
+    "brightYellow": "#e6e8ec",
     "brightBlue": "#bdd3f8",
     "brightPurple": "#ffc3db",
     "brightCyan": "#b6e4e8",
@@ -97,7 +97,10 @@
     "cursorColor": "#ffb3d1",
     "roles": {
       "accent": "purple",
-      "hot": "brightRed"
+      "hot": "brightRed",
+      "ok": "cyan",
+      "warn": "#f5d78e",
+      "sun": "#f5d78e"
     }
   },
   {
