@@ -4,11 +4,12 @@ import { isBenignConsoleMessage } from './console';
 // sudo's show (src/commands/shell/sudo.run.ts, src/ui/apps/Rick.svelte): the password prompt is
 // `Password: ` alone, with no line above it, and Esc cancels it; the show's files are warmed at
 // idle after boot, and --help fetches nothing more. After the password the Rick app opens over
-// the terminal, with the owner's frames and their track, and nothing opens anywhere else; the
-// screen shows the frames and one line saying how to leave. Esc, q and ^C end it on a keyboard,
-// a tap and Back on a phone; the audio element goes with it, and the sudoers line
-// follows in the transcript. Without the frames file the stage is empty. Under reduced motion
-// one frame stands still. No console errors anywhere.
+// the terminal, with the owner's frames and their track, and nothing opens anywhere else. On a
+// keyboard the screen shows the frames and, once they have played a few seconds, one line saying
+// how to leave; on a phone the frames alone, covering the screen upright or on its side, and
+// turning with it. Esc, q and ^C end it on a keyboard, a tap and Back on a phone; the audio
+// element goes with it, and the sudoers line follows in the transcript. Without the frames file
+// the stage is empty. Under reduced motion the frames still play. No console errors anywhere.
 
 const PHONES = ['iphone-instagram', 'pixel-7'];
 const isPhone = () => PHONES.includes(test.info().project.name);
@@ -80,9 +81,9 @@ async function sudoLs(page: Page): Promise<void> {
 }
 
 /**
- * On a phone held upright the picture covers the stage, the width of the screen's frame, as large as
- * it must be, and is cut evenly about its centre: as much from the left as from the right, and
- * from the top as from the bottom.
+ * On a phone, upright or on its side, the picture covers the stage, the whole screen inside its
+ * frame, as large as it must be, and is cut evenly about its centre: as much from the left as from
+ * the right, and from the top as from the bottom.
  */
 async function coversTheStage(page: Page): Promise<void> {
   const box = await show(page).evaluate((dialog) => {
@@ -90,8 +91,9 @@ async function coversTheStage(page: Page): Promise<void> {
     return { stage: rect('.stage'), frame: rect('.frame') };
   });
   const { stage, frame: picture } = box;
-  // The screen's width less the frame: 4px of gutter and 2px of border each side.
+  // The screen less the frame: 4px of gutter and 2px of border each side, and no line under the picture.
   expect(stage.width).toBeGreaterThanOrEqual((page.viewportSize()?.width ?? 0) - 14);
+  expect(stage.height).toBeGreaterThanOrEqual((page.viewportSize()?.height ?? 0) - 14);
   expect(picture.left).toBeLessThanOrEqual(stage.left + 1);
   expect(picture.right).toBeGreaterThanOrEqual(stage.right - 1);
   expect(picture.top).toBeLessThanOrEqual(stage.top + 1);
@@ -144,18 +146,20 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
     await expect(audio(page)).toHaveCount(0);
 
     await sudoLs(page);
-    // Nothing on the screen but the stage and the way out: no title, no mute button.
+    // Nothing on the screen but the stage and, on a keyboard, the way out: no title, no mute button.
     await expect(show(page)).not.toContainText('rickrolled');
     if (isPhone()) {
-      // No buttons on a phone: a tap leaves, as the one line says.
+      // No buttons and no words on a phone: the picture alone, and a tap leaves.
       await expect(show(page).getByRole('button')).toHaveCount(0);
-      await expect(status(page)).toHaveText('Tap to exit');
+      await expect(status(page)).toHaveCount(0);
     } else {
-      await expect(status(page)).toHaveText('Ctrl+C, q or Esc to exit');
+      // How to leave comes once the show has played a few seconds, not as it opens.
+      expect(await status(page).textContent()).toBe('');
+      await expect(status(page)).toHaveText('Press q or Esc to exit', { timeout: 10_000 });
+      // It names no track and uses ASCII marks only.
+      expect(await status(page).textContent()).toMatch(/^[\x20-\x7e]*$/);
+      expect(await status(page).textContent()).not.toMatch(/Never|number|\.mp3/);
     }
-    // The status line names no track and uses ASCII marks only.
-    expect(await status(page).textContent()).toMatch(/^[\x20-\x7e]*$/);
-    expect(await status(page).textContent()).not.toMatch(/Never|number|\.mp3/);
 
     // The track: an element made for the show, with the file from this origin, looping, modest.
     await expect(show(page).locator('audio')).toHaveCount(1);
@@ -234,19 +238,17 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
     const { errors } = await arrive(page);
     const home = page.url();
     await sudoLs(page);
-    // Where the browser lets the sound run, m mutes it; either way the one line says only how to
-    // leave, even where the browser waits for a gesture of its own.
+    // Where the browser lets the sound run, m mutes it, and says nothing of it: the line under the
+    // picture only ever says how to leave.
     const sound = await show(page).getAttribute('data-sound');
     expect(['on', 'waiting', 'off']).toContain(sound);
     if (sound === 'on') {
-      await expect(status(page)).toHaveText('Ctrl+C, q or Esc to exit');
       await page.keyboard.press('m');
       expect(await audio(page).evaluate((element: HTMLAudioElement) => element.muted)).toBe(true);
-      await expect(status(page)).toHaveText('Ctrl+C, q or Esc to exit');
+      await expect(status(page)).not.toContainText(/mute/i);
       await page.keyboard.press('m');
-    } else if (sound === 'waiting') {
-      await expect(status(page)).toHaveText('Ctrl+C, q or Esc to exit');
     }
+    await expect(status(page)).toHaveText('Press q or Esc to exit', { timeout: 10_000 });
     await page.keyboard.press('q');
     await reported(page, home);
 
@@ -330,6 +332,41 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
     }
     if (isPhone()) await tapToLeave(page);
     else await page.keyboard.press('Escape');
+    await reported(page, home);
+    expect(errors).toEqual([]);
+  });
+
+  test('fills a phone on its side too, and turns with it, the other cut taking over', async ({ page }) => {
+    test.skip(!isPhone(), 'a phone');
+    // Two small cuts, told apart by their sizes: 4 by 6 upright, 12 by 3 on its side.
+    const cut = (cols: number, rows: number) =>
+      [`vesen-frames fps=4 cols=${cols} rows=${rows}`, ...Array.from({ length: rows }, () => '#'.repeat(cols)), '===', ...Array.from({ length: rows }, () => '.'.repeat(cols)), ''].join('\n');
+    await page.route(FRAMES_ROUTE, (route) =>
+      route.fulfill({ status: 200, contentType: 'text/plain', body: new URL(route.request().url()).pathname === PORTRAIT_FRAMES ? cut(4, 6) : cut(12, 3) }),
+    );
+    const { errors } = await arrive(page);
+    const home = page.url();
+    const upright = page.viewportSize() ?? { width: 390, height: 664 };
+    const cols = () => frame(page).evaluate((element) => element.style.getPropertyValue('--cols'));
+    await sudoLs(page);
+    await expect(show(page)).toHaveAttribute('data-frames', 'file');
+    await expect(show(page)).toHaveAttribute('data-cut', 'portrait');
+    expect(await cols()).toBe('4');
+    await coversTheStage(page);
+
+    // On its side: the whole picture takes over, and covers the screen too.
+    await page.setViewportSize({ width: upright.height, height: upright.width });
+    await expect(show(page)).toHaveAttribute('data-cut', 'landscape');
+    expect(await cols()).toBe('12');
+    await coversTheStage(page);
+    expect(await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - window.innerWidth))).toBe(0);
+
+    // And upright again.
+    await page.setViewportSize(upright);
+    await expect(show(page)).toHaveAttribute('data-cut', 'portrait');
+    expect(await cols()).toBe('4');
+    await coversTheStage(page);
+    await tapToLeave(page);
     await reported(page, home);
     expect(errors).toEqual([]);
   });

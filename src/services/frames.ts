@@ -6,8 +6,8 @@
 
 import { FRAMES_MAX_CHARS, parseFramesFile, type FramesFile } from '../lib/frames';
 
-/** Fetches a frames file; null where there is none to play. */
-export type FramesLoader = (url: string) => Promise<FramesFile | null>;
+/** Fetches a frames file; null where there is none to play, or the signal stopped it. */
+export type FramesLoader = (url: string, signal?: AbortSignal) => Promise<FramesFile | null>;
 
 /** The least fetch needs to give: a status and a body, the way the browser's fetch does. */
 export interface FramesResponse {

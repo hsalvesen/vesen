@@ -4,28 +4,32 @@
   foreground colour to the owner's own track, through an <audio> element the boot warmed at idle
   (services/warm-show.ts) or one made here when the show opens (services/track.ts); where the
   track cannot load or play, vesen's own 8-bit tune takes over (services/chiptune.ts, through the
-  page's one AudioContext). Nothing else is on the screen: the frames, and one line saying how to
-  leave (Tap to exit on a touch screen, where a tap leaves). Esc, ^C, q and Back close it, with a short
-  fade; m still mutes whichever plays, unannounced. A browser that holds the sound back until it
-  has seen a gesture of its own gets one from the first key or tap, which starts the sound (and
-  the frames from the top with it); nothing on the screen asks for it.
+  page's one AudioContext). Nothing else is on the screen: on a touch screen the picture alone,
+  edge to edge, where a tap leaves (a screen reader hears so); on a keyboard the picture and,
+  once the show has played a few seconds, one line saying how to leave. Esc, ^C, q and Back
+  close it, with a short fade; m still mutes whichever plays, unannounced. sudo readies the
+  track inside the key press that answers its password (services/warm-show.ts unlockAudio), so a
+  browser that starts sound only from a gesture lets it play here; one that holds it back anyway
+  gets a gesture from the first key or tap, which starts the sound (and the frames from the top
+  with it); nothing on the screen asks for it.
 
   The frames are fetched when the show opens (services/frames.ts): on a screen taller than wide
-  (a phone held upright) the portrait cut, the middle of the picture, which covers the screen edge
-  to edge, as large as it must be, cropped evenly about its centre; elsewhere the whole picture,
-  as large as the window allows. Until they come, and where the file is missing or malformed, the
-  stage is empty. They start together with the track (from where the track is, if it is already
-  playing; at once where no sound plays) and keep to it: every couple of seconds the frames are
-  set to where the track is, so the two loop as one (the file's rate is fitted to the track's
-  length; scripts/ascii-video.py --fit). Frames change on animation frames at the file's pace, and
-  rest while the page is hidden. They play under reduced motion too: they are a video the visitor
-  asked for, and a video plays (the cathode's moving layers, which are decoration, still go).
-  Only a browser that cannot animate shows one frame: the most detailed, since the video opens on
-  black.
+  (a phone held upright) the portrait cut, the middle of the picture; elsewhere the whole picture.
+  When the screen turns, the other cut is fetched and takes over from where the first had got to.
+  On a touch screen the picture covers the window, as large as it must be, cropped evenly about
+  its centre; on a keyboard it is as large as the window allows, whole. Until they come, and where
+  the file is missing or malformed, the stage is empty. They start together with the track (from
+  where the track is, if it is already playing; at once where no sound plays) and keep to it:
+  every couple of seconds the frames are set to where the track is, so the two loop as one (the
+  file's rate is fitted to the track's length; scripts/ascii-video.py --fit). Frames change on
+  animation frames at the file's pace, and rest while the page is hidden. They play under reduced
+  motion too: they are a video the visitor asked for, and a video plays (the cathode's moving
+  layers, which are decoration, still go). Only a browser that cannot animate shows one frame: the
+  most detailed, since the video opens on black.
 -->
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { RICK_ALT, RICK_CLOSED, RICK_TITLE, type RickView } from '../../commands/lib/rick';
+  import { RICK_ALT, RICK_CLOSED, RICK_HINT_AFTER_MS, RICK_KEYS_HINT, RICK_TAP_HINT, RICK_TITLE, type RickView } from '../../commands/lib/rick';
   import type { Song } from '../../lib/chiptune';
   import { stillFrameIndex, type AsciiFrame, type FramesFile } from '../../lib/frames';
   import { PORTRAIT_QUERY } from '../../lib/show-files';
@@ -40,7 +44,7 @@
     close,
     synth = createChiptune,
     audio = audioElement,
-    fetchFrames = loadFrames,
+    fetchFrames = (url: string, signal?: AbortSignal) => loadFrames(url, undefined, signal),
   }: AppProps & {
     /** Makes the synth; tests give a fake. */
     synth?: (song: Song, options: ChiptuneOptions) => Chiptune;
@@ -59,8 +63,12 @@
   const MODIFIERS = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'];
   const BLANK: AsciiFrame = { text: '', rows: [] };
 
+  /** The portrait cut, the middle of the picture, or the whole picture. */
+  type Cut = 'portrait' | 'landscape';
+
   /** The owner's frames on the stage, once the file has come. */
   interface Shown {
+    readonly cut: Cut;
     readonly frames: readonly AsciiFrame[];
     readonly fps: number;
     readonly cols: number;
@@ -85,11 +93,20 @@
   // svelte-ignore state_referenced_locally
   const view = viewOf(props);
   const canAnimate = typeof requestAnimationFrame === 'function';
-  /** The cut that plays, chosen as the show opens: the portrait one on a screen taller than wide, where the view names one. */
-  const cut: 'portrait' | 'landscape' =
-    view.portraitFramesFile !== '' && typeof matchMedia === 'function' && matchMedia(PORTRAIT_QUERY).matches ? 'portrait' : 'landscape';
-  const framesPath = cut === 'portrait' ? view.portraitFramesFile : view.framesFile;
+  /** Whether the screen is taller than wide, as it is now and whenever it turns. */
+  const upright = typeof matchMedia === 'function' ? matchMedia(PORTRAIT_QUERY) : null;
 
+  /** The cut for the screen: the portrait one on a screen taller than wide, where the view names one. */
+  function cutNow(): Cut {
+    return view.portraitFramesFile !== '' && upright?.matches === true ? 'portrait' : 'landscape';
+  }
+
+  function pathOf(which: Cut): string {
+    return which === 'portrait' ? view.portraitFramesFile : view.framesFile;
+  }
+
+  /** The cut the screen calls for; the one on the stage follows when its file comes. */
+  let cut: Cut = $state(cutNow());
   /** Null until the file has come: an empty stage. */
   let shown = $state.raw<Shown | null>(null);
   const still = $derived(!canAnimate || (shown !== null && shown.frames.length < 2));
@@ -100,6 +117,8 @@
   let sound: 'off' | 'waiting' | 'on' | 'muted' = $state('off');
   /** What the sound comes from: the owner's track, the synth, or nothing. */
   let source: 'track' | 'synth' | 'none' = $state('none');
+  /** On a keyboard, how to leave shows once the show has played a few seconds. */
+  let hinted = $state(false);
 
   let root: HTMLElement | undefined = $state();
   let player: Chiptune | null = null;
@@ -109,14 +128,23 @@
   let last: number | null = null;
   let synced = 0;
   let done = false;
+  let hintTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The frames file on its way, which a turn of the screen or the show closing stops. */
+  let loading: AbortController | null = null;
 
   const current = $derived(shown === null ? BLANK : (shown.frames[still ? shown.still : frame] ?? BLANK));
+
   /**
-   * The one line under the frames: how to leave. A touch screen has its Close button instead. A
-   * browser that holds the sound back until a gesture of its own gets one from the first key or
-   * tap (onKey, onTap), and the screen says nothing of it.
+   * The show has begun: its frames are on the stage, its sound plays, or no frames will come. On a
+   * keyboard, how to leave shows a few seconds after; a touch screen shows the picture alone.
    */
-  const status = $derived(view.touch ? 'Tap to exit' : 'Ctrl+C, q or Esc to exit');
+  function begin(): void {
+    if (view.touch || done || hinted || hintTimer !== null) return;
+    hintTimer = setTimeout(() => {
+      hintTimer = null;
+      if (!done) hinted = true;
+    }, RICK_HINT_AFTER_MS);
+  }
 
   function soundNow(): void {
     if (player === null) sound = 'off';
@@ -136,6 +164,7 @@
         return;
       }
       soundNow();
+      begin();
       if (asked === track && shown !== null) restartFrames(0);
     });
   }
@@ -229,22 +258,68 @@
     frame = frameAt(elapsed);
   }
 
-  /** The owner's frames take the stage, together with the track. */
-  function useFile(file: FramesFile): void {
+  /** The owner's frames take the stage, together with the track; a cut taking over from another goes on from where it was. */
+  function useFile(file: FramesFile, which: Cut): void {
+    const from = shown === null ? 0 : elapsed / 1000;
     // The still frame is looked for only where the stage will stand still.
-    shown = { frames: file.frames, fps: file.fps, cols: file.cols, rows: file.rows, still: canAnimate ? 0 : stillFrameIndex(file.frames) };
-    restartFrames(track !== null && track.playing ? track.position() : 0);
+    shown = { cut: which, frames: file.frames, fps: file.fps, cols: file.cols, rows: file.rows, still: canAnimate ? 0 : stillFrameIndex(file.frames) };
+    restartFrames(track !== null && track.playing ? track.position() : from);
     if (still) {
       stopFrames();
       motion = 'still';
     } else if (typeof document === 'undefined' || document.visibilityState !== 'hidden') startFrames();
     else motion = 'paused';
+    begin();
+  }
+
+  /** Fetches the frames of `which` and puts them on the stage when they come, unless the screen turned again first. */
+  function loadCut(which: Cut): void {
+    loading?.abort();
+    loading = null;
+    const path = pathOf(which);
+    if (path === '') {
+      // Nothing to fetch: the stage stays as it is.
+      begin();
+      return;
+    }
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    loading = controller;
+    const settled = (file: FramesFile | null): void => {
+      if (done || loading !== controller) return;
+      loading = null;
+      // A file that does not come leaves the stage as it was: empty, or the other cut.
+      if (file !== null) useFile(file, which);
+      else begin();
+    };
+    fetchFrames(path, controller?.signal).then(settled, () => settled(null));
+  }
+
+  /** The screen turned: the cut for its new shape takes over once its file has come. */
+  function onTurn(): void {
+    const next = cutNow();
+    if (done || next === cut) return;
+    cut = next;
+    if (shown?.cut === next) {
+      // Turned back before the other cut came: the one on the stage still fits.
+      loading?.abort();
+      loading = null;
+      return;
+    }
+    loadCut(next);
+  }
+
+  function stopTimers(): void {
+    if (hintTimer !== null) clearTimeout(hintTimer);
+    hintTimer = null;
+    loading?.abort();
+    loading = null;
   }
 
   function finish(): void {
     if (done) return;
     done = true;
     stopFrames();
+    stopTimers();
     player?.stop();
     close(RICK_CLOSED);
   }
@@ -294,23 +369,17 @@
   onMount(() => {
     if (!playTrack()) playSynth();
     document.addEventListener('visibilitychange', onVisibility);
+    upright?.addEventListener?.('change', onTurn);
     // The frames: the stage stays empty until they come, and where they never do.
-    if (framesPath !== '') {
-      fetchFrames(framesPath).then(
-        (file) => {
-          if (!done && file !== null) useFile(file);
-        },
-        () => {
-          // The loader never throws; the stage stays empty anyway.
-        },
-      );
-    }
+    loadCut(cut);
   });
 
   onDestroy(() => {
     done = true;
     stopFrames();
+    stopTimers();
     player?.stop();
+    upright?.removeEventListener?.('change', onTurn);
     if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisibility);
   });
 </script>
@@ -330,15 +399,17 @@
   data-sound={sound}
   data-source={source}
   data-frames={shown === null ? 'none' : 'file'}
-  data-cut={cut}
+  data-cut={shown?.cut ?? cut}
   onclick={onTap}
   bind:this={root}
 >
   <div class="stage">
     <pre class="frame" aria-hidden="true" style:--cols={shown?.cols ?? 1} style:--rows={shown?.rows ?? 1}>{#each current.rows as row, r (r)}{#if r > 0}{'\n'}{/if}{#each row as span, s (s)}<span style:color={cssColour(span.role)}>{span.text}</span>{/each}{/each}</pre>
     <p class="sr-only">{view.alt}</p>
+    {#if view.touch}<p class="sr-only">{RICK_TAP_HINT}</p>{/if}
   </div>
-  <p class="status" role="status">{status}</p>
+  <!-- On a keyboard: empty until the show has played a few seconds, so the line is there to be announced. -->
+  {#if !view.touch}<p class="status" class:shown={hinted} role="status">{hinted ? RICK_KEYS_HINT : ''}</p>{/if}
 </div>
 
 <style>
@@ -368,10 +439,10 @@
   }
 
   /*
-    As large as the window allows, within reason, for a frame of --cols by --rows cells: a cell is
-    about 0.62 em wide in the terminal's font and the rows are 1.15 em tall; the app host's frame
-    and this padding take 68 px of the width, and with the status line or the Close button about
-    112 px of the height. The floor of 4 px keeps a wide picture whole on a phone on its side.
+    On a keyboard: as large as the window allows, within reason, for a frame of --cols by --rows
+    cells: a cell is about 0.62 em wide in the terminal's font and the rows are 1.15 em tall; the
+    app host's frame and this padding take 68 px of the width, and with the line under it about
+    112 px of the height. The floor of 4 px keeps a wide picture whole in a short window.
   */
   .frame {
     --cols: 24;
@@ -383,6 +454,7 @@
     white-space: pre;
   }
 
+  /* The line is there from the start, so the picture does not move when the words come. */
   .status {
     margin: 0;
     min-height: 1.15em;
@@ -390,42 +462,54 @@
     text-align: center;
   }
 
+  .status.shown {
+    animation: hint-in 0.6s ease-out;
+  }
+
+  @keyframes hint-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .status.shown {
+      animation: none;
+    }
+  }
+
   /*
-    A screen taller than wide (a phone held upright): the picture covers the screen edge to edge,
-    as large as it must be in both directions, centred, so what overflows is cut evenly from both
-    sides (the portrait cut is a little wider than most phones), and the status line sits beneath it. The stage is a size container, so the font follows the stage's
+    A touch screen, upright or on its side: the picture covers the whole window, as large as it
+    must be in both directions, centred, so what overflows is cut evenly from both sides (the
+    portrait cut is a little wider than most phones held upright; the whole picture a little
+    taller than one on its side). The stage is a size container, so the font follows the stage's
     own width and height: a cell is 0.585 em wide (Vesen Mono's advance, 1200 of 2048) and 1.15 em
-    tall. Where container units are missing (iOS 15), the viewport stands in for the stage.
+    tall. Where container units are missing (iOS 15), the viewport less the app host's frame
+    (12 px each way) stands in for the stage.
   */
-  @media (orientation: portrait) {
-    .rick {
-      gap: 0;
-      padding: 0;
-    }
+  .rick.touch {
+    gap: 0;
+    padding: 0;
+  }
 
-    .stage {
-      container-type: size;
-      flex: 1 1 0;
-      align-self: stretch;
-      align-items: center;
-      min-height: 0;
-      max-width: none;
-    }
+  .rick.touch .stage {
+    container-type: size;
+    flex: 1 1 0;
+    align-self: stretch;
+    align-items: center;
+    min-height: 0;
+    max-width: none;
+  }
 
-    .frame {
-      font-size: max(calc(100vw / (var(--cols) * 0.585)), calc((100vh - 70px) / (var(--rows) * 1.15)));
-    }
+  .rick.touch .frame {
+    flex: none;
+    font-size: max(calc((100vw - 12px) / (var(--cols) * 0.585)), calc((100vh - 12px) / (var(--rows) * 1.15)));
+  }
 
-    @supports (width: 1cqw) {
-      .frame {
-        font-size: max(calc(100cqw / (var(--cols) * 0.585)), calc(100cqh / (var(--rows) * 1.15)));
-      }
+  @supports (width: 1cqw) {
+    .rick.touch .frame {
+      font-size: max(calc(100cqw / (var(--cols) * 0.585)), calc(100cqh / (var(--rows) * 1.15)));
     }
-
-    .status {
-      padding: 8px 16px;
-    }
-
   }
 
   .sr-only {
@@ -439,9 +523,4 @@
     white-space: nowrap;
     border: 0;
   }
-
-
-
-
-
 </style>

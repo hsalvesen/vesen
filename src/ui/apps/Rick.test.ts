@@ -1,16 +1,29 @@
 // The Rick app (sudo): when it opens it makes the audio element for the owner's track, looping at
 // a modest volume, and plays it, with the synth as the fallback where the track cannot load or
-// play; where the browser holds the sound back until a gesture, the status line says so and the
-// first key or tap starts it. The owner's frames file takes the stage when it comes, fitted to its
-// size and started with the track, stepping on animation frames and resting while the page is
-// hidden; until then, and where the file is missing or malformed, the stage is empty. Nothing is
-// shown but the frames and the way out. Esc, q, ^C, Back and the Close button end it with the same
-// result, stopping the sound with a short fade; m mutes whichever plays, unannounced; under reduced
-// motion the first frame stands still while the sound plays.
+// play; where the browser holds the sound back until a gesture, the first key or tap starts it,
+// with nothing said. The owner's frames file takes the stage when it comes, fitted to its size and
+// started with the track, stepping on animation frames and resting while the page is hidden, and
+// the other cut takes over when the screen turns; until then, and where the file is missing or
+// malformed, the stage is empty. Nothing is shown but the frames and, on a keyboard, how to leave,
+// three seconds into the show; a touch screen shows the frames alone, and a tap leaves. Esc, q,
+// ^C and Back end it with the same result, stopping the sound with a short fade; m mutes whichever
+// plays, unannounced; under reduced motion the frames still play.
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { RICK_ALT, RICK_CLOSED, RICK_FRAMES, RICK_FRAMES_PORTRAIT, RICK_TITLE, RICK_TRACK, rickView, type RickView } from '../../commands/lib/rick';
+import {
+  RICK_ALT,
+  RICK_CLOSED,
+  RICK_FRAMES,
+  RICK_FRAMES_PORTRAIT,
+  RICK_HINT_AFTER_MS,
+  RICK_KEYS_HINT,
+  RICK_TAP_HINT,
+  RICK_TITLE,
+  RICK_TRACK,
+  rickView,
+  type RickView,
+} from '../../commands/lib/rick';
 import type { Song } from '../../lib/chiptune';
 import { parseFramesFile, type FramesFile } from '../../lib/frames';
 import type { Chiptune, ChiptuneOptions } from '../../services/chiptune';
@@ -126,6 +139,27 @@ function portrait(): void {
   vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(orientation: portrait)' }));
 }
 
+/** A screen that turns: `turn(true)` holds it upright, `turn(false)` on its side, telling who listens. */
+function turnable(upright: boolean) {
+  let matches = upright;
+  const listeners = new Set<() => void>();
+  const list = {
+    get matches() {
+      return matches;
+    },
+    addEventListener: (_type: string, listener: () => void) => listeners.add(listener),
+    removeEventListener: (_type: string, listener: () => void) => listeners.delete(listener),
+  };
+  vi.stubGlobal('matchMedia', (query: string) => (query === '(orientation: portrait)' ? list : { matches: false }));
+  return {
+    listeners,
+    turn(next: boolean): void {
+      matches = next;
+      for (const listener of [...listeners]) listener();
+    },
+  };
+}
+
 function setVisibility(state: 'hidden' | 'visible'): void {
   Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
   document.dispatchEvent(new Event('visibilitychange'));
@@ -140,6 +174,8 @@ async function settle(): Promise<void> {
 
 /** The owner's frames file for the tests: two frames of 3 by 2, two a second. */
 const FILE = parseFramesFile('vesen-frames fps=2 cols=3 rows=2\nabc\ndef\n===\nghi\njkl\n') as FramesFile;
+/** Its portrait cut: the same two frames, 2 by 3. */
+const UPRIGHT = parseFramesFile('vesen-frames fps=2 cols=2 rows=3\nab\ncd\nef\n===\ngh\nij\nkl\n') as FramesFile;
 
 interface ShowOptions {
   touch?: boolean;
@@ -165,8 +201,9 @@ async function show(options: ShowOptions = {}) {
     return element;
   };
   let deliver: (file: FramesFile | null) => void = () => {};
-  const fetchFrames = vi.fn((url: string): Promise<FramesFile | null> => {
+  const fetchFrames = vi.fn((url: string, signal?: AbortSignal): Promise<FramesFile | null> => {
     void url;
+    void signal;
     if (options.file === 'rejects') return Promise.reject(new Error('no'));
     if (options.file === 'later') {
       return new Promise((resolve) => {
@@ -183,7 +220,8 @@ async function show(options: ShowOptions = {}) {
 
 const frameOf = (dialog: HTMLElement): HTMLElement => dialog.querySelector('.frame') as HTMLElement;
 const drawn = (dialog: HTMLElement): string => frameOf(dialog).textContent ?? '';
-const status = (dialog: HTMLElement): string => (dialog.querySelector('.status') as HTMLElement).textContent ?? '';
+/** The line under the picture on a keyboard; null where there is none (a touch screen). */
+const status = (dialog: HTMLElement): string | null => dialog.querySelector('.status')?.textContent ?? null;
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -192,18 +230,18 @@ afterEach(() => {
 });
 
 describe('the Rick app', () => {
-  it('shows an empty stage with a text alternative and the way out, and nothing else, until the file comes', async () => {
+  it('shows an empty stage with a text alternative, and nothing else, until the file comes', async () => {
     frames();
     const { dialog, fake } = await show();
     expect(dialog.getAttribute('aria-label')).toBe(RICK_TITLE);
     expect(dialog.querySelector('.title')).toBeNull();
-    expect(dialog.textContent?.replace(/\s+/g, ' ').trim()).toBe(`${RICK_ALT} Ctrl+C, q or Esc to exit`);
+    expect(dialog.textContent?.replace(/\s+/g, ' ').trim()).toBe(RICK_ALT);
     const frame = frameOf(dialog);
     expect(frame.getAttribute('aria-hidden')).toBe('true');
     expect(drawn(dialog)).toBe('');
     expect(dialog.querySelector('.sr-only')?.textContent).toBe(RICK_ALT);
-    expect(status(dialog)).toBe('Ctrl+C, q or Esc to exit');
-    expect(status(dialog)).toMatch(/^[\x20-\x7e]*$/);
+    // The line for how to leave is there, empty, until the show has played a few seconds.
+    expect(status(dialog)).toBe('');
     expect(dialog.dataset.motion).toBe('still');
     expect(dialog.dataset.frames).toBe('none');
     expect(dialog.querySelector('.toolbar')).toBeNull();
@@ -228,7 +266,7 @@ describe('the Rick app', () => {
     expect(sound.play).toHaveBeenCalledTimes(1);
     // The frames file was asked for once, as the show opened.
     expect(fetchFrames).toHaveBeenCalledTimes(1);
-    expect(fetchFrames).toHaveBeenCalledWith(RICK_FRAMES);
+    expect(fetchFrames).toHaveBeenCalledWith(RICK_FRAMES, expect.any(AbortSignal));
   });
 
   it('plays the synth where the view names no track, and makes no element', async () => {
@@ -252,7 +290,7 @@ describe('the Rick app', () => {
     frames();
     const { dialog, sound, fake, close } = await show({ audio: 'blocked' });
     expect(dialog.dataset).toMatchObject({ sound: 'waiting', source: 'track' });
-    expect(status(dialog)).toBe('Ctrl+C, q or Esc to exit');
+    expect(status(dialog)).toBe('');
     expect(fake.synth.play).not.toHaveBeenCalled();
     // The browser is satisfied by the next gesture.
     sound.setMode('plays');
@@ -260,7 +298,7 @@ describe('the Rick app', () => {
     await settle();
     expect(sound.play).toHaveBeenCalledTimes(2);
     expect(dialog.dataset.sound).toBe('on');
-    expect(status(dialog)).toBe('Ctrl+C, q or Esc to exit');
+    expect(status(dialog)).toBe('');
     expect(close).not.toHaveBeenCalled();
   });
 
@@ -296,7 +334,7 @@ describe('the Rick app', () => {
     expect(fake.synth.play).toHaveBeenCalledTimes(1);
     expect(fake.synth.mute).toHaveBeenCalledTimes(1);
     expect(dialog.dataset).toMatchObject({ sound: 'muted', source: 'synth' });
-    expect(status(dialog)).toBe('Ctrl+C, q or Esc to exit');
+    expect(status(dialog)).toBe('');
   });
 
   it("steps through the file's frames at its pace on animation frames, and rests while the page is hidden", async () => {
@@ -377,17 +415,24 @@ describe('the Rick app', () => {
     await fireEvent.keyDown(window, { key: 'm' });
     expect(sound.element?.muted).toBe(true);
     expect(dialog.dataset.sound).toBe('muted');
-    expect(status(dialog)).toBe('Ctrl+C, q or Esc to exit');
+    expect(status(dialog)).toBe('');
     await fireEvent.keyDown(window, { key: 'M' });
     expect(sound.element?.muted).toBe(false);
     expect(dialog.dataset.sound).toBe('on');
-    expect(status(dialog)).toBe('Ctrl+C, q or Esc to exit');
+    expect(status(dialog)).toBe('');
   });
 
-  it('on a touch screen says Tap to exit, has no buttons, and a tap leaves', async () => {
+  it('on a touch screen shows the picture alone, has no buttons, and a tap leaves, as a screen reader hears', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     frames();
-    const { dialog, close } = await show({ touch: true });
-    expect(status(dialog)).toBe('Tap to exit');
+    const { dialog, close } = await show({ touch: true, file: FILE });
+    // No line under the picture, now or later: the picture fills the screen.
+    expect(status(dialog)).toBeNull();
+    vi.advanceTimersByTime(RICK_HINT_AFTER_MS * 2);
+    await tick();
+    expect(status(dialog)).toBeNull();
+    expect(dialog.textContent).not.toContain(RICK_KEYS_HINT);
+    expect([...dialog.querySelectorAll('.sr-only')].map((line) => line.textContent)).toEqual([RICK_ALT, RICK_TAP_HINT]);
     expect(dialog.querySelectorAll('button')).toHaveLength(0);
     await fireEvent.click(dialog);
     expect(close).toHaveBeenCalledWith(RICK_CLOSED);
@@ -404,7 +449,7 @@ describe('the Rick app', () => {
     frames();
     const { dialog, sound, close } = await show({ touch: true, audio: 'blocked' });
     expect(dialog.dataset.sound).toBe('waiting');
-    expect(status(dialog)).toBe('Tap to exit');
+    expect(status(dialog)).toBeNull();
     sound.setMode('plays');
     await fireEvent.click(dialog);
     await settle();
@@ -434,26 +479,127 @@ describe('the Rick app', () => {
   it('plays the portrait cut on a screen taller than wide, and the whole picture otherwise', async () => {
     frames();
     const wide = await show();
-    expect(wide.fetchFrames).toHaveBeenCalledWith(RICK_FRAMES);
+    expect(wide.fetchFrames).toHaveBeenCalledWith(RICK_FRAMES, expect.any(AbortSignal));
     expect(wide.dialog.dataset.cut).toBe('landscape');
     portrait();
     const upright = await show();
     expect(upright.fetchFrames).toHaveBeenCalledTimes(1);
-    expect(upright.fetchFrames).toHaveBeenCalledWith(RICK_FRAMES_PORTRAIT);
+    expect(upright.fetchFrames).toHaveBeenCalledWith(RICK_FRAMES_PORTRAIT, expect.any(AbortSignal));
     expect(upright.dialog.dataset.cut).toBe('portrait');
     // A view with no portrait cut plays the whole picture upright too.
     const whole = await show({ view: { portraitFramesFile: '' } });
-    expect(whole.fetchFrames).toHaveBeenCalledWith(RICK_FRAMES);
+    expect(whole.fetchFrames).toHaveBeenCalledWith(RICK_FRAMES, expect.any(AbortSignal));
     expect(whole.dialog.dataset.cut).toBe('landscape');
   });
 
-  it('says only how to leave where nothing can play', async () => {
+  it('changes cut when the screen turns, going on from where the picture had got to', async () => {
+    const raf = frames();
+    const screenNow = turnable(true);
+    // Sound held back, so the frames keep their own time.
+    const { dialog, fetchFrames, deliver } = await show({ file: 'later', audio: 'blocked' });
+    expect(fetchFrames).toHaveBeenLastCalledWith(RICK_FRAMES_PORTRAIT, expect.any(AbortSignal));
+    deliver(UPRIGHT);
+    await settle();
+    expect(dialog.dataset.cut).toBe('portrait');
+    expect(frameOf(dialog).style.getPropertyValue('--cols')).toBe('2');
+    raf.frame(0);
+    raf.frame(250);
+    raf.frame(500);
+    await tick();
+    expect(drawn(dialog)).toBe('gh\nij\nkl');
+
+    // On its side: the whole picture is fetched, and the portrait cut plays until it comes.
+    screenNow.turn(false);
+    await settle();
+    expect(fetchFrames).toHaveBeenCalledTimes(2);
+    expect(fetchFrames).toHaveBeenLastCalledWith(RICK_FRAMES, expect.any(AbortSignal));
+    expect(dialog.dataset.cut).toBe('portrait');
+    deliver(FILE);
+    await settle();
+    expect(dialog.dataset.cut).toBe('landscape');
+    expect(frameOf(dialog).style.getPropertyValue('--cols')).toBe('3');
+    // Half a second in, still: the second frame, in the new cut.
+    expect(drawn(dialog)).toBe('ghi\njkl');
+
+    // Upright and back again before the portrait cut comes: that fetch stops, and the stage keeps what fits.
+    screenNow.turn(true);
+    await settle();
+    expect(fetchFrames).toHaveBeenCalledTimes(3);
+    const stopped = fetchFrames.mock.calls[2]?.[1] as AbortSignal | undefined;
+    screenNow.turn(false);
+    await settle();
+    expect(fetchFrames).toHaveBeenCalledTimes(3);
+    expect(stopped?.aborted).toBe(true);
+    deliver(UPRIGHT);
+    await settle();
+    expect(dialog.dataset.cut).toBe('landscape');
+
+    // Closed, it listens no more.
+    cleanup();
+    expect(screenNow.listeners.size).toBe(0);
+  });
+
+  it('stops fetching the frames when it closes', async () => {
     frames();
-    const { dialog } = await show({ touch: true, audio: 'none', starts: false, synthAvailable: false });
-    expect(dialog.dataset).toMatchObject({ sound: 'off', source: 'synth' });
-    expect(status(dialog)).toBe('Tap to exit');
-    const keys = await show({ audio: 'none', starts: false, synthAvailable: false });
-    expect(status(keys.dialog)).toBe('Ctrl+C, q or Esc to exit');
+    const { fetchFrames, close } = await show({ file: 'later' });
+    const signal = fetchFrames.mock.calls[0]?.[1] as AbortSignal | undefined;
+    expect(signal?.aborted).toBe(false);
+    await fireEvent.keyDown(window, { key: 'q' });
+    expect(close).toHaveBeenCalledWith(RICK_CLOSED);
+    expect(signal?.aborted).toBe(true);
+  });
+
+  describe('how to leave, on a keyboard', () => {
+    it('says Press q or Esc to exit three seconds after the frames take the stage, and not before', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      frames();
+      // The sound held back and the frames on their way: the show has not begun.
+      const { dialog, deliver } = await show({ audio: 'blocked', file: 'later' });
+      vi.advanceTimersByTime(RICK_HINT_AFTER_MS * 2);
+      await tick();
+      expect(status(dialog)).toBe('');
+      deliver(FILE);
+      await settle();
+      vi.advanceTimersByTime(RICK_HINT_AFTER_MS - 1);
+      await tick();
+      expect(status(dialog)).toBe('');
+      vi.advanceTimersByTime(1);
+      await tick();
+      expect(status(dialog)).toBe(RICK_KEYS_HINT);
+      expect(RICK_KEYS_HINT).toBe('Press q or Esc to exit');
+      expect(status(dialog)).toMatch(/^[\x20-\x7e]*$/);
+      expect(dialog.querySelector('.status')?.classList.contains('shown')).toBe(true);
+      expect(dialog.querySelector('.status')?.getAttribute('role')).toBe('status');
+    });
+
+    it('counts from the sound where it starts before the frames, and from the start where no frames will come', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      frames();
+      const playing = await show({ file: 'later' });
+      expect(playing.dialog.dataset.sound).toBe('on');
+      vi.advanceTimersByTime(RICK_HINT_AFTER_MS);
+      await tick();
+      expect(status(playing.dialog)).toBe(RICK_KEYS_HINT);
+      // Nothing to play at all, and no file: it still says how to leave.
+      const silent = await show({ audio: 'none', starts: false, synthAvailable: false, file: null });
+      expect(silent.dialog.dataset).toMatchObject({ sound: 'off', frames: 'none' });
+      vi.advanceTimersByTime(RICK_HINT_AFTER_MS);
+      await tick();
+      expect(status(silent.dialog)).toBe(RICK_KEYS_HINT);
+    });
+
+    it('never comes once the show has closed', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      frames();
+      const { dialog, close } = await show({ file: FILE });
+      vi.advanceTimersByTime(RICK_HINT_AFTER_MS / 2);
+      await fireEvent.keyDown(window, { key: 'Escape' });
+      expect(close).toHaveBeenCalledWith(RICK_CLOSED);
+      vi.advanceTimersByTime(RICK_HINT_AFTER_MS);
+      await tick();
+      expect(status(dialog)).toBe('');
+      expect(vi.getTimerCount()).toBe(0);
+    });
   });
 
   describe("the owner's frames", () => {

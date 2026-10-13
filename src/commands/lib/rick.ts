@@ -3,10 +3,11 @@
 // track, with an 8-bit tune of vesen's own as the fallback where the track cannot play. sudo
 // hands all of it to the Rick app (src/ui/apps/Rick.svelte) through tty.fullscreen after the
 // password prompt; the app fetches the frames when it opens (the boot warmed the cache at idle,
-// services/warm-show.ts), the portrait cut on a screen taller than wide, which it fills, and the
-// whole picture elsewhere; draws them in the foreground colour at the pace the file names, keeps
-// them to the track, and shows nothing else but how to leave. Until the file comes, or where it
-// is missing or malformed, the stage is empty; nothing else is drawn.
+// services/warm-show.ts), the portrait cut on a screen taller than wide and the whole picture
+// elsewhere, changing cut when the screen turns; draws them in the foreground colour at the pace
+// the file names, filling a touch screen edge to edge, keeps them to the track, and shows nothing
+// else but, on a keyboard, how to leave once it has played a few seconds. Until the file comes,
+// or where it is missing or malformed, the stage is empty; nothing else is drawn.
 //
 // The frames file is a header line, then the frames, each `rows` lines of `cols` characters,
 // with a line of `===` between frames:
@@ -33,6 +34,15 @@ export const RICK_TITLE = 'You have been rickrolled';
 
 /** How the show reads to a screen reader. */
 export const RICK_ALT = "The owner's video, traced to text, plays on the terminal to their track.";
+
+/** How to leave on a keyboard, under the picture once it has played a few seconds (^C leaves too). */
+export const RICK_KEYS_HINT = 'Press q or Esc to exit';
+
+/** How long the show plays before it says how to leave on a keyboard. */
+export const RICK_HINT_AFTER_MS = 3000;
+
+/** How to leave on a touch screen, for a screen reader: the screen itself shows the picture alone. */
+export const RICK_TAP_HINT = 'Tap to exit.';
 
 /**
  * The owner's track (public/audio/incident-report.mp3, served from this origin; lib/show-files.ts),
