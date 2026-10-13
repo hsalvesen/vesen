@@ -6,6 +6,7 @@ import {
   PIN_THRESHOLD_PX,
   REVEAL_EVENT,
   SUBMIT_EVENT,
+  VISITOR_SCROLL_MS,
   reactToContent,
   scrollToEnd,
   stickToBottom,
@@ -92,6 +93,25 @@ function scroller(main: HTMLElement, metrics: { view: number; content: number })
       main.dispatchEvent(new Event('scroll'));
     },
     atBottom: () => top === max(),
+  };
+}
+
+/** requestAnimationFrame by hand: `run()` runs the frame waiting, as a browser's next frame would. */
+function frames() {
+  let waiting = new Map<number, FrameRequestCallback>();
+  let next = 0;
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    next += 1;
+    waiting.set(next, callback);
+    return next;
+  });
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => waiting.delete(id));
+  return {
+    run(): void {
+      const now = waiting;
+      waiting = new Map();
+      for (const callback of now.values()) callback(performance.now());
+    },
   };
 }
 
@@ -272,6 +292,7 @@ describe('use:stickToBottom', () => {
     });
 
     it('a tap is not a scroll, and a flick is over once the momentum is', () => {
+      const frame = frames();
       const now = vi.spyOn(performance, 'now').mockReturnValue(1000);
       const view = start({ view: 600, content: 2000 });
       main.dispatchEvent(new Event('touchstart'));
@@ -285,6 +306,8 @@ describe('use:stickToBottom', () => {
       main.dispatchEvent(new Event('touchstart'));
       main.dispatchEvent(new Event('touchmove'));
       main.dispatchEvent(new Event('touchend'));
+      // Frames go by, and the momentum runs out.
+      frame.run();
       now.mockReturnValue(1000 + MOMENTUM_MS + 1);
       view.metrics.content = 3200;
       main.scrollTop = 2040;
@@ -292,6 +315,32 @@ describe('use:stickToBottom', () => {
       observer().resize({ target: content, height: 3200 });
       expect(view.atBottom()).toBe(true);
       expect(pills).toEqual([]);
+    });
+
+    it("a wheel's scroll reported late, in a slow frame with new output, still leaves the view where the visitor put it", () => {
+      const frame = frames();
+      const now = vi.spyOn(performance, 'now').mockReturnValue(1000);
+      const view = start({ view: 600, content: 2000 });
+      main.dispatchEvent(new WheelEvent('wheel', { deltaY: -1500 }));
+      main.scrollTop = 0;
+      // The next frame comes long after VISITOR_SCROLL_MS (WebKit painting on a slow screen), with output.
+      now.mockReturnValue(1000 + VISITOR_SCROLL_MS * 2);
+      view.metrics.content = 2600;
+      engineScroll();
+      frame.run();
+      observer().resize({ target: content, height: 2600 });
+      expect(main.scrollTop).toBe(0);
+      expect(pills).toEqual([true]);
+
+      // Once that frame has run, a scroll the engine makes with new output is the engine's again.
+      view.scroll(2000);
+      expect(pills).toEqual([true, false]);
+      view.metrics.content = 3000;
+      main.scrollTop = 2350;
+      engineScroll();
+      observer().resize({ target: content, height: 3000 });
+      expect(view.atBottom()).toBe(true);
+      expect(pills).toEqual([true, false]);
     });
 
     it('dragging the scrollbar counts as the visitor scrolling', () => {

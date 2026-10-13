@@ -110,9 +110,14 @@ export function stickToBottom(node: HTMLElement, options: StickToBottomOptions =
   // ResizeObserver callbacks in a frame, so a scroll can see content that changed since: new
   // output, after the engine clamped scrollTop as the running line went, or anchored it. Such a
   // scroll says nothing about the visitor, and the report for the change decides instead. While
-  // the visitor is scrolling (a wheel, a drag, a flick, the scrollbar), every scroll counts.
+  // the visitor is scrolling (a wheel, a drag, a flick, the scrollbar), every scroll counts, and
+  // so does the one the next frame reports however late that frame comes: a browser slow to
+  // paint (WebKit on a slow screen) can report a wheel's scroll after VISITOR_SCROLL_MS, in the
+  // same frame as new output.
   let knownHeight = node.scrollHeight;
   let visitorUntil = 0;
+  /** A frame asked for when the visitor last scrolled, not yet run: the scroll it reports is theirs. */
+  let visitorFrame = 0;
   let holdingScrollbar = false;
   let dragged = false;
   // An entry is anchored at most once, when it grows past the threshold: output streaming into
@@ -135,8 +140,15 @@ export function stickToBottom(node: HTMLElement, options: StickToBottomOptions =
   const now = (): number => win?.performance.now() ?? 0;
   const visitorScrolls = (ms: number): void => {
     visitorUntil = Math.max(visitorUntil, now() + ms);
+    // Animation frame callbacks run after a frame's scroll events, so this one runs once the
+    // scroll the visitor just made has been reported.
+    if (visitorFrame === 0 && typeof win?.requestAnimationFrame === 'function') {
+      visitorFrame = win.requestAnimationFrame(() => {
+        visitorFrame = 0;
+      });
+    }
   };
-  const visitorScrolling = (): boolean => holdingScrollbar || now() < visitorUntil;
+  const visitorScrolling = (): boolean => holdingScrollbar || visitorFrame !== 0 || now() < visitorUntil;
 
   const onScroll = (): void => {
     if (observer !== null && node.scrollHeight !== knownHeight && !visitorScrolling()) return;
@@ -263,6 +275,7 @@ export function stickToBottom(node: HTMLElement, options: StickToBottomOptions =
     },
     destroy() {
       observer?.disconnect();
+      if (visitorFrame !== 0) win?.cancelAnimationFrame?.(visitorFrame);
       node.removeEventListener('scroll', onScroll);
       node.removeEventListener('keydown', onKeydown);
       node.removeEventListener('input', onInput);
