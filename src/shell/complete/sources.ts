@@ -282,7 +282,7 @@ function enumPool(source: Extract<ValueSource, { kind: 'enum' }>, env: Completio
       label: v.value,
       kind: 'value',
       ...(v.summary === undefined ? {} : { summary: v.summary }),
-      ...(v.swatch === undefined ? {} : { swatch: v.swatch }),
+      ...(v.theme === true ? { theme: true } : {}),
       terminal: true,
     }),
   );

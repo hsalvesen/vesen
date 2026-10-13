@@ -189,8 +189,8 @@ export interface Chip {
   readonly kind: ChipKind;
   readonly action: ChipAction;
   readonly summary?: string;
-  /** A colour shown beside the label: a theme's background. */
-  readonly swatch?: string;
+  /** A colour theme's name: marked with a small circle, filled for the current theme. */
+  readonly theme?: true;
   /** The candidate the Tab menu has on the line. */
   readonly selected?: boolean;
   /** The whole line a tap runs, for a chip that runs one: its name for screen readers says it. */

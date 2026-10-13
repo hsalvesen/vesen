@@ -33,13 +33,14 @@ describe('chipsFor', () => {
     expect(chips.every((c) => c.action.kind === 'apply')).toBe(true);
   });
 
-  it('marks the typed part of a path by its last name, and carries swatches', () => {
+  it('marks the typed part of a path by its last name, and marks theme names as themes', () => {
     expect(chipsFor(input('cat documents/li')).chips.map((c) => [c.label, c.matchLen])).toEqual([['linux.txt', 2]]);
     const themes = chipsFor(input('theme k')).chips;
-    expect(themes.map((c) => [c.label, c.swatch])).toEqual([
-      ['kangaroo', '#262626'],
-      ['kookaburra', '#222222'],
+    expect(themes.map((c) => [c.label, c.theme])).toEqual([
+      ['kangaroo', true],
+      ['kookaburra', true],
     ]);
+    expect(chipsFor(input('cat documents/li')).chips[0]?.theme).toBeUndefined();
   });
 
   it("offers what comes next after a word typed in full: 'theme' gives ls and every theme, whole even under a desktop prompt", () => {

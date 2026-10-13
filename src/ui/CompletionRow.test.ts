@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { tick } from 'svelte';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Chip, CompletionResult } from '../shell/complete/types';
+import { defaultTheme, findTheme, theme } from '../stores/theme';
 import CompletionRow from './CompletionRow.svelte';
 
 const result = { state: { text: '', cursor: 0 } } as CompletionResult;
@@ -16,23 +18,25 @@ const chip = (label: string, extra: Partial<Chip> = {}): Chip => ({
 /** The column width the row set from its chips, in ch. */
 const column = (): string => screen.getByRole('listbox').style.getPropertyValue('--column');
 
+afterEach(() => theme.set(defaultTheme));
+
 describe('CompletionRow', () => {
-  it('draws chips as options in a listbox, with the typed part bold, swatches and a count of the rest', () => {
+  it('draws chips as options in a listbox, with the typed part bold, a theme its small circle, and a count of the rest', () => {
     const { container } = render(CompletionRow, {
-      props: { chips: [chip('kangaroo', { swatch: '#262626', summary: 'kangaroo' }), chip('kookaburra')], more: 3 },
+      props: { chips: [chip('kangaroo', { theme: true, summary: 'kangaroo' }), chip('kookaburra')], more: 3 },
     });
     const list = screen.getByRole('listbox', { name: 'Suggestions' });
     const options = screen.getAllByRole('option');
-    // The swatch is a block in the theme's colour, before the name.
-    expect(options.map((o) => o.textContent)).toEqual(['█kangaroo', 'kookaburra']);
+    // A theme that is not the one in use: a hollow circle in the chip's own colour.
+    expect(options.map((o) => o.textContent)).toEqual(['◦kangaroo', 'kookaburra']);
     expect(list.id).toBe('completion-list');
     expect(options[0]?.id).toBe('completion-list-0');
     expect(options[0]?.getAttribute('tabindex')).toBe('-1');
     expect(options[0]?.querySelector('b')?.textContent).toBe('k');
-    // A block glyph in the theme's colour, not a tinted circle.
-    const swatch = options[0]?.querySelector('.swatch') as HTMLElement | null;
-    expect(swatch?.textContent).toBe('█');
-    expect(swatch?.style.color).toBe('#262626');
+    const mark = options[0]?.querySelector('.mark') as HTMLElement | null;
+    expect(mark?.getAttribute('aria-hidden')).toBe('true');
+    expect(mark?.getAttribute('style')).toBeNull();
+    expect(options[0]?.classList.contains('current')).toBe(false);
     expect(options[0]?.getAttribute('title')).toBe('kangaroo');
     expect(container.querySelector('.more')?.textContent).toBe('+3 more');
     // The quiet row has no descriptions and no line for a choice.
@@ -81,11 +85,27 @@ describe('CompletionRow', () => {
     expect(choice?.querySelector('.choice-summary')?.textContent).toBe('does 3');
   });
 
-  it('counts the run mark and a swatch in the column, and names the choice on its own where the dock draws the chips', async () => {
+  it('marks the theme in use with a filled circle and its name, following the theme as it changes', async () => {
+    theme.set(findTheme('kangaroo') ?? defaultTheme);
+    render(CompletionRow, { props: { chips: [chip('kangaroo', { theme: true }), chip('kookaburra', { theme: true })], listed: true } });
+    const [kangaroo, kookaburra] = screen.getAllByRole('option');
+    expect([kangaroo?.textContent, kookaburra?.textContent]).toEqual(['•kangaroo', '◦kookaburra']);
+    expect(kangaroo?.classList.contains('current')).toBe(true);
+    expect(kangaroo?.getAttribute('aria-label')).toBe('kangaroo, the current theme');
+    expect(kookaburra?.getAttribute('aria-label')).toBeNull();
+    // The visitor changes theme: the mark moves with it.
+    theme.set(findTheme('kookaburra') ?? defaultTheme);
+    await tick();
+    expect([kangaroo?.textContent, kookaburra?.textContent]).toEqual(['◦kangaroo', '•kookaburra']);
+    expect(kangaroo?.classList.contains('current')).toBe(false);
+    expect(kookaburra?.classList.contains('current')).toBe(true);
+  });
+
+  it('counts the run mark and a theme circle in the column, and names the choice on its own where the dock draws the chips', async () => {
     const { container, rerender } = render(CompletionRow, {
-      props: { chips: [chip('help', { kind: 'starter', action: { kind: 'run', line: 'help' } }), chip('kangaroo', { swatch: '#262626' })], listed: true },
+      props: { chips: [chip('help', { kind: 'starter', action: { kind: 'run', line: 'help' } }), chip('kangaroo', { theme: true })], listed: true },
     });
-    // kangaroo (8) with its swatch (2.1) and the padding, wider than help (4) with its > (2).
+    // kangaroo (8) with its circle (2) and the padding, wider than help (4) with its > (2).
     expect(column()).toBe('11ch');
     // On a phone the dock draws the chips: the choice comes alone, and is still named.
     await rerender({ chips: [], listed: true, choice: chip('date', { selected: true, summary: 'print the date and time' }) });

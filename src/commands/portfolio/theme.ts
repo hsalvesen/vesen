@@ -15,9 +15,9 @@ export const CURRENT_MARK = '* ';
 const STRONG: SpanStyle = { fg: 'fg-strong' };
 const MUTED: SpanStyle = { fg: 'muted' };
 
-/** The themes, for Tab and the chips, each with its background as a swatch. */
+/** The themes, for Tab and the chips, each marked as one, so the current theme can be shown. */
 function themeValues(context?: ValueContext): readonly EnumValue[] {
-  return (context?.appearance?.themes() ?? []).map((theme) => ({ value: theme.name.toLowerCase(), summary: theme.name, swatch: theme.background }));
+  return (context?.appearance?.themes() ?? []).map((theme) => ({ value: theme.name.toLowerCase(), summary: theme.name, theme: true }));
 }
 
 const NAME: ArgSpec = { name: 'NAME', source: { kind: 'enum', values: themeValues, caseInsensitive: true } };

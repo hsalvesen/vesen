@@ -8,20 +8,23 @@
     and one muted line under them names the menu's choice with its description as Tab cycles.
   On a phone the dock draws the chips, with no descriptions, so the choice's line comes on its
   own, through `choice`. Every chip keeps its description as a tooltip.
-  Chips are <button role=option> in a listbox: a theme name carries its colour, and the typed part
-  of each label is bold. A tap or click does what Tab would, through the same accept(), and keeps
+  Chips are <button role=option> in a listbox: a theme name has a small circle before it, filled,
+  with the name bold in the theme's accent, for the theme in use (ui/theme-mark.ts, following the
+  theme as it changes), and the typed part of each label is bold. A tap or click does what Tab would, through the same accept(), and keeps
   focus, and a phone's keyboard, on the prompt. Everything here is text, never markup. The app
   loads it in its own chunk just after the first paint: nothing completes before the kernel does.
 -->
 <script lang="ts">
   import type { Chip } from '../shell/complete/types';
+  import { theme } from '../stores/theme';
   import { COMPLETION_LIST_ID, optionId } from './completion-ids';
+  import { CURRENT_THEME_MARK, currentThemeName, isCurrentTheme, THEME_MARK } from './theme-mark';
 
   /** A Tab list longer than this is names only, with the choice's description on its own line. */
   const LONG_LIST = 16;
-  /** In ch: the `>` before a chip that runs with its gap, a swatch (one block cell) with its gap, and a chip's padding. */
+  /** In ch: the `>` before a chip that runs with its gap, a theme's circle with its gap, and a chip's padding. */
   const RUN_WIDTH = 2;
-  const SWATCH_WIDTH = 2;
+  const MARK_WIDTH = 2;
   const PADDING = 1;
 
   let {
@@ -53,13 +56,13 @@
   const long = $derived(listed && chips.length > LONG_LIST);
 
   /**
-   * The widest chip in ch: its label, the > where it runs, a swatch where it has one, and the
-   * padding. A listed column is at least this wide, so no name is ever cut.
+   * The widest chip in ch: its label, the > where it runs, a theme's circle, and the padding. A
+   * listed column is at least this wide, so no name is ever cut.
    */
   const column = $derived.by(() => {
     let widest = 0;
     for (const chip of chips) {
-      const width = [...chip.label].length + (runs(chip) ? RUN_WIDTH : 0) + (chip.swatch ? SWATCH_WIDTH : 0);
+      const width = [...chip.label].length + (runs(chip) ? RUN_WIDTH : 0) + (chip.theme ? MARK_WIDTH : 0);
       if (width > widest) widest = width;
     }
     return widest + PADDING;
@@ -69,10 +72,10 @@
   const named = $derived(listed && (long || chips.length === 0) && choice?.summary ? choice : null);
 
   /** The chip's name for screen readers: what a tap does, when that is more than its label says. */
-  function nameOf(chip: Chip): string | undefined {
+  function nameOf(chip: Chip, current: boolean): string | undefined {
     if (chip.kind === 'didyoumean') return `Did you mean ${chip.label}?`;
     if (chip.action.kind === 'run') return `Run: ${chip.line ?? chip.action.line}`;
-    return undefined;
+    return current ? currentThemeName(chip.label) : undefined;
   }
 
   /**
@@ -93,21 +96,23 @@
   {#if chips.length > 0}
     <div id={COMPLETION_LIST_ID} class="chips" role="listbox" aria-label={listed ? 'Completions' : 'Suggestions'} style:--column={`${column}ch`}>
       {#each chips as chip, index (chip.id)}
+        {@const current = chip.theme === true && isCurrentTheme(chip.label, $theme.name)}
         <button
           type="button"
           role="option"
           id={optionId(index)}
           class="chip kind-{chip.kind}"
           class:selected={chip.selected === true}
+          class:current
           aria-selected={chip.selected === true}
-          aria-label={nameOf(chip)}
+          aria-label={nameOf(chip, current)}
           title={chip.summary}
           tabindex="-1"
           onpointerdown={keepFocus}
           onmousedown={(event) => event.preventDefault()}
           onclick={() => onchoose?.(chip)}
         >
-          {#if runs(chip)}<span class="run" aria-hidden="true">&gt;</span>{/if}{#if chip.swatch}<span class="swatch" style:color={chip.swatch} aria-hidden="true">█</span>{/if}<span class="label"
+          {#if runs(chip)}<span class="run" aria-hidden="true">&gt;</span>{/if}{#if chip.theme}<span class="mark" aria-hidden="true">{current ? CURRENT_THEME_MARK : THEME_MARK}</span>{/if}<span class="label"
             ><b>{chip.label.slice(0, chip.matchLen)}</b>{chip.label.slice(chip.matchLen)}</span
           >{#if listed && !long && chip.summary}<span class="summary">{chip.summary}</span>{/if}
         </button>
@@ -186,8 +191,8 @@
     color: var(--role-link);
   }
 
-  /* A theme's colour as a block cell, as fastfetch's and theme ls's swatches draw it. */
-  .swatch {
+  /* A theme's small circle, in the chip's own colour. */
+  .mark {
     flex: none;
   }
 
@@ -214,6 +219,15 @@
 
   .listed .chip {
     color: var(--role-fg-strong);
+  }
+
+  /* The theme in use: its circle and name bold, in the theme's accent, which reads against the
+     background in every theme (lib/roles.ts). A hover keeps the chip's fill; the Tab menu's
+     choice still shows over it. */
+  .chip.current:not(.selected),
+  .chip.current:not(.selected) .label {
+    color: var(--role-accent);
+    font-weight: bold;
   }
 
   /* The name never shrinks; the description is what gets cut. */

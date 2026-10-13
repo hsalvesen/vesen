@@ -132,11 +132,15 @@ describe('subcommands and enums', () => {
     expect(tab(line)).toEqual(expected);
   });
 
-  it('gives theme names their background as a swatch', () => {
+  it('marks theme names as themes, so the chips can show the current one', () => {
     const result = complete(at('theme k'), env);
-    expect(result.candidates.map((c) => c.swatch)).toEqual(['#262626', '#222222']);
+    expect(result.candidates.map((c) => c.theme)).toEqual([true, true]);
     const all = complete(at('theme '), env);
-    expect(all.candidates.filter((c) => c.kind === 'value').map((c) => c.swatch)).toEqual(env.appearance?.themes().map((theme) => theme.background));
+    const values = all.candidates.filter((c) => c.kind === 'value');
+    expect(values).toHaveLength(env.appearance?.themes().length ?? -1);
+    expect(values.every((c) => c.theme === true)).toBe(true);
+    // ls is no theme.
+    expect(all.candidates.find((c) => c.value === 'ls')?.theme).toBeUndefined();
   });
 
   it("looks ahead when the word is typed in full: 'theme' still offers ls and every theme", () => {

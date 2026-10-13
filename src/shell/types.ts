@@ -37,8 +37,8 @@ export const DEFAULT_BUDGET_MS = 15_000;
 export interface EnumValue {
   readonly value: string;
   readonly summary?: string;
-  /** A hex colour shown next to the value, for theme names. */
-  readonly swatch?: string;
+  /** The value is a colour theme's name: the chips and the Tab list mark the current one. */
+  readonly theme?: true;
   /**
    * The operands that follow this value, in place of the rest of its list: ip's `route` takes a
    * COMMAND, whose `get` takes an ADDRESS and whose `show` a device. Completion reads them.
@@ -289,7 +289,8 @@ export interface Candidate {
   readonly label: string;
   readonly kind: CandidateKind;
   readonly summary?: string;
-  readonly swatch?: string;
+  /** A colour theme's name (EnumValue.theme). */
+  readonly theme?: true;
   /** False for directories and `--opt=`: no space is added and completion continues. */
   readonly terminal: boolean;
 }

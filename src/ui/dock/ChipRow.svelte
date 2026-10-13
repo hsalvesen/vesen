@@ -5,11 +5,15 @@
   chip says: a completion goes on the line exactly as Tab would put it there, and a chip marked >
   runs its line. A long press on a chip that runs puts its line at the prompt instead, to edit.
   Pressing a chip never takes focus from the prompt, so the keyboard stays as it was. A new set of
-  chips starts scrolled to its first; the Tab menu's choice is kept in view.
+  chips starts scrolled to its first; the Tab menu's choice is kept in view. A theme's chip has a
+  small circle before its name (ui/theme-mark.ts): the theme in use is filled in the theme's
+  accent, its name bold, and it follows the theme as it changes.
 -->
 <script lang="ts">
   import type { Chip } from '../../shell/complete/types';
+  import { theme } from '../../stores/theme';
   import { COMPLETION_LIST_ID, optionId } from '../completion-ids';
+  import { CURRENT_THEME_MARK, currentThemeName, isCurrentTheme, THEME_MARK } from '../theme-mark';
   import { chipName, leadGlyph, runsLine } from './chip-name';
   import { press } from './press';
 
@@ -46,6 +50,7 @@
       {#each chips as chip, index (chip.id)}
         {@const lead = leadGlyph(chip)}
         {@const runs = runsLine(chip)}
+        {@const current = chip.theme === true && isCurrentTheme(chip.label, $theme.name)}
         <button
           type="button"
           role="option"
@@ -53,8 +58,9 @@
           class="chip kind-{chip.kind}"
           class:emphasis={chip.action.kind === 'interrupt'}
           class:selected={chip.selected === true}
+          class:current
           aria-selected={chip.selected === true}
-          aria-label={chipName(chip)}
+          aria-label={current ? currentThemeName(chipName(chip)) : chipName(chip)}
           title={chip.summary}
           tabindex="-1"
           use:press={{
@@ -62,7 +68,7 @@
             ...(runs ? { longPress: () => onchoose?.(chip, { insert: true }) } : {}),
           }}
         >
-          {#if lead}<span class="glyph" aria-hidden="true">{lead}</span>{/if}{#if chip.swatch}<span class="swatch" style:color={chip.swatch} aria-hidden="true">█</span>{/if}<span class="label"><b>{chip.label.slice(0, chip.matchLen)}</b>{chip.label.slice(chip.matchLen)}</span>
+          {#if lead}<span class="glyph" aria-hidden="true">{lead}</span>{/if}{#if chip.theme}<span class="mark" aria-hidden="true">{current ? CURRENT_THEME_MARK : THEME_MARK}</span>{/if}<span class="label"><b>{chip.label.slice(0, chip.matchLen)}</b>{chip.label.slice(chip.matchLen)}</span>
         </button>
       {/each}
       {#if more > 0}
@@ -141,13 +147,23 @@
     flex: none;
   }
 
-  /* A theme's colour as a block cell, as fastfetch's and theme ls's swatches draw it. */
-  .swatch {
+  /* A theme's small circle, in the chip's own colour. */
+  .mark {
     flex: none;
   }
 
   .kind-current {
     border-color: var(--role-accent);
+  }
+
+  /* The theme in use: the chip filled with the theme's accent and its name bold, in the theme's
+     background, which the accent reads against in every theme (lib/roles.ts). The Tab menu's
+     choice, below, still shows over it. */
+  .chip.current {
+    border-color: var(--role-accent);
+    background: var(--role-accent);
+    color: var(--theme-background);
+    font-weight: bold;
   }
 
   /* While a command runs: one large chip to stop it. */

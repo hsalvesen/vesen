@@ -154,7 +154,7 @@ function completionChips(result: CompletionResult, max: number | null, highlight
       action: { kind: 'apply', result, candidate, ...(runs === null ? {} : { run: true }) },
       ...(runs === null ? {} : { line: runs }),
       ...(candidate.summary === undefined ? {} : { summary: candidate.summary }),
-      ...(candidate.swatch === undefined ? {} : { swatch: candidate.swatch }),
+      ...(candidate.theme === true ? { theme: true } : {}),
       ...(highlight === i ? { selected: true } : {}),
     };
   });
