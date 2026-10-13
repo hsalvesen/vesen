@@ -8,6 +8,7 @@ oooo  ooo  .oooo.  .oooo.o  .oooo.  ooo. .oo.
   `88.8'  888ooo88 `"Y8b.  888ooo88  888  888
    `88'   888   .o o. )88b 888   .o  888  888
     `8'   `Y8bodP' 8""88P' `Y8bodP' o888  888o  v0.0.0-test
+
 A virtual Linux terminal, with its own file system to explore.
 
 Type help and press Enter to see all available commands.

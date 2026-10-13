@@ -177,12 +177,14 @@ describe('banner', () => {
     expect(art?.tail).toEqual({ text: `  v${version}`, style: { fg: 'muted' } });
     expect(art?.text.split('\n')).toHaveLength(BANNER_ART.split('\n').length);
     const lines = rows(blocks).map(lineText);
-    expect(lines[0]).toBe('A virtual Linux terminal, with its own file system to explore.');
-    expect(lines[1]).toBe('');
+    // A blank line under the logo, then what this is.
+    expect(lines[0]).toBe('');
+    expect(lines[1]).toBe('A virtual Linux terminal, with its own file system to explore.');
+    expect(lines[2]).toBe('');
     // Spelt out for someone who has never used a terminal: type it, then press Enter.
-    expect(lines[2]).toBe('Type help and press Enter to see all available commands.');
-    expect(lines[3]).toBe('Then try tree to explore the file system, or cat README.md for the story behind it.');
-    expect(lines).toHaveLength(4);
+    expect(lines[3]).toBe('Type help and press Enter to see all available commands.');
+    expect(lines[4]).toBe('Then try tree to explore the file system, or cat README.md for the story behind it.');
+    expect(lines).toHaveLength(5);
     const spans = rows(blocks).flat();
     expect(spans.find((span) => span.text === 'help')?.action).toMatchObject({ kind: 'run', line: 'help' });
     expect(spans.find((span) => span.text === 'cat README.md')?.action).toMatchObject({ kind: 'run', line: 'cat ~/README.md' });
@@ -198,7 +200,7 @@ describe('banner', () => {
       const version = /^Vesen logo, version (\S+)$/.exec(art?.alt ?? '')?.[1] ?? '';
       // Scaled to fit by the art block, never swapped.
       expect(art, String(cols)).toMatchObject({ text: BANNER_ART, fit: 'scale', tail: { text: `  v${version}` } });
-      expect(lineText(rows(blocks)[0] ?? [])).toBe('A virtual Linux terminal, with its own file system to explore.');
+      expect(lineText(rows(blocks)[1] ?? [])).toBe('A virtual Linux terminal, with its own file system to explore.');
     }
   });
 
@@ -214,7 +216,7 @@ describe('banner', () => {
   });
 
   it("tells a touch screen to tap the keyboard's Go key, where a keyboard presses Enter", () => {
-    const start = (touch: boolean) => lineText(rows(bannerBlocks({ version: '1.2.0', touch }))[2] ?? []);
+    const start = (touch: boolean) => lineText(rows(bannerBlocks({ version: '1.2.0', touch }))[3] ?? []);
     expect(start(true)).toBe('Type help and tap Go to see all available commands.');
     expect(start(false)).toBe('Type help and press Enter to see all available commands.');
     const touch = bannerBlocks({ version: '1.2.0', touch: true });

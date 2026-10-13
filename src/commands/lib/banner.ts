@@ -36,11 +36,13 @@ const STRONG: SpanStyle = { fg: 'fg-strong' };
 const ACCENT: SpanStyle = { fg: 'accent' };
 
 /**
- * The banner's blocks: the logo with the version, what this is, how to start (type help and press
- * Enter, or tap Go on a phone's keyboard), and where to go next.
+ * The banner's blocks: the logo with the version, a blank line, what this is, how to start (type
+ * help and press Enter, or tap Go on a phone's keyboard), and where to go next.
  */
 export function bannerBlocks({ version, touch }: BannerOptions): Block[] {
   const lines: Line[] = [
+    // A blank line between the logo and the words.
+    [],
     [out.span('A virtual Linux terminal, with its own file system to explore.', MUTED)],
     [],
     [out.span('Type ', STRONG), out.run('help', 'help', ACCENT), out.span(touch ? ' and tap Go to see all available commands.' : ' and press Enter to see all available commands.', STRONG)],
