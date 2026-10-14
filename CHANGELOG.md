@@ -4,6 +4,14 @@ All notable changes to vesen are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Changed
+
+- On a phone or tablet `sudo`'s show covers the whole screen, under the status bar and, on iOS, behind Safari's toolbar, where the page's own background had shown as dark bands above and below the picture. The green frame is drawn over it, where the terminal's frame is.
+
+### Removed
+
+- `sl`, the steam train.
+
 ## [2.1.0] - 2026-10-14
 
 Changes on top of 2.0, mostly to how vesen looks and behaves on a phone: `sudo`'s show plays a video traced to text, to its own track, and fills the screen inside the frame; the CRT starts in phosphor; `help` is shorter; Tab adds no trailing space; the theme chips mark the theme in use; galah is pink and grey; and `cmatrix` rains on phones.
