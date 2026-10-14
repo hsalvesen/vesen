@@ -81,21 +81,31 @@ async function sudoLs(page: Page): Promise<void> {
 }
 
 /**
- * On a phone, upright or on its side, the picture covers the stage, which is the whole screen,
- * edge to edge (no gutter, frame or line under it), as large as it must be, and is cut evenly
- * about its centre: as much from the left as from the right, and from the top as from the bottom.
+ * On a phone, upright or on its side, the window is as large as the screen allows inside the
+ * terminal's green frame, 4px in from the edges, with no line under the picture; the picture
+ * covers it, as large as it must be, and is cut evenly about its centre: as much from the left as
+ * from the right, and from the top as from the bottom.
  */
 async function coversTheStage(page: Page): Promise<void> {
   const box = await show(page).evaluate((dialog) => {
+    const host = dialog.closest('.app-host') as HTMLElement;
     const rect = (element: Element | null) => (element as HTMLElement).getBoundingClientRect().toJSON() as DOMRect;
-    return { host: rect(dialog.closest('.app-host')), stage: rect(dialog.querySelector('.stage')), frame: rect(dialog.querySelector('.frame')) };
+    const style = getComputedStyle(host);
+    return {
+      host: rect(host),
+      border: [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth, style.borderTopStyle],
+      stage: rect(dialog.querySelector('.stage')),
+      frame: rect(dialog.querySelector('.frame')),
+    };
   });
-  const { host, stage, frame: picture } = box;
+  const { host, border, stage, frame: picture } = box;
   const screenSize = page.viewportSize() ?? { width: 0, height: 0 };
-  // The whole screen: the window has no gutter and no border here.
-  expect([host.left, host.top, host.width, host.height]).toEqual([0, 0, screenSize.width, screenSize.height]);
-  expect(stage.width).toBeGreaterThanOrEqual(screenSize.width - 1);
-  expect(stage.height).toBeGreaterThanOrEqual(screenSize.height - 1);
+  // The frame all round, 4px in from the screen's edges, as the terminal's is on a phone.
+  expect([host.left, host.top, host.width, host.height]).toEqual([4, 4, screenSize.width - 8, screenSize.height - 8]);
+  expect(border).toEqual(['2px', '2px', '2px', '2px', 'solid']);
+  // Inside it, the stage is all of the window.
+  expect(stage.width).toBeGreaterThanOrEqual(screenSize.width - 13);
+  expect(stage.height).toBeGreaterThanOrEqual(screenSize.height - 13);
   expect(picture.left).toBeLessThanOrEqual(stage.left + 1);
   expect(picture.right).toBeGreaterThanOrEqual(stage.right - 1);
   expect(picture.top).toBeLessThanOrEqual(stage.top + 1);

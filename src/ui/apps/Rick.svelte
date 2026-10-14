@@ -5,8 +5,8 @@
   (services/warm-show.ts) or one made here when the show opens (services/track.ts); where the
   track cannot load or play, vesen's own 8-bit tune takes over (services/chiptune.ts, through the
   page's one AudioContext). Nothing else is on the screen: on a touch screen the picture alone,
-  over the whole screen, frame and safe areas included (AppHost), where a tap leaves (a screen
-  reader hears so); on a keyboard the picture and,
+  filling the screen inside the terminal's frame, over the safe areas too (AppHost), where a tap
+  leaves (a screen reader hears so); on a keyboard the picture and,
   once the show has played a few seconds, one line saying how to leave. Esc, ^C, q and Back
   close it, with a short fade; m still mutes whichever plays, unannounced. sudo readies the
   track inside the key press that answers its password (services/warm-show.ts unlockAudio), so a
@@ -480,13 +480,13 @@
   }
 
   /*
-    A touch screen, upright or on its side: the picture covers the whole screen (AppHost drops its
-    frame and the safe areas for it), as large as it must be in both directions, centred, so what
-    overflows is cut evenly from both sides (the portrait cut is a little wider than most phones
-    held upright; the whole picture a little taller than one on its side). The stage is a size
-    container, so the font follows the stage's own width and height: a cell is 0.585 em wide
-    (Vesen Mono's advance, 1200 of 2048) and 1.15 em tall. Where container units are missing
-    (iOS 15), the viewport stands in for the stage.
+    A touch screen, upright or on its side: the picture covers the whole window, which AppHost
+    makes as large as the screen allows inside the frame, as large as it must be in both
+    directions, centred, so what overflows is cut evenly from both sides (the portrait cut is a
+    little wider than most phones held upright; the whole picture a little taller than one on its
+    side). The stage is a size container, so the font follows the stage's own width and height: a
+    cell is 0.585 em wide (Vesen Mono's advance, 1200 of 2048) and 1.15 em tall. Where container
+    units are missing (iOS 15), the viewport less the frame (12 px each way) stands in for it.
   */
   .rick.touch {
     gap: 0;
@@ -504,7 +504,7 @@
 
   .rick.touch .frame {
     flex: none;
-    font-size: max(calc(100vw / (var(--cols) * 0.585)), calc(100vh / (var(--rows) * 1.15)));
+    font-size: max(calc((100vw - 12px) / (var(--cols) * 0.585)), calc((100vh - 12px) / (var(--rows) * 1.15)));
   }
 
   @supports (width: 1cqw) {
