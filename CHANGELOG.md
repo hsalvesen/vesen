@@ -4,6 +4,10 @@ All notable changes to vesen are recorded here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-14
+
+Changes on top of 2.0, mostly to how vesen looks and behaves on a phone: `sudo`'s show plays a video traced to text, to its own track, and fills the screen inside the frame; the CRT starts in phosphor; `help` is shorter; Tab adds no trailing space; the theme chips mark the theme in use; galah is pink and grey; and `cmatrix` rains on phones.
+
 ### Changed
 
 - On a phone the terminal's frame shows on every side, 4px in from the edges, so it shows in Instagram's browser too; full-screen apps are framed the same way.
@@ -175,7 +179,8 @@ A rewrite of the whole app, built from the audit and plan in [docs/plan](docs/pl
 
 - The first release of the vesen terminal: a virtual file system with `ls`, `cd`, `cat`, `mkdir`, `echo` and more, `help` with command descriptions, `weather`, `stock` (Yahoo Finance), `curl`, themes named for Australian animals that recolour earlier output when changed, and deployment to Firebase Hosting from CI.
 
-[Unreleased]: https://github.com/hsalvesen/vesen/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/hsalvesen/vesen/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/hsalvesen/vesen/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/hsalvesen/vesen/compare/v1.2.0...v2.0.0
 [1.2.0]: https://github.com/hsalvesen/vesen/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/hsalvesen/vesen/compare/v1.0.0...v1.1.0
