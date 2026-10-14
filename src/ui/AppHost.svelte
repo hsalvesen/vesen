@@ -5,11 +5,12 @@
   meanwhile, so keys, taps and screen readers reach only the app. It keeps the terminal's look: the
   same gutter, the same green frame (4px in from the edges on a phone, as the terminal
   is there), and the cathode overlay (Cathode.svelte, as the screen frame has it; crt.css gives
-  the app's text the same glow), so sudo's show, sl, cmatrix and the pager open as a window of
+  the app's text the same glow), so sudo's show, cmatrix and the pager open as a window of
   the terminal, not a sheet over it. The QR presenter goes without: it is a white sheet to be
-  scanned, and scanlines would get in the way. sudo's show on a touch screen keeps the frame but
-  is as large as the screen allows: 4px in from its edges, as the terminal's frame is on a phone,
-  over the safe areas too, so the picture fills the screen inside its green border.
+  scanned, and scanlines would get in the way. sudo's show on a touch screen covers the whole
+  screen, not only the part the browser reports as visible: under the status bar, and on iOS behind
+  Safari's toolbar, where the page's own background had shown as dark bands. Its green frame is
+  drawn over the picture where the terminal's frame is.
 
   Each app has one history entry while it shows (apps/history-entry.ts), so Back (Android's
   button, iOS's edge swipe) closes the app rather than leaving vesen: Back calls the app's own
@@ -139,9 +140,42 @@
     display: none;
   }
 
-  /* sudo's show on a touch screen: the frame 4px in from the screen's edges, over the safe areas. */
+  /*
+    sudo's show on a touch screen: the whole screen. Fixed to the page's own viewport rather than
+    to #app, which is sized to the visible area (platform/viewport.ts): the browser's bars, the
+    status bar and the home indicator take some of the screen from that, and the page's
+    background showed there. As tall as the dynamic viewport; on iOS (-webkit-touch-callout is
+    WebKit's on iOS alone) as tall as the large one, behind Safari's toolbar, which there leaves
+    the page its full height.
+  */
   .app-host:has(:global(.rick.touch)) {
-    inset: 4px;
+    position: fixed;
+    inset: 0 0 auto;
+    height: 100vh;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  @supports (-webkit-touch-callout: none) {
+    .app-host:has(:global(.rick.touch)) {
+      height: 100lvh;
+    }
+  }
+
+  /* Its frame, drawn over the picture where the terminal's frame is: the visible area, 4px in
+     from its edges and clear of the notch and the home indicator. */
+  .app-host:has(:global(.rick.touch))::after {
+    content: '';
+    position: fixed;
+    z-index: 3;
+    top: calc(var(--app-top, 0px) + max(4px, env(safe-area-inset-top)));
+    right: max(4px, env(safe-area-inset-right));
+    left: max(4px, env(safe-area-inset-left));
+    height: calc(var(--app-h, 100dvh) - max(4px, env(safe-area-inset-top)) - max(4px, env(safe-area-inset-bottom)));
+    border: 2px solid var(--theme-green);
+    border-radius: 6px;
+    pointer-events: none;
   }
 
   .app-failed {

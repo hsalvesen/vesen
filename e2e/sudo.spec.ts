@@ -81,31 +81,34 @@ async function sudoLs(page: Page): Promise<void> {
 }
 
 /**
- * On a phone, upright or on its side, the window is as large as the screen allows inside the
- * terminal's green frame, 4px in from the edges, with no line under the picture; the picture
- * covers it, as large as it must be, and is cut evenly about its centre: as much from the left as
- * from the right, and from the top as from the bottom.
+ * On a phone, upright or on its side, the window is the whole screen, with the terminal's green
+ * frame drawn over it 4px in from the edges, and no line under the picture; the picture covers it,
+ * as large as it must be, and is cut evenly about its centre: as much from the left as from the
+ * right, and from the top as from the bottom.
  */
 async function coversTheStage(page: Page): Promise<void> {
   const box = await show(page).evaluate((dialog) => {
     const host = dialog.closest('.app-host') as HTMLElement;
     const rect = (element: Element | null) => (element as HTMLElement).getBoundingClientRect().toJSON() as DOMRect;
-    const style = getComputedStyle(host);
+    const own = getComputedStyle(host);
+    const frame = getComputedStyle(host, '::after');
     return {
       host: rect(host),
-      border: [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth, style.borderTopStyle],
+      hostBorder: own.borderTopStyle,
+      frame: [frame.top, frame.left, frame.right, frame.height, frame.borderTopWidth, frame.borderTopStyle, frame.pointerEvents],
       stage: rect(dialog.querySelector('.stage')),
-      frame: rect(dialog.querySelector('.frame')),
+      picture: rect(dialog.querySelector('.frame')),
     };
   });
-  const { host, border, stage, frame: picture } = box;
+  const { host, hostBorder, frame, stage, picture } = box;
   const screenSize = page.viewportSize() ?? { width: 0, height: 0 };
-  // The frame all round, 4px in from the screen's edges, as the terminal's is on a phone.
-  expect([host.left, host.top, host.width, host.height]).toEqual([4, 4, screenSize.width - 8, screenSize.height - 8]);
-  expect(border).toEqual(['2px', '2px', '2px', '2px', 'solid']);
-  // Inside it, the stage is all of the window.
-  expect(stage.width).toBeGreaterThanOrEqual(screenSize.width - 13);
-  expect(stage.height).toBeGreaterThanOrEqual(screenSize.height - 13);
+  // The whole screen, with no border of its own: nothing of the page shows round it.
+  expect([host.left, host.top, host.width, host.height]).toEqual([0, 0, screenSize.width, screenSize.height]);
+  expect(hostBorder).toBe('none');
+  // The frame, drawn over it where the terminal's is, and not in the way of a tap.
+  expect(frame).toEqual(['4px', '4px', '4px', `${screenSize.height - 8}px`, '2px', 'solid', 'none']);
+  expect(stage.width).toBeGreaterThanOrEqual(screenSize.width - 1);
+  expect(stage.height).toBeGreaterThanOrEqual(screenSize.height - 1);
   expect(picture.left).toBeLessThanOrEqual(stage.left + 1);
   expect(picture.right).toBeGreaterThanOrEqual(stage.right - 1);
   expect(picture.top).toBeLessThanOrEqual(stage.top + 1);
