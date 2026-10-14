@@ -157,7 +157,8 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
     await expect(log(page)).toHaveAttribute('aria-busy', 'false');
     await expect(entryOf(page, 'sudo --help')).toContainText('run a command as the superuser');
     expect(await entryOf(page, 'sudo --help').textContent()).not.toMatch(TELLING);
-    expect(requests).toHaveLength(warmed);
+    // Nothing new: WebKit may fetch more ranges of the warmed track whenever it likes.
+    expect(requests.slice(warmed).filter((path) => path !== TRACK)).toEqual([]);
     await expect(audio(page)).toHaveCount(0);
 
     await sudoLs(page);
