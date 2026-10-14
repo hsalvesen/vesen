@@ -223,13 +223,15 @@ Inside `run`:
   connectors, spinners, markers, bullets and separators) is drawn with ASCII characters at the
   terminal's line height, as a text-mode terminal draws them: `->` for "opens" or "external",
   `...` for an ellipsis, `*` for a bullet or the current entry of a listing (in the foreground
-  colour, never the accent), `-` rules, ` | ` between facts on one line, `|-- ` and `` `-- `` for
-  tree's connectors, `#` for figlet's ink and a swatch, `| / - \` for a spinner, and a word where
-  no mark fits (`refresh`, `Copy`, `Menu`). Never a CSS strip, an SVG chart or Unicode block
-  shading. Box drawing and half blocks stay only where the thing is that by nature: the wordmark
-  and a scannable text-mode QR code. Prose (the owner's documents, man-page text, degrees in a
-  weather reading) keeps its typography, and a command that imitates a Linux tool keeps that
-  tool's own format. Every character must be one Vesen Mono has (`scripts/fonts/glyphs.json`
+  colour, never the accent), `-` rules, ` | ` between facts on one line, `#` for figlet's ink,
+  `| / - \` for a spinner, and a word where no mark fits (`refresh`, `Copy`, `Menu`). Never a CSS
+  strip or an SVG chart. A few characters beyond ASCII stay where the owner chose them, as the
+  thing is that by nature: the wordmark, a scannable text-mode QR code's half blocks, `tree`'s
+  box-drawing lines (`--charset ascii` draws `|-- ` and `` `-- ``), `██` colour swatches, and the
+  small circles (`◦`, and `•` for the theme in use) before a theme's name in the chips. Prose
+  (the owner's documents, man-page text, degrees in a weather reading) keeps its typography,
+  and a command that imitates a Linux tool keeps that tool's own format. Every character must be
+  one Vesen Mono has (`scripts/fonts/glyphs.json`
   lists them; `npm run check:glyphs` fails on any other); UI chrome that needs a symbol draws a
   small inline SVG.
 - **Honest network commands.** A browser cannot send ICMP or raw DNS: say what is done instead
