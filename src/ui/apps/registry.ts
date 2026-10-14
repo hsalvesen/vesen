@@ -28,7 +28,6 @@ type Loader = () => Promise<{ default: Component<AppProps, AppExports> }>;
 const APPS: Partial<Record<FullscreenView, Loader>> = {
   shutdown: () => import('./Shutdown.svelte'),
   'qr-present': () => import('./QrPresenter.svelte'),
-  sl: () => import('./Train.svelte'),
   matrix: () => import('./Matrix.svelte'),
   rick: () => import('./Rick.svelte'),
   pager: () => import('./Pager.svelte'),

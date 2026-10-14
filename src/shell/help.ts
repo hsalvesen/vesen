@@ -59,7 +59,7 @@ const EVERYDAY: Readonly<Record<Category, readonly string[]>> = {
   shell: ['sudo', 'man', 'history', 'watch', 'help', 'alias', 'sleep', 'clear'],
   system: ['fastfetch', 'cal', 'top', 'date', 'uptime', 'ps', 'free', 'privacy'],
   network: ['weather', 'stock', 'speedtest', 'curl', 'ping', 'dig', 'ip', 'whois'],
-  fun: ['cmatrix', 'sl', 'cowsay', 'figlet', 'fortune', 'lolcat', 'cowthink', 'factor'],
+  fun: ['cmatrix', 'cowsay', 'figlet', 'fortune', 'lolcat', 'cowthink', 'factor'],
   editor: ['nano', 'less', 'more'],
 };
 

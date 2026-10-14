@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { isBenignConsoleMessage } from './console';
 
 // Back while a full-screen app is open. A visitor who comes from Instagram's bio and opens man,
-// less, nano, cmatrix or sl, then presses Back (Android's button, iOS's edge swipe), lands back
+// less, nano or cmatrix, then presses Back (Android's button, iOS's edge swipe), lands back
 // at the prompt: the page never goes back past vesen. Each app has one history entry; Back closes
 // the app through its own close path, nano with unsaved changes asks to save first, and a normal
 // close takes the entry off again without going back twice. The page before vesen stands in for
@@ -88,7 +88,6 @@ const APPS = [
   { line: 'less README.md', shows: '[data-pager]' },
   { line: 'nano ~/draft.txt', shows: '[data-editor]' },
   { line: 'cmatrix', shows: '.matrix' },
-  { line: 'sl', shows: '.sl' },
 ] as const;
 
 test.describe('Back while an app is open', { tag: '@smoke' }, () => {

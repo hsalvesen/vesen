@@ -1,4 +1,4 @@
-// The fun commands together: sl and cmatrix hand their view to a full-screen app at the prompt and
+// The fun commands together: cmatrix hands its view to a full-screen app at the prompt and
 // print a still frame anywhere else; all of them stay out of the first Tab list but are in help
 // under Fun; and the two easter eggs, `sudo make me a sandwich` and `rm -rf /`.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -9,9 +9,8 @@ import { keepsQuiet } from '../../../shell/complete/sources';
 import type { CompletionEnv } from '../../../shell/complete/types';
 import { at, completionHarness, type CompletionHarness } from '../../../testing/completion-env';
 import { stepFor, type MatrixView } from '../../lib/matrix';
-import { trainFrame, trainView, type TrainView } from '../../lib/train';
 
-const FUN = ['cmatrix', 'cowsay', 'cowthink', 'factor', 'figlet', 'fortune', 'lolcat', 'sl'];
+const FUN = ['cmatrix', 'cowsay', 'cowthink', 'factor', 'figlet', 'fortune', 'lolcat'];
 
 /** A full-screen stand-in that records what it was asked to show, and closes with `result`. */
 function screen(result: unknown = 'stopped') {
@@ -22,44 +21,6 @@ function screen(result: unknown = 'stopped') {
   };
   return { shown, fullscreen };
 }
-
-describe('sl', () => {
-  it('hands the train to the Train app at the prompt, and prints nothing itself', async () => {
-    const { shown, fullscreen } = screen('crossed');
-    const result = await runLine('sl', { fullscreen });
-    expect(result).toMatchObject({ status: 0, stdoutPlain: '', stderrPlain: '' });
-    expect(shown).toHaveLength(1);
-    expect(shown[0]?.view).toBe('sl');
-    const view = shown[0]?.props as TrainView;
-    expect(view.frames.length).toBeGreaterThanOrEqual(4);
-    expect(view.width).toBe(Math.max(...view.frames.flatMap((frame) => frame.split('\n').map((row) => row.length))));
-    // Every frame is the same height, and the wheels turn between them.
-    expect(new Set(view.frames.map((frame) => frame.split('\n').length)).size).toBe(1);
-    expect(new Set(view.frames).size).toBeGreaterThan(1);
-  });
-
-  it('prints the train standing still into a pipe, or where no full-screen app can show', async () => {
-    const { shown, fullscreen } = screen();
-    const piped = await runLine('sl | cat', { fullscreen });
-    expect(piped).toMatchObject({ status: 0, stdoutPlain: trainFrame(0) });
-    expect(shown).toHaveLength(0);
-    const plain = await runLine('sl', { tty: false });
-    expect(plain.stdoutPlain).toBe(trainFrame(0));
-    // At the prompt, when the app cannot show, the train is drawn as art instead.
-    const art = await runLine('sl', { fullscreen: () => Promise.reject(new Error('no app')) });
-    expect(art).toMatchObject({ status: 0, blocks: [expect.objectContaining({ type: 'art', alt: 'A steam train stands on the screen' })] });
-  });
-
-  it('is VESEN-liveried and original', () => {
-    expect(trainFrame(0)).toContain('VESEN');
-    expect(trainView().label).toBe('A steam train crosses the screen');
-  });
-
-  it('takes no operands', async () => {
-    expect((await runLine('sl -l', { tty: false })).status).toBe(1);
-    expect(await runLine('sl now', { tty: false })).toMatchObject({ status: 1, stderrPlain: "sl: extra operand 'now'\nTry 'sl --help' for more information." });
-  });
-});
 
 describe('cmatrix', () => {
   it('hands the rain to the Matrix app at the prompt, at the speed -u asks for', async () => {
@@ -114,8 +75,6 @@ describe('the first Tab list', () => {
     expect(names('cow')).toEqual(['cowsay', 'cowthink']);
     expect(names('fortu')).toEqual(['fortune']);
     expect(names('help fig')).toEqual(['figlet']);
-    // A whole name stays, beside the longer names it begins.
-    expect(names('sl')).toEqual(['sl', 'sleep']);
   });
 
   it('is the rule for every fun command, and for any spec that says featured: false', () => {

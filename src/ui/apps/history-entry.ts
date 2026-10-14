@@ -1,7 +1,7 @@
 // One history entry for each full-screen view that is open: a command's app in AppHost, or the QR
 // card's Present mode. Back (Android's button, iOS's edge swipe, the browser's arrow) then leaves
 // the view's entry rather than the page, so a visitor who came from Instagram's bio and opens
-// man, nano or sl comes back to the prompt instead of leaving vesen.
+// man, nano or cmatrix comes back to the prompt instead of leaving vesen.
 //
 // - Opening a view pushes an entry with no URL of its own, only `{ vesenApp: token }`.
 // - Back off that entry calls the view's `onBack`, which closes it through its own close path. A

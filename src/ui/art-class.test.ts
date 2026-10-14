@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { BANNER_ART } from '../commands/lib/banner';
 import { INK } from '../commands/lib/block-font';
 import { COWS } from '../commands/lib/cows';
-import { trainFrame } from '../commands/lib/train';
 import { logoFor } from '../commands/system/fastfetch.logos';
 import { artClass } from './art-class';
 
@@ -27,7 +26,6 @@ describe('artClass', () => {
   it('draws art made of letters and punctuation at the terminal line height', () => {
     expect(artClass(' /\\_/\\\n( o.o )\n > ^ <')).toBe('art-glyph');
     for (const cow of COWS) expect(artClass(cow.art), cow.name).toBe('art-glyph');
-    expect(artClass(trainFrame(0))).toBe('art-glyph');
     // The banner's logo, drawn in Roman's letters.
     expect(artClass(BANNER_ART)).toBe('art-glyph');
     // figlet's ink is #, as figlet's own fonts draw it: text, at the terminal's line height.

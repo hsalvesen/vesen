@@ -17,13 +17,13 @@ repo     file   yes     clear
 
 System     Network    Fun       Editor
 fastfetch  weather    cmatrix   nano
-cal        stock      sl        less
-top        speedtest  cowsay    more
-date       curl       figlet
-uptime     ping       fortune
-ps         dig        lolcat
-free       ip         cowthink
-privacy    whois      factor
+cal        stock      cowsay    less
+top        speedtest  figlet    more
+date       curl       fortune
+uptime     ping       lolcat
+ps         dig        cowthink
+free       ip         factor
+privacy    whois
 ...        ...
 
 help files lists every command in a category; add -v to say what each does.
@@ -33,13 +33,13 @@ privacy says what vesen sends, and where.
 [terminal at 80, 120 columns]
 Vesen    Files  Text    Shell    System     Network    Fun       Editor
 theme    tree   bc      sudo     fastfetch  weather    cmatrix   nano
-cathode  ls     diff    man      cal        stock      sl        less
-qr       cat    grep    history  top        speedtest  cowsay    more
-banner   find   column  watch    date       curl       figlet
-whoami   du     rev     help     uptime     ping       fortune
-about    df     sort    alias    ps         dig        lolcat
-contact  stat   sed     sleep    free       ip         cowthink
-repo     file   yes     clear    privacy    whois      factor
+cathode  ls     diff    man      cal        stock      cowsay    less
+qr       cat    grep    history  top        speedtest  figlet    more
+banner   find   column  watch    date       curl       fortune
+whoami   du     rev     help     uptime     ping       lolcat
+about    df     sort    alias    ps         dig        cowthink
+contact  stat   sed     sleep    free       ip         factor
+repo     file   yes     clear    privacy    whois
          ...    ...     ...      ...        ...
 
 help files lists every command in a category; add -v to say what each does.
@@ -53,7 +53,7 @@ Text: bc diff grep column rev sort sed yes ...
 Shell: sudo man history watch help alias sleep clear ...
 System: fastfetch cal top date uptime ps free privacy ...
 Network: weather stock speedtest curl ping dig ip whois ...
-Fun: cmatrix sl cowsay figlet fortune lolcat cowthink factor
+Fun: cmatrix cowsay figlet fortune lolcat cowthink factor
 Editor: nano less more
 
 help files lists every command in a category; add -v to say what each does.

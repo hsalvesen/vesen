@@ -15,6 +15,6 @@ export default defineCommand({
     { line: 'cmatrix -u 8', note: 'slower' },
     { line: 'cmatrix | cat', note: 'in a pipe, one still screen', offline: true },
   ],
-  seeAlso: ['sl', 'clear'],
+  seeAlso: ['clear'],
   load: () => import('./cmatrix.run'),
 });

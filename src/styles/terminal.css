@@ -52,8 +52,8 @@ textarea,
   padding-block: 0.1em;
 }
 
-/* Art drawn with letters and punctuation (cowsay's animals, sl's train): text, which line height
-   1 would squash, so it keeps the terminal's line height. */
+/* Art drawn with letters and punctuation (cowsay's animals, fastfetch's logos): text, which line
+   height 1 would squash, so it keeps the terminal's line height. */
 .art-glyph {
   line-height: var(--term-lh);
 }

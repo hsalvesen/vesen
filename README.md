@@ -10,7 +10,7 @@ vesen is Has Salvesen's portfolio, in the shape of a Linux terminal. It runs ent
 
 - **A real shell.** Quotes, pipes that stream, redirection, variables, `$( )` and `$(( ))`, globs, history expansion, aliases, exit codes, and ^C that stops anything. [docs/SHELL.md](docs/SHELL.md) lists what is supported and where it differs from bash.
 - **A file system.** `/home/guest` is yours, with permissions, symlinks, `/proc` and `/dev`; what you change under `~` is still there when you come back. `/home/has` holds the owner's documents.
-- **About 160 commands.** Coreutils and text tools (`grep`, `sed`, `sort`, `diff`, `bc`), file tools (`find`, `tree`, `chmod`), system tools (`ps`, `top`, `uname`), network tools that say what a browser can and cannot do (`dig`, `ping`, `whois`, `wget`), a pager and an editor (`less`, `man`, `nano`), and some fun (`cowsay`, `fortune`, `figlet`, `sl`).
+- **About 160 commands.** Coreutils and text tools (`grep`, `sed`, `sort`, `diff`, `bc`), file tools (`find`, `tree`, `chmod`), system tools (`ps`, `top`, `uname`), network tools that say what a browser can and cannot do (`dig`, `ping`, `whois`, `wget`), a pager and an editor (`less`, `man`, `nano`), and some fun (`cowsay`, `fortune`, `figlet`, `cmatrix`).
 - **Cards.** `weather`, `stock` and `qr` draw live cards; `whoami`, `about` and `contact` give link cards with Copy.
 - **Fifteen themes** named for Australian animals, every one checked for contrast, with an optional CRT effect.
 
@@ -67,7 +67,7 @@ The app is a DOM-free shell kernel with a Svelte interface on top. [ADR 0001](do
 - **Output** (`src/output`): commands write text with a small SGR subset, or typed blocks (`lines`, `grid`, `table`, `art`, `panel`, `chips`, `card`, `columns`, `component`), never HTML. `src/ui/OutputView.svelte` draws them with text interpolation only, and tap actions come only from the trusted `out` builders.
 - **The file system** (`src/vfs`): permissions, symlinks, `/proc` and `/dev`, a 512 KB quota, and an overlay of your changes under `~` saved in the browser.
 - **Services and platform** (`src/services`, `src/platform`): the only code that touches browser APIs. The network service gives every request a deadline and typed errors; storage falls back to memory when the browser blocks it; the opener holds the in-app link policy.
-- **Interface** (`src/ui`): the transcript, the prompt and its editor, the phone dock, the rich cards (loaded on first use) and the full-screen apps (`AppHost` with the pager, editor, QR presenter, train and rain).
+- **Interface** (`src/ui`): the transcript, the prompt and its editor, the phone dock, the rich cards (loaded on first use) and the full-screen apps (`AppHost` with the pager, editor, QR presenter, rain and sudo's show).
 
 `npm run check:boundaries` keeps `src/shell`, `src/output`, `src/vfs`, `src/lib` and `src/commands` free of the DOM, and `npm run check:bundle` holds the budgets: 60 kB gzip of JavaScript before the first paint, 75 kB for the kernel (in at most four files), 40 kB for the catalogue's specs.
 
@@ -109,7 +109,7 @@ src/
     ├── prompt/                    # The prompt controller, LineEditor and PromptLine
     ├── dock/                      # The phone dock: chips, key bar, history sheet
     ├── components/                # Cards, each loaded on first use: link, weather, quote, QR
-    ├── apps/                      # Full-screen apps: Pager, Editor, QrPresenter, Train, Matrix, Shutdown
+    ├── apps/                      # Full-screen apps: Pager, Editor, QrPresenter, Matrix, Rick, Shutdown
     └── actions/                   # The one scroll owner, and the focus policy
 public/                            # 404.html, fonts/ (Vesen Mono and OFL.txt), icons/, og.png,
                                    # manifest.webmanifest, probe/ (the device probe, not linked)

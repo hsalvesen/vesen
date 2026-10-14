@@ -38,7 +38,7 @@
     {:else if block.type === 'art'}
       <!-- Hidden from screen readers, which hear the alternative text instead of the glyphs. Block
            art (the banner, text-mode QR codes) is drawn with its rows touching; art drawn with
-           letters and punctuation (cowsay, sl, figlet, fastfetch's logos) at the terminal's line height. -->
+           letters and punctuation (cowsay, figlet, fastfetch's logos) at the terminal's line height. -->
       <div class="art-wrap">
         <div
           class="art {artClass(block.text)} {spanClasses(block.style)}"

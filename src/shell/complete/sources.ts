@@ -55,8 +55,7 @@ export function keepsQuiet(spec: CommandSpec | undefined): boolean {
 
 /**
  * Command names without the quiet ones (keepsQuiet), unless one is the word typed whole or
- * nothing else matches: `c` lists cat and cd but not cowsay, while `cow` finds cowsay and `sl`
- * keeps sl beside sleep.
+ * nothing else matches: `c` lists cat and cd but not cowsay, while `cow` finds cowsay.
  */
 export function withoutQuiet(items: readonly Candidate[], typed: string, env: CompletionEnv): Candidate[] {
   const loud = items.filter((c) => c.value === typed || (c.kind !== 'command' && c.kind !== 'alias') || !keepsQuiet(env.registry.get(c.value)));
