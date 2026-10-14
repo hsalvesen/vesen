@@ -1,6 +1,8 @@
 // The Matrix app (cmatrix): it rains on animation frames until any key or a tap, rests while the
-// page is hidden, and stands still under reduced motion without asking for a single frame.
-import { fireEvent, render, screen } from '@testing-library/svelte';
+// page is hidden, and rains under reduced motion too; only a browser that cannot animate shows it
+// standing still. The keys a phone's typing engine sends on its own do not end it, and the canvas
+// is fitted again when the screen's size changes.
+import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MATRIX_GLYPHS, stepFor, stillRain } from '../../commands/lib/matrix';
@@ -84,18 +86,76 @@ describe('the Matrix app', () => {
     expect(raf.request.mock.calls.length).toBe(asked + 1);
   });
 
-  it('stands still under reduced motion, until a key', async () => {
+  it('rains under reduced motion too, as the animation the visitor asked for, until a key', async () => {
     vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduced-motion') }));
     const raf = frames();
+    const { close, button } = show();
+    expect(button.dataset.motion).toBe('running');
+    expect(raf.request).toHaveBeenCalledTimes(1);
+    for (let ms = 0; ms < 200; ms += 16) raf.frame(ms);
+    expect(raf.request.mock.calls.length).toBeGreaterThan(5);
+    await fireEvent.keyDown(window, { key: 'a' });
+    expect(close).toHaveBeenCalledWith('stopped');
+  });
+
+  it('stands still only where the browser cannot animate, until a key', async () => {
+    vi.stubGlobal('requestAnimationFrame', undefined);
     const { close, button } = show();
     expect(button.dataset.motion).toBe('still');
     setVisibility('hidden');
     setVisibility('visible');
     await tick();
     expect(button.dataset.motion).toBe('still');
-    expect(raf.request).not.toHaveBeenCalled();
     await fireEvent.keyDown(window, { key: 'a' });
     expect(close).toHaveBeenCalledWith('stopped');
+  });
+
+  it("leaves the keys a phone's typing engine sends with no key pressed alone", async () => {
+    frames();
+    const { close } = show({ ...VIEW, touch: true });
+    await fireEvent.keyDown(window, { key: 'Unidentified', keyCode: 229 });
+    await fireEvent.keyDown(window, { key: 'Process' });
+    await fireEvent.keyDown(window, { key: 'Enter', isComposing: true });
+    await fireEvent.keyDown(window, { key: 'a', keyCode: 229 });
+    expect(close).not.toHaveBeenCalled();
+    await fireEvent.keyDown(window, { key: 'Enter' });
+    expect(close).toHaveBeenCalledWith('stopped');
+  });
+
+  it('fits the canvas to the screen again when its size changes, as a phone keyboard closing makes it', async () => {
+    frames();
+    let observed: (() => void) | null = null;
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: () => void) {
+          observed = callback;
+        }
+        observe(): void {}
+        disconnect(): void {
+          disconnect();
+        }
+      },
+    );
+    const size = { width: 300, height: 400 };
+    const spy = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(() => size.width);
+    const spyHeight = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(() => size.height);
+    try {
+      const { button } = show();
+      const canvas = button.querySelector('canvas') as HTMLCanvasElement;
+      const ratio = Math.min(2, window.devicePixelRatio || 1);
+      expect([canvas.width, canvas.height]).toEqual([Math.floor(300 * ratio), Math.floor(400 * ratio)]);
+      // The keyboard closes: the screen grows, with no resize event on iOS.
+      size.height = 700;
+      (observed as (() => void) | null)?.();
+      expect([canvas.width, canvas.height]).toEqual([Math.floor(300 * ratio), Math.floor(700 * ratio)]);
+      cleanup();
+      expect(disconnect).toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+      spyHeight.mockRestore();
+    }
   });
 
   it('opens through AppHost for cmatrix', async () => {

@@ -1,9 +1,13 @@
 <!--
   The Matrix app, for cmatrix (src/commands/more/fun/cmatrix.ts): characters fall down the screen
-  in columns, each column's leading character in the theme's accent and its trail in green (the
-  ok role), fading into the background. It is drawn on a canvas, a step at a time on animation
-  frames, and stops drawing while the page is hidden. Any key or a tap ends it. Under reduced
-  motion the rain stands still until then.
+  in columns, each column's leading character in the theme's accent and its trail in the ok role,
+  fading into the background. It is drawn on a canvas, a step at a time on animation frames, from
+  drops already on the screen, so the rain shows at once, and stops drawing while the page is
+  hidden. The canvas is measured again whenever its size changes (a phone's keyboard closing as
+  the app opens, a turn of the screen). Any key or a tap ends it; the keys a phone's typing engine
+  sends on its own, with no key pressed, do not. It falls under reduced motion too: the rain is
+  what the visitor asked for, as a video is (the cathode's moving layers, which are decoration,
+  still go). Only a browser that cannot animate shows it standing still.
 -->
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
@@ -29,8 +33,7 @@
   // svelte-ignore state_referenced_locally
   const view = viewOf(props);
   const glyphs = Array.from(view.glyphs);
-  const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const still = reduce || typeof requestAnimationFrame !== 'function';
+  const still = typeof requestAnimationFrame !== 'function';
 
   let screen: HTMLElement | undefined = $state();
   let canvas: HTMLCanvasElement | undefined = $state();
@@ -52,6 +55,9 @@
   let raf = 0;
   let lastStep = 0;
   let done = false;
+  /** The screen's size when the canvas was last fitted to it. */
+  let fitted = { width: -1, height: -1 };
+  let observer: ResizeObserver | null = null;
 
   const pick = (): string => glyphs[Math.floor(Math.random() * glyphs.length)] ?? '0';
 
@@ -84,6 +90,7 @@
     if (screen === undefined || canvas === undefined) return;
     const width = screen.clientWidth;
     const height = screen.clientHeight;
+    fitted = { width, height };
     const ratio = Math.min(2, typeof devicePixelRatio === 'number' && devicePixelRatio > 0 ? devicePixelRatio : 1);
     canvas.width = Math.max(1, Math.floor(width * ratio));
     canvas.height = Math.max(1, Math.floor(height * ratio));
@@ -106,9 +113,16 @@
     }
     const columns = Math.max(1, Math.floor(width / cellWidth));
     rows = Math.max(1, Math.ceil(height / cellHeight));
-    // A drop in every other column, so the characters have room to read.
-    drops = Array.from({ length: Math.ceil(columns / 2) }, () => ({ y: -Math.floor(Math.random() * rows), speed: 1 }));
+    // A drop in every other column, so the characters have room to read. Most start on the
+    // screen, at any height, so the rain shows at once; the rest come in from above.
+    drops = Array.from({ length: Math.ceil(columns / 2) }, () => ({ y: Math.floor(Math.random() * rows * 1.25) - Math.floor(rows / 4), speed: 1 }));
     if (still) drawStill(columns);
+  }
+
+  /** Fits the canvas again when the screen is not the size it was fitted to. */
+  function refit(): void {
+    if (done || screen === undefined) return;
+    if (screen.clientWidth !== fitted.width || screen.clientHeight !== fitted.height) setup();
   }
 
   /** The rain standing still: streaks in green, each ending in the accent. */
@@ -174,19 +188,29 @@
     } else start();
   }
 
+  /**
+   * No key was pressed: a phone's typing engine at work. Android's keyboards send keydown with no
+   * key (Unidentified, or keyCode 229) as they compose, and as a field they typed in lets go.
+   */
+  function typingEngine(event: KeyboardEvent): boolean {
+    return event.isComposing || event.key === 'Unidentified' || event.key === 'Process' || event.keyCode === 229;
+  }
+
   function onKey(event: KeyboardEvent): void {
-    if (done || event.repeat || MODIFIERS.includes(event.key)) return;
+    if (done || event.repeat || MODIFIERS.includes(event.key) || typingEngine(event)) return;
     event.preventDefault();
     event.stopPropagation();
     finish();
   }
 
-  function onResize(): void {
-    if (!done) setup();
-  }
-
   onMount(() => {
     setup();
+    // The screen's own size, whatever changed it: on iOS a keyboard closing grows the page with no
+    // resize event.
+    if (typeof ResizeObserver === 'function' && screen !== undefined) {
+      observer = new ResizeObserver(refit);
+      observer.observe(screen);
+    }
     document.addEventListener('visibilitychange', onVisibility);
     if (!still && document.visibilityState !== 'hidden') start();
     else if (!still) motion = 'paused';
@@ -195,11 +219,12 @@
   onDestroy(() => {
     done = true;
     stop();
+    observer?.disconnect();
     if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisibility);
   });
 </script>
 
-<svelte:window onkeydown={onKey} onresize={onResize} />
+<svelte:window onkeydown={onKey} onresize={refit} />
 
 <button type="button" class="matrix" data-motion={motion} aria-label="Characters rain down the screen. Press any key or tap to stop." bind:this={screen} onclick={finish}>
   <canvas bind:this={canvas} aria-hidden="true"></canvas>

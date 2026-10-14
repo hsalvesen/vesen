@@ -7,7 +7,7 @@ import { MATRIX_GLYPHS, stepFor, stillRain, type MatrixView } from '../../lib/ma
 /** What --help, help and man say about cmatrix, besides its spec (cmatrix.ts). */
 export const doc: CommandDoc = {
   description:
-    "Fills the screen with characters falling in columns, in the theme's accent and green, until any key or a tap. It pauses while the page is hidden. When the system asks for reduced motion the rain stands still. In a pipe, a script or $( ), it prints one still screen of it.",
+    "Fills the screen with characters falling in columns, in the theme's colours, until any key or a tap. It pauses while the page is hidden, and falls under reduced motion too, as the animation asked for. In a pipe, a script or $( ), it prints one still screen of it.",
   man: [{ heading: 'EXIT STATUS', body: '0 when it was stopped; 1 for a DELAY outside 0 to 10, or an operand.' }],
 };
 
