@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { isBenignConsoleMessage } from './console';
+import { isBenignConsoleMessage, isBenignPageError } from './console';
 
 // Back while a full-screen app is open. A visitor who comes from Instagram's bio and opens man,
 // less, nano or cmatrix, then presses Back (Android's button, iOS's edge swipe), lands back
@@ -50,7 +50,9 @@ async function arrive(page: Page): Promise<string[]> {
   page.on('console', (message) => {
     if (message.type() === 'error' && !isBenignConsoleMessage(message.text())) errors.push(message.text());
   });
-  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('pageerror', (error) => {
+    if (!isBenignPageError(error.message)) errors.push(error.message);
+  });
   await page.goto(BEFORE);
   await page.goto('/');
   await expect(page.locator('[data-completion="ready"]')).toHaveCount(1);

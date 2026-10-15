@@ -23,3 +23,14 @@ export function isBenignConsoleMessage(text: string, url = ''): boolean {
   const cutOff = /^Fetch API cannot load \S+ due to access control checks\.?$/.test(trimmed);
   return (notFound || cutOff) && OPTIONAL.some((path) => url.includes(path) || trimmed.includes(path));
 }
+
+/**
+ * The same cut-off fetch, as Playwright's WebKit reports it at times: WebKit files the note under
+ * the page's scripts, so Playwright raises it as a page error, its text split at the first colon
+ * as an exception's name and message are. What is left starts inside the URL, after `http:/`:
+ * "/localhost:4173/audio/incident-report.portrait.frames due to access control checks.".
+ */
+export function isBenignPageError(message: string): boolean {
+  const cutOff = /^\S+ due to access control checks\.?$/.test(message.trim());
+  return cutOff && OPTIONAL.some((path) => message.includes(path));
+}

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { isBenignConsoleMessage } from './console';
+import { isBenignConsoleMessage, isBenignPageError } from './console';
 
 // sudo's show (src/commands/shell/sudo.run.ts, src/ui/apps/Rick.svelte): the password prompt is
 // `Password: ` alone, with no line above it, and Esc cancels it; the show's files are warmed at
@@ -52,7 +52,9 @@ async function arrive(page: Page): Promise<{ errors: string[]; requests: string[
   page.on('console', (message) => {
     if (message.type() === 'error' && !isBenignConsoleMessage(message.text(), message.location().url)) errors.push(message.text());
   });
-  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('pageerror', (error) => {
+    if (!isBenignPageError(error.message)) errors.push(error.message);
+  });
   page.on('request', (request) => {
     const path = new URL(request.url()).pathname;
     if (path.startsWith('/audio/')) requests.push(path);
