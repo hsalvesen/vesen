@@ -1,30 +1,83 @@
-# [vesen](https://www.vesen.app)
+<div align="center">
 
-> A Unix-style terminal in the browser, built as much for a phone inside Instagram as for a desktop.
+<pre>
+oooo  ooo  .oooo.  .oooo.o  .oooo.  ooo. .oo. 
+ `88..8'  d88' `8b d88( "8 d88' `8b `888P"Y8b 
+  `88.8'  888ooo88 `"Y8b.  888ooo88  888  888 
+   `88'   888   .o o. )88b 888   .o  888  888 
+    `8'   `Y8bodP' 8""88P' `Y8bodP' o888  888o
+</pre>
 
-![banner](/docs/themes/banner.gif)
+**A Linux terminal in your browser, made as much for a phone inside Instagram as for a desktop.**
 
-## What vesen is
+[**Open www.vesen.app**](https://www.vesen.app) &nbsp;·&nbsp; [Changelog](docs/CHANGELOG.md) &nbsp;·&nbsp; [The shell](docs/SHELL.md) &nbsp;·&nbsp; [Architecture](docs/adr/0001-architecture.md)
 
-vesen is Has Salvesen's portfolio, in the shape of a Linux terminal. It runs entirely in the page:
+[![CI](https://github.com/hsalvesen/vesen/actions/workflows/ci.yml/badge.svg)](https://github.com/hsalvesen/vesen/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/hsalvesen/vesen?color=2fbf8f&label=release)](https://github.com/hsalvesen/vesen/releases)
+[![Licence](https://img.shields.io/badge/licence-MIT-2fbf8f)](LICENSE)
 
-- **A real shell.** Quotes, pipes that stream, redirection, variables, `$( )` and `$(( ))`, globs, history expansion, aliases, exit codes, and ^C that stops anything. [docs/SHELL.md](docs/SHELL.md) lists what is supported and where it differs from bash.
-- **A file system.** `/home/guest` is yours, with permissions, symlinks, `/proc` and `/dev`; what you change under `~` is still there when you come back. `/home/has` holds the owner's documents.
-- **About 160 commands.** Coreutils and text tools (`grep`, `sed`, `sort`, `diff`, `bc`), file tools (`find`, `tree`, `chmod`), system tools (`ps`, `top`, `uname`), network tools that say what a browser can and cannot do (`dig`, `ping`, `whois`, `wget`), a pager and an editor (`less`, `man`, `nano`), and some fun (`cowsay`, `fortune`, `figlet`, `cmatrix`).
-- **Cards.** `weather`, `stock` and `qr` draw live cards; `whoami`, `about` and `contact` give link cards with Copy.
-- **Fifteen themes** named for Australian animals, every one checked for contrast, with an optional CRT effect.
+<img src="docs/images/hero.png" width="100%" alt="vesen on a desktop: the banner, then fastfetch with the macOS logo beside the system's details and the theme's sixteen colours">
 
-Version 2.0.0 is a rewrite of the whole app; [CHANGELOG.md](docs/CHANGELOG.md) says what changed.
+</div>
+
+## What it is
+
+vesen is Has Salvesen's portfolio, in the shape of a Linux terminal. Everything runs in the page: no server answers your commands.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**A real shell**<br>
+Quotes, pipes that stream, redirection, variables, `$( )` and `$(( ))`, globs, history expansion, aliases, exit codes, and ^C that stops anything. [docs/SHELL.md](docs/SHELL.md) says where it differs from bash.
+
+</td>
+<td width="50%" valign="top">
+
+**A file system**<br>
+`/home/guest` is yours, with permissions, symlinks, `/proc` and `/dev`, and what you change under `~` is still there when you come back. `/home/has` holds the owner's documents.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**About 150 commands**<br>
+Text tools (`grep`, `sed`, `sort`, `diff`, `bc`), file tools (`find`, `tree`, `chmod`), system tools (`ps`, `top`, `uname`), network tools that say what a browser can and cannot do (`dig`, `ping`, `whois`), a pager and an editor (`less`, `man`, `nano`), and some fun (`cowsay`, `fortune`, `cmatrix`).
+
+</td>
+<td width="50%" valign="top">
+
+**Live cards**<br>
+`weather` draws a forecast, `stock` a quote with its chart and `qr` a code you can scan, each with chips to tap; `whoami`, `about` and `contact` give link cards with Copy.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Fifteen themes**<br>
+Named for Australian animals and each checked for contrast, with an optional CRT over the lot: scanlines, a rolling sweep, a phosphor glow.
+
+</td>
+<td width="50%" valign="top">
+
+**Made for a phone**<br>
+A dock of chips and keys above the keyboard, a page that fits the screen and never scrolls sideways, and links that keep working inside Instagram's browser.
+
+</td>
+</tr>
+</table>
 
 ## A short tour
 
 ```bash
-help                      # eight commands of each category; help files lists all of Files, -v says what each does
+help                      # eight commands of each category; help files lists them all, -v says what each does
 cat README.md             # the owner's README, in colour
 ls -la ~ | grep bash      # pipes, options and globs work as on Linux
 fastfetch                 # this device, as a terminal sees it
-weather Oslo              # a forecast card; weather --here uses this device's location
-stock AAPL CBA.AX         # quotes in a table; stock AAPL draws a card with a chart
+weather Sydney            # a forecast card; weather --here uses this device's location
+stock AAPL CBA.AX         # quotes in a table; stock CBA draws a card with a chart
 qr https://www.vesen.app  # a scannable QR card; tap it to present it full screen
 dig vesen.app +short      # DNS over HTTPS, and it says so
 man ls | less             # the pager; nano notes.txt is the editor
@@ -37,27 +90,86 @@ privacy                   # every service a command talks to, and what it is sen
 
 At the prompt, Tab completes (extend, then list, then cycle), ↑ and ↓ step through the history lines that start with what is typed, Ctrl+R searches the history, and grey text offers the rest of a past line (→ takes it). The readline keys edit the line while the prompt has focus: Ctrl+A, E, U, K, Y, L and D everywhere, Ctrl+W, P, N, F, B and T on a Mac, and Alt+B, F, D, Y, . and Backspace. Ctrl+C stops the running command or abandons the line; on Windows and Linux, with text selected, it copies instead. Escape then a key is that key with Alt, as in readline, and Escape then Tab leaves the terminal for the rest of the page. `help keys` lists them all.
 
-### On a phone
+## On a phone
+
+<p align="center">
+  <img src="docs/images/phone-fastfetch.png" width="31%" alt="fastfetch on an iPhone: the Apple logo first, then the system's details and the theme's colours, over the dock's chips and key bar">&nbsp;
+  <img src="docs/images/phone-weather.png" width="31%" alt="weather Sydney on an iPhone: the current conditions beside a drawn sun, then the week's forecast">&nbsp;
+  <img src="docs/images/phone-stock.png" width="31%" alt="stock CBA on an iPhone: CBA.AX's price and change, the day's chart, its ranges and chips for the range">
+</p>
 
 A dock rides above the keyboard. Its chips run a starter command in one tap without opening the keyboard, offer what comes next after a command (every theme after `theme ls`), and build a line by tapping. Holding a chip puts it at the prompt instead of running it. The key bar has tab, ↑, ↓, ^C, clear, `...` for symbols and a chevron to put the keyboard away; holding ↑ opens a list of past commands. A hardware keyboard hides the key bar, and `keys on|off|auto` chooses. Open the page with `?dock=1` to see the dock on a desktop.
 
 The page keeps pinch zoom, sizes itself to the visible screen above the keyboard, and never scrolls sideways: wide output such as `ps aux` scrolls inside its own block. Inside Instagram's browser a link opens only when tapped, in the same view, and Back brings the terminal back as it was. The CRT effect is lighter on phones, in in-app browsers and under reduced motion (nothing in it moves there), and off under more contrast, reduced transparency or forced colours.
 
-### Network commands are honest
+## Themes
 
-A browser tab cannot send ICMP or raw DNS, so vesen does what a page can and labels it. `dig`, `host` and `nslookup` ask Cloudflare's DNS over HTTPS (Google's when Cloudflare cannot be reached); `whois` asks the registries over RDAP; `ping` times HTTPS round trips and prints ping's statistics at the end or on ^C; `ip addr` and `ifconfig` show a synthetic `eth0`, marked as such, and your public address after saying they will ask Cloudflare for it; `wget` and `curl` download what CORS allows; `git log` in `~/projects/vesen` reads this repository's newest commits from GitHub. `ssh`, `telnet`, `nc`, `ftp` and `traceroute` say in one line why a tab cannot be them.
+<p align="center">
+  <img src="docs/themes/themes.gif" width="100%" alt="The fifteen themes in turn, each showing the banner and fastfetch's logo, details and sixteen colours">
+</p>
 
-### Stock quotes
+[docs/themes](docs/themes) has a screenshot of each, or run `theme ls`. `cathode ls` shows the CRT modes, and `cathode quality auto|full|lite|off` overrides the device's choice.
+
+## Network commands are honest
+
+A browser tab cannot send ICMP or raw DNS, so vesen does what a page can and labels it.
+
+| You type | What a tab does instead |
+|:--|:--|
+| `dig`, `host`, `nslookup` | Asks Cloudflare's DNS over HTTPS, or Google's when Cloudflare cannot be reached |
+| `whois` | Asks the registries over RDAP |
+| `ping` | Times HTTPS round trips, with ping's statistics at the end or on ^C |
+| `ip addr`, `ifconfig` | Shows a synthetic `eth0`, marked as such, and your public address after saying it will ask Cloudflare |
+| `wget`, `curl` | Downloads what CORS allows |
+| `git log` in `~/projects/vesen` | Reads this repository's newest commits from GitHub |
+| `ssh`, `telnet`, `nc`, `ftp`, `traceroute` | Says in one line why a tab cannot be them |
+
+## Stock quotes
 
 `stock AAPL` shows a card with the price in the instrument's currency, the change, the market's phase, a chart and the day and 52-week ranges; several tickers give a table, `stock -s commonwealth bank` searches by name, and `stock -r 5d AAPL` changes the range. Quotes may be delayed, every card says where its data came from and how old it is, and the last good quote is shown marked STALE when live data cannot be reached. Not investment advice.
 
-## Themes
+A browser cannot ask Yahoo Finance for a quote itself (no CORS, and browser-like requests are rate-limited), so quotes come through vesen-stock, a small Cloudflare Worker in [`worker/stock`](worker/stock/README.md):
 
-![themes](/docs/themes/themes.gif)
+```text
+┌──────────────────────── the page ────────────────────────┐
+│ stock CBA                                                │
+└────────────┬────────────────────────────────▲────────────┘
+   /v1/quote │                                │ one shape from every source
+┌────────────▼───────── vesen-stock ──────────┴────────────┐
+│ a Cloudflare Worker on the free plan, with rate limits   │
+│ CBA → CBA.AX, apple → AAPL                               │
+│ a quote cached 60 s, or 300 s while its market is closed │
+│ a stale copy, up to 24 h old, when every source fails    │
+└────────────┬────────────────────────────────┬────────────┘
+       first │                                │ when Yahoo is down
+┌────────────▼────────────┐      ┌────────────▼────────────┐
+│ Yahoo Finance           │      │ Cboe                    │
+│ chart and search        │      │ delayed US quotes       │
+└─────────────────────────┘      └─────────────────────────┘
+```
 
-[docs/themes](docs/themes) has a screenshot of each theme, or run `theme ls`. `cathode ls` shows the CRT modes, and `cathode quality auto|full|lite|off` overrides the device's choice.
+Until it is deployed, a build reads Yahoo through a public proxy, which is often down, and `stock` says so. The Worker's README sets it up in five steps: a free Cloudflare account, an API token, two repository secrets, one workflow run and one repository variable.
 
-## Architecture
+## How it is built
+
+```text
+                    keys and taps
+                          │
+┌─────────────────────────▼─── src/ui ─────────────────────────────┐
+│ the prompt and its editor · transcript · dock · cards · apps     │
+└─────────────────────────┬───────────────────────────▲────────────┘
+                   a line │                           │ typed blocks, never HTML
+┌─────────────────────────▼─ src/shell ───────────────┴────────────┐
+│ lexer → parser → expansion → executor, pipes and redirections    │
+│ the registry, help and man from the specs, Tab and the chips     │
+└──────────┬──────────────────────┬──────────────────────┬─────────┘
+           │                      │                      │
+┌──────────▼─────────┐ ┌──────────▼─────────┐ ┌──────────▼─────────┐
+│ src/commands       │ │ src/vfs            │ │ src/services       │
+│ a spec a command,  │ │ /home /proc /dev,  │ │ net and storage,   │
+│ bodies load on use │ │ your ~ kept here   │ │ weather and quotes │
+└────────────────────┘ └────────────────────┘ └────────────────────┘
+```
 
 The app is a DOM-free shell kernel with a Svelte interface on top. [ADR 0001](docs/adr/0001-architecture.md) records the shared contracts and every amendment made while building them; [docs/plan](docs/plan) holds the audit and the plan this version was built from, and [docs/plan/STATUS.md](docs/plan/STATUS.md) what was done, how it differs from the plan, and what is left.
 
@@ -76,6 +188,7 @@ The app is a DOM-free shell kernel with a Svelte interface on top. [ADR 0001](do
 ```text
 src/
 ├── main.ts, App.svelte, app.css   # Entry: bootstrap, then the app shell; boot errors shown plainly
+├── themes.json                    # The fifteen themes: palettes and any role colours a theme sets
 ├── app/                           # bootstrap.ts (composition root), shell.ts (builds the shell and its
 │                                  # services), lazy-shell.ts (loads the kernel), transcript.ts
 ├── shell/                         # The DOM-free kernel: lexer, parser, expand, glob, histexpand,
@@ -112,20 +225,24 @@ src/
     ├── apps/                      # Full-screen apps: Pager, Editor, QrPresenter, Matrix, Rick, Shutdown
     └── actions/                   # The one scroll owner, and the focus policy
 public/                            # 404.html, fonts/ (Vesen Mono and OFL.txt), icons/, og.png,
-                                   # manifest.webmanifest, probe/ (the device probe, not linked)
+                                   # audio/, manifest.webmanifest, probe/ (the device probe, not linked)
 assets-src/fonts/                  # The source Vesen Mono is built from (not served)
-themes.json                        # The fifteen themes: palettes and any role colours a theme sets
 worker/stock/                      # vesen-stock, the Cloudflare Worker for quotes (its own README)
 tests/                             # The command harness, transcripts, XSS tests, hosting checks,
                                    # recorded network fixtures
 e2e/                               # Playwright: desktop Chrome, iPhone in Instagram (WebKit), Pixel 7
 scripts/                           # The checks (boundaries, bundle, contrast), the kernel chunk rule,
-                                   # the boot script plugin, icons, og image, theme screenshots, fonts/
-docs/                              # adr/, plan/ (with STATUS.md), themes/, SHELL.md, ADDING_COMMANDS.md
-.github/                           # CI, release and stock Worker workflows; issue forms; PR template
+                                   # the boot script plugin, icons, og image, screenshots, fonts/, art
+config/                            # The strict TypeScript configs that npm run check:strict runs
+docs/                              # CHANGELOG.md, adr/, plan/ (with STATUS.md), themes/, images/,
+                                   # SHELL.md, ADDING_COMMANDS.md
+.github/                           # CI, release and stock Worker workflows; issue forms; PR template;
+                                   # CONTRIBUTING, SECURITY and the code of conduct
 ```
 
-## Scripts
+The root keeps only what its tools look for there: `package.json` and its lockfile, `index.html` and `vite.config.ts` (Vite), `svelte.config.js`, `tsconfig.json`, `playwright.config.ts`, `firebase.json` and `.firebaserc` (Firebase), `.nvmrc`, `.env.example`, the README and the licence.
+
+## Development
 
 Node 22.12 or later (`nvm use` reads `.nvmrc`).
 
@@ -142,20 +259,21 @@ npm run check:boundaries   # DOM-free folders stay DOM-free, no {@html}, the cat
 npm test                   # unit tests (Vitest, node and happy-dom)
 npm run check:bundle       # after build: initial JS 60 kB, kernel 75 kB, catalogue 40 kB, stock's
                            # first quote 19 kB (gzip)
-npm run check:contrast -- --strict   # WCAG contrast of every theme's roles
-npm run test:smoke         # the @smoke Playwright tests on all three projects, as CI runs them
+npm run check:contrast     # WCAG contrast of every theme; add -- --strict to fail on any role
+                           # below its minimum, as CI does
+npm run test:smoke         # the @smoke Playwright tests on every project, as CI runs them
 npm run test:e2e           # every Playwright test
 ```
 
-Install the Playwright browsers once with `npx playwright install chromium webkit`. `PW_PORT` chooses the port Playwright's preview server uses. `npm run build && node scripts/theme-screenshots.mjs` regenerates the theme screenshots (and `themes.gif` when ffmpeg is installed).
+Install the Playwright browsers once with `npx playwright install chromium webkit`. `PW_PORT` chooses the port Playwright's preview server uses. `npm run build && node scripts/theme-screenshots.mjs` regenerates the theme screenshots and `themes.gif`, with ffmpeg or, where it is missing, `scripts/gif.py` (Python with Pillow and numpy).
 
 ## Configuration
 
 Vite reads two variables at build time. Copy [.env.example](.env.example) to `.env.local` (ignored by git) to set them locally; CI reads the repository variables of the same names.
 
 | Variable | What it is | When empty |
-|---|---|---|
-| `VITE_STOCK_API` | The stock Worker's base URL, such as `https://vesen-stock.<subdomain>.workers.dev` | `stock` uses its interim source, Yahoo's chart through a public proxy, which is slower and says so on every card |
+|:--|:--|:--|
+| `VITE_STOCK_API` | The stock Worker's base URL, such as `https://vesen-stock.<subdomain>.workers.dev` | `stock` reads Yahoo's chart through a public proxy, which is slower, often down, and says so |
 | `VITE_FETCH_PROXY` | vesen's own fetch proxy for `curl --via-proxy` | `curl --via-proxy` says the site has none |
 
 ## Deployment
@@ -165,11 +283,7 @@ Vite reads two variables at build time. Copy [.env.example](.env.example) to `.e
 - a pull request from this repository gets a **preview channel**, and the bot comments its URL on the pull request;
 - a push to `main` deploys to the **live channel**, www.vesen.app.
 
-`firebase.json` sets the Content-Security-Policy and the other security headers, never caches `index.html` and caches hashed assets for a year. Pushing a `v*` tag runs `release.yml`, which creates the GitHub release.
-
-## The stock Worker
-
-Quotes come through vesen-stock, a small Cloudflare Worker in [`worker/stock`](worker/stock/README.md) that calls Yahoo Finance, with Cboe for US listings when Yahoo is down, and keeps a short snapshot in KV. It answers only vesen.app, its preview channels and localhost. Its README covers the owner's setup, and `.github/workflows/stock-worker.yml` deploys it when it changes and checks it daily. To run your own copy elsewhere, deploy your own Worker with your domain in its `ALLOWED_ORIGINS` and build with `VITE_STOCK_API` pointing at it.
+`firebase.json` sets the Content-Security-Policy and the other security headers, never caches `index.html` and caches hashed assets for a year. Pushing a `v*` tag runs `release.yml`, which creates the GitHub release; `.github/workflows/stock-worker.yml` deploys the stock Worker when it changes and checks it daily.
 
 ## Contributing
 
@@ -187,6 +301,8 @@ Quotes come through vesen-stock, a small Cloudflare Worker in [`worker/stock`](w
 
 MIT: see [LICENSE](LICENSE).
 
-## Author
+<div align="center">
 
-**Has Salvesen** · [vesen.app](https://www.vesen.app) · [GitHub](https://github.com/hsalvesen) · [LinkedIn](https://www.linkedin.com/in/harrysalvesen/)
+**Has Salvesen** &nbsp;·&nbsp; [vesen.app](https://www.vesen.app) &nbsp;·&nbsp; [GitHub](https://github.com/hsalvesen) &nbsp;·&nbsp; [LinkedIn](https://www.linkedin.com/in/harrysalvesen/)
+
+</div>
