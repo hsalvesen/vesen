@@ -12,7 +12,10 @@ import spec, { RANGE_VALUES, TICKER_VALUES, stockLabel } from './stock';
 import { DRAW_MS, USAGE, USAGE_NARROW } from './stock.run';
 import type { QuoteCardView, QuoteTableView } from './stock/view';
 
-afterEach(() => provideMarket(null));
+afterEach(() => {
+  provideMarket(null);
+  vi.unstubAllEnvs();
+});
 
 function use(market: Market): void {
   provideMarket(() => Promise.resolve(market));
@@ -276,6 +279,8 @@ describe('failures, in plain words', () => {
       "stock: live quotes aren't available on this host.\nvesen's quote proxy only serves vesen.app — set VITE_STOCK_API to your own (README -> Stock quotes).",
     ],
   ])('%s %j', async (code, extra, message) => {
+    // A build with the stock Worker: the failure is said alone.
+    vi.stubEnv('VITE_STOCK_API', 'https://stock.example.workers.dev');
     use(fakeMarket({ AAPL: fail(code, extra) }));
     const { status, stderrPlain, blocks } = await runLine('stock AAPL');
     expect(status).toBe(1);
@@ -283,6 +288,13 @@ describe('failures, in plain words', () => {
     const retry = code === 'timeout' || code === 'upstream_unavailable' || code === 'network' || code === 'internal';
     expect(chipLabels(blocks)).toEqual(retry ? ['|try again'] : []);
     if (retry) expect(runLines(blocks)).toEqual(['stock -f AAPL']);
+  });
+
+  it.each(['timeout', 'upstream_unavailable', 'network'])('says where quotes still come through the public proxy that it is the proxy failing: %s', async (code) => {
+    vi.stubEnv('VITE_STOCK_API', '');
+    use(fakeMarket({ AAPL: fail(code, {}) }));
+    const { stderrPlain } = await runLine('stock AAPL');
+    expect(stderrPlain.split('\n')[1]).toBe("Quotes here come through a public proxy until vesen's own stock service is set up, and the proxy isn't answering.");
   });
 
   it('says so when no client was provided, as on a copy built without one', async () => {

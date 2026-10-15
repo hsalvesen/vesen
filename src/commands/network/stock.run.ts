@@ -6,7 +6,7 @@
 import { DeadlineExceeded } from '../../lib/signals';
 import { out, type ChipItem, type Line, type SpanStyle } from '../../output/model';
 import { RANGES, isRange, normaliseSymbol, type InstrumentType, type Range, type SearchHit } from '../../services/market/contract';
-import { getMarket, type FetchPhase, type Market, type MarketFailure, type QuoteOutcome } from '../../services/market/port';
+import { getMarket, marketBackend, type FetchPhase, type Market, type MarketFailure, type QuoteOutcome } from '../../services/market/port';
 import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
 import { cardText, tableText } from './stock/text';
 import {
@@ -338,6 +338,15 @@ async function notAvailable(ctx: CommandContext): Promise<ExitCode> {
   return 1;
 }
 
+/**
+ * Where quotes still come through the interim public proxy (no stock Worker in this build), a
+ * failure is most likely the proxy's: said plainly, for a visitor and for the owner alike.
+ */
+async function proxyNote(ctx: CommandContext): Promise<void> {
+  if (marketBackend() !== 'interim') return;
+  await ctx.stderr.line(out.span("Quotes here come through a public proxy until vesen's own stock service is set up, and the proxy isn't answering.", MUTED));
+}
+
 /** [try again], which asks afresh. */
 async function tryAgain(ctx: CommandContext, symbol: string, range: Range): Promise<void> {
   const line = stockLine(symbol, { range, force: true });
@@ -377,12 +386,14 @@ async function failure(ctx: CommandContext, error: MarketFailure, wanted: Wanted
       return 1;
     case 'timeout':
       await say('stock: no response after 10 s — your connection or the quote service is slow.');
+      await proxyNote(ctx);
       await tryAgain(ctx, wanted.symbol, range);
       ctx.tty.bell();
       return 1;
     default:
       // The service's side, not the visitor's: said calmly, with no bell.
       await say("stock: market data is unavailable right now. This is on vesen's side, not yours. Try again in a minute.", WARN);
+      await proxyNote(ctx);
       await tryAgain(ctx, wanted.symbol, range);
       return 1;
   }
