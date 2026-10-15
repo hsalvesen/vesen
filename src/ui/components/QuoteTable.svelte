@@ -36,15 +36,15 @@
               {#if row.action !== null && onaction && isTrustedAction(row.action)}
                 <button
                   type="button"
-                  class="chip"
+                  class="chip b"
                   aria-label="Show {row.symbol}"
                   onmousedown={(event) => event.preventDefault()}
                   onclick={() => row.action && onaction?.(row.action)}>{row.symbol}</button
                 >
               {:else}
-                <span class="symbol">{row.symbol}</span>
+                <span class="symbol b">{row.symbol}</span>
               {/if}
-              {#if row.stale}<span class="badge">STALE</span>{/if}
+              {#if row.stale}<span class="badge b">STALE</span>{/if}
             </td>
             {#if row.failure !== null}
               <td class="failure" colspan="4">{row.failure}</td>

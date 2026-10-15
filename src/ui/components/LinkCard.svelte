@@ -74,7 +74,7 @@
 </script>
 
 <div class="card" role="group" aria-label={card.title}>
-  <div class="card-title">{card.title}</div>
+  <div class="card-title b">{card.title}</div>
   {#if card.openLabel !== undefined || href === null}
     <div class="card-label">{label}</div>
   {:else}

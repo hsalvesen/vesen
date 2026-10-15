@@ -26,14 +26,14 @@
 {#if card}
   <div class="quote" role="group" aria-label={alt}>
     <div class="head">
-      <span class="symbol">{card.symbol}</span>
+      <span class="symbol b">{card.symbol}</span>
       {#if card.name !== null}<span class="name" title={card.name}>{card.name}</span>{/if}
-      {#if card.stale !== null}<span class="badge" title="Live data unavailable: {card.stale}">STALE</span>{/if}
+      {#if card.stale !== null}<span class="badge b" title="Live data unavailable: {card.stale}">STALE</span>{/if}
     </div>
     <div class="figures">
-      <span class="price">{card.price}</span>
+      <span class="price b">{card.price}</span>
       {#if card.change !== null}
-        <span class="change {card.change.tone}">{card.change.text}{#if card.change.basis !== null}<span class="basis">{` ${card.change.basis}`}</span>{/if}</span>
+        <span class="change b {card.change.tone}">{card.change.text}{#if card.change.basis !== null}<span class="basis">{` ${card.change.basis}`}</span>{/if}</span>
       {/if}
     </div>
     <div class="phase" class:live={card.phase.live}>{card.phase.text}</div>
@@ -70,13 +70,14 @@
               type="button"
               class="chip"
               class:active={chip.active}
+              class:b={chip.active}
               aria-current={chip.active ? 'true' : undefined}
               aria-label={chip.title}
               onmousedown={(event) => event.preventDefault()}
               onclick={() => onaction?.(chip.action)}>{#if chip.active}<span aria-hidden="true">{'* '}</span>{/if}{chip.label}</button
             >
           {:else}
-            <span class="chip" class:active={chip.active} aria-current={chip.active ? 'true' : undefined}>{#if chip.active}<span aria-hidden="true">{'* '}</span>{/if}{chip.label}</span>
+            <span class="chip" class:active={chip.active} class:b={chip.active} aria-current={chip.active ? 'true' : undefined}>{#if chip.active}<span aria-hidden="true">{'* '}</span>{/if}{chip.label}</span>
           {/if}
         {/each}
       </div>

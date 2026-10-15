@@ -39,8 +39,9 @@ html.crt-vintage :is(.scrollback, .app-host) {
 
 /* Bold text glows less. Vesen Mono has one weight, so the browser draws bold by overprinting each
    glyph, and the glow is drawn under each print: at the full strength it doubles into a blur
-   (fastfetch's labels, the prompt's user and host). Here it is a tight halo and a faint bloom;
-   vintage keeps its fringes over it. */
+   (fastfetch's labels, the prompt's user and host, a quote's price). Here it is a tight halo and a
+   faint bloom; vintage keeps its fringes over it. Output marks its bold with .b (SpanView), and the
+   cards mark theirs the same way. */
 :is(html.crt-phosphor, html.crt-vintage) :is(.scrollback, .app-host) :is(b, strong, th, .b) {
   text-shadow: 0 0 2px currentColor;
 }

@@ -104,6 +104,7 @@
           class="chip kind-{chip.kind}"
           class:selected={chip.selected === true}
           class:current
+          class:b={current}
           aria-selected={chip.selected === true}
           aria-label={nameOf(chip, current)}
           title={chip.summary}

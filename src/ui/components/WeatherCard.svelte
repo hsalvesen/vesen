@@ -120,7 +120,7 @@
     {#if also.length > 0}
       <div class="wx-chips" role="group" aria-label="Places with this name">
         <span class="wx-also">{MATCHES_LABEL}</span>
-        {#if chosen !== null}<span class="wx-chip wx-chosen" aria-current="true"><span class="wx-mark" aria-hidden="true">{`${CHOSEN_MARK} `}</span>{chosen}</span>{/if}
+        {#if chosen !== null}<span class="wx-chip wx-chosen b" aria-current="true"><span class="wx-mark" aria-hidden="true">{`${CHOSEN_MARK} `}</span>{chosen}</span>{/if}
         {#each also as item}{@render chip(item)}{/each}
       </div>
     {/if}
