@@ -1,6 +1,7 @@
 // fastfetch (F050, F041): the device as the browser describes it, every row labelled for what it
-// is, beside its system's logo in a columns block that stacks below 60 columns, with a live WM
-// Theme, and no request at all unless --net asks for the public IP.
+// is, beside its system's logo in a columns block that stacks below 60 columns, the logo first,
+// with no user@host title over the rows (the prompt above says it), a live WM Theme, and no
+// request at all unless --net asks for the public IP.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { runLine } from '../../../tests/harness';
 import { ANDROID_PHONE, APPLE_SILICON_MAC, IPHONE_SAFARI, WINDOWS_PC, type System } from '../../../tests/support/systems';
@@ -130,8 +131,12 @@ describe('fastfetch on the terminal', () => {
     expect(columns.left).toEqual([expect.objectContaining({ type: 'art', alt: 'macOS logo', fit: 'scale' })]);
     const details = columns.right[0] as LinesBlock;
     const text = details.lines.map(lineText);
-    expect(text.slice(0, 3)).toEqual(['guest@vesen', '-----------', 'OS: macOS Sequoia 15.6 arm64']);
+    // The rows at once: no user@host over them, and no rule of dashes.
+    expect(text[0]).toBe('OS: macOS Sequoia 15.6 arm64');
+    expect(text.some((line) => line.includes('@vesen') || /^-+$/.test(line))).toBe(false);
     expect(text).toContain('WM Theme: swamphen');
+    // Stacked on a phone, the logo comes first: the left side, in the order it is given.
+    expect(Object.keys(columns)).not.toContain('rightFirst');
   });
 
   it("names the theme with a live binding, so earlier output follows a theme change", async () => {
@@ -179,8 +184,8 @@ describe('fastfetch on the terminal', () => {
       expect(strip.swatches?.background).toBeNull();
       expect(strip.text).toBe(` ${'\u2588\u2588'.repeat(8)} `);
     }
-    // The title's rule is ASCII.
-    expect(lines[1]?.map((span) => span.text).join('')).toBe('-----------');
+    // A blank line between the last row and the strips.
+    expect(lines[lines.length - 3]).toEqual([]);
   });
 
   it('works with nothing to read, as in a test: the rows it can be sure of', async () => {
@@ -200,7 +205,8 @@ describe('fastfetch in a pipe', () => {
   it('writes the details alone, a Label: value a line, for grep', async () => {
     const { stdoutPlain } = await runLine('fastfetch', { tty: false, sys: createSysInfo(ANDROID_PHONE().host) });
     const lines = stdoutPlain.split('\n');
-    expect(lines.slice(0, 3)).toEqual(['guest@vesen', '-----------', 'OS: Android 14']);
+    expect(lines[0]).toBe('OS: Android 14');
+    expect(stdoutPlain).not.toMatch(/@vesen|^-+$/m);
     expect(lines).toContain('Host (approximate): Pixel 7');
     expect(stdoutPlain).not.toContain('MMMM');
   });

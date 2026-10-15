@@ -112,7 +112,7 @@ export function cleanBlock(block: unknown): Block | null {
         const at = typeof raw.stackBelowCols === 'number' ? raw.stackBelowCols : 60;
         // A left side of its own width (fastfetch's logo) keeps it, so the layout comes back as it was.
         const leftCh = typeof raw.leftCh === 'number' && Number.isFinite(raw.leftCh) && raw.leftCh > 0 ? raw.leftCh : undefined;
-        return out.columns(side(raw.left), side(raw.right), at, leftCh, raw.rightFirst === true);
+        return out.columns(side(raw.left), side(raw.right), at, leftCh);
       }
       case 'component': {
         // A rich card comes back as what a pipe would have received.

@@ -258,7 +258,7 @@ export interface ListsBlock {
   readonly columns: readonly ListColumn[];
 }
 
-/** Two stacks side by side, stacked vertically on narrow terminals: fastfetch, stock. */
+/** Two stacks side by side, stacked vertically on narrow terminals, the left one first: fastfetch. */
 export interface ColumnsBlock {
   readonly type: 'columns';
   readonly left: readonly Block[];
@@ -269,8 +269,6 @@ export interface ColumnsBlock {
    * takes the rest; without it the two share the width.
    */
   readonly leftCh?: number;
-  /** Stacked, the right side comes first (fastfetch's details above its logo); side by side it stays on the right. */
-  readonly rightFirst?: boolean;
 }
 
 /** A rich card drawn by a registered Svelte component from a typed view model. */
@@ -508,13 +506,12 @@ export const out = {
   /** Titled lists laid out side by side as the width allows; see ListsBlock. */
   lists: (columns: readonly ListColumn[]): ListsBlock => ({ type: 'lists', columns }),
 
-  columns: (left: readonly Block[], right: readonly Block[], stackBelowCols: number, leftCh?: number, rightFirst?: boolean): ColumnsBlock => ({
+  columns: (left: readonly Block[], right: readonly Block[], stackBelowCols: number, leftCh?: number): ColumnsBlock => ({
     type: 'columns',
     left,
     right,
     stackBelowCols,
     ...(leftCh === undefined ? {} : { leftCh }),
-    ...(rightFirst === true ? { rightFirst } : {}),
   }),
 
   component: (name: ComponentName, props: unknown, plain: string, alt: string): ComponentBlock => ({

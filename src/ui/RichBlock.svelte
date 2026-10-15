@@ -124,7 +124,6 @@
   <div
     class="columns"
     class:sized={block.leftCh !== undefined}
-    class:right-first={block.rightFirst === true}
     style={block.leftCh === undefined ? `--stack-at: ${block.stackBelowCols}ch` : `--stack-at: ${block.stackBelowCols}ch; --left: ${block.leftCh}ch`}
   >
     <div class="column"><OutputView blocks={block.left} {onaction} /></div>
@@ -311,24 +310,18 @@
     max-width: 100%;
   }
 
-  /* Side by side until the row is narrower than --stack-at, then stacked, without a query. */
+  /* Side by side until the row is narrower than --stack-at, then stacked, without a query, the
+     left side first (fastfetch's logo over its details) and a blank line between them. */
   .columns {
     display: flex;
     flex-wrap: wrap;
-    gap: 0 3ch;
+    gap: calc(1em * var(--term-lh, 1.35)) 3ch;
   }
 
   .column {
     flex-grow: 1;
     flex-basis: calc((var(--stack-at) - 100%) * 999);
     min-width: 0;
-  }
-
-  /* Stacked, the right side first (fastfetch's details over its logo): the lines wrap upwards, so
-     side by side nothing moves, and a blank line parts the two once they stack. */
-  .columns.right-first {
-    flex-wrap: wrap-reverse;
-    row-gap: calc(1em * var(--term-lh, 1.35));
   }
 
   /* A left stack of a given width (fastfetch's logo): that wide beside the other, which takes the

@@ -40,7 +40,7 @@ describe('fastfetch on the page', () => {
     const logo = logoFor('macOS');
     // The logo's widest row, as fastfetch's run measures it.
     const logoCh = Math.max(...logo.art.split('\n').map(textWidth));
-    const block = out.columns([out.art(logo.art, logo.alt, 'scale', { fg: logo.colour, bold: true })], [out.lines(detailLines('guest', rows))], STACK_BELOW_COLS, logoCh);
+    const block = out.columns([out.art(logo.art, logo.alt, 'scale', { fg: logo.colour, bold: true })], [out.lines(detailLines(rows))], STACK_BELOW_COLS, logoCh);
     const { container } = render(OutputView, { blocks: [block] });
     await vi.dynamicImportSettled();
     for (let i = 0; i < 5; i += 1) await tick();

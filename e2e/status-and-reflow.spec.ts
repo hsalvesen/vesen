@@ -148,6 +148,17 @@ test.describe('output reflow', { tag: '@smoke' }, () => {
     const lefts = () => columns.evaluate((element) => Array.from(element.children, (column) => Math.round(column.getBoundingClientRect().left)));
     const [logo, details] = await lefts();
     expect(details).toBe(logo);
+    // The logo first, on the line under the one typed, then a blank line, then the details, which
+    // start with the OS: no user@host and no rule of dashes over them.
+    const stack = await columns.evaluate((element) => {
+      const [art, rows] = Array.from(element.children, (column) => column.getBoundingClientRect());
+      const line = Number.parseFloat(getComputedStyle(element).rowGap);
+      return { gap: Math.round((rows?.top ?? 0) - (art?.bottom ?? 0)), line: Math.round(line), artFirst: (art?.top ?? 0) < (rows?.top ?? 0) };
+    });
+    expect(stack.artFirst).toBe(true);
+    expect(stack.gap).toBe(stack.line);
+    await expect(columns.locator('.column').nth(1)).toContainText(/^OS: /);
+    await expect(entryOf(page, 'fastfetch').locator('.columns')).not.toContainText('@vesen');
     await page.setViewportSize({ width: 1024, height: 800 });
     await expect.poll(async () => {
       const [wideLogo, wideDetails] = await lefts();

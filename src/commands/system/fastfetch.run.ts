@@ -10,7 +10,7 @@ import { appleChip } from '../../lib/sysfacts';
 import { darwinRelease, gpuName, macModel, macosName, windowsRelease } from '../../lib/sysnames';
 import { out, textWidth, type Line, type Palette } from '../../output/model';
 import type { PlatformHints, SysSnapshot } from '../../services/types';
-import { PROMPT_HOST, type CommandContext, type CommandDoc, type ExitCode } from '../../shell/types';
+import type { CommandContext, CommandDoc, ExitCode } from '../../shell/types';
 
 /** What --help, help and man say about fastfetch, besides its spec (fastfetch.ts). */
 export const doc: CommandDoc = {
@@ -204,13 +204,13 @@ const PALETTE_ROWS: readonly (readonly Palette[])[] = [
   ['brightBlack', 'brightRed', 'brightGreen', 'brightYellow', 'brightBlue', 'brightPurple', 'brightCyan', 'brightWhite'],
 ];
 
-/** The title, its rule, the rows and the theme's sixteen colours, as fastfetch lays them out. */
-export function detailLines(user: string, rows: readonly Row[]): Line[] {
-  const title = `${user}@${PROMPT_HOST}`;
-  const strong = { fg: 'green', bold: true } as const;
+/**
+ * The rows and the theme's sixteen colours. fastfetch heads them with user@host and a rule of
+ * dashes; here the prompt the line was typed at already says who and where, just above, so the
+ * rows start at once.
+ */
+export function detailLines(rows: readonly Row[]): Line[] {
   const lines: Line[] = [
-    [out.span(user, strong), out.span('@'), out.span(PROMPT_HOST, strong)],
-    [out.span('-'.repeat(title.length))],
     ...rows.map((entry): Line => [
       out.span(entry.label, { fg: 'cyan', bold: true }),
       out.span(': '),
@@ -254,8 +254,7 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
 
   if (!ctx.stdout.isTTY) {
     // In a pipe, the details alone, one `Label: value` a line, for grep.
-    const title = `${ctx.user.name}@${PROMPT_HOST}`;
-    await ctx.stdout.write([title, '-'.repeat(title.length), ...rows.map((entry) => `${entry.label}: ${entry.value}`)].join('\n') + '\n');
+    await ctx.stdout.write(rows.map((entry) => `${entry.label}: ${entry.value}`).join('\n') + '\n');
     if (note !== null) await ctx.stderr.line(out.span(note, { fg: 'muted' }));
     return 0;
   }
@@ -266,11 +265,10 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   await ctx.stdout.block(
     out.columns(
       [out.art(logo.art, logo.alt, 'scale', { fg: logo.colour, bold: true })],
-      [out.lines(detailLines(ctx.user.name, rows))],
+      // On a phone, stacked: the logo first, on the line under the one typed, and the details under it.
+      [out.lines(detailLines(rows))],
       STACK_BELOW_COLS,
       logoCh,
-      // On a phone, stacked: the details first, as fastfetch prints them, and the logo under them.
-      true,
     ),
   );
   if (note !== null) await ctx.stdout.line(out.span(note, { fg: 'muted' }));
