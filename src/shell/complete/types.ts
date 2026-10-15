@@ -159,7 +159,7 @@ export type PromptMode = 'edit' | 'busy' | 'secret' | 'search';
 
 /**
  * A completion's kind, or: a starter command on an empty line, a follow-up after a run, a
- * did-you-mean, the line itself when it is ready to run, or cancel (a running command) and Cancel (a password, a tap).
+ * did-you-mean, the line itself when it is ready to run, or cancel (a running command) and Cancel (a password).
  */
 export type ChipKind = CandidateKind | 'starter' | 'followup' | 'didyoumean' | 'current' | 'control';
 
@@ -177,8 +177,8 @@ export type ChipAction =
   | { readonly kind: 'run'; readonly line: string }
   /** Stops the running command. */
   | { readonly kind: 'interrupt' }
-  /** Leaves a command's prompt: a password, or a tap. `name` is what a screen reader hears, when not the password's. */
-  | { readonly kind: 'cancel'; readonly name?: string };
+  /** Leaves a secret prompt. */
+  | { readonly kind: 'cancel' };
 
 export interface Chip {
   /** Unique within one list. */

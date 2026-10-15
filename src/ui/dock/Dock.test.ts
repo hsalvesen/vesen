@@ -1,11 +1,9 @@
 // The dock with a real prompt controller and shell: its layouts by visible height and keyboard,
-// the hardware keyboard, the history sheet, chips that run, insert and stop, and the Cancel alone
-// while sudo waits for a tap.
+// the hardware keyboard, the history sheet, and chips that run, insert and stop.
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { specFiles } from '../../commands/index';
-import { RICK_CLOSED } from '../../commands/lib/rick';
 import { createScreen } from '../../stores/screen';
 import { hardwareKeyboard, keyBar } from '../../stores/prefs';
 import { visibleArea } from '../../stores/viewport';
@@ -28,10 +26,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-/** With `touch`, the terminal says so, as a phone's does, and shows sudo's app and closes it at once. */
-async function setup(options: { touch?: boolean } = {}) {
-  const terminal = { size: () => ({ cols: 80, rows: 24 }), touch: true, inApp: null, fullscreen: () => Promise.resolve(RICK_CLOSED) };
-  const h = harness({ specs: specFiles(), ...(options.touch === true ? { terminal } : {}) });
+async function setup() {
+  const h = harness({ specs: specFiles() });
   const transcript = createScreen();
   const controller = new PromptController({ shell: h.shell, screen: transcript, platform: 'other', touch: true, dock: true });
   const prompt = render(PromptLine, { props: { controller, shell: h.shell } });
@@ -189,22 +185,6 @@ describe('Dock', () => {
     await vi.waitFor(() => expect(chipLabels(dock)).toEqual(['cancel ^C']));
     await tap(screen.getByRole('option', { name: 'Cancel the running command (Control C)' }));
     await vi.waitFor(() => expect(h.commits.find((c) => c.line === 'sleep 5')?.status).toBe(130));
-  });
-
-  it('offers only Cancel while sudo waits for its tap, and no keys: there is nothing to type', async () => {
-    const { h, dock, controller, input } = await setup({ touch: true });
-    input.focus();
-    controller.submit('sudo ls', 'chip');
-    await vi.waitFor(() => expect(controller.mode).toBe('secret'));
-    controller.submit();
-    await vi.waitFor(() => expect(controller.read?.tap).toBe(true));
-    await tick();
-    expect(chipLabels(dock)).toEqual(['Cancel']);
-    expect(keyLabels(dock)).toEqual([]);
-    await tap(screen.getByRole('option', { name: 'Cancel the prompt' }));
-    await vi.waitFor(() => expect(h.commits.find((c) => c.line === 'sudo ls')?.status).toBe(130));
-    await tick();
-    expect(keyLabels(dock)).toEqual(['<keyboard>Type a command...', '↑', 'clear']);
   });
 
   it('opens the history sheet when ↑ is held; a tap there puts the line at the prompt', async () => {

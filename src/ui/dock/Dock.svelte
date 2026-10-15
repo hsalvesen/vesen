@@ -11,8 +11,6 @@
   - minimal, under 300px: the keys only, except while Tab's list is open: then the compact row,
     since on touch the list is only ever chips (02, section 5, Tab rule 3).
   With the keyboard put away: the chip row, then Type a command... (with a keyboard icon) ↑ clear.
-  While a tap read waits (sudo's `Tap to elevate privileges`) there is nothing to type: the chip
-  row alone, with its Cancel.
 
   Where the chips are not drawn (minimal), they are still there for screen readers, visually
   hidden, so the input's aria-controls and aria-activedescendant always name a listbox that is.
@@ -35,9 +33,7 @@
   let { controller }: { controller: PromptController } = $props();
 
   const mode = $derived(dockMode($visibleArea.height));
-  /** A tap read waits: answered on its button above, with nothing to type here. */
-  const tapping = $derived(controller.read?.tap === true);
-  const typing = $derived(controller.focused && !tapping);
+  const typing = $derived(controller.focused);
   const keysShown = $derived(keyBarShown($keyBar, $hardwareKeyboard));
   const busy = $derived(controller.running !== null && controller.read === null);
   const chips = $derived(controller.chipList);
@@ -107,12 +103,12 @@
       {#if keysShown && mode === 'full'}<KeyBar target={controller} {busy} onhistory={openSheet} />{/if}
     {/if}
   {:else}
-    {#if mode !== 'minimal' || tapping}
+    {#if mode !== 'minimal'}
       <ChipRow chips={chips.chips} more={chips.more} onchoose={choose} />
     {:else}
       <div class="sr-only"><ChipRow chips={chips.chips} more={chips.more} onchoose={choose} /></div>
     {/if}
-    {#if !tapping}<KeyBar target={controller} variant="closed" {busy} onhistory={openSheet} />{/if}
+    <KeyBar target={controller} variant="closed" {busy} onhistory={openSheet} />
   {/if}
 </div>
 

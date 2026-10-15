@@ -15,7 +15,7 @@ export function chipName(chip: Chip): string {
     case 'interrupt':
       return 'Cancel the running command (Control C)';
     case 'cancel':
-      return chip.action.name ?? 'Cancel the password prompt';
+      return 'Cancel the password prompt';
     default:
       break;
   }
