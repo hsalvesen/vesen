@@ -183,14 +183,13 @@ describe('banner', () => {
     expect(lines[2]).toBe('');
     // Spelt out for someone who has never used a terminal: type it, then press Enter.
     expect(lines[3]).toBe('Type help and press Enter to see all available commands.');
-    expect(lines[4]).toBe('Then try tree to explore the file system, or cat README.md for the story behind it.');
+    expect(lines[4]).toBe('Then try help vesen for the commands made just for this site.');
     expect(lines).toHaveLength(5);
     const spans = rows(blocks).flat();
     expect(spans.find((span) => span.text === 'help')?.action).toMatchObject({ kind: 'run', line: 'help' });
-    expect(spans.find((span) => span.text === 'cat README.md')?.action).toMatchObject({ kind: 'run', line: 'cat ~/README.md' });
-    const tree = spans.find((span) => span.text === 'tree');
-    expect(tree?.action).toMatchObject({ kind: 'run', line: 'tree' });
-    expect(tree?.style).toEqual(spans.find((span) => span.text === 'help')?.style);
+    const next = spans.find((span) => span.text === 'help vesen');
+    expect(next?.action).toMatchObject({ kind: 'run', line: 'help vesen' });
+    expect(next?.style).toEqual(spans.find((span) => span.text === 'help')?.style);
   });
 
   it('is the same logo on every screen, a phone included, with the same words', async () => {

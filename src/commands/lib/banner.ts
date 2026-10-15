@@ -36,7 +36,7 @@ const ACCENT: SpanStyle = { fg: 'accent' };
 /**
  * The banner's blocks: the logo with the version, a blank line, what this is, how to start (type
  * help and press Enter, the same on every keyboard: a phone's names its key go, send, return or
- * an arrow), and where to go next.
+ * an arrow), and where to go next: help vesen, the commands that are this site's own.
  */
 export function bannerBlocks({ version }: BannerOptions): Block[] {
   const lines: Line[] = [
@@ -45,14 +45,7 @@ export function bannerBlocks({ version }: BannerOptions): Block[] {
     [out.span('A virtual Linux terminal, with its own file system to explore.', MUTED)],
     [],
     [out.span('Type ', STRONG), out.run('help', 'help', ACCENT), out.span(' and press Enter to see all available commands.', STRONG)],
-    [
-      out.span('Then try ', STRONG),
-      out.run('tree', 'tree', ACCENT),
-      out.span(' to explore the file system, or ', STRONG),
-      // From home, so the link works from whatever folder it is tapped in.
-      out.run('cat README.md', 'cat ~/README.md', ACCENT),
-      out.span(' for the story behind it.', STRONG),
-    ],
+    [out.span('Then try ', STRONG), out.run('help vesen', 'help vesen', ACCENT), out.span(' for the commands made just for this site.', STRONG)],
   ];
   // The version after the logo's last row, muted like the line under it.
   return [out.art(BANNER_ART, `Vesen logo, version ${version}`, 'scale', undefined, out.span(`  v${version}`, MUTED)), out.lines(lines)];

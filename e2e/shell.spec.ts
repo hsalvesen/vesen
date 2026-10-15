@@ -276,8 +276,8 @@ test.describe('focus', { tag: '@smoke' }, () => {
     test.skip(!isPhone(), 'phones only');
     await page.setViewportSize({ width: 390, height: 664 });
     await page.goto('/');
-    // The keyboard is away: tapping the banner's README link runs it, to be read.
-    await page.getByRole('button', { name: 'cat README.md' }).first().tap();
+    // The keyboard is away: tapping the banner's help link runs it, to be read.
+    await page.getByRole('button', { name: 'help', exact: true }).first().tap();
     await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
 
     const offset = () =>

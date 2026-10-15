@@ -12,5 +12,5 @@ oooo  ooo  .oooo.  .oooo.o  .oooo.  ooo. .oo.
 A virtual Linux terminal, with its own file system to explore.
 
 Type help and press Enter to see all available commands.
-Then try tree to explore the file system, or cat README.md for the story behind it.
+Then try help vesen for the commands made just for this site.
 ? 0
