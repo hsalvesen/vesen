@@ -27,6 +27,7 @@ All notable changes to vesen are recorded here. The format follows [Keep a Chang
 
 ### Fixed
 
+- Back leaves vesen for the page before it even while vesen is loading part of itself. Safari stops a page's downloads as soon as Back starts, and vesen took the stopped download for a new release and reloaded, which now and then won over Back, so Back seemed to reload vesen. Now vesen reloads only once the server says its own release is gone, and a download that fails for any other reason is said where it was needed, as before (`date: could not load the command`).
 - `npm run check:boundaries` no longer walks into `node_modules` or tools' dot-folders. With the stock Worker's packages installed it had taken minutes.
 
 ### Removed
