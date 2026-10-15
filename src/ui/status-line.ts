@@ -1,11 +1,11 @@
 // What the status line (StatusLine.svelte) shows, apart from the component: its spinner, its
 // words for a command that says nothing about itself, and how it writes the time a command has run.
 
-/** The spinner's frames, a tenth of a second each: the classic text-terminal cycle. */
-export const SPINNER = ['|', '/', '-', '\\'] as const;
+/** The spinner's frames, a tenth of a second each: the braille dots vesen 1 turned. */
+export const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'] as const;
 
-/** The spinner's one still frame under reduced motion. */
-export const STILL = '...';
+/** The spinner's one still frame under reduced motion: its first, standing still. */
+export const STILL = SPINNER[0];
 
 /** What the line says for a command that says nothing about itself, as the old terminal did. */
 export const DEFAULT_LABEL = 'Processing...';

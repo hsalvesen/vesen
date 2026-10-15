@@ -46,6 +46,12 @@ test.describe('the status line', { tag: '@smoke' }, () => {
     const status = entry.getByRole('button', { name: 'Stop: sleeping 5' });
     await expect(status).toBeVisible();
     await expect(status).toContainText('sleeping 5');
+    // vesen 1's braille spinner, turning a frame a tenth of a second, in the terminal's own font.
+    const spinner = status.locator('.spinner');
+    await expect(spinner).toHaveText(/^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]$/);
+    const first = await spinner.textContent();
+    await expect.poll(() => spinner.textContent()).not.toBe(first);
+    expect(await spinner.evaluate((element) => getComputedStyle(element).fontFamily)).toContain('Vesen Mono');
     if (isPhone()) await expect(status.locator('.stop-chip')).toHaveText('Stop');
     else await expect(status).toContainText('(Ctrl+C or Esc to stop)');
     await expect(status.locator('.elapsed')).toHaveCount(0);

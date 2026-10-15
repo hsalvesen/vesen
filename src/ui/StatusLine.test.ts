@@ -35,10 +35,11 @@ describe('the status line', () => {
     expect(button.querySelector('.elapsed')?.textContent).toBe(' | 1m 05s');
   });
 
-  it('spins through the classic | / - \\ cycle, in ASCII', () => {
-    expect(SPINNER).toEqual(['|', '/', '-', '\\']);
-    expect(STILL).toBe('...');
-    for (const frame of [...SPINNER, STILL, DEFAULT_LABEL]) expect(frame).toMatch(/^[ -~]+$/);
+  it("turns vesen 1's braille dots, one cell each, and stands on the first of them under reduced motion", () => {
+    expect(SPINNER.join('')).toBe('⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏');
+    expect(STILL).toBe(SPINNER[0]);
+    for (const frame of SPINNER) expect(Array.from(frame)).toHaveLength(1);
+    expect(DEFAULT_LABEL).toBe('Processing...');
   });
 
   it("says 'Processing…' for a command that says nothing about itself", () => {
@@ -46,7 +47,7 @@ describe('the status line', () => {
     expect(view.getByRole('button', { name: `Stop: ${DEFAULT_LABEL}` })).toBeTruthy();
   });
 
-  it('is still under reduced motion: ... in place of the spinner', async () => {
+  it('is still under reduced motion: its first frame, standing', async () => {
     vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduced-motion'), media: query }));
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
     const view = render(StatusLine, { props: { label: 'sleeping 5', startedAt: Date.now(), onstop: () => {} } });

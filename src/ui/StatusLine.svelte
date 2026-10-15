@@ -1,10 +1,11 @@
 <!--
   The status line under a running line's entry (docs/plan/designs/shell-architecture.md, "LOADING,
-  CANCEL AND ERRORS"; F013, F047): the classic | / - \ spinner (a still '...' under reduced
-  motion), what the command is doing (its spec's loadingLabel or what it set with tty.status();
-  'Processing...' when it says nothing), the seconds it has run once it has run three, then how to
-  stop it: the keys on a keyboard, a Stop chip on touch. The whole line is one button that stops
-  the command, so a tap or a click anywhere on it does.
+  CANCEL AND ERRORS"; F013, F047): vesen 1's braille spinner in the accent's cyan (standing still on
+  its first frame under reduced motion), what the command is doing (its spec's loadingLabel or what
+  it set with tty.status(); 'Processing...' when it says nothing), the seconds it has run once it
+  has run three, then how to stop it: the keys on a keyboard, a Stop chip on touch. The whole line
+  is one button that stops the command, so a tap or a click anywhere on it does. A command that
+  asks for none (sudo) runs without it.
 -->
 <script lang="ts">
   import { onMount } from 'svelte';
@@ -86,7 +87,7 @@
     cursor: pointer;
   }
 
-  /* One cell for a frame; the still '...' takes its three. */
+  /* One cell for a frame. */
   .spinner {
     flex: none;
     min-width: 1ch;

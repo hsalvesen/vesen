@@ -131,7 +131,7 @@ describe('App', () => {
     const cancel = await screen.findByRole('button', { name: 'Stop: fetching AAPL...' });
     expect(entry?.contains(cancel)).toBe(true);
     // The status line says what the command is doing, and how to stop it.
-    expect(cancel).toHaveTextContent(/^\|\s*fetching AAPL\.\.\.\s*\(Ctrl\+C or Esc to stop\)$/);
+    expect(cancel).toHaveTextContent(/^⠋\s*fetching AAPL\.\.\.\s*\(Ctrl\+C or Esc to stop\)$/);
 
     // A tap must not be cancelled at pointerdown: WebKit on iOS then never sends the click.
     expect(await fireEvent.pointerDown(cancel)).toBe(true);
