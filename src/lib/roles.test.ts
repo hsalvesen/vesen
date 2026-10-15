@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import themesJson from '../../themes.json';
+import themesJson from '../themes.json';
 import { ROLES } from '../output/model';
 import { colorSchemeFor, contrastRatio, parseHex, relativeLuminance } from './colour';
 import { deriveRoles, PANEL_TONES, QR_MIN, ROLE_NAMES, roleChecks, TEXT_ROLES, type ThemeColours } from './roles';

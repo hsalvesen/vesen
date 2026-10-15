@@ -2,7 +2,7 @@
 // storage. app/bootstrap.ts restores the saved theme with persistTheme() and applies each value
 // to the page (platform/head.ts).
 import { writable } from 'svelte/store';
-import themesJson from '../../themes.json';
+import themesJson from '../themes.json';
 import type { Theme } from '../interfaces/theme';
 import { STORAGE_KEYS } from '../services/storage-keys';
 import type { KV } from '../services/types';

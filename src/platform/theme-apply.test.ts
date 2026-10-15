@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from 'vitest';
-import themes from '../../themes.json';
+import themes from '../themes.json';
 import { deriveRoles } from '../lib/roles';
 import { ROLES } from '../output/model';
 import { applyRoles, rolesFor } from './theme-apply';

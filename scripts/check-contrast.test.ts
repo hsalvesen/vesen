@@ -13,7 +13,7 @@ import {
   parseHex,
 } from './check-contrast.mjs';
 
-const themes: ThemeColours[] = JSON.parse(readFileSync(new URL('../themes.json', import.meta.url), 'utf8'));
+const themes: ThemeColours[] = JSON.parse(readFileSync(new URL('../src/themes.json', import.meta.url), 'utf8'));
 
 describe('contrastRatio', () => {
   it('spans 1:1 to 21:1', () => {

@@ -113,7 +113,7 @@ describe('web app manifest', () => {
 });
 
 describe('icons and link preview', () => {
-  const themes = (JSON.parse(read('themes.json')) as { name: string }[]).map((t) => t.name);
+  const themes = (JSON.parse(read('src/themes.json')) as { name: string }[]).map((t) => t.name);
 
   it('has a small SVG favicon for every theme', () => {
     for (const name of themes) {

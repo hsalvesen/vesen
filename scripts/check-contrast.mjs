@@ -221,7 +221,7 @@ function main() {
   const strict = process.argv.includes('--strict');
   const update = process.argv.includes('--update-baseline');
   /** @type {ThemeColours[]} */
-  const themes = JSON.parse(readFileSync(join(ROOT, 'themes.json'), 'utf8'));
+  const themes = JSON.parse(readFileSync(join(ROOT, 'src', 'themes.json'), 'utf8'));
 
   // Roles, as applied.
   const measured = measureRoles(themes);

@@ -23,7 +23,7 @@ interface ThemeColours {
 }
 
 function readThemes(): ThemeColours[] {
-  return JSON.parse(readFileSync(new URL('../themes.json', import.meta.url), 'utf8')) as ThemeColours[];
+  return JSON.parse(readFileSync(new URL('../src/themes.json', import.meta.url), 'utf8')) as ThemeColours[];
 }
 
 /** What the boot script paints for one theme. */

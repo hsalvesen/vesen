@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from 'vitest';
-import themes from '../../themes.json';
+import themes from '../themes.json';
 import type { Theme } from '../interfaces/theme';
 import { applyCathode } from './crt';
 import { applyTheme, themeIconHref } from './head';

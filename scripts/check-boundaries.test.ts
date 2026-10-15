@@ -101,7 +101,7 @@ describe('findBoundaryViolations: imports', () => {
       ['src/commands/system/violate.ts', '../../stores/screen'],
       ['src/output/violate.ts', '../utils/commands'],
       ['src/vfs/violate.ts', '../platform/hosts'],
-      ['src/commands/theme.ts', '../../themes.json'],
+      ['src/commands/theme.ts', '../themes.json'],
     ] as const) {
       expect(importing(file, specifier), `${file} -> ${specifier}`).toHaveLength(1);
     }

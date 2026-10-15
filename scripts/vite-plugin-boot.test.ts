@@ -1,6 +1,6 @@
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
-import themes from '../themes.json';
+import themes from '../src/themes.json';
 import { colorSchemeFor } from '../src/lib/colour';
 import { themeIconHref } from '../src/platform/head';
 import { DEFAULT_THEME_NAME } from '../src/stores/theme';

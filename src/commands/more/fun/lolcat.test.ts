@@ -1,7 +1,7 @@
 // lolcat: the rainbow on a terminal, diagonal bands, and the text untouched in a pipe.
 import { describe, expect, it } from 'vitest';
 import { runLine, session } from '../../../../tests/harness';
-import themes from '../../../../themes.json';
+import themes from '../../../themes.json';
 import { contrastRatio } from '../../../lib/colour';
 import { deriveRoles, TEXT_MIN } from '../../../lib/roles';
 import { lineText, type Block, type Line } from '../../../output/model';

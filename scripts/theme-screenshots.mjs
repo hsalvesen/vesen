@@ -28,7 +28,7 @@ const THEME_KEY = 'vesen:theme:v1';
 /** @returns {string[]} theme names from themes.json, in order */
 export function themeNames() {
   /** @type {{ name: string }[]} */
-  const themes = JSON.parse(readFileSync(join(ROOT, 'themes.json'), 'utf8'));
+  const themes = JSON.parse(readFileSync(join(ROOT, 'src', 'themes.json'), 'utf8'));
   return themes.map((theme) => theme.name);
 }
 

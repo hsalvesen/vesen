@@ -4,7 +4,7 @@
 import { render } from '@testing-library/svelte';
 import { flushSync, tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import themes from '../../themes.json';
+import themes from '../themes.json';
 import { detailLines, fastfetchRows, STACK_BELOW_COLS } from '../commands/system/fastfetch.run';
 import { logoFor } from '../commands/system/fastfetch.logos';
 import { out, textWidth } from '../output/model';

@@ -75,7 +75,7 @@ async function renderPng(page, svg, size) {
 }
 
 async function main() {
-  const themes = /** @type {{ name: string }[]} */ (JSON.parse(readFileSync(join(ROOT, 'themes.json'), 'utf8')));
+  const themes = /** @type {{ name: string }[]} */ (JSON.parse(readFileSync(join(ROOT, 'src', 'themes.json'), 'utf8')));
   const colours = /** @type {Record<string, string>} */ (ICON_COLOURS);
   const missing = themes.map((t) => t.name).filter((name) => !(name in colours));
   if (missing.length > 0) throw new Error(`No icon colour for: ${missing.join(', ')}. Add it to ICON_COLOURS.`);

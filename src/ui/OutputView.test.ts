@@ -1,7 +1,7 @@
 import { fireEvent, render } from '@testing-library/svelte';
 import { flushSync, tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import themes from '../../themes.json';
+import themes from '../themes.json';
 import { activeContent } from '../../tests/support/xss';
 import { out, type Action, type Block, type ComponentName, type SafeHref, type Span } from '../output/model';
 import { cathode } from '../stores/cathode';
