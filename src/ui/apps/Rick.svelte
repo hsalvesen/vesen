@@ -8,12 +8,14 @@
   filling the terminal's green frame (AppHost), where a tap leaves (a screen reader hears so); on
   a keyboard the picture and, once the show has played a few seconds, one line saying how to
   leave. Esc, ^C, q and Back close it, with a short fade; m still mutes whichever plays,
-  unannounced. On a touch screen the show first asks for a tap, 'Tap to elevate privileges', and
-  starts inside it, sound and picture together, since a tap is a gesture every browser lets start
-  sound. sudo also readies the track inside the key press that answers its password
-  (services/warm-show.ts unlockAudio), so a browser that starts sound only from a gesture lets it
-  play here; one that holds it back anyway gets a gesture from the first key or tap, which starts
-  the sound (and the frames from the top with it); nothing on the screen asks for it.
+  unannounced. On a touch screen the show first asks for the visitor's thumb: a fingerprint drawn
+  in text (RICK_FINGERPRINT) over 'Scan your right thumb to elevate privileges', with no box round
+  either, and a touch anywhere starts it, sound and picture together, since a tap is a gesture
+  every browser lets start sound. On a keyboard sudo readies the track inside the key press that
+  answers its password (services/warm-show.ts unlockAudio), so a browser that starts sound only
+  from a gesture lets it play here; one that holds it back anyway gets a gesture from the first
+  key or tap, which starts the sound (and the frames from the top with it); nothing on the screen
+  asks for it.
 
   The frames are fetched when the show opens (services/frames.ts): on a screen taller than wide
   (a phone held upright) the portrait cut, the middle of the picture; elsewhere the whole picture.
@@ -31,7 +33,7 @@
 -->
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { RICK_ALT, RICK_CLOSED, RICK_ELEVATE, RICK_HINT_AFTER_MS, RICK_KEYS_HINT, RICK_TAP_HINT, RICK_TITLE, type RickView } from '../../commands/lib/rick';
+  import { RICK_ALT, RICK_CLOSED, RICK_ELEVATE, RICK_FINGERPRINT, RICK_HINT_AFTER_MS, RICK_KEYS_HINT, RICK_TAP_HINT, RICK_TITLE, type RickView } from '../../commands/lib/rick';
   import type { Song } from '../../lib/chiptune';
   import { stillFrameIndex, type AsciiFrame, type FramesFile } from '../../lib/frames';
   import { PORTRAIT_QUERY } from '../../lib/show-files';
@@ -109,6 +111,10 @@
 
   /** The cut the screen calls for; the one on the stage follows when its file comes. */
   let cut: Cut = $state(cutNow());
+  /** The fingerprint's size in cells, for the font that fits it to the stage. */
+  const PRINT_ROWS = RICK_FINGERPRINT.split('\n').length;
+  const PRINT_COLS = Math.max(...RICK_FINGERPRINT.split('\n').map((line) => line.length));
+
   /** Null until the file has come: an empty stage. */
   let shown = $state.raw<Shown | null>(null);
   const still = $derived(!canAnimate || (shown !== null && shown.frames.length < 2));
@@ -117,9 +123,9 @@
   /** running, paused while the page is hidden, still where it cannot animate, or waiting for the tap that elevates. */
   let motion: 'running' | 'paused' | 'still' | 'waiting' = $state(view.touch ? 'waiting' : 'still');
   /**
-   * On a touch screen the show waits for a tap ('Tap to elevate privileges') and starts inside it,
-   * sound and picture together: a tap is a gesture every browser lets start sound. On a keyboard it
-   * starts at once.
+   * On a touch screen the show waits for the thumb its fingerprint asks for, a tap anywhere, and
+   * starts inside it, sound and picture together: a tap is a gesture every browser lets start
+   * sound. On a keyboard it starts at once.
    */
   let elevated = $state(!view.touch);
   /** off: nothing plays (no track, no Web Audio); waiting: the browser wants a gesture first; on; muted. */
@@ -440,7 +446,12 @@
     <pre class="frame" aria-hidden="true" style:--cols={shown?.cols ?? 1} style:--rows={shown?.rows ?? 1}>{#each current.rows as row, r (r)}{#if r > 0}{'\n'}{/if}{#each row as span, s (s)}<span style:color={cssColour(span.role)}>{span.text}</span>{/each}{/each}</pre>
     <p class="sr-only">{view.alt}</p>
     {#if view.touch && elevated}<p class="sr-only">{RICK_TAP_HINT}</p>{/if}
-    {#if !elevated}<p class="elevate">{RICK_ELEVATE}</p>{/if}
+    {#if !elevated}
+      <div class="elevate" style:--print-cols={PRINT_COLS} style:--print-rows={PRINT_ROWS}>
+        <pre class="print" aria-hidden="true">{RICK_FINGERPRINT}</pre>
+        <p class="scan">{RICK_ELEVATE}</p>
+      </div>
+    {/if}
   </div>
   <!-- On a keyboard: empty until the show has played a few seconds, so the line is there to be announced. -->
   {#if !view.touch}<p class="status" class:shown={hinted} role="status">{hinted ? RICK_KEYS_HINT : ''}</p>{/if}
@@ -547,7 +558,13 @@
     }
   }
 
-  /* Waiting to be elevated: the picture hidden, and the one line that asks for the tap. */
+  /*
+    Waiting for the thumb: the picture hidden, and the fingerprint over the two lines that ask for
+    it, in the middle of the window, with no box round either. The print is drawn in the frame's
+    green, as wide as 60% of the stage or as tall as 45% of it, whichever is less, in cells 0.585 em
+    wide and 1.15 em tall (Vesen Mono's), and never larger than a 28 px font draws it; where
+    container units are missing (iOS 15), the viewport stands in for the stage.
+  */
   .stage.waiting .frame {
     visibility: hidden;
   }
@@ -556,13 +573,35 @@
     position: absolute;
     inset: 0;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    margin: 0;
+    gap: 2em;
     padding: 16px;
+  }
+
+  .print {
+    margin: 0;
+    color: var(--theme-green);
+    font: inherit;
+    font-size: min(calc(60vw / (var(--print-cols) * 0.585)), calc(45vh / (var(--print-rows) * 1.15)), 28px);
+    line-height: 1.15;
+    white-space: pre;
+  }
+
+  @supports (width: 1cqw) {
+    .print {
+      font-size: min(calc(60cqw / (var(--print-cols) * 0.585)), calc(45cqh / (var(--print-rows) * 1.15)), 28px);
+    }
+  }
+
+  .scan {
+    margin: 0;
     color: var(--role-fg-strong, var(--theme-foreground));
     font-size: 1.15em;
+    line-height: 1.5;
     text-align: center;
+    white-space: pre-line;
   }
 
   .sr-only {

@@ -4,7 +4,8 @@ import { isBenignConsoleMessage } from './console';
 // sudo's show (src/commands/shell/sudo.run.ts, src/ui/apps/Rick.svelte): the password prompt is
 // `Password: ` alone, with no line above it, and Esc cancels it; the show's files are warmed at
 // idle after boot, and --help fetches nothing more. After the password the Rick app opens over
-// the terminal, with the owner's frames and their track, and nothing opens anywhere else. On a
+// the terminal, with the owner's frames and their track, and nothing opens anywhere else; on a
+// phone it first shows a fingerprint and asks for the right thumb, and starts at the touch. On a
 // keyboard the screen shows the frames and, once they have played a few seconds, one line saying
 // how to leave; on a phone the frames alone, filling the terminal's frame upright or on its side,
 // and turning with it. Esc, q and ^C end it on a keyboard, a tap and Back on a phone; the audio
@@ -82,15 +83,37 @@ async function sudoLs(page: Page): Promise<void> {
 }
 
 /**
- * On a phone the show asks for a tap first, and nothing plays or shows until it comes: the tap
- * starts the sound and the picture together, inside a gesture every browser lets start sound.
+ * On a phone the show's window first shows a fingerprint over two lines asking for the right
+ * thumb, with no box round either, and nothing plays or shows until the touch: it starts the
+ * sound and the picture together, inside a gesture every browser lets start sound.
  */
 async function elevate(page: Page): Promise<void> {
-  await expect(show(page).locator('.elevate')).toHaveText('Tap to elevate privileges');
+  const print = show(page).locator('.elevate .print');
+  await expect(print).toBeVisible();
+  await expect(print).toContainText("_.-----._");
+  await expect(show(page).locator('.elevate .scan')).toHaveText('Scan your right thumb to elevate privileges');
+  // The two lines as two, and nothing drawn round the print or the words.
+  const lines = await show(page).locator('.elevate .scan').evaluate((element) => element.getBoundingClientRect().height / Number.parseFloat(getComputedStyle(element).lineHeight));
+  expect(Math.round(lines)).toBe(2);
+  for (const part of ['.elevate', '.elevate .print', '.elevate .scan']) {
+    const look = await show(page)
+      .locator(part)
+      .evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { border: [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth], fill: style.backgroundColor, shadow: style.boxShadow };
+      });
+    expect(look, part).toEqual({ border: ['0px', '0px', '0px', '0px'], fill: 'rgba(0, 0, 0, 0)', shadow: 'none' });
+  }
+  // The print in the middle of the window, above the words.
+  const [stage, drawn, words] = await Promise.all(['.stage', '.elevate .print', '.elevate .scan'].map((part) => show(page).locator(part).boundingBox()));
+  if (!stage || !drawn || !words) throw new Error('nothing drawn');
+  expect(Math.abs(drawn.x + drawn.width / 2 - (stage.x + stage.width / 2))).toBeLessThanOrEqual(2);
+  expect(drawn.y + drawn.height).toBeLessThanOrEqual(words.y);
+  expect(drawn.width).toBeGreaterThan(stage.width * 0.3);
   await expect(show(page)).toHaveAttribute('data-sound', 'off');
   await expect(show(page)).toHaveAttribute('data-motion', 'waiting');
   await expect(show(page).locator('audio')).toHaveCount(0);
-  await show(page).tap();
+  await print.tap();
   await expect(show(page).locator('.elevate')).toHaveCount(0);
   await expect.poll(() => show(page).getAttribute('data-sound'), { timeout: 10_000 }).not.toBe('off');
 }

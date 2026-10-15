@@ -34,9 +34,11 @@ export async function run(ctx: CommandContext): Promise<ExitCode> {
   if (!ctx.tty.interactive) return ctx.fail('a terminal is required to read the password');
 
   // No hint above it: Esc and ^C cancel, as they cancel any read, and on a touch screen the dock
-  // offers its Cancel chip. Where the show follows, the key press that answers readies its track:
-  // Safari, iOS and in-app browsers start sound only inside one, and the show opens after it.
-  const unlocks = ctx.stdout.isTTY ? { unlocks: RICK_TRACK } : {};
+  // offers its Cancel chip. Where the show follows on a keyboard, the key press that answers
+  // readies its track: Safari and in-app browsers start sound only inside one, and the show opens
+  // after it. A touch screen's show asks for a tap of its own, its fingerprint, and starts the
+  // sound inside that.
+  const unlocks = ctx.stdout.isTTY && !ctx.tty.touch ? { unlocks: RICK_TRACK } : {};
   const password = await ctx.tty.readLine({ prompt: SUDO_PROMPT, secret: true, feedback: true, ...unlocks });
   if (password === null) {
     if (ctx.signal.aborted) throw ctx.signal.reason;

@@ -15,6 +15,7 @@ import {
   RICK_ALT,
   RICK_CLOSED,
   RICK_ELEVATE,
+  RICK_FINGERPRINT,
   RICK_FRAMES,
   RICK_FRAMES_PORTRAIT,
   RICK_HINT_AFTER_MS,
@@ -423,13 +424,17 @@ describe('the Rick app', () => {
     expect(status(dialog)).toBe('');
   });
 
-  it('on a touch screen asks for a tap to elevate privileges, starts inside it, and the next tap leaves', async () => {
+  it('on a touch screen asks for the right thumb under a fingerprint, starts at the touch, and the next tap leaves', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const raf = frames();
     const { dialog, close, sound } = await show({ touch: true, file: FILE });
-    // Before the tap: the one line asking for it, no picture, no sound, not even an element made.
-    expect(dialog.querySelector('.elevate')?.textContent).toBe(RICK_ELEVATE);
-    expect(RICK_ELEVATE).toBe('Tap to elevate privileges');
+    // Before the touch: the fingerprint, hidden from screen readers, over the two lines asking
+    // for it; no picture, no sound, not even an element made.
+    const print = dialog.querySelector('.elevate .print');
+    expect(print?.textContent).toBe(RICK_FINGERPRINT);
+    expect(print?.getAttribute('aria-hidden')).toBe('true');
+    expect(dialog.querySelector('.elevate .scan')?.textContent).toBe(RICK_ELEVATE);
+    expect(RICK_ELEVATE).toBe('Scan your right thumb\nto elevate privileges');
     expect(dialog.querySelector('.stage')?.classList.contains('waiting')).toBe(true);
     expect(dialog.dataset).toMatchObject({ motion: 'waiting', sound: 'off', frames: 'file' });
     expect(sound.factory).not.toHaveBeenCalled();

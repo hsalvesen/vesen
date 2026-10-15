@@ -149,15 +149,18 @@ describe('sudo', () => {
     expect(unlockAudio).toHaveBeenCalledTimes(1);
   });
 
-  it('on a touch screen asks the same, with no hint, and tells the app', async () => {
+  it('on a touch screen asks the same, with no hint, and tells the app, which starts the sound at its own tap', async () => {
     const term = terminal({ touch: true });
-    const h = harness({ specs: [sudo], terminal: term.info });
+    const unlockAudio = vi.fn();
+    const h = harness({ specs: [sudo], terminal: term.info, unlockAudio });
     const job = h.shell.start('sudo -i');
     const request = await asked(h.shell);
     expect(request).toMatchObject({ prompt: 'Password: ', hint: null });
     h.shell.answerRead(request.id, '');
     await job.done;
     expect(term.shown[0]?.props.touch).toBe(true);
+    // The key on a phone's own keyboard may not count as a gesture: the fingerprint's tap does.
+    expect(unlockAudio).not.toHaveBeenCalled();
   });
 
   it('makes the sandwich after the show, and still exits 0 for it', async () => {
