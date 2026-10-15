@@ -20,6 +20,7 @@
     "../src/testing/**/*.ts",
     "../scripts/**/*.mjs",
     "../scripts/**/*.ts",
+    "../tests/docs/**/*.ts",
     "../tests/hosting/**/*.ts",
     "../tests/harness.ts",
     "../tests/transcripts/**/*.ts",

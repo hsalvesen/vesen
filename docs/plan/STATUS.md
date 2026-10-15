@@ -2,7 +2,7 @@
 
 *Written 8 October 2026 for v2.0.0, on the `overhaul` branch (pull request #3), not yet merged to `main`.*
 
-Every phase of the [roadmap](README.md#roadmap) is built, including all six optional command waves. This page records what landed in each phase and where, every deliberate deviation from the plan, what only the owner can do, and what is left to do. [ADR 0001](../adr/0001-architecture.md) has the full text of each contract change; the [changelog](../../CHANGELOG.md) describes the release for visitors.
+Every phase of the [roadmap](README.md#roadmap) is built, including all six optional command waves. This page records what landed in each phase and where, every deliberate deviation from the plan, what only the owner can do, and what is left to do. [ADR 0001](../adr/0001-architecture.md) has the full text of each contract change; the [changelog](../CHANGELOG.md) describes the release for visitors.
 
 ## What was built, phase by phase
 
@@ -104,9 +104,9 @@ Each was deliberate; the ADR amendment named in brackets has the detail.
 - [ ] **Redirect the apex domain** `vesen.app` (and `vesenterminal.web.app` and `vesenterminal.firebaseapp.com` if you can) to `https://www.vesen.app` in the Firebase console. The page already moves visitors there itself (`src/platform/hosts.ts`), but a server redirect is faster and keeps one origin for storage.
 - [ ] **Protect `main`** in GitHub's branch settings and require the CI `check` job to pass before merging.
 - [ ] **Edit `/home/has`**, the owner's read-only portfolio files, in `src/vfs/seed.ts` (and `src/content/` for the styled documents), so `ls ~has`, `cat` and `finger has` say what you want.
-- [ ] **Review PR #3 on its preview channel** with the phone checklist in [CONTRIBUTING.md](../../CONTRIBUTING.md), merge it, and push the tag `v2.0.0` (`release.yml` creates the GitHub release). The old `latest` tag still points at v1.1.0; delete or move it if it is not used.
+- [ ] **Review PR #3 on its preview channel** with the phone checklist in [CONTRIBUTING.md](../../.github/CONTRIBUTING.md), merge it, and push the tag `v2.0.0` (`release.yml` creates the GitHub release). The old `latest` tag still points at v1.1.0; delete or move it if it is not used.
 - [ ] **Delete the merged remote branches** `UI`, `demo`, `refactor`, `GUI` and `features-grep` if you no longer want them (grep was rebuilt in wave A1, so `features-grep` is not needed).
-- [ ] **Turn on private vulnerability reporting** (Settings → Code security), which [SECURITY.md](../../SECURITY.md) points to, or remove that line.
+- [ ] **Turn on private vulnerability reporting** (Settings → Code security), which [SECURITY.md](../../.github/SECURITY.md) points to, or remove that line.
 - [ ] **Decisions the waves left open:** whether `git log` and `git show` should print author e-mail addresses (they show names only); whether `ifconfig` should ask Cloudflare for the public address or leave that to `ip addr`; whether to run a fetch proxy for `curl --via-proxy` (`VITE_FETCH_PROXY`).
 
 ## Follow-ups
