@@ -480,13 +480,13 @@
   }
 
   /*
-    A touch screen, upright or on its side: the picture covers the whole window, which AppHost
-    makes the whole screen, as large as it must be in both directions, centred, so what overflows
-    is cut evenly from both sides (the portrait cut is a little wider than most phones held
-    upright; the whole picture a little taller than one on its side). The stage is a size
-    container, so the font follows the stage's own width and height: a cell is 0.585 em wide
-    (Vesen Mono's advance, 1200 of 2048) and 1.15 em tall. Where container units are missing
-    (iOS 15), the viewport stands in for it.
+    A touch screen, upright or on its side: the picture covers the whole window inside its frame,
+    which AppHost makes all of the screen the page may draw on, as large as it must be in both
+    directions, centred, so what overflows is cut evenly from both sides (the portrait cut is a
+    little wider than most phones held upright; the whole picture a little taller than one on its
+    side). The stage is a size container, so the font follows the stage's own width and height: a
+    cell is 0.585 em wide (Vesen Mono's advance, 1200 of 2048) and 1.15 em tall. Where container
+    units are missing (iOS 15), the viewport less the frame's border stands in for it.
   */
   .rick.touch {
     gap: 0;
@@ -504,7 +504,7 @@
 
   .rick.touch .frame {
     flex: none;
-    font-size: max(calc(100vw / (var(--cols) * 0.585)), calc(100vh / (var(--rows) * 1.15)));
+    font-size: max(calc((100vw - 4px) / (var(--cols) * 0.585)), calc((100vh - 4px) / (var(--rows) * 1.15)));
   }
 
   @supports (width: 1cqw) {

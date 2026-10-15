@@ -91,24 +91,26 @@ async function coversTheStage(page: Page): Promise<void> {
     const host = dialog.closest('.app-host') as HTMLElement;
     const rect = (element: Element | null) => (element as HTMLElement).getBoundingClientRect().toJSON() as DOMRect;
     const own = getComputedStyle(host);
-    const frame = getComputedStyle(host, '::after');
     return {
       host: rect(host),
-      hostBorder: own.borderTopStyle,
-      frame: [frame.top, frame.left, frame.right, frame.height, frame.borderTopWidth, frame.borderTopStyle, frame.pointerEvents],
+      border: [own.borderTopWidth, own.borderRightWidth, own.borderBottomWidth, own.borderLeftWidth, own.borderTopStyle],
+      clip: own.overflow,
+      overlay: getComputedStyle(host, '::after').content,
       stage: rect(dialog.querySelector('.stage')),
       picture: rect(dialog.querySelector('.frame')),
     };
   });
-  const { host, hostBorder, frame, stage, picture } = box;
+  const { host, border, clip, overlay, stage, picture } = box;
   const screenSize = page.viewportSize() ?? { width: 0, height: 0 };
-  // The whole screen, with no border of its own: nothing of the page shows round it.
+  // The whole screen, the frame on the window's own edge, and the picture kept inside it.
   expect([host.left, host.top, host.width, host.height]).toEqual([0, 0, screenSize.width, screenSize.height]);
-  expect(hostBorder).toBe('none');
-  // The frame, drawn over it where the terminal's is, and not in the way of a tap.
-  expect(frame).toEqual(['4px', '4px', '4px', `${screenSize.height - 8}px`, '2px', 'solid', 'none']);
-  expect(stage.width).toBeGreaterThanOrEqual(screenSize.width - 1);
-  expect(stage.height).toBeGreaterThanOrEqual(screenSize.height - 1);
+  expect(border).toEqual(['2px', '2px', '2px', '2px', 'solid']);
+  expect(clip).toBe('hidden');
+  expect(overlay).toBe('none');
+  // Inside the frame, the stage is all of the window.
+  expect([stage.left, stage.top]).toEqual([2, 2]);
+  expect(stage.width).toBeGreaterThanOrEqual(screenSize.width - 5);
+  expect(stage.height).toBeGreaterThanOrEqual(screenSize.height - 5);
   expect(picture.left).toBeLessThanOrEqual(stage.left + 1);
   expect(picture.right).toBeGreaterThanOrEqual(stage.right - 1);
   expect(picture.top).toBeLessThanOrEqual(stage.top + 1);
