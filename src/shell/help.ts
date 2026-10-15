@@ -1,10 +1,10 @@
 // Help generated from command specs (docs/plan/02-architecture-and-contracts.md, section 11):
 //
-// - the help index: every category as a column of eight of its names (the ones with the most to see), with
-//   `...` under a category that has more, vesen's own commands first, side by side as many as fit
-//   (a lists block, which reflows on its own); `help CATEGORY` lists all of a category's names,
-//   and -v (or --all, for every category) adds what each does. Each name is tappable (it inserts
-//   itself at the prompt). In a pipe, a line of names per category;
+// - the help index: every command by name, category by category, vesen's own first, each
+//   category's heading over a grid of its names that reflows with the width, the columns lined up
+//   from one category to the next; `help CATEGORY` lists one category. Names only: what a command
+//   does is for `COMMAND --help` (or -h) and `man COMMAND`. Each name is tappable (it inserts itself
+//   at the prompt). In a pipe, a line of names per category;
 // - the `<cmd> --help` panels as callouts (what it does, Usage, Options, Examples as run chips,
 //   See also);
 // - man pages: NAME, SYNOPSIS, DESCRIPTION, OPTIONS, EXAMPLES and SEE ALSO, laid out to the width
@@ -16,10 +16,10 @@
 // body loads lazily keeps its long help with the body; withDoc() fetches it first.
 
 import { parseMarkup } from '../output/markup';
-import { out, textWidth, type Block, type Line, type ListColumn, type Span, type SpanStyle } from '../output/model';
+import { out, textWidth, type Block, type Line, type Span, type SpanStyle } from '../output/model';
 import { flagKey } from './flags';
 import { KEY_BINDINGS, TOUCH_BINDINGS, type KeyBinding } from './keys';
-import { CATEGORY_ORDER, CATEGORY_WORDS } from './registry';
+import { CATEGORY_ORDER } from './registry';
 import type { ArgSpec, Category, CommandDoc, CommandSpec, FlagSpec, Registry } from './types';
 
 export const CATEGORY_TITLES: Readonly<Record<Category, string>> = {
@@ -38,129 +38,61 @@ const STRONG: SpanStyle = { fg: 'fg-strong' };
 const MUTED: SpanStyle = { fg: 'muted' };
 const BOLD: SpanStyle = { bold: true };
 
-/** Room for a summary beside each name in the help index, before the grid adds a column. */
-const SUMMARY_CH = 26;
-
-/** How many of a category's commands the index shows; `help CATEGORY` lists them all. */
-export const INDEX_PER_CATEGORY = 8;
-
-/** What follows a category's eight in the index when it has more. */
-export const MORE_MARK = '...';
-
-/**
- * The commands each category's column shows, in this order: the ones with the most to see when
- * run (a calendar, a forecast, a full-screen app, a picture), then the everyday ones. A category
- * with fewer than eight here fills up by name; a name that is not a command here is passed over.
- */
-const EVERYDAY: Readonly<Record<Category, readonly string[]>> = {
-  portfolio: ['theme', 'cathode', 'qr', 'banner', 'whoami', 'about', 'contact', 'repo'],
-  files: ['tree', 'ls', 'cat', 'find', 'du', 'df', 'stat', 'file'],
-  text: ['bc', 'diff', 'grep', 'column', 'rev', 'sort', 'sed', 'yes'],
-  shell: ['sudo', 'man', 'history', 'watch', 'help', 'alias', 'sleep', 'clear'],
-  system: ['fastfetch', 'cal', 'top', 'date', 'uptime', 'ps', 'free', 'privacy'],
-  network: ['weather', 'stock', 'speedtest', 'curl', 'ping', 'dig', 'ip', 'whois'],
-  fun: ['cmatrix', 'cowsay', 'figlet', 'fortune', 'lolcat', 'cowthink', 'factor'],
-  editor: ['nano', 'less', 'more'],
-};
-
-/** The index's share of a category: up to eight of its commands, the standout ones first and in EVERYDAY's order, then by name, and whether it has more. */
-export function indexShare(category: Category, specs: readonly CommandSpec[]): { readonly shown: readonly CommandSpec[]; readonly more: boolean } {
-  const everyday = EVERYDAY[category];
-  const rank = (name: string): number => {
-    const at = everyday.indexOf(name);
-    return at === -1 ? everyday.length : at;
-  };
-  // A stable sort: commands of the same rank keep the registry's order, by name.
-  const ranked = [...specs].sort((a, b) => rank(a.name) - rank(b.name));
-  return { shown: ranked.slice(0, INDEX_PER_CATEGORY), more: specs.length > INDEX_PER_CATEGORY };
-}
-
 // ── The index ──────────────────────────────────────────────────────────────────────────────
 
-/** A category as a column of the lists block: its title over its share of names, each tappable, and `...` when it has more. */
-function categoryColumn(category: Category, specs: readonly CommandSpec[]): ListColumn {
-  const { shown, more } = indexShare(category, specs);
-  return {
-    title: out.span(CATEGORY_TITLES[category], HEADING),
-    items: [...shown.map((spec) => out.insert(spec.name, `${spec.name} `, STRONG)), ...(more ? [out.span(MORE_MARK, MUTED)] : [])],
-  };
-}
-
-/** A category's names on one line, for a pipe: `Files: cat cd cp ls mkdir mv pwd rm ...`; with `every`, all of them. */
-function categoryLine(category: Category, specs: readonly CommandSpec[], every = false): Line {
-  const { shown, more } = every ? { shown: specs, more: false } : indexShare(category, specs);
-  return [out.span(`${CATEGORY_TITLES[category]}: ${shown.map((spec) => spec.name).join(' ')}${more ? ` ${MORE_MARK}` : ''}`)];
-}
-
-/** A category's heading and a grid of its names, each with its summary beside it. */
-function categoryTable(category: Category, specs: readonly CommandSpec[], minCh: number): Block[] {
+/** A category's heading over a grid of its names, each a tap that puts it at the prompt. */
+function categoryGrid(category: Category, specs: readonly CommandSpec[], minCh: number): Block[] {
   return [
     out.lines([[out.span(CATEGORY_TITLES[category], HEADING)]]),
     out.grid(
       specs.map((spec) => out.insert(spec.name, `${spec.name} `, STRONG)),
       minCh,
-      specs.map((spec) => [out.span(spec.summary)]),
     ),
   ];
 }
 
+/** A category's names on one line, for a pipe: `Files: cat cd cp ls mkdir mv pwd rm`. */
+function categoryLine(category: Category, specs: readonly CommandSpec[]): Line {
+  return [out.span(`${CATEGORY_TITLES[category]}: ${specs.map((spec) => spec.name).join(' ')}`)];
+}
+
+/** Where to find out what a command does: its --help (or -h) and its manual; and the keys. */
 const MORE_HELP: Line = [
-  out.span("Type 'help <command>' for its options, 'man <command>' for its manual, ", MUTED),
+  out.span("Type '<command> --help' (or -h) for its options, 'man <command>' for its manual, ", MUTED),
   out.span("and 'help keys' for the keys.", MUTED),
 ];
 
+/** A cell of the index's grids: the longest name of all and a gap, so the columns line up across categories. */
+function cellWidth(registry: Registry): number {
+  return Math.max(1, ...registry.list().map((spec) => textWidth(spec.name))) + 2;
+}
+
 export interface IndexOptions {
-  /** Every category as a grid of names with their summaries: --all, or -v with no category. */
-  readonly all?: boolean;
-  /** On a terminal the categories are columns that reflow with the width; in a pipe, the default, lines of names. */
+  /** On a terminal each category is a grid that reflows with the width; in a pipe, the default, a line of names. */
   readonly tty?: boolean;
 }
 
-/** The note under the index: how to see all of a category, and what each command does. */
-function moreNote(word: string): Line {
-  return [
-    out.run(`help ${word}`, `help ${word}`, STRONG),
-    out.span(' lists every command in a category; add ', MUTED),
-    out.span('-v', STRONG),
-    out.span(' to say what each does.', MUTED),
-  ];
-}
-
 /**
- * The help index: every category as a column of eight of its names (the ones with the most to see first)
- * and `...` where there are more, vesen's own commands (the `portfolio` category, titled Vesen)
- * first, side by side as many as fit and the rest in a band below (one lists block, which reflows
- * on its own: a desktop shows them all at once, a phone three or four a band). The note under it
- * says how to see the rest: `help files` lists a whole category, and -v says what each command
- * does (`help -v`, or `help --all`, for every category: a grid of names with their summaries). A
- * name inserts itself at the prompt when tapped. In a pipe the index is plain text: one
- * `Category: a b c ...` line per category.
+ * The help index: every command by name, category by category, vesen's own commands (the
+ * `portfolio` category, titled Vesen) first, each category's heading over a grid of its names
+ * (by name, in as many columns as fit, the same width of column for every category). Names only,
+ * as v1's help listed them: the note under it says where to find out what a command does
+ * (`COMMAND --help`, or -h, and `man COMMAND`). A name inserts itself at the prompt when tapped. In
+ * a pipe the index is plain text: one `Category: a b c` line per category.
  */
 export function helpIndex(registry: Registry, options: IndexOptions = {}): Block[] {
   const blocks: Block[] = [];
-  const widest = Math.max(1, ...registry.list().map((spec) => textWidth(spec.name)));
-  // One column on a phone, two at 80 columns, three at 120.
-  const minCh = widest + 2 + SUMMARY_CH;
-  const columns: ListColumn[] = [];
   const lines: Line[] = [];
+  const minCh = cellWidth(registry);
   for (const category of CATEGORY_ORDER) {
     // The registry lists by name.
     const specs = registry.list({ category });
     if (specs.length === 0) continue;
-    if (options.all === true) blocks.push(...categoryTable(category, specs, minCh));
-    else if (options.tty === true) columns.push(categoryColumn(category, specs));
+    if (options.tty === true) blocks.push(...categoryGrid(category, specs, minCh));
     else lines.push(categoryLine(category, specs));
   }
-  if (columns.length > 0) blocks.push(out.lists(columns));
   if (lines.length > 0) blocks.push(out.lines(lines));
-  const more: Line[] = [[]];
-  if (options.all !== true) {
-    // The example names the first category the index cut short, or else the first it lists.
-    const listed = CATEGORY_ORDER.filter((category) => registry.list({ category }).length > 0);
-    const example = listed.find((category) => registry.list({ category }).length > INDEX_PER_CATEGORY) ?? listed[0] ?? 'files';
-    more.push(moreNote(CATEGORY_WORDS[example]));
-  }
-  more.push(MORE_HELP);
+  const more: Line[] = [[], MORE_HELP];
   // What vesen sends where, one tap away (docs/plan/10-tooling-hosting-docs.md, 0.10).
   if (registry.get('privacy') !== undefined) {
     more.push([out.run('privacy', 'privacy', STRONG), out.span(' says what vesen sends, and where.', MUTED)]);
@@ -171,24 +103,13 @@ export function helpIndex(registry: Registry, options: IndexOptions = {}): Block
 
 /**
  * `help CATEGORY`: the category's heading and every one of its commands, by name, each a tap that
- * puts it at the prompt, in a grid that reflows with the width, and a line saying how to see what
- * each does; with -v, each command with its summary. In a pipe, without -v, one line of names.
+ * puts it at the prompt, in a grid that reflows with the width, and where to find out what each
+ * does. In a pipe, one line of names.
  */
-export function categoryHelp(registry: Registry, category: Category, options: { readonly verbose?: boolean; readonly tty?: boolean } = {}): Block[] {
+export function categoryHelp(registry: Registry, category: Category, options: { readonly tty?: boolean } = {}): Block[] {
   const specs = registry.list({ category });
-  const widest = Math.max(1, ...specs.map((spec) => textWidth(spec.name)));
-  if (options.verbose === true) return categoryTable(category, specs, widest + 2 + SUMMARY_CH);
-  const word = CATEGORY_WORDS[category];
-  const note: Line = [out.run(`help -v ${word}`, `help -v ${word}`, STRONG), out.span(' says what each does.', MUTED)];
-  if (options.tty !== true) return [out.lines([categoryLine(category, specs, true), [], note])];
-  return [
-    out.lines([[out.span(CATEGORY_TITLES[category], HEADING)]]),
-    out.grid(
-      specs.map((spec) => out.insert(spec.name, `${spec.name} `, STRONG)),
-      widest + 2,
-    ),
-    out.lines([[], note]),
-  ];
+  if (options.tty !== true) return [out.lines([categoryLine(category, specs), [], MORE_HELP])];
+  return [...categoryGrid(category, specs, cellWidth(registry)), out.lines([[], MORE_HELP])];
 }
 
 /** `help keys`: the keys the terminal answers to, and on a touch screen what to tap. */

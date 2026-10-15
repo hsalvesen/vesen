@@ -72,7 +72,7 @@ A dock of chips and keys above the keyboard, a page that fits the screen and nev
 ## A short tour
 
 ```bash
-help                      # eight commands of each category; help files lists them all, -v says what each does
+help                      # every command, by category; ls --help (or -h) or man ls says what one does
 cat README.md             # the owner's README, in colour
 ls -la ~ | grep bash      # pipes, options and globs work as on Linux
 fastfetch                 # this device, as a terminal sees it
@@ -81,7 +81,7 @@ stock AAPL CBA.AX         # quotes in a table; stock CBA draws a card with a cha
 qr https://www.vesen.app  # a scannable QR card; tap it to present it full screen
 dig vesen.app +short      # DNS over HTTPS, and it says so
 man ls | less             # the pager; nano notes.txt is the editor
-fortune | cowsay          # the fun ones are under Fun: help -v fun
+fortune | cowsay          # the fun ones are under Fun: help fun
 theme ls                  # every theme with its colours; theme wombat switches
 privacy                   # every service a command talks to, and what it is sent
 ```

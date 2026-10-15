@@ -36,7 +36,7 @@ What the visitor sees does not depend on the folder. Until the catalogue arrives
 - a line whose command is not registered waits for it (up to 8 s, and ^C stops the wait), so a
   catalogue command runs as if it were always there, and `command not found` (127) comes only once
   the catalogue has settled without the name;
-- `help`, `help --all`, `man`, `whatis`, `apropos`, `which`, `type`, `command -v` and `privacy`
+- `help`, `help CATEGORY`, `man`, `whatis`, `apropos`, `which`, `type`, `command -v` and `privacy`
   wait for it too, through `allCommands(ctx)` in `src/commands/lib/catalogue.ts`; a command that
   lists or looks up commands by name should do the same;
 - a first Tab on a command name waits up to 300 ms, then shows what it has; the list, the ghost

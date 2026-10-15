@@ -90,9 +90,9 @@ test.describe('output reflow', { tag: '@smoke' }, () => {
       page.evaluate(() => {
         const entries = Array.from(document.querySelectorAll('[role="log"] .entry'));
         const typed = (line: string) => entries.find((entry) => entry.querySelector('.command-input-display')?.textContent === line);
-        // The help index's widest band: how many of its category columns share one top edge.
-        const tops = Array.from(typed('help')?.querySelectorAll('.lists .list') ?? [], (list) => Math.round(list.getBoundingClientRect().top));
-        const columns = Math.max(0, ...Array.from(new Set(tops), (top) => tops.filter((t) => t === top).length));
+        // The help index's grids: how many columns of names the widest row of any of them has.
+        const tops = Array.from(typed('help')?.querySelectorAll('.grid') ?? [], (grid) => Array.from(grid.children, (cell) => Math.round(cell.getBoundingClientRect().top)));
+        const columns = Math.max(0, ...tops.flatMap((row) => Array.from(new Set(row), (top) => row.filter((t) => t === top).length)));
         const [side, main] = Array.from(typed('fastfetch')?.querySelector('.columns')?.children ?? [], (column) => column.getBoundingClientRect());
         return { entries: entries.length, columns, sideBySide: side !== undefined && main !== undefined && Math.abs(side.top - main.top) < 2 };
       });
@@ -101,7 +101,7 @@ test.describe('output reflow', { tag: '@smoke' }, () => {
     expect(await sideways(page)).toEqual({ page: 0, body: 0, transcript: 0 });
 
     await page.setViewportSize({ width: 812, height: 375 });
-    await expect.poll(async () => (await layout()).columns, { message: 'the help index fits more columns to a band' }).toBeGreaterThan(portrait.columns);
+    await expect.poll(async () => (await layout()).columns, { message: 'the help index fits more names to a row' }).toBeGreaterThan(portrait.columns);
     const landscape = await layout();
     expect(landscape.entries, 'nothing ran again').toBe(portrait.entries);
     expect(portrait.sideBySide, 'fastfetch is stacked in portrait').toBe(false);

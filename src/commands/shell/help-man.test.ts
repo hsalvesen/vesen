@@ -9,126 +9,104 @@ import { CATEGORY_ORDER } from '../../shell/registry';
 import { allSpecFiles } from '../index';
 
 const text = (blocks: readonly Block[]): string => blocks.map(plain).join('');
-const literal = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/** The categories the index gives a column: every one, vesen's own (the portfolio) first. */
-const COLUMNS = CATEGORY_ORDER;
+/** The categories the index lists, each under its heading: every one, vesen's own (the portfolio) first. */
+const SECTIONS = CATEGORY_ORDER;
+
+/** Each category of an index as its heading, then its names: a one-span lines block, then a grid. */
+const sectionsOf = (blocks: readonly Block[]): string[][] => {
+  const sections: string[][] = [];
+  for (const block of blocks) {
+    if (block.type === 'grid') sections.at(-1)?.push(...block.items.map((item) => item.text));
+    else if (block.type === 'lines' && block.lines.length === 1 && block.lines[0]?.length === 1) sections.push([block.lines[0][0]?.text ?? '']);
+  }
+  return sections;
+};
+
+const NOTE = "Type '<command> --help' (or -h) for its options, 'man <command>' for its manual, and 'help keys' for the keys.";
 
 describe('help', () => {
-  it("is a column of eight names for each category, the standout ones first, vesen's own first, with ... where there are more", async () => {
+  it("lists every command by name, category by category, vesen's own first, and says nothing of what they do", async () => {
     const s = await session({ cols: 40 });
     const result = await s.run('help');
     expect(result.status).toBe(0);
     const listed = text(result.blocks);
     expect(listed.indexOf('Vesen')).toBe(0);
-    for (const spec of s.app.shell.registry.list({ category: 'portfolio' })) {
-      expect(listed, spec.name).not.toContain(spec.summary);
-    }
-    // One lists block: a column per category, headed by its name, with eight of its commands
-    // under it, the ones with the most to see first, each a tap that puts it at the prompt, and a
-    // muted ... where it has more.
-    const lists = result.blocks.filter((block) => block.type === 'lists');
-    expect(lists).toHaveLength(1);
-    const columns = lists[0]?.type === 'lists' ? lists[0].columns : [];
-    expect(columns.map((column) => column.title.text)).toEqual(COLUMNS.map((category) => CATEGORY_TITLES[category]));
-    COLUMNS.forEach((category, i) => {
+    // Each category's heading over every one of its commands, by name, each a tap that puts it at
+    // the prompt; nothing left out, no ... and no summaries.
+    const sections = sectionsOf(result.blocks);
+    expect(sections.map(([title]) => title)).toEqual(SECTIONS.map((category) => CATEGORY_TITLES[category]));
+    SECTIONS.forEach((category, i) => {
       const all = s.app.shell.registry.list({ category }).map((spec) => spec.name);
       expect(all.length, category).toBeGreaterThan(0);
-      const items = columns[i]?.items ?? [];
-      const names = items.filter((item) => item.action !== undefined).map((item) => item.text);
-      expect(names, category).toHaveLength(Math.min(8, all.length));
-      for (const name of names) expect(all, category).toContain(name);
-      expect(items.map((item) => item.text).slice(names.length), category).toEqual(all.length > 8 ? ['...'] : []);
-      for (const item of items.slice(0, names.length)) {
+      expect(sections[i]?.slice(1), category).toEqual(all);
+    });
+    // The notes at the foot aside (privacy's link says what it is), no command's summary.
+    const index = text(result.blocks.slice(0, -1));
+    for (const spec of s.app.shell.registry.list()) expect(index, spec.name).not.toContain(spec.summary);
+    for (const block of result.blocks) {
+      if (block.type !== 'grid') continue;
+      for (const item of block.items) {
         expect(item.action, item.text).toMatchObject({ kind: 'insert', text: `${item.text} ` });
         expect(isTrustedAction(item.action), item.text).toBe(true);
       }
-    });
-    // The standout ones: the commands with the most to see when run.
-    expect(columns[1]?.items.map((item) => item.text)).toEqual(['tree', 'ls', 'cat', 'find', 'du', 'df', 'stat', 'file', '...']);
-    expect(columns[0]?.items.map((item) => item.text)).toEqual(['theme', 'cathode', 'qr', 'banner', 'whoami', 'about', 'contact', 'repo']);
-    expect(columns[4]?.items.map((item) => item.text).slice(0, 3)).toEqual(['fastfetch', 'cal', 'top']);
-    expect(columns[5]?.items.map((item) => item.text)[0]).toBe('weather');
-    expect(listed).not.toMatch(/\+\d+ more/);
-    expect(listed).not.toContain('list directory contents');
-    // How to see the rest: help with a category, and -v for what each does.
-    expect(listed).toContain('help files lists every command in a category; add -v to say what each does.');
-    const more = result.blocks.flatMap((block) => (block.type === 'lines' ? block.lines.flat() : [])).find((span) => span.text === 'help files');
-    expect(more?.action).toMatchObject({ kind: 'run', line: 'help files' });
-    // On a 40-column screen the columns come in bands, each as wide as its longest name, and no
-    // row of them is wider than the screen.
-    const screen = renderScreen(lists, 40);
+    }
+    expect(listed).not.toContain('...');
+    // What a command does is for its --help and its manual.
+    expect(listed).toContain(NOTE);
+    // On a 40-column screen each grid fits the width.
+    const screen = renderScreen(result.blocks.filter((block) => block.type === 'grid'), 40);
     for (const row of screen) expect(row.length, row).toBeLessThanOrEqual(40);
-    const titles = screen.filter((row) => /^(Vesen|System)\b/.test(row));
-    expect(titles[0]).toMatch(/^Vesen +Files +Text +Shell$/);
-    expect(titles[1]).toMatch(/^System +Network +Fun +Editor$/);
     s.stop();
   });
 
-  it('names eight of each category on one line in a pipe, with ... where there are more', async () => {
+  it('names every command of each category on one line in a pipe', async () => {
     const piped = await session({ cols: 40, tty: false });
     const listed = `\n${(await piped.run('help')).stdoutPlain}`;
-    for (const category of COLUMNS) {
+    for (const category of SECTIONS) {
       const all = piped.app.shell.registry.list({ category }).map((spec) => spec.name);
       const row = new RegExp(`\\n${CATEGORY_TITLES[category]}: ([^\\n]*)\\n`).exec(listed)?.[1]?.split(' ') ?? [];
-      const names = row.filter((word) => word !== '...');
-      expect(names, category).toHaveLength(Math.min(8, all.length));
-      for (const name of names) expect(all, category).toContain(name);
-      expect(row.at(-1) === '...', category).toBe(all.length > 8);
+      expect(row, category).toEqual(all);
     }
-    expect(listed).not.toMatch(/\+\d+ more/);
+    expect(listed).toContain(NOTE);
     piped.stop();
   });
 
-  it('lists every command of a category for help CATEGORY, in any case, and with -v what each does', async () => {
+  it('lists the commands of a category for help CATEGORY, in any case, by name only', async () => {
     const s = await session();
     const files = s.app.shell.registry.list({ category: 'files' });
     const listed = await s.run('help files');
     expect(listed.status).toBe(0);
     const grid = listed.blocks.find((block) => block.type === 'grid');
     expect(grid?.type === 'grid' ? grid.items.map((item) => item.text) : []).toEqual(files.map((spec) => spec.name));
-    expect(text(listed.blocks)).toContain('help -v files says what each does.');
+    expect(text(listed.blocks)).toContain(NOTE);
     expect(text(listed.blocks)).not.toContain('list directory contents');
     // Any case, and vesen's own by its title or its category's name.
     expect(text((await s.run('help Files')).blocks)).toBe(text(listed.blocks));
     expect(text((await s.run('help vesen')).blocks)).toMatch(/^Vesen\n/);
     expect(text((await s.run('help portfolio')).blocks)).toBe(text((await s.run('help vesen')).blocks));
-    // -v, before or after: every command of the category with its summary.
-    const verbose = text((await s.run('help -v files')).blocks);
-    for (const spec of files) expect(verbose, spec.name).toMatch(new RegExp(`^${literal(spec.name)} +${literal(spec.summary)}$`, 'm'));
-    expect(text((await s.run('help files --verbose')).blocks)).toBe(verbose);
-    expect(verbose).not.toContain('System');
-    // -v alone is --all: every category, every command, with what it does.
-    expect(text((await s.run('help -v')).blocks)).toBe(text((await s.run('help --all')).blocks));
     s.stop();
   });
 
-  it('lists every visible command in the registry with --all, by category, each with its summary', async () => {
-    const s = await session();
-    const result = await s.run('help --all');
-    expect(result.status).toBe(0);
-    const listed = text(result.blocks);
-    for (const spec of s.app.shell.registry.list()) {
-      expect(listed, spec.name).toMatch(new RegExp(`^${literal(spec.name)} +${literal(spec.summary)}$`, 'm'));
+  it('has no options to say what each command does: -v and --all are gone', async () => {
+    for (const line of ['help -v', 'help --all', 'help -v files']) {
+      const result = await runLine(line);
+      expect(result.status, line).toBe(2);
+      expect(result.stdoutPlain, line).not.toContain('list directory contents');
     }
-    for (const hidden of s.app.shell.registry.list({ includeHidden: true }).filter((spec) => spec.hidden)) {
-      expect(listed).not.toMatch(new RegExp(`^${literal(hidden.name)} `, 'm'));
-    }
-    expect(listed.indexOf('Vesen')).toBe(0);
-    s.stop();
   });
 
   it('makes each name a tap that puts it at the prompt', async () => {
     const { blocks } = await runLine('help');
-    const lists = blocks.find((block) => block.type === 'lists');
-    const theme = lists?.type === 'lists' ? lists.columns.flatMap((column) => column.items).find((item) => item.text === 'theme') : undefined;
+    const theme = blocks.flatMap((block) => (block.type === 'grid' ? block.items : [])).find((item) => item.text === 'theme');
     expect(isTrustedAction(theme?.action)).toBe(true);
     expect(theme?.action).toMatchObject({ kind: 'insert', text: 'theme ' });
   });
 
   it('is plain text in a pipe', async () => {
-    expect((await runLine('help -a', { tty: false })).stdoutPlain).toMatch(/^ls +list directory contents$/m);
-    expect((await runLine('help', { tty: false })).stdoutPlain).toMatch(/^Files: tree ls cat find du df stat file \.\.\.$/m);
+    const piped = (await runLine('help', { tty: false })).stdoutPlain;
+    expect(piped).toMatch(/^Files: (\S+ )*ls( \S+)*$/m);
+    expect(piped).not.toMatch(/^ls +list directory contents$/m);
   });
 
   it("shows a command's panels for help NAME, and says so for a topic it does not know", async () => {

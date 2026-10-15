@@ -113,22 +113,22 @@ describe('a listing', () => {
   it('waits for the catalogue, and shows what there is with a note when it could not be loaded', async () => {
     const { load, calls } = deferred();
     const h = harness({ specs: [help], catalogue: load });
-    const listing = h.run('help --all');
+    const listing = h.run('help');
     // help's body loads first, then asks for the catalogue.
     await vi.waitFor(() => expect(calls).toHaveLength(1));
     calls[0]?.reject(new Error('Failed to fetch'));
     const result = await listing;
     expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/^echo +display a line of text$/m);
+    expect(result.stdout).toMatch(/^echo$/m);
     expect(result.stderr).toBe("Some of vesen's commands could not be loaded (Failed to fetch). The next command will try again.");
 
     // The next one tries again, and lists them all.
-    const again = h.run('help --all');
+    const again = h.run('help');
     await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2));
     calls[1]?.resolve([shout]);
     const listed = await again;
     expect(listed.stderr).toBe('');
-    expect(listed.stdout).toMatch(/^shout +say it louder$/m);
+    expect(listed.stdout).toMatch(/^shout$/m);
   });
 });
 

@@ -76,7 +76,7 @@ describe('the catalogue in the app', () => {
   });
 
   it.each([
-    ['help --all', /^rev +reverse the characters of each line$/m],
+    ['help', /^Text: .*\brev\b/m],
     // In a pipe help text names every command in Text on one line, the catalogue's rev too.
     ['help text', /^Text: base64 bc\b.* rev\b/m],
     ['help rev', /^rev - reverse the characters of each line$/m],

@@ -44,52 +44,45 @@ async function run(page: Page, line: string): Promise<void> {
   await expect(page.getByRole('log')).toHaveAttribute('aria-busy', 'false');
 }
 
-/** The categories of the help index, in its order, each a column; vesen's own commands first. */
+/** The categories of the help index, in its order, each a heading over a grid; vesen's own commands first. */
 const CATEGORIES = ['Vesen', 'Files', 'Text', 'Shell', 'System', 'Network', 'Fun', 'Editor'];
 
 test.describe('the help index', { tag: '@smoke' }, () => {
-  test('shows every category, the commands in columns that fit the screen, and a tapped name goes to the prompt', async ({ page, hasTouch }) => {
+  test('shows every command under its category, in grids that fit the screen, and a tapped name goes to the prompt', async ({ page, hasTouch }) => {
     await page.goto('/');
     await run(page, 'help');
     const output = lastEntry(page).locator('.command-output');
     for (const heading of CATEGORIES) {
       await expect(output.getByText(heading, { exact: true })).toBeVisible();
     }
-    // Every category is a column: its title over eight of its commands (the everyday ones), by
-    // name, a muted ... under a category with more, nothing counted, and no summaries (they are in
-    // help -v).
-    await expect(output.locator('.grid')).toHaveCount(0);
+    // Every category's heading over a grid of all of its commands, by name: nothing left out, no
+    // ... and no summaries (they are in each command's --help and its manual).
+    await expect(output.locator('.lists')).toHaveCount(0);
+    const grids = output.locator('.grid');
+    await expect(grids).toHaveCount(CATEGORIES.length);
     await expect(output.getByText('change the colour theme')).toHaveCount(0);
-    const columns = output.locator('.lists .list');
-    await expect(columns).toHaveCount(CATEGORIES.length);
-    const shape = await columns.evaluateAll((lists) =>
-      lists.map((list) => ({
-        title: list.querySelector('.list-title')?.textContent ?? '',
-        names: Array.from(list.querySelectorAll('[role="listitem"] button'), (button) => button.textContent ?? ''),
-        top: Math.round(list.getBoundingClientRect().top),
-        right: list.getBoundingClientRect().right,
+    await expect(output.getByText('...', { exact: true })).toHaveCount(0);
+    const shape = await grids.evaluateAll((elements) =>
+      elements.map((grid) => ({
+        names: Array.from(grid.querySelectorAll('button'), (button) => button.textContent ?? ''),
+        lefts: Array.from(new Set(Array.from(grid.children, (cell) => Math.round(cell.getBoundingClientRect().left)))),
+        right: grid.getBoundingClientRect().right,
       })),
     );
-    expect(shape.map((column) => column.title)).toEqual(CATEGORIES);
-    for (const column of shape) {
-      expect(column.names.length, column.title).toBeGreaterThan(0);
-    }
-    for (const column of shape) expect(column.names.length, column.title).toBeLessThanOrEqual(8);
-    expect(shape.find((column) => column.title === 'Files')?.names).toEqual(['tree', 'ls', 'cat', 'find', 'du', 'df', 'stat', 'file']);
-    expect(shape.find((column) => column.title === 'Editor')?.names).toEqual(['nano', 'less', 'more']);
-    expect(shape.find((column) => column.title === 'System')?.names.slice(0, 2)).toEqual(['fastfetch', 'cal']);
-    await expect(output.locator('.lists .list').filter({ hasText: 'Files' }).getByText('...', { exact: true })).toBeVisible();
-    await expect(output.getByRole('button', { name: 'help files', exact: true })).toBeVisible();
-    expect(await output.getByText(/\+\d+ more/).count()).toBe(0);
-    // A desktop shows the eight side by side; a phone three or four a band.
-    const bands = new Set(shape.map((column) => column.top)).size;
-    if (test.info().project.name === 'desktop-chrome') expect(bands).toBe(1);
-    else expect(bands).toBeGreaterThanOrEqual(2);
+    for (const [i, grid] of shape.entries()) expect(grid.names.length, CATEGORIES[i]).toBeGreaterThan(0);
+    expect(shape[CATEGORIES.indexOf('Editor')]?.names).toEqual(['less', 'more', 'nano']);
+    expect(shape[CATEGORIES.indexOf('Files')]?.names).toEqual(expect.arrayContaining(['cat', 'find', 'ls', 'tree']));
+    expect(shape[CATEGORIES.indexOf('Files')]?.names.length).toBeGreaterThan(8);
+    // The columns line up from one category to the next: the long grids start their columns at
+    // the same places.
+    const [vesen, files] = [shape[0], shape[1]];
+    expect(files?.lefts.slice(0, vesen?.lefts.length)).toEqual(vesen?.lefts);
+    await expect(output.getByText("Type '<command> --help' (or -h) for its options", { exact: false })).toBeVisible();
 
     // Nothing is wider than the screen.
     const main = await page.locator('main').evaluate((element) => ({ overflow: element.scrollWidth - element.clientWidth, right: element.getBoundingClientRect().right }));
     expect(main.overflow).toBeLessThanOrEqual(0);
-    for (const column of shape) expect(column.right, column.title).toBeLessThanOrEqual(main.right);
+    for (const [i, grid] of shape.entries()) expect(grid.right, CATEGORIES[i]).toBeLessThanOrEqual(main.right);
 
     // A name is a tap that puts it at the prompt.
     const name = output.getByRole('button', { name: 'nano', exact: true });
@@ -117,8 +110,8 @@ test.describe('the help index', { tag: '@smoke' }, () => {
         const style = getComputedStyle(node);
         return style.textShadow.split(style.color).join('currentcolor');
       };
-      // The hint line: the tappable `help files`, then plain text, on one line.
-      const hint = Array.from(element.querySelectorAll('.lines .text')).find((line) => line.textContent?.startsWith('help files lists'));
+      // The note's line: the tappable `privacy`, then plain text, on one line.
+      const hint = Array.from(element.querySelectorAll('.lines .text')).find((line) => line.textContent?.startsWith('privacy says'));
       const button = hint?.querySelector('button.action');
       const span = hint?.querySelector('span');
       const buttons = Array.from(element.querySelectorAll('button.action'));
@@ -161,9 +154,10 @@ test.describe('help and theme', { tag: '@smoke' }, () => {
     // the output is scrolled to its start.
     const heading = output.getByText('Vesen', { exact: true });
     await expect(heading).toBeVisible();
-    await expect(output.locator('.list-title').first()).toHaveText('Vesen');
+    await expect(output.locator('.lines').first()).toHaveText('Vesen');
     if (hasTouch) await expect(heading).toBeInViewport();
-    await expect(output.getByRole('button', { name: 'help files', exact: true })).toBeVisible();
+    // The note at the foot, after privacy's name in the System grid.
+    await expect(output.getByRole('button', { name: 'privacy', exact: true }).last()).toBeVisible();
 
     // Scroll the prompt out of sight, to the start of the output, then tap a name: the prompt
     // comes back with the name in it.

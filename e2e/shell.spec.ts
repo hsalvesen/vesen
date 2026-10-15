@@ -106,37 +106,35 @@ test.describe('the app shell', { tag: '@smoke' }, () => {
   }
 
   for (const width of [800, 1000, 1180]) {
-    test(`at ${width}px help shows every column of commands`, async ({ page }) => {
+    test(`at ${width}px help shows every command, in grids that fit`, async ({ page }) => {
       test.skip(isPhone(), 'desktop and tablet widths');
       await page.setViewportSize({ width, height: 800 });
       await page.goto('/');
       await run(page, 'help');
-      const lists = await page.locator('[role="log"] .output').last().evaluate((output) => {
+      const grids = await page.locator('[role="log"] .output').last().evaluate((output) => {
         const main = document.querySelector('main') as HTMLElement;
         const edge = main.getBoundingClientRect().left + main.clientWidth - parseFloat(getComputedStyle(main).paddingRight);
-        return Array.from(output.querySelectorAll<HTMLElement>('.lists'), (block) => {
-          const columns = Array.from(block.querySelectorAll<HTMLElement>('.list'));
-          const tops = new Set(columns.map((column) => Math.round(column.getBoundingClientRect().top)));
+        return Array.from(output.querySelectorAll<HTMLElement>('.grid'), (block) => {
+          const cells = Array.from(block.children) as HTMLElement[];
           return {
             text: block.textContent ?? '',
-            columns: columns.length,
-            bands: tops.size,
-            // The rightmost column's right edge, against the transcript's content edge.
-            right: Math.max(...columns.map((column) => column.getBoundingClientRect().right)),
+            columns: new Set(cells.map((cell) => Math.round(cell.getBoundingClientRect().left))).size,
+            // The rightmost name's right edge, against the transcript's content edge.
+            right: Math.max(...cells.map((cell) => cell.getBoundingClientRect().right)),
             edge,
             scrolls: block.scrollWidth - block.clientWidth,
           };
         });
       });
-      expect(lists).toHaveLength(1);
-      expect(lists[0]?.text).toContain('whoami');
-      for (const block of lists) {
+      // A grid for each of the eight categories, vesen's own first.
+      expect(grids).toHaveLength(8);
+      expect(grids[0]?.text).toContain('whoami');
+      for (const block of grids) {
         expect(block.right, 'the last column is cut off').toBeLessThanOrEqual(block.edge + 1);
-        expect(block.scrolls, 'the columns have to be scrolled').toBeLessThanOrEqual(0);
+        expect(block.scrolls, 'the names have to be scrolled').toBeLessThanOrEqual(0);
       }
-      // Every category is a column, side by side where there is room.
-      expect(lists[0]?.columns).toBe(8);
-      expect(lists[0]?.bands).toBeLessThanOrEqual(2);
+      // As many columns of names as fit: several, at these widths.
+      expect(Math.max(...grids.map((block) => block.columns))).toBeGreaterThanOrEqual(5);
     });
   }
 

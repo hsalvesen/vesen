@@ -210,7 +210,7 @@ describe('more', () => {
 
   it('pages what does not, leaving at the end', async () => {
     const screen = pagerScreen();
-    const result = await runLine('help --all | more', { fullscreen: screen.fullscreen });
+    const result = await runLine('seq 200 | more', { fullscreen: screen.fullscreen });
     expect(result).toMatchObject({ status: 0, stdoutPlain: '' });
     expect(screen.shown[0]?.props).toMatchObject({ mode: 'more', title: '(standard input)' });
   });

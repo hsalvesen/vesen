@@ -1,7 +1,8 @@
-// help: eight commands of each category, every command of one category, or one command's options
-// and examples, or the keys. The index, the panels and the key list are all generated from the
-// specs (src/shell/help.ts), so help never disagrees with the commands (F042, F043). Its body is
-// in help.run.ts.
+// help: every command by name, category by category, or one category's, or one command's options
+// and examples, or the keys. Names only in the lists: what a command does is for its --help (or -h)
+// and its manual. The index, the panels and the key list are all generated from the specs
+// (src/shell/help.ts), so help never disagrees with the commands (F042, F043). Its body is in
+// help.run.ts.
 
 import { categoryNamed } from '../../shell/registry';
 import { defineCommand, PLAIN_ARG } from '../../shell/types';
@@ -11,19 +12,14 @@ export default defineCommand({
   category: 'shell',
   // A usage error exits 2, as bash builtins do.
   usageStatus: 2,
-  summary: 'list the commands, or explain one',
-  synopsis: ['help [-v]', 'help [-v] CATEGORY', 'help COMMAND...', 'help keys'],
+  summary: 'list every command, or explain one',
+  synopsis: ['help', 'help CATEGORY', 'help COMMAND...', 'help keys'],
   featured: true,
-  flags: [
-    { short: 'v', long: 'verbose', description: 'say what each command does' },
-    { short: 'a', long: 'all', description: 'list every command of every category, each with what it does' },
-  ],
   args: [{ name: 'COMMAND', source: { kind: 'command' }, optional: true, variadic: true }],
   examples: [
-    { line: 'help', note: 'eight commands of each category', offline: true, starter: 1 },
-    { line: 'help files', note: 'every command in a category', offline: true },
-    { line: 'help -v files', note: 'the same, with what each does', offline: true },
-    { line: 'help ls', note: "one command's options and examples", offline: true },
+    { line: 'help', note: 'every command, by category', offline: true, starter: 1 },
+    { line: 'help files', note: 'the commands in one category', offline: true },
+    { line: 'help ls', note: "one command's options and examples, as ls --help shows them", offline: true },
     { line: 'help keys', note: 'the keys', offline: true },
   ],
   seeAlso: ['man', 'whatis', 'apropos'],

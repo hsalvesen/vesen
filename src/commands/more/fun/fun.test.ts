@@ -91,23 +91,16 @@ describe('help', () => {
     const result = await runLine('help', { tty: false, cols: 120 });
     const row = /^Fun: (.*)$/m.exec(result.stdoutPlain)?.[1]?.split(' ') ?? [];
     expect([...row].sort()).toEqual(FUN);
-    const all = await runLine('help --all', { tty: false, cols: 120 });
-    expect(all.stdoutPlain).toMatch(/^Fun$/m);
-    for (const name of FUN) expect(all.stdoutPlain).toMatch(new RegExp(`^${name} `, 'm'));
   });
 
-  it('gives them a column of their own on a terminal, a phone included, with every one of them (there are eight)', async () => {
+  it('gives them a heading and a grid of their own on a terminal, a phone included, with every one of them', async () => {
     const phone = await runLine('help', { cols: 44, touch: true });
-    const lists = phone.blocks.filter((block) => block.type === 'lists');
-    const fun = lists[0]?.type === 'lists' ? lists[0].columns.find((column) => column.title.text === 'Fun') : undefined;
-    expect(fun?.items.map((item) => item.text).sort()).toEqual(FUN);
-    // The ones with the most to see lead.
-    expect(fun?.items[0]?.text).toBe('cmatrix');
-    // The columns fit the screen's width, in bands.
-    for (const row of renderScreen(lists, 44)) expect(row.length, row).toBeLessThanOrEqual(44);
-    expect(phone.stdoutPlain).not.toMatch(/\+\d+ more/);
-    expect(phone.stdoutPlain).toContain('help files lists every command in a category; add -v to say what each does.');
-    expect((await runLine('help --all', { cols: 44 })).stdoutPlain).toMatch(/^Fun$/m);
+    const heading = phone.blocks.findIndex((block) => block.type === 'lines' && block.lines[0]?.[0]?.text === 'Fun');
+    const grid = phone.blocks[heading + 1];
+    expect(grid?.type === 'grid' ? grid.items.map((item) => item.text) : []).toEqual(FUN);
+    // The grids fit the screen's width.
+    for (const row of renderScreen(phone.blocks.filter((block) => block.type === 'grid'), 44)) expect(row.length, row).toBeLessThanOrEqual(44);
+    expect(phone.stdoutPlain).not.toContain('...');
   });
 });
 

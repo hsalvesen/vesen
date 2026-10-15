@@ -11,7 +11,7 @@ export default defineCommand({
   args: [{ name: 'FILE', source: { kind: 'path', accept: 'file' }, optional: true, variadic: true }],
   examples: [
     { line: 'more history.txt', note: 'space for the next screen, q to leave', offline: true },
-    { line: 'help --all | more', offline: true },
+    { line: 'cat history.txt | more', offline: true },
   ],
   seeAlso: ['less', 'cat'],
   load: () => import('./more.run'),

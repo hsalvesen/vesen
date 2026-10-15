@@ -8,7 +8,6 @@ import {
   commandHelp,
   flagLabel,
   helpIndex,
-  INDEX_PER_CATEGORY,
   keysHelp,
   manPage,
   usageLines,
@@ -50,142 +49,88 @@ describe('the help index', () => {
     { name: 'cd', category: 'files', summary: 'change folder', run: () => 0 },
   ]);
 
-  /** The lists block's columns as text: each title, then its items. */
-  const columnsOf = (blocks: readonly Block[]): string[][] => {
-    const lists = blocks.find((block) => block.type === 'lists');
-    return lists?.type === 'lists' ? lists.columns.map((column) => [column.title.text, ...column.items.map((item) => item.text)]) : [];
+  /** Each category as its heading, then its names: the heading's lines block, then its grid. */
+  const sectionsOf = (blocks: readonly Block[]): string[][] => {
+    const sections: string[][] = [];
+    for (const block of blocks) {
+      if (block.type === 'grid') sections.at(-1)?.push(...block.items.map((item) => item.text));
+      else if (block.type === 'lines' && block.lines.length === 1 && block.lines[0]?.length === 1) sections.push([block.lines[0][0]?.text ?? '']);
+    }
+    return sections;
   };
 
-  it('is, on a terminal, a column of names for every category, vesen\'s own first', () => {
+  const NOTE = "Type '<command> --help' (or -h) for its options, 'man <command>' for its manual, and 'help keys' for the keys.";
+
+  it("is, on a terminal, every command by name under its category's heading, vesen's own first", () => {
     const blocks = helpIndex(registry, { tty: true });
-    expect(text(blocks)).toBe(
-      [
-        'Vesen',
-        'theme',
-        'whoami',
-        'Files',
-        'ls',
-        'cd',
-        'Text',
-        'head',
-        '',
-        'help vesen lists every command in a category; add -v to say what each does.',
-        "Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.",
-        '',
-      ].join('\n'),
-    );
-    // One lists block, a column per category in the categories' order, the standout names first; a
-    // hidden command and an empty category are left out.
-    expect(blocks.filter((block) => block.type === 'lists')).toHaveLength(1);
-    expect(columnsOf(blocks)).toEqual([
+    expect(text(blocks)).toBe(['Vesen', 'theme', 'whoami', 'Files', 'cd', 'ls', 'Text', 'head', '', NOTE, ''].join('\n'));
+    // A heading and a grid for each category, in the categories' order and each by name; a hidden
+    // command and an empty category are left out.
+    expect(sectionsOf(blocks)).toEqual([
       ['Vesen', 'theme', 'whoami'],
-      ['Files', 'ls', 'cd'],
+      ['Files', 'cd', 'ls'],
       ['Text', 'head'],
     ]);
-    const lists = blocks.find((block) => block.type === 'lists');
-    const files = lists?.type === 'lists' ? lists.columns[1] : undefined;
-    expect(files?.title).toMatchObject({ text: 'Files', style: { fg: 'accent', bold: true } });
-    expect(files?.items[0]).toMatchObject({ text: 'ls', action: { kind: 'insert', text: 'ls ' } });
-    expect(isTrustedAction(files?.items[0]?.action)).toBe(true);
+    const heading = blocks.find((block) => block.type === 'lines');
+    expect(heading?.type === 'lines' ? heading.lines[0]?.[0] : undefined).toMatchObject({ text: 'Vesen', style: { fg: 'accent', bold: true } });
+    expect(blocks.some((block) => block.type === 'lists')).toBe(false);
   });
 
   it('is plain text in a pipe: one line of names per category', () => {
-    expect(text(helpIndex(registry))).toBe(
-      [
-        'Vesen: theme whoami',
-        'Files: ls cd',
-        'Text: head',
-        '',
-        'help vesen lists every command in a category; add -v to say what each does.',
-        "Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.",
-        '',
-      ].join('\n'),
-    );
-    expect(helpIndex(registry).some((block) => block.type === 'lists')).toBe(false);
+    expect(text(helpIndex(registry))).toBe(['Vesen: theme whoami', 'Files: cd ls', 'Text: head', '', NOTE, ''].join('\n'));
+    expect(helpIndex(registry).some((block) => block.type === 'grid')).toBe(false);
   });
 
-  /** A Text category of 32: thirty numbered, aardvark first by name, and grep, an everyday one. */
+  /** A Text category of 32: thirty numbered, aardvark and grep. */
   const big = new CommandRegistry([
     ...Array.from({ length: 30 }, (_, i): CommandSpec => ({ name: `cmd${String(i).padStart(2, '0')}`, category: 'text', summary: 'a command', run: () => 0 })),
     { name: 'aardvark', category: 'text', summary: 'first by name', run: () => 0 },
     { name: 'grep', category: 'text', summary: 'print lines that match patterns', run: () => 0 },
   ]);
 
-  it('shows eight of a long category, the standout ones first, then by name, then ... and how to see the rest', () => {
-    // grep stands out, so it leads; the other seven are the first by name.
-    const eight = ['grep', 'aardvark', 'cmd00', 'cmd01', 'cmd02', 'cmd03', 'cmd04', 'cmd05'];
-    expect(INDEX_PER_CATEGORY).toBe(8);
-    expect(columnsOf(helpIndex(big, { tty: true }))).toEqual([['Text', ...eight, '...']]);
-    const lists = helpIndex(big, { tty: true }).find((block) => block.type === 'lists');
-    const mark = lists?.type === 'lists' ? lists.columns[0]?.items[8] : undefined;
-    // The mark is muted text, not a tap.
-    expect(mark).toMatchObject({ text: '...', style: { fg: 'muted' } });
-    expect(mark?.action).toBeUndefined();
-    expect(`\n${text(helpIndex(big))}`).toContain(`\nText: ${eight.join(' ')} ...\n`);
-    // The note names the category the index cut short, as a tap that runs it.
-    expect(text(helpIndex(big))).toContain('help text lists every command in a category; add -v to say what each does.');
-    const note = helpIndex(big, { tty: true }).flatMap((block) => (block.type === 'lines' ? block.lines.flat() : [])).find((span) => span.text === 'help text');
-    expect(note?.action).toMatchObject({ kind: 'run', line: 'help text' });
-    expect(text(helpIndex(big, { tty: true }))).not.toMatch(/\+\d+ more/);
-  });
-
-  it('lists every command of a category for help CATEGORY, and with -v what each does', () => {
+  it('lists every command of a long category, by name, leaving none out', () => {
     const names = big.list({ category: 'text' }).map((spec) => spec.name);
     expect(names).toHaveLength(32);
-    // On a terminal: the heading, every name in a grid of taps, and how to see what each does.
+    expect(sectionsOf(helpIndex(big, { tty: true }))).toEqual([['Text', ...names]]);
+    expect(`\n${text(helpIndex(big))}`).toContain(`\nText: ${names.join(' ')}\n`);
+    expect(text(helpIndex(big, { tty: true }))).not.toContain('...');
+  });
+
+  it("never says what a command does: that is for its --help and its manual, as the note says", () => {
+    for (const blocks of [helpIndex(big, { tty: true }), helpIndex(big), categoryHelp(big, 'text', { tty: true }), categoryHelp(big, 'text')]) {
+      expect(text(blocks)).not.toContain('print lines that match patterns');
+      expect(text(blocks)).not.toContain('a command\n');
+      expect(text(blocks)).toContain(NOTE);
+      expect(text(blocks)).not.toContain('-v');
+    }
+  });
+
+  it('lines the columns up from one category to the next: each grid is as wide as the longest name and a gap', () => {
+    const grids = helpIndex(registry, { tty: true }).filter((block) => block.type === 'grid');
+    expect(grids).toHaveLength(3);
+    // whoami, the longest name, and two cells of gap.
+    for (const grid of grids) if (grid.type === 'grid') expect(grid.minCh).toBe(6 + 2);
+    for (const grid of grids) if (grid.type === 'grid') expect(grid.notes).toBeUndefined();
+  });
+
+  it('lists one category for help CATEGORY, names only', () => {
+    const names = big.list({ category: 'text' }).map((spec) => spec.name);
     const listed = categoryHelp(big, 'text', { tty: true });
     const grid = listed.find((block) => block.type === 'grid');
     expect(grid?.type === 'grid' ? grid.items.map((item) => item.text) : []).toEqual(names);
     expect(grid?.type === 'grid' ? grid.items[0]?.action : undefined).toMatchObject({ kind: 'insert', text: 'aardvark ' });
-    expect(grid?.type === 'grid' ? grid.notes : []).toBeUndefined();
     expect(text(listed)).toMatch(/^Text\n/);
-    expect(text(listed)).toContain('help -v text says what each does.');
-    // In a pipe: one line of every name, and the same note.
-    expect(text(categoryHelp(big, 'text'))).toBe(`Text: ${names.join(' ')}\n\nhelp -v text says what each does.\n`);
-    // -v: every name with its summary, as --all lays a category out.
-    const verbose = text(categoryHelp(big, 'text', { verbose: true }));
-    expect(verbose).toMatch(/^grep +print lines that match patterns$/m);
-    expect(verbose).toMatch(/^cmd29 +a command$/m);
-    expect(verbose).not.toContain('help -v');
-  });
-
-  it('groups every visible command by category with --all, vesen\'s own first, each with its summary', () => {
-    const blocks = helpIndex(registry, { all: true });
-    expect(text(blocks)).toBe(
-      [
-        'Vesen',
-        'theme   change the theme',
-        'whoami  about the developer',
-        'Files',
-        'cd  change folder',
-        'ls  list a folder',
-        'Text',
-        'head  output the first part of files',
-        '',
-        "Type 'help <command>' for its options, 'man <command>' for its manual, and 'help keys' for the keys.",
-        '',
-      ].join('\n'),
-    );
-    expect(CATEGORY_TITLES.portfolio).toBe('Vesen');
-  });
-
-  it('lays each category out as a grid wide enough for a name and its summary', () => {
-    const grids = helpIndex(registry, { all: true }).filter((block) => block.type === 'grid');
-    expect(grids).toHaveLength(3);
-    for (const grid of grids) {
-      if (grid.type !== 'grid') continue;
-      // The widest name, a gap and room for a summary: one column at 40, two at 80.
-      expect(grid.minCh).toBe(6 + 2 + 26);
-      expect(grid.notes).toHaveLength(grid.items.length);
-    }
+    // In a pipe: one line of every name, and the note.
+    expect(text(categoryHelp(big, 'text'))).toBe(`Text: ${names.join(' ')}\n\n${NOTE}\n`);
   });
 
   it('makes each name a trusted tap that inserts it at the prompt', () => {
-    const lists = helpIndex(registry, { tty: true }).find((block) => block.type === 'lists');
-    const item = lists?.type === 'lists' ? lists.columns[0]?.items[0] : undefined;
+    const grid = helpIndex(registry, { tty: true }).find((block) => block.type === 'grid');
+    const item = grid?.type === 'grid' ? grid.items[0] : undefined;
     expect(item?.text).toBe('theme');
     expect(isTrustedAction(item?.action)).toBe(true);
     expect(item?.action).toMatchObject({ kind: 'insert', text: 'theme ' });
+    expect(CATEGORY_TITLES.portfolio).toBe('Vesen');
   });
 });
 
