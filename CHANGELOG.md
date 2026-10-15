@@ -9,6 +9,10 @@ All notable changes to vesen are recorded here. The format follows [Keep a Chang
 - On a phone or tablet `sudo`'s show covers the whole screen, under the status bar and, on iOS, behind Safari's toolbar, where the page's own background had shown as dark bands above and below the picture. The green frame is drawn over it, where the terminal's frame is.
 - `sudo`'s track ends at 2:43, the song's own end, cut in the quiet just before the next beat, so the loop joins cleanly. It is cut at an MP3 frame boundary without re-encoding, and the picture keeps to it: the same 3,189 frames now play at 19.49 a second, so the two still loop as one.
 
+- On a phone `sudo`'s show takes all of the screen the page may draw on, with its green frame on the window's own edge and the picture kept inside it: none of it shows past the border. Where the page reaches the screen's rounded corners, the frame's corners round with them.
+- On a phone `sudo`'s show asks "Tap to elevate privileges" first, and starts at the tap, sound and picture together, since every browser lets a tap start sound.
+- The CRT effect shows under Reduce Motion, as the still lite effect (the glow, the fine scanlines and the vignette; nothing that moves). It had been off altogether there. More contrast, reduced transparency and forced colours still turn it off.
+
 ### Removed
 
 - `sl`, the steam train.
