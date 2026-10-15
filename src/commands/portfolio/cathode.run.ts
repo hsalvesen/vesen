@@ -9,7 +9,7 @@ import { CURRENT_MARK } from './theme';
 /** What --help, help and man say about cathode, besides its spec (cathode.ts). */
 export const doc: CommandDoc = {
   description:
-    "Draws the terminal as a cathode ray tube would: scanlines, phosphor glow, flicker. 'cathode ls' lists the variations and the quality in force. The quality, auto unless you choose, is how much of the effect the device draws: full on a desktop, lite on phones and in-app browsers, off when the system asks for less motion or more contrast.",
+    "Draws the terminal as a cathode ray tube would: scanlines, phosphor glow, flicker. 'cathode ls' lists the variations and the quality in force. The quality, auto unless you choose, is how much of the effect the device draws: full on a desktop, lite on phones, in-app browsers and where the system asks for less motion, off where it asks for more contrast.",
 };
 
 const STRONG: SpanStyle = { fg: 'fg-strong' };

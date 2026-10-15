@@ -3,8 +3,9 @@
 // tier (platform/perf.ts) and reflects both onto <html> as classes (platform/crt.ts).
 //
 // The mode is the look the visitor picks. The tier is how much of it the device shows: full on a
-// desktop, lite on phones and in-app browsers, off when the system asks for less motion or more
-// contrast. The quality is the visitor's override of the tier; `auto` leaves it to the device.
+// desktop, lite on phones, in-app browsers and where the system asks for less motion, off where it
+// asks for more contrast. The quality is the visitor's override of the tier; `auto` leaves it to
+// the device.
 import { get, writable } from 'svelte/store';
 import { STORAGE_KEYS } from '../services/storage-keys';
 import type { StoredCathode } from '../services/storage';
