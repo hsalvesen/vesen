@@ -7,9 +7,8 @@
   is there), and the cathode overlay (Cathode.svelte, as the screen frame has it; crt.css gives
   the app's text the same glow), so sudo's show, cmatrix and the pager open as a window of
   the terminal, not a sheet over it. The QR presenter goes without: it is a white sheet to be
-  scanned, and scanlines would get in the way. sudo's show on a touch screen takes the whole of
-  the screen the page may draw on, not only the part the browser reports as visible, with the
-  green frame on its own edge and the picture inside it.
+  scanned, and scanlines would get in the way. sudo's show sits in the same frame as the rest, the
+  terminal's own place on the screen, where all four sides are in view, and fills it.
 
   Each app has one history entry while it shows (apps/history-entry.ts), so Back (Android's
   button, iOS's edge swipe) closes the app rather than leaving vesen: Back calls the app's own
@@ -137,32 +136,6 @@
 
   .app-host:has(:global(.qr-present)) :global(.crt-overlay) {
     display: none;
-  }
-
-  /*
-    sudo's show on a touch screen: the whole of the screen the page may draw on, with the frame on
-    its own edge and the picture inside it. Fixed to the page's viewport rather than to #app,
-    which is sized to the visible area (platform/viewport.ts), and as tall as the dynamic
-    viewport; on iOS (-webkit-touch-callout is WebKit's on iOS alone) as tall as the large one,
-    behind Safari's toolbar. Where the page reaches the screen's rounded corners, under the status
-    bar or the home indicator (a safe-area inset says so), the frame's corners round with them:
-    about 0.9 of the inset at the top, 1.6 of it at the bottom, as on an iPhone, and never less
-    than the terminal's 6px.
-  */
-  .app-host:has(:global(.rick.touch)) {
-    --corner-top: clamp(6px, calc(env(safe-area-inset-top, 0px) * 0.9), 56px);
-    --corner-bottom: clamp(6px, calc(env(safe-area-inset-bottom, 0px) * 1.6), 56px);
-    position: fixed;
-    inset: 0 0 auto;
-    height: 100vh;
-    height: 100dvh;
-    border-radius: var(--corner-top) var(--corner-top) var(--corner-bottom) var(--corner-bottom);
-  }
-
-  @supports (-webkit-touch-callout: none) {
-    .app-host:has(:global(.rick.touch)) {
-      height: 100lvh;
-    }
   }
 
   .app-failed {

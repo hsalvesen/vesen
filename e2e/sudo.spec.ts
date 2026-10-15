@@ -6,8 +6,8 @@ import { isBenignConsoleMessage } from './console';
 // idle after boot, and --help fetches nothing more. After the password the Rick app opens over
 // the terminal, with the owner's frames and their track, and nothing opens anywhere else. On a
 // keyboard the screen shows the frames and, once they have played a few seconds, one line saying
-// how to leave; on a phone the frames alone, covering the screen upright or on its side, and
-// turning with it. Esc, q and ^C end it on a keyboard, a tap and Back on a phone; the audio
+// how to leave; on a phone the frames alone, filling the terminal's frame upright or on its side,
+// and turning with it. Esc, q and ^C end it on a keyboard, a tap and Back on a phone; the audio
 // element goes with it, and the sudoers line follows in the transcript. Without the frames file
 // the stage is empty. Under reduced motion the frames still play. No console errors anywhere.
 
@@ -96,11 +96,11 @@ async function elevate(page: Page): Promise<void> {
 }
 
 /**
- * On a phone, upright or on its side, the window is all of the screen the page may draw on, with
- * the terminal's green frame on its own edge and nothing of the picture outside it, and no line
- * under the picture; the picture covers the window inside the frame, as large as it must be, and is
- * cut evenly about its centre: as much from the left as from the right, and from the top as from
- * the bottom.
+ * On a phone, upright or on its side, the window sits where the terminal's frame does, 4px in from
+ * each edge, with all four sides of its green border in view and nothing of the picture outside it,
+ * and no line under the picture; the picture covers the window inside the border, as large as it
+ * must be, and is cut evenly about its centre: as much from the left as from the right, and from
+ * the top as from the bottom.
  */
 async function coversTheStage(page: Page): Promise<void> {
   const box = await show(page).evaluate((dialog) => {
@@ -111,22 +111,20 @@ async function coversTheStage(page: Page): Promise<void> {
       host: rect(host),
       border: [own.borderTopWidth, own.borderRightWidth, own.borderBottomWidth, own.borderLeftWidth, own.borderTopStyle],
       clip: own.overflow,
-      overlay: getComputedStyle(host, '::after').content,
       stage: rect(dialog.querySelector('.stage')),
       picture: rect(dialog.querySelector('.frame')),
     };
   });
-  const { host, border, clip, overlay, stage, picture } = box;
+  const { host, border, clip, stage, picture } = box;
   const screenSize = page.viewportSize() ?? { width: 0, height: 0 };
-  // The whole screen, the frame on the window's own edge, and the picture kept inside it.
-  expect([host.left, host.top, host.width, host.height]).toEqual([0, 0, screenSize.width, screenSize.height]);
+  // The terminal's frame, 4px in from each edge, its border whole, and the picture kept inside it.
+  expect([host.left, host.top, host.width, host.height]).toEqual([4, 4, screenSize.width - 8, screenSize.height - 8]);
   expect(border).toEqual(['2px', '2px', '2px', '2px', 'solid']);
   expect(clip).toBe('hidden');
-  expect(overlay).toBe('none');
-  // Inside the frame, the stage is all of the window.
-  expect([stage.left, stage.top]).toEqual([2, 2]);
-  expect(stage.width).toBeGreaterThanOrEqual(screenSize.width - 5);
-  expect(stage.height).toBeGreaterThanOrEqual(screenSize.height - 5);
+  // Inside the border, the stage is all of the window.
+  expect([stage.left, stage.top]).toEqual([6, 6]);
+  expect(stage.width).toBeGreaterThanOrEqual(screenSize.width - 13);
+  expect(stage.height).toBeGreaterThanOrEqual(screenSize.height - 13);
   expect(picture.left).toBeLessThanOrEqual(stage.left + 1);
   expect(picture.right).toBeGreaterThanOrEqual(stage.right - 1);
   expect(picture.top).toBeLessThanOrEqual(stage.top + 1);

@@ -5,16 +5,15 @@
   (services/warm-show.ts) or one made here when the show opens (services/track.ts); where the
   track cannot load or play, vesen's own 8-bit tune takes over (services/chiptune.ts, through the
   page's one AudioContext). Nothing else is on the screen: on a touch screen the picture alone,
-  inside the green frame round all of the screen the page may draw on (AppHost), where a tap
-  leaves (a screen reader hears so); on a keyboard the picture and,
-  once the show has played a few seconds, one line saying how to leave. Esc, ^C, q and Back
-  close it, with a short fade; m still mutes whichever plays, unannounced. On a touch screen the
-  show first asks for a tap, 'Tap to elevate privileges', and starts inside it, sound and picture
-  together, since a tap is a gesture every browser lets start sound. sudo also readies the
-  track inside the key press that answers its password (services/warm-show.ts unlockAudio), so a
-  browser that starts sound only from a gesture lets it play here; one that holds it back anyway
-  gets a gesture from the first key or tap, which starts the sound (and the frames from the top
-  with it); nothing on the screen asks for it.
+  filling the terminal's green frame (AppHost), where a tap leaves (a screen reader hears so); on
+  a keyboard the picture and, once the show has played a few seconds, one line saying how to
+  leave. Esc, ^C, q and Back close it, with a short fade; m still mutes whichever plays,
+  unannounced. On a touch screen the show first asks for a tap, 'Tap to elevate privileges', and
+  starts inside it, sound and picture together, since a tap is a gesture every browser lets start
+  sound. sudo also readies the track inside the key press that answers its password
+  (services/warm-show.ts unlockAudio), so a browser that starts sound only from a gesture lets it
+  play here; one that holds it back anyway gets a gesture from the first key or tap, which starts
+  the sound (and the frames from the top with it); nothing on the screen asks for it.
 
   The frames are fetched when the show opens (services/frames.ts): on a screen taller than wide
   (a phone held upright) the portrait cut, the middle of the picture; elsewhere the whole picture.
@@ -516,12 +515,12 @@
 
   /*
     A touch screen, upright or on its side: the picture covers the whole window inside its frame,
-    which AppHost makes all of the screen the page may draw on, as large as it must be in both
-    directions, centred, so what overflows is cut evenly from both sides (the portrait cut is a
+    which AppHost puts where the terminal's frame is, as large as it must be in both directions,
+    centred, so what overflows is cut evenly from both sides (the portrait cut is a
     little wider than most phones held upright; the whole picture a little taller than one on its
     side). The stage is a size container, so the font follows the stage's own width and height: a
     cell is 0.585 em wide (Vesen Mono's advance, 1200 of 2048) and 1.15 em tall. Where container
-    units are missing (iOS 15), the viewport less the frame's border stands in for it.
+    units are missing (iOS 15), the viewport less the frame (12 px each way) stands in for it.
   */
   .rick.touch {
     gap: 0;
@@ -539,7 +538,7 @@
 
   .rick.touch .frame {
     flex: none;
-    font-size: max(calc((100vw - 4px) / (var(--cols) * 0.585)), calc((100vh - 4px) / (var(--rows) * 1.15)));
+    font-size: max(calc((100vw - 12px) / (var(--cols) * 0.585)), calc((100vh - 12px) / (var(--rows) * 1.15)));
   }
 
   @supports (width: 1cqw) {
