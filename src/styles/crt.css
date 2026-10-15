@@ -37,6 +37,29 @@ html.crt-vintage :is(.scrollback, .app-host) {
   filter: saturate(1.15) contrast(1.05);
 }
 
+/* Bold text glows less. Vesen Mono has one weight, so the browser draws bold by overprinting each
+   glyph, and the glow is drawn under each print: at the full strength it doubles into a blur
+   (fastfetch's labels, the prompt's user and host). Here it is a tight halo and a faint bloom;
+   vintage keeps its fringes over it. */
+:is(html.crt-phosphor, html.crt-vintage) :is(.scrollback, .app-host) :is(b, strong, th, .b) {
+  text-shadow: 0 0 2px currentColor;
+}
+
+@supports (color: color-mix(in srgb, red 50%, transparent)) {
+  html.crt-phosphor :is(.scrollback, .app-host) :is(b, strong, th, .b) {
+    text-shadow:
+      0 0 1px color-mix(in srgb, currentColor 55%, transparent),
+      0 0 4px color-mix(in srgb, currentColor 30%, transparent);
+  }
+
+  html.crt-vintage :is(.scrollback, .app-host) :is(b, strong, th, .b) {
+    text-shadow:
+      0.6px 0 0 rgba(255, 45, 90, 0.35),
+      -0.6px 0 0 rgba(60, 190, 255, 0.35),
+      0 0 4px color-mix(in srgb, currentColor 30%, transparent);
+  }
+}
+
 /* The glow is inherited, and the browsers' own stylesheets turn it off on buttons and inputs
    (`text-shadow: none`), so every tappable name (a button) and link in the output takes its
    parent's again, and so does the prompt's input, which draws the line being typed on a touch
@@ -210,6 +233,10 @@ html.crt-on.crt-tier-lite .crt-layer-vignette {
 html.crt-on.crt-tier-lite.crt-vintage :is(.scrollback, .app-host) {
   text-shadow: 0 0 2px currentColor;
   filter: none;
+}
+
+html.crt-on.crt-tier-lite.crt-vintage :is(.scrollback, .app-host) :is(b, strong, th, .b) {
+  text-shadow: 0 0 1px currentColor;
 }
 
 /* --- Safety nets ----------------------------------------------------------

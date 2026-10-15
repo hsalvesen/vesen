@@ -190,6 +190,10 @@ test.describe('CRT tiers', { tag: '@smoke' }, () => {
       expect(await shadow('.input-box .mirror')).toContain('6px');
       expect(await shadow('input.command-input')).toBe('none');
     }
+    // Bold text glows less: the browser draws it by overprinting, which would double a full glow.
+    const bold = await page.locator('.prompt-line .prompt .b').first().evaluate((el) => getComputedStyle(el).textShadow);
+    expect(bold).not.toContain('6px');
+    expect(bold).toContain('4px');
 
     await run(page, 'cathode ls');
     const reason = test.info().project.name === 'iphone-instagram' ? "in Instagram's in-app browser" : tier === 'lite' ? 'a touch screen' : 'a desktop';
