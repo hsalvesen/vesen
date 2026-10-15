@@ -246,6 +246,10 @@ describe('sudo', () => {
     expect(term.fullscreen).not.toHaveBeenCalled();
   });
 
+  it('runs with no status line, so nothing comes between the line, the password and the show', () => {
+    expect(sudo.statusLine).toBe(false);
+  });
+
   it('answers --help and man like sudo itself, with nothing of the show in them', async () => {
     const term = terminal();
     const h = harness({ specs: [sudo, man], terminal: term.info });

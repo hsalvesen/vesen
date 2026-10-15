@@ -195,6 +195,11 @@ export interface CommandSpec {
   /** The status line while the command runs, such as 'fetching forecast for Oslo'. */
   readonly loadingLabel?: (argv: readonly string[]) => string;
   /**
+   * No status line while it runs: sudo, whose password prompt and show are all that a terminal's
+   * sudo shows. ^C and Esc still stop it, and so does the dock's cancel chip.
+   */
+  readonly statusLine?: false;
+  /**
    * Asks before spending this much data in the listed conditions: speedtest. `bytes` may depend
    * on the line (`speedtest --full`); 0 asks nothing.
    */
@@ -423,6 +428,8 @@ export interface JobInfo {
   readonly name: string;
   readonly label: string | null;
   readonly startedAt: number;
+  /** The command now running asks for no status line (CommandSpec.statusLine). */
+  readonly statusLine?: false;
 }
 
 // ── Identity ───────────────────────────────────────────────────────────────────────────────

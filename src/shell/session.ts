@@ -287,22 +287,25 @@ export class JobControl {
   /** The running job, or null while the prompt is idle. */
   readonly store: Readable<JobState | null> = readonly(this.state);
 
-  /** Starts a job for a line, aborting any job still running. */
-  begin(name: string, now: number): { id: number; signal: AbortSignal } {
+  /**
+   * Starts a job for a line, aborting any job still running. `statusLine` false: the line's first
+   * command asks for none, so none shows even before it runs.
+   */
+  begin(name: string, now: number, statusLine?: false): { id: number; signal: AbortSignal } {
     this.abort();
     const id = ++this.lastId;
     const controller = new AbortController();
     this.controller = controller;
-    this.state.set({ id, name, label: null, startedAt: now });
+    this.state.set({ id, name, label: null, startedAt: now, ...(statusLine === false ? { statusLine } : {}) });
     return { id, signal: controller.signal };
   }
 
-  /** Updates what the running job shows: the command now running and its label. */
-  describe(id: number, name: string, label: string | null): void {
+  /** Updates what the running job shows: the command now running, its label, and whether it wants a status line. */
+  describe(id: number, name: string, label: string | null, statusLine?: false): void {
     const current = this.state.get();
     if (current === null || current.id !== id) return;
-    if (current.name === name && current.label === label) return;
-    this.state.set({ ...current, name, label });
+    if (current.name === name && current.label === label && current.statusLine === statusLine) return;
+    this.state.set({ id: current.id, name, label, startedAt: current.startedAt, ...(statusLine === false ? { statusLine } : {}) });
   }
 
   /** Ends job `id` if it is still the current one. */

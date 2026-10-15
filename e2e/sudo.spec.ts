@@ -73,12 +73,23 @@ async function sudoPrompt(page: Page): Promise<void> {
   await expect(hint(page)).toHaveCount(0);
 }
 
-/** Types `sudo ls`, then a password, and waits for the show. */
+/**
+ * Types `sudo ls`, then a password, and waits for the show, with no status line at any point:
+ * nothing comes between the line, the password and the show.
+ */
 async function sudoLs(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const seen = { line: false };
+    (window as unknown as { statusSeen: typeof seen }).statusSeen = seen;
+    new MutationObserver(() => {
+      if (document.querySelector('.status-line') !== null) seen.line = true;
+    }).observe(document.body, { childList: true, subtree: true });
+  });
   await sudoPrompt(page);
   await prompt(page).pressSequentially(SECRET);
   await prompt(page).press('Enter');
   await expect(show(page)).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { statusSeen: { line: boolean } }).statusSeen.line)).toBe(false);
   if (isPhone()) await elevate(page);
 }
 

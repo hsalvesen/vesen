@@ -334,7 +334,8 @@ export class PromptController {
   /** What the status line shows while a line runs: the line, its label, when it started. */
   readonly status = $derived.by((): { line: string; label: string | null; startedAt: number } | null => {
     const running = this.running;
-    if (running === null || this.read !== null) return null;
+    // A command that asks for none (sudo) runs with no status line.
+    if (running === null || this.read !== null || this.job?.statusLine === false) return null;
     return { line: running.line, label: this.job?.label ?? null, startedAt: this.job?.startedAt ?? 0 };
   });
 

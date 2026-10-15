@@ -175,8 +175,8 @@ export interface Job {
   readonly preflight: PreflightSlot;
   /** Rings the bell, at most once per job. */
   bell(): void;
-  /** What the status line shows: the command now running, and its label. */
-  describe(name: string, label: string | null): void;
+  /** What the status line shows: the command now running, and its label; false: no status line. */
+  describe(name: string, label: string | null, statusLine?: false): void;
 }
 
 export interface Io {
@@ -733,7 +733,7 @@ export class Executor {
       if (!takesRawArgs(spec)) args = args.slice(1);
     }
 
-    job.describe(spec.name, spec.loadingLabel?.(argv) ?? null);
+    job.describe(spec.name, spec.loadingLabel?.(argv) ?? null, spec.statusLine);
     const budgetMs = spec.budgetMs ?? (spec.network ? DEFAULT_BUDGET_MS : undefined);
     const budget = budgetMs === undefined ? null : deadline(budgetMs);
     const deadlineAt = budgetMs === undefined ? undefined : this.deps.clock.now() + budgetMs;
@@ -969,7 +969,7 @@ export class Executor {
       },
       touch: terminal.touch,
       inApp: terminal.inApp,
-      status: (text) => job.describe(spec.name, text),
+      status: (text) => job.describe(spec.name, text, spec.statusLine),
       readLine: (options) => this.readLine(job, options),
       confirm: async (message, options = {}) => {
         const yes = options.defaultAnswer === true;

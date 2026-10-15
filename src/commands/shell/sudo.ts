@@ -23,5 +23,7 @@ export default defineCommand({
     { line: 'sudo --help', note: 'what it would do', offline: true },
   ],
   seeAlso: ['whoami', 'id'],
+  // Nothing comes between the line, the password and the show, as nothing does in a terminal.
+  statusLine: false,
   load: () => import('./sudo.run'),
 });

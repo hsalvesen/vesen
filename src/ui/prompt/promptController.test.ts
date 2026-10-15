@@ -895,6 +895,19 @@ describe('sudo’s password', () => {
     expect(input.value).not.toContain('hunter');
   });
 
+  it('shows no status line between the password and the show: sudo asks for none', async () => {
+    const { input, controller, h } = setup();
+    await sudoPrompt(input, controller);
+    typeKeys(input, SECRET);
+    press(input, 'Enter');
+    // sudo seems to check the password for a moment before the show (sudo.run.ts CHECKING_MS).
+    await vi.waitFor(() => expect(controller.read).toBeNull());
+    expect(controller.running).not.toBeNull();
+    expect(controller.job?.name).toBe('sudo');
+    expect(controller.status).toBeNull();
+    await vi.waitFor(() => expect(h.commits).toHaveLength(1));
+  });
+
   it('has no dim hint: the prompt is the word alone, described by the keys as any line is', async () => {
     const { input, controller } = setup();
     expect(input.getAttribute('aria-describedby')).toBe('prompt-keys');

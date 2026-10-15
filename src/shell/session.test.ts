@@ -203,6 +203,17 @@ describe('JobControl', () => {
     expect(jobs.abort()).toBe(false);
   });
 
+  it('says when the command now running wants no status line, from the start, for as long as it runs', () => {
+    const jobs = new JobControl();
+    const { id } = jobs.begin('sudo', 0, false);
+    expect(jobs.store.get()?.statusLine).toBe(false);
+    jobs.describe(id, 'sudo', null, false);
+    expect(jobs.store.get()).toEqual({ id, name: 'sudo', label: null, startedAt: 0, statusLine: false });
+    // The next command of the line has one again.
+    jobs.describe(id, 'echo', null);
+    expect(jobs.store.get()).toEqual({ id, name: 'echo', label: null, startedAt: 0 });
+  });
+
   it('ignores updates for a job that is no longer current', () => {
     const jobs = new JobControl();
     const old = jobs.begin('a', 0);

@@ -381,7 +381,8 @@ export function createShell(deps: ShellDeps): Shell {
     const first = line.trim().split(/\s+/)[0] ?? '';
     const prompt = renderPrompt();
     const startedAt = deps.clock.now();
-    const { id, signal } = session.jobs.begin(first, startedAt);
+    // A first command that asks for no status line (sudo) has none from the start, not only once it runs.
+    const { id, signal } = session.jobs.begin(first, startedAt, deps.registry.get(first)?.statusLine);
     let belled = false;
     const transcript = deps.screen;
     const sink = new TtySink({
@@ -399,7 +400,7 @@ export function createShell(deps: ShellDeps): Shell {
         belled = true;
         deps.bell?.ring();
       },
-      describe: (name, label) => session.jobs.describe(id, name, label),
+      describe: (name, label, statusLine) => session.jobs.describe(id, name, label, statusLine),
     };
     // ^C shows where the output had got to, first, then seals the screen before anything the job
     // does next can write to it. Only what the abort event itself writes still lands, after the
