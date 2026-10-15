@@ -3,7 +3,7 @@
   // Cloudflare-only types come from src/env.d.ts, so this runs without installing anything:
   //   npx tsc -p worker/stock/tsconfig.json --noEmit
   // Wrangler bundles with esbuild and does not read this file. The tests are checked by the
-  // root tsconfig.strict.node.json and run by the root Vitest config (project "worker").
+  // root config/tsconfig.strict.node.json and run by the root Vitest config (project "worker").
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",

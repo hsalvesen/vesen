@@ -6,7 +6,7 @@
   // @types/node adds to ES2021) through, and Safari 15 has none of them. vite/client and svelte
   // come in through src/global.d.ts. Tests, scripts and config files are checked under Node's
   // types by tsconfig.strict.node.json.
-  "extends": "./tsconfig.json",
+  "extends": "../tsconfig.json",
   "compilerOptions": {
     "strict": true,
     "noImplicitAny": true,
@@ -18,21 +18,21 @@
     "types": []
   },
   "include": [
-    "src/global.d.ts",
-    "src/app/**/*.ts",
-    "src/shell/**/*.ts",
-    "src/output/**/*.ts",
-    "src/vfs/**/*.ts",
-    "src/lib/**/*.ts",
-    "src/services/**/*.ts",
-    "src/platform/**/*.ts",
-    "src/ui/**/*.ts",
-    "src/commands/**/*.ts",
-    "src/stores/**/*.ts",
-    "src/interfaces/**/*.ts",
-    "worker/**/*.ts"
+    "../src/global.d.ts",
+    "../src/app/**/*.ts",
+    "../src/shell/**/*.ts",
+    "../src/output/**/*.ts",
+    "../src/vfs/**/*.ts",
+    "../src/lib/**/*.ts",
+    "../src/services/**/*.ts",
+    "../src/platform/**/*.ts",
+    "../src/ui/**/*.ts",
+    "../src/commands/**/*.ts",
+    "../src/stores/**/*.ts",
+    "../src/interfaces/**/*.ts",
+    "../worker/**/*.ts"
   ],
   // The Worker's test helpers read fixtures with Node, so they are checked by
   // tsconfig.strict.node.json.
-  "exclude": ["**/node_modules", "dist", "**/*.test.ts", "worker/*/test/**"]
+  "exclude": ["../**/node_modules", "../dist", "../**/*.test.ts", "../worker/*/test/**"]
 }

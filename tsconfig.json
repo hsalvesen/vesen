@@ -15,8 +15,8 @@
     "skipLibCheck": true,
     "allowJs": true,
     "checkJs": false,
-    // The same strictness as tsconfig.strict.json, now that no loosely typed legacy code is left,
-    // so svelte-check holds the components to it too.
+    // The same strictness as config/tsconfig.strict.json, now that no loosely typed legacy code
+    // is left, so svelte-check holds the components to it too.
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitAny": true,
@@ -26,11 +26,11 @@
     "noUnusedParameters": false,
     "exactOptionalPropertyTypes": false,
     // Node's types are for the tests this config also checks. TypeScript 6 loads no @types
-    // package unless it is listed; tsconfig.strict.json sets "types": [] again, so the strict
-    // browser folders still cannot use Node globals.
+    // package unless it is listed; config/tsconfig.strict.json sets "types": [] again, so the
+    // strict browser folders still cannot use Node globals.
     "types": ["node"]
   },
-  // tests/, scripts and config files are checked by tsconfig.strict.node.json.
+  // tests/, scripts and config files are checked by config/tsconfig.strict.node.json.
   "include": ["src/**/*.ts", "src/**/*.svelte"],
   "exclude": ["node_modules", "dist"]
 }

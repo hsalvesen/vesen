@@ -18,7 +18,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "check:strict": "tsc -p tsconfig.strict.json --noEmit && tsc -p tsconfig.strict.node.json --noEmit",
+    "check:strict": "tsc -p config/tsconfig.strict.json --noEmit && tsc -p config/tsconfig.strict.node.json --noEmit",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:glyphs": "node scripts/check-glyphs.mjs",
     "check:bundle": "node scripts/check-bundle.mjs",
