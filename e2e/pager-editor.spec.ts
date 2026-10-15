@@ -48,8 +48,11 @@ test.describe('the pager and the editor', { tag: '@smoke' }, () => {
     await expect(pager).toBeVisible();
     await expect(pager.locator('.rows')).toContainText('LS(1)');
     await expect(pager.locator('.status')).toContainText('Manual page ls(1)');
-    if (isPhone()) await expect(page.getByRole('button', { name: 'Close' })).toBeVisible();
-    else await expect(pager).toContainText('h help  q quit');
+    // How to leave, in man's words: q quits (and on a phone, so does Close).
+    if (isPhone()) {
+      await expect(page.getByRole('button', { name: 'Close' })).toBeVisible();
+      await expect(pager.locator('.status')).toContainText('(press q or tap Close to quit)');
+    } else await expect(pager.locator('.status')).toContainText('(press h for help or q to quit)');
     // Nothing scrolls sideways, at any width.
     const sideways = await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - window.innerWidth));
     expect(sideways).toBe(0);

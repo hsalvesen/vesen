@@ -41,6 +41,12 @@ describe('Pager', () => {
     expect(document.querySelector('.hint')?.textContent).toBe('h help  q quit');
   });
 
+  it("says how to leave a manual page in man's own words: h for help, q to quit", () => {
+    open({ title: 'Manual page ls(1)' });
+    expect(document.querySelector('.status .where')?.textContent).toMatch(/^Manual page ls\(1\) lines 1-10\/100 10%$/);
+    expect(document.querySelector('.hint')?.textContent).toBe('(press h for help or q to quit)');
+  });
+
   it("moves with less's keys", async () => {
     const { rows, status } = open();
     await press(' ');
@@ -174,6 +180,12 @@ describe('Pager', () => {
 });
 
 describe('Pager on a touch screen', () => {
+  it('says how to leave a manual page: q, or the Close button', () => {
+    open({ touch: true, title: 'Manual page ls(1)' });
+    expect(document.querySelector('.hint')?.textContent).toBe('(press q or tap Close to quit)');
+    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+  });
+
   it('has a toolbar of buttons for a screen back, a screen on, Search and Close, and no key hint', async () => {
     const { rows, close } = open({ touch: true });
     const toolbar = screen.getByRole('toolbar', { name: 'Pager' });
@@ -184,6 +196,7 @@ describe('Pager on a touch screen', () => {
       'Close',
     ]);
     expect(screen.queryByText('h help q quit')).toBeNull();
+    expect(document.querySelector('.hint')).toBeNull();
     await fireEvent.click(screen.getByRole('button', { name: 'On a screen' }));
     expect(rows()[0]).toBe('line 11');
     await fireEvent.click(screen.getByRole('button', { name: 'Back a screen' }));

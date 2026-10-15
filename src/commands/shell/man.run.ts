@@ -8,7 +8,7 @@ import { allCommands } from '../lib/catalogue';
 /** What --help, help and man say about man, besides its spec (man.ts). */
 export const doc: CommandDoc = {
   description:
-    "Shows the manual page of each PAGE: what the command does, how to call it, its options, examples to run and related commands. 'man vesen' is about this terminal.",
+    "Shows the manual page of each PAGE: what the command does, how to call it, its options, examples to run and related commands. On the terminal the page opens in the pager, as less shows it: space, b and the arrows move, /text searches, h lists the keys and q quits (on a touch screen, so does Close). 'man vesen' is about this terminal.",
 };
 
 /** man-db's status when a page is not found. */

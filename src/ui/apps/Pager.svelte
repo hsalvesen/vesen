@@ -1,7 +1,8 @@
 <!--
   The pager: less, more, and man on a terminal (src/lib/pager.ts has the model). The text fills
   the screen, wrapped at its edge as less wraps it, with a status line under it: the name, the
-  lines on screen and how far through, or (END). less's keys move it (q, space, b, j, k, d, u, g,
+  lines on screen and how far through, or (END), and how to leave (for man, man's own words:
+  press h for help or q to quit). less's keys move it (q, space, b, j, k, d, u, g,
   G, the arrows and Page keys); /text and ?text search, highlighting every match, n and N go on;
   h shows the keys. On a touch screen, swipes scroll and a toolbar of 44px buttons pages, searches
   and closes, since a phone has no q. Back (AppHost) does what Esc and q do: it closes the search
@@ -43,6 +44,9 @@
   const PROBE = 'MMMMMMMMMM';
   /** The keys hint on a keyboard, two spaces between the pair. */
   const PAGER_HINT = 'h help  q quit';
+  /** man's own words for leaving its pager, on a keyboard; a touch screen names its Close button too. */
+  const MAN_HINT = '(press h for help or q to quit)';
+  const MAN_TOUCH_HINT = '(press q or tap Close to quit)';
 
   /** The screen in characters: the terminal's until the pager has measured its own. */
   let columns = $state(view.columns);
@@ -100,6 +104,9 @@
     const where = text.length === 0 ? '' : ` lines ${first}-${last}/${lines.length}`;
     return `${view.title}${where} ${atEnd ? '(END)' : `${percent}%`}`;
   });
+
+  /** How to leave, at the status line's end: man says so as man does, everywhere; less on a keyboard. */
+  const quitHint = $derived(view.title.startsWith('Manual page ') ? (view.touch ? MAN_TOUCH_HINT : MAN_HINT) : view.touch ? '' : PAGER_HINT);
 
   function finish(): void {
     if (closed) return;
@@ -358,7 +365,7 @@
       <div class="status">
         <span class="where">{status}</span>
         <!-- Two spaces between the keys, kept as an expression so the compiler does not collapse them. -->
-        {#if !view.touch}<span class="hint">{PAGER_HINT}</span>{/if}
+        {#if quitHint !== ''}<span class="hint">{quitHint}</span>{/if}
       </div>
     {/if}
     <p class="sr-only" role="status" aria-live="polite">{message}</p>
@@ -442,10 +449,12 @@
     flex: none;
   }
 
-  /* less's status line, in reverse video: the background's colour on the text's. */
+  /* less's status line, in reverse video: the background's colour on the text's. Where the name
+     and how to leave do not fit on one line, how to leave goes on a second. */
   .status {
     display: flex;
-    gap: 2ch;
+    flex-wrap: wrap;
+    gap: 0 2ch;
     justify-content: space-between;
     background: var(--role-fg, var(--theme-foreground));
     color: var(--theme-background);
