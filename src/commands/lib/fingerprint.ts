@@ -1,69 +1,42 @@
-/*!
- * The fingerprint sudo's show asks a touch screen's thumb on (commands/lib/rick.ts,
- * RICK_FINGERPRINT): Omarchy's fingerprint artwork (github.com/omacom/omarchy), as
- * fingerprint-tui traces it to text (github.com/standardagents/fingerprint-tui,
- * fingerprint_tui/art.py), its common indent taken off. Under the MIT licence, whose notice the
- * site also serves at /licences/fingerprint.txt (public/licences/fingerprint.txt), since the build
- * drops comments:
- *
- * Copyright (c) David Heinemeier Hansson
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
- * "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
- * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
- * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
- * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+// The fingerprint sudo's show asks a touch screen's thumb on (commands/lib/rick.ts,
+// RICK_FINGERPRINT): vesen's own, drawn by scripts/fingerprint-art.py in the letters of the
+// banner's figlet Roman (888 stems, d88P and Y88b where a ridge slants, .oooo. along the top of a
+// ridge and '""' along its foot) from a loop of its own making, as a thumb's ridges run.
 
-/** The print, row by row: ridges drawn in @, as the trace has them. */
+/** The print, row by row. */
 export const FINGERPRINT: readonly string[] = [
-  '                   @@@@@@@@@@@@@',
-  '             @@@@@@@@@@@@@@@@@@@@@@@@@@',
-  '          @@@@@@@@@             @@@@@@@@@@',
-  '       @@@@@@@                        @@@@@@@',
-  '     @@@@@@     @@@@@@@@@@@@@@@@@@@      @@@@@@@',
-  '   @@@@@    @@@@@@@@@@@@@@@@@@@@@@@@@@@     @@@',
-  '   @@@@   @@@@@@@                  @@@@@@@',
-  '        @@@@@@      @@@@@@@@@@@@      @@@@@@',
-  '      @@@@@     @@@@@@@@@@@@@@@@@@@@     @@@@@',
-  '    @@@@@    @@@@@@@            @@@@@@@    @@@@@',
-  '   @@@@@   @@@@@@      @@@@@       @@@@@@    @@@@@',
-  '  @@@@    @@@@     @@@@@@@@@@@@@@     @@@@@   @@@@',
-  ' @@@@   @@@@@   @@@@@@@@    @@@@@@@@   @@@@@',
-  ' @@@   @@@@   @@@@@@            @@@@@    @@@@  @@@',
-  '      @@@@   @@@@@    @@@@@@@@    @@@@@   @@@@ @@@@',
-  '    @@@@@   @@@@   @@@@@@@@@@@@@   @@@@   @@@@ @@@@',
-  '  @@@@@@   @@@@   @@@@@      @@@@   @@@@   @@@  @@@@',
-  '@@@@@@    @@@@   @@@@         @@@@  @@@@   @@@  @@@@',
-  '@@@@    @@@@@   @@@@    @@@@  @@@@  @@@@  @@@@  @@@@',
-  '       @@@@@   @@@@    @@@@@   @@@  @@@@  @@@@  @@@@',
-  '    @@@@@@    @@@@    @@@@    @@@@  @@@@  @@@@  @@@@',
-  '  @@@@@@    @@@@@    @@@@    @@@@@  @@@   @@@   @@@@',
-  '@@@@@@    @@@@@@   @@@@@    @@@@@  @@@@  @@@@   @@@@',
-  '@@@     @@@@@@    @@@@@    @@@@    @@@@  @@@@   @@@',
-  '      @@@@@@    @@@@@    @@@@@     @@@   @@@@  @@@@',
-  '   @@@@@@     @@@@@     @@@@@      @@@@   @@@@ @@@@',
-  ' @@@@@@     @@@@@@    @@@@@  @@@@@ @@@@   @@@@',
-  '@@@@      @@@@@@    @@@@@    @@@@  @@@@    @@@@@',
-  '        @@@@@@    @@@@@      @@@    @@@@     @@@@@',
-  '     @@@@@@     @@@@@@       @@@     @@@@@     @@',
-  '   @@@@@@     @@@@@          @@@@     @@@@@@@@',
-  '   @@@@    @@@@@@   @@@@@@@   @@@@@      @@@@@@',
-  '         @@@@@@   @@@@@@@@@@@  @@@@@@',
-  '        @@@@@   @@@@@    @@@@@   @@@@@',
-  '               @@@@       @@@@@    @@',
-  '                           @@@',
+  '                   .ooooooooooooooooo.',
+  '            dPoo\'"\'                   ""8',
+  '         d888P      .oo.\'"""""""""\'.o.   8',
+  '       d88P    d8888P                Y8888b',
+  '     d88P   d888P   dPoo\'""""""""\'oY8b   Y88b',
+  '    d8P   d88P  d8888P              Y88b   Y8b',
+  '   dP  d888P  d888P dPoo\'""""""\'oYb   Y88b   Yb',
+  '  88  8dP   d88P d888P           Y888b  Y8b   Yb',
+  ' 88   88  8888 d88P  d8P\'"""""\'Y8b  Y88b Y88b  Yb',
+  ' 88  888  888  88  d88P         Y88b  Y8b  Y8b  8',
+  '888  888  88  888  888  8dP  Yb8  888  888  888  8',
+  'dP  d8P  888  888  888  88    88  888  888   88',
+  '  d88P d88P  d8P  888   88   88  888  888   888',
+  ' d8P  d8P  d88P  d8P   88   88  888   888   888  8',
+  'd8P  d8P  d8P  d88P   dP    88  888  888   888  88',
+  'dP d88P  888  8888  8dP    88  888   888  888  888',
+  '  d88P  888   888   88    dP   888  888   888  888',
+  'd88P  d88P   dP8   88   d8P  d88P  d8P8  888  888',
+  'dP  d88P   d88P   dP   dP   d8P   d88P  d8P  d8P',
+  '  d88P   d88P   dP   dP   d88P  d88P  d88P  d8P',
+  ' d8P   d88P   dP    88   888   d88P  d8P  d88P dP',
+  '      d8P   dP     dP   888   888   8dP  d8P  dP',
+  '    d88P   dP    d8P   d8P   d8P   d8P  888  888',
+  '   d8P   d8P   d8P   d88P  d88P  d88P  d8P  888',
+  '    8  d8P   d8P  d888P  d88P  d88P  d88P d88P',
+  '     d8P   d8P   d8P   d88P  d88P  d88P d88P',
+  '          dP    d8P   d8P   d8P  d88P  d8P',
+  '        d8P   d88P   d8P  d88P d88P  d88P',
+  '        8   d88P   d88P  d8P  d88P  d8P',
+  '          d88P   d88P  d88P d88P  d88P',
+  '              d888P d888P d88P  d88P',
+  '              dP  d88P  d88P  d88P',
+  '                 d8P  d88P  d88P',
+  '                      dP  dP',
 ];

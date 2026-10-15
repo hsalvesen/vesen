@@ -180,7 +180,6 @@ Quotes come through vesen-stock, a small Cloudflare Worker in [`worker/stock`](w
 - Weather data by [Open-Meteo.com](https://open-meteo.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - Place names © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, under the [ODbL](https://opendatacommons.org/licenses/odbl/).
 - The terminal font, Vesen Mono (`public/fonts/VesenMono.woff2`), is a modified subset of Cascadia Code, distributed under the SIL Open Font License 1.1 under its own name: see [public/fonts/OFL.txt](public/fonts/OFL.txt).
-- The fingerprint on `sudo`'s phone screen is [Omarchy](https://github.com/omacom/omarchy)'s, as [fingerprint-tui](https://github.com/standardagents/fingerprint-tui) traces it to text, under the MIT licence: see [public/licences/fingerprint.txt](public/licences/fingerprint.txt).
 
 `privacy` in the terminal lists every service a command talks to and what it sends.
 

@@ -52,8 +52,8 @@ export const RICK_TAP_HINT = 'Tap to exit.';
 export const RICK_ELEVATE = 'Scan your right thumb\nto elevate privileges';
 
 /**
- * The print above it: Omarchy's fingerprint artwork, as fingerprint-tui traces it to text, a loop
- * of ridges drawn in @ (commands/lib/fingerprint.ts, which carries its MIT licence).
+ * The print above it: vesen's own fingerprint, a loop of ridges in the banner's Roman letters
+ * (commands/lib/fingerprint.ts, drawn by scripts/fingerprint-art.py).
  */
 export const RICK_FINGERPRINT = FINGERPRINT.join('\n');
 

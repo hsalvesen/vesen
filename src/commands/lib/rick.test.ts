@@ -1,11 +1,12 @@
 // sudo's show: the tune a well-formed song of the promised length and tempo, written for vesen,
 // the view naming the owner's track and frames, the title and the way it reads, and the
 // fingerprint a touch screen asks the visitor's thumb on.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parseSong, schedule } from '../../lib/chiptune';
 import { RICK_ALT, RICK_ELEVATE, RICK_FINGERPRINT, RICK_FRAMES, RICK_FRAMES_PORTRAIT, RICK_SONG, RICK_TITLE, RICK_TRACK, rickLoopSeconds, rickView } from './rick';
+import { BANNER_ROWS } from './banner';
 
 describe('the tune', () => {
   it('is a well-formed song at 113 bpm that loops in 30 to 45 seconds, using all four channels', () => {
@@ -51,24 +52,24 @@ describe('the view', () => {
 });
 
 describe('the fingerprint', () => {
-  it("is Omarchy's print as fingerprint-tui traces it: 36 rows of ridges in @, with no trailing spaces", () => {
+  it("is vesen's own print in the banner's Roman letters: 34 rows of ridges, with no trailing spaces", () => {
     const rows = RICK_FINGERPRINT.split('\n');
-    expect(rows).toHaveLength(36);
-    expect(RICK_FINGERPRINT).toMatch(/^[@ \n]+$/);
+    expect(rows).toHaveLength(34);
+    expect(Math.max(...rows.map((row) => row.length))).toBe(50);
     expect(rows.every((row) => row.trim() !== '' && row === row.trimEnd())).toBe(true);
-    expect(Math.max(...rows.map((row) => row.length))).toBe(52);
+    // The banner's letters and nothing else: 8 for stems, d P Y b where a ridge slants, o . ' " along it.
+    const banner = new Set(BANNER_ROWS.join('').replace(/\s/g, ''));
+    for (const ch of new Set(RICK_FINGERPRINT.replace(/\s/g, ''))) expect(banner.has(ch), ch).toBe(true);
+    expect(RICK_FINGERPRINT).not.toContain('@');
     // Its common indent is off, so it centres: some row starts at the left edge.
     expect(Math.min(...rows.map((row) => row.length - row.trimStart().length))).toBe(0);
   });
 
-  it('ships with its MIT licence: in the file that holds it, and served beside the site, since the build drops comments', () => {
+  it('is what scripts/fingerprint-art.py draws, and carries no one else\'s notice', () => {
     const source = readFileSync(fileURLToPath(new URL('./fingerprint.ts', import.meta.url)), 'utf8');
-    const served = readFileSync(fileURLToPath(new URL('../../../public/licences/fingerprint.txt', import.meta.url)), 'utf8');
-    for (const text of [source, served]) {
-      expect(text).toContain('Copyright (c) David Heinemeier Hansson');
-      expect(text).toContain('The above copyright notice and this permission notice shall be');
-      expect(text).toContain('github.com/omacom/omarchy');
-    }
+    expect(source).toContain('scripts/fingerprint-art.py');
+    expect(source).not.toMatch(/copyright|licen[cs]e|permission is hereby/i);
+    expect(existsSync(fileURLToPath(new URL('../../../scripts/fingerprint-art.py', import.meta.url)))).toBe(true);
   });
 
   it('is asked for in two lines: scan your right thumb, to elevate privileges', () => {

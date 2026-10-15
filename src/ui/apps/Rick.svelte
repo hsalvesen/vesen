@@ -9,7 +9,7 @@
   a keyboard the picture and, once the show has played a few seconds, one line saying how to
   leave. Esc, ^C, q and Back close it, with a short fade; m still mutes whichever plays,
   unannounced. On a touch screen the show first asks for the visitor's thumb: a fingerprint drawn
-  in text (RICK_FINGERPRINT, Omarchy's) over 'Scan your right thumb to elevate privileges', with no
+  in text (RICK_FINGERPRINT, vesen's own) over 'Scan your right thumb to elevate privileges', with no
   box round either, and a touch anywhere starts it, sound and picture together, since a tap is a gesture
   every browser lets start sound. On a keyboard sudo readies the track inside the key press that
   answers its password (services/warm-show.ts unlockAudio), so a browser that starts sound only
