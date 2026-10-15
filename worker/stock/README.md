@@ -88,7 +88,7 @@ Tests live in `test/` and run under the root Vitest config as the `worker` proje
 
 Yahoo's behaviour was checked only from a home connection. Cloudflare's shared addresses may be treated differently, so before the Worker is relied on, a throwaway Worker in `spike/` samples the sources from Cloudflare for 24 hours.
 
-1. Complete steps 1 to 3 of the owner setup below.
+1. Create the Cloudflare account (owner setup, step 1, below), then from this folder run `npm install` and `npx wrangler login`.
 2. From `worker/stock`, create its namespace and paste the id into `spike/wrangler.toml`:
 
    ```bash
@@ -110,45 +110,24 @@ Then delete the spike with `npx wrangler delete --config spike/wrangler.toml`, a
 
 ## Owner setup
 
+Once, and about five minutes. Until it is done, the site reads Yahoo through the public api.allorigins.win proxy, which is slow at best and often down, so `stock` mostly fails.
+
 1. **Create a free Cloudflare account** at [dash.cloudflare.com](https://dash.cloudflare.com/sign-up). The Workers free plan allows 100,000 requests a day and needs no card. Choose a `workers.dev` subdomain when asked.
-2. **Install and log in** from this folder:
+2. **Create an API token** under My Profile, API Tokens, Create Token, with the "Edit Cloudflare Workers" template.
+3. **Add two repository secrets** in GitHub (Settings, Secrets and variables, Actions, Secrets):
+   - `CLOUDFLARE_API_TOKEN`: the token from step 2.
+   - `CLOUDFLARE_ACCOUNT_ID`: shown on the Workers and Pages overview page.
+4. **Deploy:** in GitHub, Actions, Stock Worker, Run workflow. It tests the Worker, deploys it, and its summary gives the Worker's URL, such as `https://vesen-stock.<subdomain>.workers.dev`.
+5. **Point the site at it:** add a repository variable (Settings, Secrets and variables, Actions, Variables) named `VITE_STOCK_API`, with that URL and no trailing slash, then run CI on `main` again. The site's next build asks the Worker for quotes, and every card names its source.
 
-   ```bash
-   cd worker/stock
-   npm install
-   npx wrangler login
-   ```
+From then on, `.github/workflows/stock-worker.yml` tests and deploys the Worker whenever `worker/stock/**` or `src/services/market/**` changes on `main`, and checks `/v1/health` and `/v1/quote?symbol=AAPL` (from `https://www.vesen.app`) every day. Until the secrets and the variable exist, both jobs skip with a notice. GitHub emails you when the canary fails.
 
-   Commit the `package-lock.json` that `npm install` writes. The deploy workflow installs Wrangler from it with `npm ci`, and refuses to deploy without it, so every deploy runs the same packages. The Cloudflare token reaches only the workflow's Deploy step, never the steps that install packages.
+**Optional:**
 
-3. **Run the Stage 0 spike** above, and follow its verdict.
-4. **Create the snapshot store** and paste the id it prints into `wrangler.toml`, replacing `REPLACE_WITH_SNAPSHOT_KV_ID`:
-
-   ```bash
-   npx wrangler kv namespace create SNAPSHOT
-   ```
-
-5. **Deploy:**
-
-   ```bash
-   npx wrangler deploy
-   ```
-
-   It prints the Worker's URL, such as `https://vesen-stock.<account>.workers.dev`. Check it:
-
-   ```bash
-   curl -i -H 'Origin: https://www.vesen.app' 'https://vesen-stock.<account>.workers.dev/v1/quote?symbol=AAPL'
-   ```
-
-6. **Point the app at it.** The stock command (Phase 4) reads `VITE_STOCK_API` at build time. Set it for local builds in `.env.local`, and in GitHub as a repository variable (Settings → Secrets and variables → Actions → Variables) named `VITE_STOCK_API`, with the URL from step 5 and no trailing slash. The daily canary reads the same variable.
-7. **Let GitHub deploy it.** Add two repository secrets:
-   - `CLOUDFLARE_API_TOKEN`: create it under My Profile → API Tokens with the "Edit Cloudflare Workers" template.
-   - `CLOUDFLARE_ACCOUNT_ID`: shown on the Workers overview page.
-
-   From then on, `.github/workflows/stock-worker.yml` tests and deploys the Worker whenever `worker/stock/**` or `src/services/market/**` changes on `main`, and checks `/v1/health` and `/v1/quote?symbol=AAPL` (from `https://www.vesen.app`) every day. Until the secrets and the variable exist, both jobs skip with a notice. GitHub emails you when the canary fails.
-8. **Optional:** add a Finnhub key for a third, US-only source with `npx wrangler secret put FINNHUB_KEY`. It is appended to the provider order automatically.
-
-After the first `npm install` here, commit `worker/stock/package-lock.json` so CI installs the same Wrangler.
+- **The snapshot store.** Without it the curated tickers' snapshot answers from the copy built into the Worker, marked stale. To keep it fresh, run `npx wrangler kv namespace create SNAPSHOT` from this folder and uncomment the `[[kv_namespaces]]` lines in `wrangler.toml` with the id it prints.
+- **A third source.** Add a Finnhub key with `npx wrangler secret put FINNHUB_KEY` (US symbols only); it is appended to the provider order automatically.
+- **Deploying from your own machine:** `npm install`, `npx wrangler login` and `npx wrangler deploy` from this folder, then step 5. Commit any change `npm install` makes to `package-lock.json`: the workflow installs Wrangler from it with `npm ci`, and the Cloudflare token reaches only its Deploy step, never the steps that install packages.
+- **The Stage 0 spike** above, to see how Yahoo treats Cloudflare's addresses before relying on it. From a home connection in October 2026, Yahoo answered the Worker's User-Agent at once for US and ASX symbols alike, and the Worker run locally (`npx wrangler dev`) gave the app every kind of answer it draws; Cloudflare's shared addresses may still be treated differently.
 
 ## Terms
 

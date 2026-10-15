@@ -9,13 +9,14 @@ workers_dev = true
 [triggers]
 crons = ["*/15 * * * *"]
 
-# Holds the snapshot under the key "snapshot:v1". Create the namespace once with
+# Optional: a store for the snapshot, under the key "snapshot:v1". Without it the Worker deploys
+# and answers quotes as usual, and /v1/snapshot answers from the copy built into the Worker, marked
+# stale. To add it, create the namespace once with
 #   npx wrangler kv namespace create SNAPSHOT
-# and paste the id it prints below. Until then /v1/snapshot answers from the copy built into the
-# Worker, marked stale. `wrangler dev` simulates KV locally and ignores the id.
-[[kv_namespaces]]
-binding = "SNAPSHOT"
-id = "REPLACE_WITH_SNAPSHOT_KV_ID"
+# and uncomment these three lines with the id it prints.
+# [[kv_namespaces]]
+# binding = "SNAPSHOT"
+# id = "PASTE_THE_ID_HERE"
 
 [vars]
 # Browser origins the Worker answers, comma-separated. A `*` in the host matches one DNS label

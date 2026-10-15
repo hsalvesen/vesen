@@ -68,3 +68,6 @@ $RECYCLE.BIN/
 
 # Vercel (not used; the site is on Firebase Hosting)
 .vercel
+
+# The stock Worker's local state from wrangler dev.
+worker/stock/.wrangler/
