@@ -8,7 +8,7 @@ describe('the line reader', () => {
     reader.request.subscribe((value) => seen.push(value));
     const answer = reader.read({ prompt: 'name? ', hint: 'a hint' });
     const request = reader.request.get();
-    expect(request).toMatchObject({ prompt: 'name? ', secret: false, hint: 'a hint' });
+    expect(request).toMatchObject({ prompt: 'name? ', secret: false, hint: 'a hint', tap: false });
     reader.answer(request?.id ?? -1, 'guest');
     await expect(answer).resolves.toBe('guest');
     expect(reader.request.get()).toBeNull();
@@ -74,5 +74,21 @@ describe('the line reader', () => {
     reader.answer(reader.request.get()?.id ?? -1, 'y');
     await plain;
     expect(unlock).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks for a tap where told, and unlocks its track inside the tap, which answers with nothing', async () => {
+    const unlock = vi.fn();
+    const reader = createLineReader(undefined, unlock);
+    const answer = reader.read({ prompt: 'Tap to go on', tap: true, unlocks: '/audio/track.mp3' });
+    expect(reader.request.get()).toMatchObject({ prompt: 'Tap to go on', secret: false, feedback: false, tap: true });
+    reader.answer(reader.request.get()?.id ?? -1, '');
+    expect(unlock).toHaveBeenCalledWith('/audio/track.mp3');
+    await expect(answer).resolves.toBe('');
+
+    // A secret is typed, never tapped.
+    const secret = reader.read({ prompt: 'Password: ', secret: true, tap: true });
+    expect(reader.request.get()?.tap).toBe(false);
+    reader.answer(reader.request.get()?.id ?? -1, null);
+    await secret;
   });
 });

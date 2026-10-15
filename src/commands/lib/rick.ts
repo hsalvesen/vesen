@@ -44,9 +44,6 @@ export const RICK_HINT_AFTER_MS = 3000;
 /** How to leave on a touch screen, for a screen reader: the screen itself shows the picture alone. */
 export const RICK_TAP_HINT = 'Tap to exit.';
 
-/** What a touch screen asks before the show: the tap starts it, so the browser lets its sound play. */
-export const RICK_ELEVATE = 'Tap to elevate privileges';
-
 /**
  * The owner's track (public/audio/incident-report.mp3, served from this origin; lib/show-files.ts),
  * warmed at idle after boot and played when the show opens. An empty string means no track: the

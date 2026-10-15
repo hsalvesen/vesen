@@ -62,7 +62,7 @@ describe('ChipRow', () => {
     expect(screen.getByRole('listbox').querySelector('.more')).toBeNull();
   });
 
-  it('shows one large cancel chip while a command runs, and Cancel at a password', () => {
+  it('shows one large cancel chip while a command runs, and Cancel at a password or a tap', () => {
     const stop: Chip = { id: 'control:stop', label: 'cancel ^C', matchLen: 0, kind: 'control', action: { kind: 'interrupt' } };
     const { rerender } = render(ChipRow, { props: { chips: [stop] } });
     const option = screen.getByRole('option', { name: 'Cancel the running command (Control C)' });
@@ -70,6 +70,8 @@ describe('ChipRow', () => {
     expect(option.textContent).toBe('xcancel ^C');
     rerender({ chips: [{ id: 'control:cancel', label: 'Cancel', matchLen: 0, kind: 'control', action: { kind: 'cancel' } }] });
     expect(screen.getByRole('option', { name: 'Cancel the password prompt' })).toBeInTheDocument();
+    rerender({ chips: [{ id: 'control:cancel', label: 'Cancel', matchLen: 0, kind: 'control', action: { kind: 'cancel', name: 'Cancel the prompt' } }] });
+    expect(screen.getByRole('option', { name: 'Cancel the prompt' })).toBeInTheDocument();
   });
 
   it('never takes focus from the prompt, and a tap chooses the chip', async () => {

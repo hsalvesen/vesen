@@ -14,7 +14,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   RICK_ALT,
   RICK_CLOSED,
-  RICK_ELEVATE,
   RICK_FRAMES,
   RICK_FRAMES_PORTRAIT,
   RICK_HINT_AFTER_MS,
@@ -423,48 +422,20 @@ describe('the Rick app', () => {
     expect(status(dialog)).toBe('');
   });
 
-  it('on a touch screen asks for a tap to elevate privileges, starts inside it, and the next tap leaves', async () => {
+  it('on a touch screen shows the picture alone, has no buttons, and a tap leaves, as a screen reader hears', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    const raf = frames();
-    const { dialog, close, sound } = await show({ touch: true, file: FILE });
-    // Before the tap: the one line asking for it, no picture, no sound, not even an element made.
-    expect(dialog.querySelector('.elevate')?.textContent).toBe(RICK_ELEVATE);
-    expect(RICK_ELEVATE).toBe('Tap to elevate privileges');
-    expect(dialog.querySelector('.stage')?.classList.contains('waiting')).toBe(true);
-    expect(dialog.dataset).toMatchObject({ motion: 'waiting', sound: 'off', frames: 'file' });
-    expect(sound.factory).not.toHaveBeenCalled();
-    expect(raf.request).not.toHaveBeenCalled();
-    expect(dialog.querySelectorAll('button')).toHaveLength(0);
-    // The tap: the sound starts inside it, and the picture with it.
-    await fireEvent.click(dialog);
-    expect(sound.factory).toHaveBeenCalledTimes(1);
-    expect(sound.play).toHaveBeenCalledTimes(1);
-    await settle();
-    expect(dialog.dataset).toMatchObject({ motion: 'running', sound: 'on' });
-    expect(dialog.querySelector('.elevate')).toBeNull();
-    expect(dialog.querySelector('.stage')?.classList.contains('waiting')).toBe(false);
-    expect(close).not.toHaveBeenCalled();
-    // No line under the picture, now or later: the picture fills the screen, as a screen reader hears.
+    frames();
+    const { dialog, close } = await show({ touch: true, file: FILE });
+    // No line under the picture, now or later: the picture fills the screen.
+    expect(status(dialog)).toBeNull();
     vi.advanceTimersByTime(RICK_HINT_AFTER_MS * 2);
     await tick();
     expect(status(dialog)).toBeNull();
     expect(dialog.textContent).not.toContain(RICK_KEYS_HINT);
     expect([...dialog.querySelectorAll('.sr-only')].map((line) => line.textContent)).toEqual([RICK_ALT, RICK_TAP_HINT]);
+    expect(dialog.querySelectorAll('button')).toHaveLength(0);
     await fireEvent.click(dialog);
     expect(close).toHaveBeenCalledWith(RICK_CLOSED);
-  });
-
-  it('on a touch screen a key elevates too, and Esc leaves before or after', async () => {
-    frames();
-    const first = await show({ touch: true });
-    await fireEvent.keyDown(window, { key: 'Escape' });
-    expect(first.close).toHaveBeenCalledWith(RICK_CLOSED);
-    expect(first.sound.factory).not.toHaveBeenCalled();
-    const second = await show({ touch: true });
-    await fireEvent.keyDown(window, { key: 'Enter' });
-    await settle();
-    expect(second.dialog.dataset.sound).toBe('on');
-    expect(second.close).not.toHaveBeenCalled();
   });
 
   it('on a keyboard a click on the stage does not leave', async () => {
@@ -474,12 +445,9 @@ describe('the Rick app', () => {
     expect(close).not.toHaveBeenCalled();
   });
 
-  it('on a touch screen a browser that holds the sound back even at the tap gets the next one, and the one after leaves', async () => {
+  it('on a touch screen the first tap starts held-back sound, and the next leaves', async () => {
     frames();
     const { dialog, sound, close } = await show({ touch: true, audio: 'blocked' });
-    expect(dialog.dataset.sound).toBe('off');
-    await fireEvent.click(dialog);
-    await settle();
     expect(dialog.dataset.sound).toBe('waiting');
     expect(status(dialog)).toBeNull();
     sound.setMode('plays');

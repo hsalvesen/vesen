@@ -470,7 +470,8 @@ export interface Tty {
    * and never echoed or stored. `hint` is a dim line above the prompt; `opens` is a URL opened
    * inside the key press that answers, as `opens()` is inside the Enter that runs a line, for
    * tty.open to report. `unlocks` is a track the command will play once answered, readied inside
-   * that key press, so a browser that starts sound only from a gesture lets it play then.
+   * that key press, so a browser that starts sound only from a gesture lets it play then. With
+   * `tap` the prompt is a button, answered by a tap (or Enter or Space) with the empty string.
    * `signal` ends the read early with null, as ^C does: `read -t`.
    */
   readLine(options: {
@@ -480,6 +481,7 @@ export interface Tty {
     hint?: string;
     opens?: string;
     unlocks?: string;
+    tap?: boolean;
     signal?: AbortSignal;
   }): Promise<string | null>;
   /** Asks yes or no at the prompt; null on ^C. */

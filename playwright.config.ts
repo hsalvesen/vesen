@@ -40,11 +40,17 @@ export default defineConfig({
       use: { ...devices['Pixel 7'] },
     },
     {
-      // Chromium starting sound only inside a gesture, as Safari does on a Mac (a phone starts the
-      // show with a tap of its own): for sudo's sound alone.
+      // Chromium starting sound only inside a gesture, as Safari does on a Mac and on a phone: for
+      // sudo's sound alone, readied by the key that answers its password on a desktop, and by the
+      // tap that elevates privileges on a phone.
       name: 'gesture-required',
       testMatch: /sudo-sound\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 }, launchOptions: { args: ['--autoplay-policy=user-gesture-required'] } },
+    },
+    {
+      name: 'gesture-required-phone',
+      testMatch: /sudo-sound\.spec\.ts$/,
+      use: { ...devices['Pixel 7'], launchOptions: { args: ['--autoplay-policy=user-gesture-required'] } },
     },
   ],
   // Tests run against the production build, served the way Firebase serves it.

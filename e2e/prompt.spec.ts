@@ -227,9 +227,11 @@ test.describe('sudo', { tag: '@smoke' }, () => {
     expect(masked.value).toBe('*'.repeat(SECRET.length));
     if (!isPhone()) expect(masked.mirror).toBe(`${'*'.repeat(SECRET.length)} `);
 
-    // The Enter that answers opens the show over the terminal; nothing opens anywhere else. Esc
-    // ends it, and the sudoers line follows (e2e/sudo.spec.ts has the rest of the show).
+    // The Enter that answers opens the show over the terminal (on a phone, after the tap the
+    // terminal asks for next); nothing opens anywhere else. Esc ends it, and the sudoers line
+    // follows (e2e/sudo.spec.ts has the rest of the show).
     await prompt(page).press('Enter');
+    if (isPhone()) await page.getByRole('button', { name: 'Tap to elevate privileges' }).tap();
     const show = page.getByRole('dialog', { name: 'You have been rickrolled' });
     await expect(show).toBeVisible();
     await page.keyboard.press('Escape');

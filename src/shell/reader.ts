@@ -1,7 +1,8 @@
 // Reading a line from the terminal for a running command (ctx.tty.readLine): `rm -i` asking
 // before each removal, sudo asking for a password. The kernel puts the request in a store; the
 // prompt shows its prompt in place of PS1, under the command's entry and what it has printed so
-// far, and answers with what was typed, or null for ^C or ^D.
+// far, and answers with what was typed, or null for ^C or ^D. A tap read is answered by a tap
+// instead: its prompt is a button, and the answer the empty string.
 // DOM-free: the UI subscribes to `request` and calls `answer`.
 //
 // A secret answer (sudo's password, `read -s`) is handed to the command and to nothing else: it
@@ -37,6 +38,12 @@ export interface ReadOptions {
    * (services/warm-show.ts unlockAudio).
    */
   readonly unlocks?: string;
+  /**
+   * Answered by a tap on the prompt, or Enter or Space on it, rather than by a typed line: the
+   * prompt is a button, and the answer is the empty string. A tap is a gesture every browser
+   * lets start sound, where a key on a phone's own keyboard may not be. Never with `secret`.
+   */
+  readonly tap?: boolean;
 }
 
 /** A read waiting for the prompt, as the UI sees it. */
@@ -47,6 +54,8 @@ export interface ReadRequest {
   /** A secret whose characters show as asterisks (ReadOptions.feedback). */
   readonly feedback: boolean;
   readonly hint: string | null;
+  /** Answered by a tap, not typed (ReadOptions.tap). */
+  readonly tap: boolean;
 }
 
 export interface LineReader {
@@ -102,7 +111,8 @@ export function createLineReader(
         };
         pending = entry;
         signal?.addEventListener('abort', onAbort, { once: true });
-        request.set({ id, prompt: options.prompt, secret: options.secret === true, feedback: options.secret === true && options.feedback === true, hint: options.hint ?? null });
+        const secret = options.secret === true;
+        request.set({ id, prompt: options.prompt, secret, feedback: secret && options.feedback === true, hint: options.hint ?? null, tap: !secret && options.tap === true });
       });
     },
   };

@@ -978,6 +978,62 @@ describe('sudo’s password', () => {
   });
 });
 
+describe('sudo’s tap on a touch screen', () => {
+  /** Answers sudo's password on a touch screen, and waits for the tap it asks for next. */
+  async function tapPrompt(input: HTMLInputElement, controller: PromptController, view: { container: Element }): Promise<HTMLButtonElement> {
+    input.focus();
+    await sudoPrompt(input, controller);
+    typeKeys(input, SECRET);
+    press(input, 'Enter');
+    await vi.waitFor(() => expect(controller.read?.tap).toBe(true));
+    await tick();
+    const button = view.container.querySelector<HTMLButtonElement>('button.tap-read');
+    if (button === null) throw new Error('no tap prompt');
+    return button;
+  }
+
+  it('asks in the prompt’s place with a button that takes the focus, so the keyboard goes, and a tap answers', async () => {
+    const { input, controller, h, view } = setup({ touch: true, dock: true });
+    const button = await tapPrompt(input, controller, view);
+    expect(button.textContent).toBe('Tap to elevate privileges');
+    expect(document.activeElement).toBe(button);
+    expect(controller.focused).toBe(false);
+    // Nothing to type: the line editor waits unseen, there is no status line, and the chips offer only a way out.
+    expect(view.container.querySelector('.edit-row')?.classList.contains('tap')).toBe(true);
+    expect(controller.status).toBeNull();
+    expect(controller.chipList.chips.map((chip) => [chip.label, chip.action])).toEqual([['Cancel', { kind: 'cancel', name: 'Cancel the prompt' }]]);
+    expect(h.commits).toHaveLength(0);
+
+    button.click();
+    await vi.waitFor(() => expect(h.commits).toHaveLength(1));
+    await tick();
+    expect(h.commits[0]?.status).toBe(1);
+    expect(view.container.querySelector('button.tap-read')).toBeNull();
+    expect(view.container.querySelector('.edit-row')?.classList.contains('tap')).toBe(false);
+    // The keyboard stays away: nothing focuses the input again.
+    expect(document.activeElement).not.toBe(currentInput(view));
+    expect(JSON.stringify(h.commits)).not.toContain(SECRET);
+  });
+
+  it('is cancelled by Escape, as any read is, and by its Cancel chip', async () => {
+    const { input, controller, h, view } = setup({ touch: true, dock: true });
+    const button = await tapPrompt(input, controller, view);
+    button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(h.commits).toHaveLength(1));
+    expect(h.commits[0]).toMatchObject({ line: 'sudo ls', status: 130, interrupted: true });
+    expect(controller.read).toBeNull();
+    await tick();
+    expect(view.container.querySelector('button.tap-read')).toBeNull();
+
+    await tapPrompt(currentInput(view), controller, view);
+    const cancel = controller.chipList.chips[0];
+    if (cancel === undefined) throw new Error('no Cancel chip');
+    controller.choose(cancel);
+    await vi.waitFor(() => expect(h.commits).toHaveLength(2));
+    expect(h.commits[1]).toMatchObject({ status: 130, interrupted: true });
+  });
+});
+
 describe('history', () => {
   it('brings back a line continued at > as it was typed, and runs exactly that line', async () => {
     const { input, controller, h, view } = setup();

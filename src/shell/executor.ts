@@ -999,11 +999,12 @@ export class Executor {
   /**
    * Reads a line at the prompt for a running command, then echoes it into the job's output as a
    * terminal does: the hint, the prompt and what was typed; for a secret the prompt alone, or with
-   * feedback the prompt and an asterisk for each character typed (sudo's pwfeedback).
+   * feedback the prompt and an asterisk for each character typed (sudo's pwfeedback); for a tap
+   * read, answered with nothing, the prompt alone.
    */
   private async readLine(
     job: Job,
-    options: { prompt: string; secret?: boolean; feedback?: boolean; hint?: string; opens?: string; unlocks?: string; signal?: AbortSignal },
+    options: { prompt: string; secret?: boolean; feedback?: boolean; hint?: string; opens?: string; unlocks?: string; tap?: boolean; signal?: AbortSignal },
   ): Promise<string | null> {
     const read = this.deps.terminal.readLine;
     if (read === undefined || job.signal.aborted || job.sink.ended || options.signal?.aborted === true) return null;
@@ -1014,6 +1015,7 @@ export class Executor {
       ...(options.secret === true && options.feedback === true ? { feedback: true } : {}),
       ...(options.hint === undefined ? {} : { hint: options.hint }),
       ...(options.unlocks === undefined ? {} : { unlocks: options.unlocks }),
+      ...(options.tap === true ? { tap: true } : {}),
       signal: options.signal === undefined ? job.signal : combineSignals(job.signal, options.signal),
       ...(url === undefined
         ? {}

@@ -1,8 +1,9 @@
 // sudo: the password prompt as a Unix terminal asks it, `Password: ` and nothing else, an
 // asterisk for each key and the answer dropped; then the show (the Rick app with the owner's
-// track and the frames file to look for) on the terminal, and the sudoers line after it; the
-// message alone in a pipe or where no app can show; ^C at either stage; and --help and man that
-// read like sudo's own, with nothing of the show in them.
+// track and the frames file to look for) on the terminal, on a touch screen after a tap asked for
+// in the terminal, and the sudoers line after it; the message alone in a pipe or where no app can
+// show; ^C at every stage; and --help and man that read like sudo's own, with nothing of the show
+// in them.
 import { describe, expect, it, vi } from 'vitest';
 import type { Block } from '../../output/model';
 import { plain } from '../../output/plain';
@@ -15,7 +16,7 @@ import rm from '../files/rm';
 import { RICK_CLOSED, RICK_FRAMES, RICK_FRAMES_PORTRAIT, RICK_SONG, RICK_TRACK, type RickView } from '../lib/rick';
 import man from './man';
 import sudo from './sudo';
-import { doc, SUDO_PROMPT } from './sudo.run';
+import { doc, ELEVATE_PROMPT, SUDO_PROMPT } from './sudo.run';
 
 const SECRET = 'hunter2-correct-horse';
 /** Words that would give the show away before it opens. */
@@ -149,15 +150,57 @@ describe('sudo', () => {
     expect(unlockAudio).toHaveBeenCalledTimes(1);
   });
 
-  it('on a touch screen asks the same, with no hint, and tells the app', async () => {
+  it('on a touch screen asks the same, then for a tap in the terminal, which readies the track before the show opens', async () => {
     const term = terminal({ touch: true });
-    const h = harness({ specs: [sudo], terminal: term.info });
+    const unlocked: string[] = [];
+    const unlockAudio = vi.fn((track: string) => {
+      // Inside the tap: the show has not opened yet.
+      expect(term.fullscreen).not.toHaveBeenCalled();
+      unlocked.push(track);
+    });
+    const h = harness({ specs: [sudo], terminal: term.info, unlockAudio });
     const job = h.shell.start('sudo -i');
     const request = await asked(h.shell);
-    expect(request).toMatchObject({ prompt: 'Password: ', hint: null });
+    expect(request).toMatchObject({ prompt: 'Password: ', hint: null, tap: false });
     h.shell.answerRead(request.id, '');
-    await job.done;
+    // A phone's own keyboard may not count as a gesture: the tap readies the track instead.
+    expect(unlockAudio).not.toHaveBeenCalled();
+
+    const tap = await asked(h.shell);
+    expect(tap).toMatchObject({ prompt: ELEVATE_PROMPT, secret: false, hint: null, tap: true });
+    expect(ELEVATE_PROMPT).toBe('Tap to elevate privileges');
+    expect(term.fullscreen).not.toHaveBeenCalled();
+    h.shell.answerRead(tap.id, '');
+    // At once, in the same call as the tap.
+    expect(unlocked).toEqual([RICK_TRACK]);
+    const result = await job.done;
+    expect(term.shown).toHaveLength(1);
     expect(term.shown[0]?.props.touch).toBe(true);
+    // The prompt stays in the transcript, as a terminal keeps one, between the password and the message.
+    expect(text(result.blocks)).toBe('Password: \nTap to elevate privileges\nguest is not in the sudoers file.\n');
+  });
+
+  it('on a touch screen leaves the show out at ^D on the tap, and stops at ^C there', async () => {
+    const term = terminal({ touch: true });
+    const unlockAudio = vi.fn();
+    const h = harness({ specs: [sudo], terminal: term.info, unlockAudio });
+    const eof = h.shell.start('sudo ls');
+    h.shell.answerRead((await asked(h.shell)).id, 'x');
+    h.shell.answerRead((await asked(h.shell)).id, null);
+    const result = await eof.done;
+    expect(result.status).toBe(1);
+    expect(text(result.blocks)).toContain('guest is not in the sudoers file.');
+    expect(term.fullscreen).not.toHaveBeenCalled();
+    expect(unlockAudio).not.toHaveBeenCalled();
+
+    const cancelled = h.shell.start('sudo ls');
+    h.shell.answerRead((await asked(h.shell)).id, 'x');
+    await vi.waitFor(() => expect(h.shell.reads.get()?.tap).toBe(true));
+    h.shell.abort();
+    expect(await cancelled.done).toMatchObject({ status: 130, interrupted: true });
+    expect(h.shell.reads.get()).toBeNull();
+    expect(term.fullscreen).not.toHaveBeenCalled();
+    expect(text(h.commits[h.commits.length - 1]?.blocks ?? [])).not.toContain('sudoers');
   });
 
   it('makes the sandwich after the show, and still exits 0 for it', async () => {

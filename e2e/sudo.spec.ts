@@ -4,12 +4,14 @@ import { isBenignConsoleMessage } from './console';
 // sudo's show (src/commands/shell/sudo.run.ts, src/ui/apps/Rick.svelte): the password prompt is
 // `Password: ` alone, with no line above it, and Esc cancels it; the show's files are warmed at
 // idle after boot, and --help fetches nothing more. After the password the Rick app opens over
-// the terminal, with the owner's frames and their track, and nothing opens anywhere else. On a
-// keyboard the screen shows the frames and, once they have played a few seconds, one line saying
-// how to leave; on a phone the frames alone, filling the terminal's frame upright or on its side,
-// and turning with it. Esc, q and ^C end it on a keyboard, a tap and Back on a phone; the audio
-// element goes with it, and the sudoers line follows in the transcript. Without the frames file
-// the stage is empty. Under reduced motion the frames still play. No console errors anywhere.
+// the terminal, with the owner's frames and their track, and nothing opens anywhere else; on a
+// phone the terminal first asks for a tap, `Tap to elevate privileges`, in the prompt's place. On
+// a keyboard the screen shows the frames and, once they have played a few seconds, one line
+// saying how to leave; on a phone the frames alone, filling the terminal's frame upright or on
+// its side, and turning with it. Esc, q and ^C end it on a keyboard, a tap and Back on a phone;
+// the audio element goes with it, and the sudoers line follows in the transcript. Without the
+// frames file the stage is empty. Under reduced motion the frames still play. No console errors
+// anywhere.
 
 const PHONES = ['iphone-instagram', 'pixel-7'];
 const isPhone = () => PHONES.includes(test.info().project.name);
@@ -33,6 +35,7 @@ const log = (page: Page) => page.getByRole('log');
 const readPrompt = (page: Page) => page.locator('.edit-row .read-prompt');
 const hint = (page: Page) => page.locator('.prompt-line .hint');
 const show = (page: Page) => page.getByRole('dialog', { name: 'You have been rickrolled' });
+const elevateButton = (page: Page) => page.locator('.edit-row').getByRole('button', { name: 'Tap to elevate privileges' });
 const frame = (page: Page) => show(page).locator('.frame');
 const status = (page: Page) => show(page).locator('.status');
 const audio = (page: Page) => page.locator('audio');
@@ -72,27 +75,28 @@ async function sudoPrompt(page: Page): Promise<void> {
   await expect(hint(page)).toHaveCount(0);
 }
 
-/** Types `sudo ls`, then a password, and waits for the show. */
+/** Types `sudo ls`, then a password, and waits for the show: on a phone, after the tap that elevates privileges. */
 async function sudoLs(page: Page): Promise<void> {
   await sudoPrompt(page);
   await prompt(page).pressSequentially(SECRET);
   await prompt(page).press('Enter');
-  await expect(show(page)).toBeVisible();
   if (isPhone()) await elevate(page);
+  await expect(show(page)).toBeVisible();
 }
 
 /**
- * On a phone the show asks for a tap first, and nothing plays or shows until it comes: the tap
- * starts the sound and the picture together, inside a gesture every browser lets start sound.
+ * On a phone, after the password, the terminal asks for a tap in the prompt's place, before the
+ * show opens: a button with the focus, so the keyboard has gone, and nothing to type. The tap
+ * readies the show's track, inside a gesture every browser lets start sound.
  */
 async function elevate(page: Page): Promise<void> {
-  await expect(show(page).locator('.elevate')).toHaveText('Tap to elevate privileges');
-  await expect(show(page)).toHaveAttribute('data-sound', 'off');
-  await expect(show(page)).toHaveAttribute('data-motion', 'waiting');
-  await expect(show(page).locator('audio')).toHaveCount(0);
-  await show(page).tap();
-  await expect(show(page).locator('.elevate')).toHaveCount(0);
-  await expect.poll(() => show(page).getAttribute('data-sound'), { timeout: 10_000 }).not.toBe('off');
+  await expect(elevateButton(page)).toBeVisible();
+  await expect(elevateButton(page)).toBeFocused();
+  await expect(prompt(page)).toBeHidden();
+  await expect(show(page)).toHaveCount(0);
+  await expect(log(page)).toContainText(`Password: ${'*'.repeat(SECRET.length)}`);
+  await elevateButton(page).tap();
+  await expect(elevateButton(page)).toHaveCount(0);
 }
 
 /**
@@ -133,7 +137,7 @@ async function coversTheStage(page: Page): Promise<void> {
   expect(Math.abs(picture.top + picture.bottom - stage.top - stage.bottom)).toBeLessThanOrEqual(2);
 }
 
-/** On a phone, once elevated, a tap leaves the show; where the browser held the sound back, the first tap starts it and the next leaves. */
+/** On a phone a tap leaves the show; where the browser held the sound back, the first tap starts it and the next leaves. */
 async function tapToLeave(page: Page): Promise<void> {
   if ((await show(page).getAttribute('data-sound')) === 'waiting') await show(page).tap();
   await show(page).tap();
@@ -261,6 +265,17 @@ test.describe("sudo's show", { tag: '@smoke' }, () => {
       await prompt(page).pressSequentially(SECRET);
       await cancelChip.tap();
       await cancelled();
+
+      // The tap that elevates privileges has its own Cancel, and leaves with no show either.
+      await prompt(page).tap();
+      await sudoPrompt(page);
+      await prompt(page).pressSequentially(SECRET);
+      await prompt(page).press('Enter');
+      await expect(elevateButton(page)).toBeVisible();
+      await page.getByRole('option', { name: 'Cancel the prompt' }).tap();
+      await expect(elevateButton(page)).toHaveCount(0);
+      await cancelled();
+      await expect(prompt(page)).toBeVisible();
     }
     expect(errors).toEqual([]);
   });

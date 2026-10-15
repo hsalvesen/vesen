@@ -20,6 +20,9 @@
 //   or copy can give it back. It never reaches history, the screen, storage or the kill ring,
 //   and is emptied when the prompt loses focus or the page is hidden. Text an input method put
 //   in the input itself goes with the input: a fresh one replaces it when the read ends.
+// - A tap read (sudo's `Tap to elevate privileges` on a touch screen) is answered by a tap on its
+//   prompt, a button in the input's place (PromptLine): the keyboard goes as it begins, and the
+//   answer is given inside the tap, so what the read unlocks may play.
 // - Lines from history with line breaks in them (a quote continued at `> `) come back as typed:
 //   their earlier lines at the `> ` prompt, the last in the input.
 
@@ -132,7 +135,12 @@ export interface PromptRead {
   readonly oneKey: boolean;
   /** The line being edited stays, and the question shows under it. */
   readonly keepLine: boolean;
+  /** Answered by a tap on the prompt, not typed (ReadRequest.tap). */
+  readonly tap: boolean;
 }
+
+/** The way out of a tap read, for a thumb: what ^C and Esc do. */
+const TAP_CANCEL: Chip = { id: 'control:cancel', label: 'Cancel', matchLen: 0, kind: 'control', action: { kind: 'cancel', name: 'Cancel the prompt' }, summary: 'leave the prompt' };
 
 interface ActiveRead extends PromptRead {
   readonly answer: (text: string | null) => void;
@@ -310,6 +318,7 @@ export class PromptController {
    * the follow-ups, the line ready to run and Stop.
    */
   readonly chipList = $derived.by((): ChipList => {
+    if (this.read?.tap === true) return { chips: [TAP_CANCEL], more: 0 };
     const completion = this.completion;
     if (completion === null || this.ps2 !== null || (this.read !== null && !this.read.secret && !this.read.keepLine)) return { chips: [], more: 0 };
     const thumb = this.touch || this.dock;
@@ -1126,7 +1135,7 @@ export class PromptController {
     if (asking.phase === 'asking') {
       const engine = this.completion?.engine;
       this.beginRead(
-        { id: OWN_READ, prompt: effect.question ?? '', secret: false, feedback: false, hint: null, oneKey: true, keepLine: true },
+        { id: OWN_READ, prompt: effect.question ?? '', secret: false, feedback: false, hint: null, oneKey: true, keepLine: true, tap: false },
         (answer) => {
           if (engine !== undefined) this.applyTab(engine.answer(asking, answer === 'y'));
         },
@@ -1202,7 +1211,7 @@ export class PromptController {
     }
     if (this.read?.id === request.id) return;
     this.beginRead(
-      { id: request.id, prompt: request.prompt, secret: request.secret, feedback: request.feedback, hint: request.hint, oneKey: false, keepLine: false },
+      { id: request.id, prompt: request.prompt, secret: request.secret, feedback: request.feedback, hint: request.hint, oneKey: false, keepLine: false, tap: request.tap },
       (text) => this.shell.answerRead(request.id, text),
     );
   }
@@ -1221,6 +1230,11 @@ export class PromptController {
     }
     this.read = { ...read, answer, stash, asked: read.oneKey ? this.state : null };
     if (!read.keepLine) this.write(EMPTY_LINE, { replace: true, force: true });
+    if (read.tap) {
+      // Nothing to type: the keyboard goes, and the input stays unfocused after.
+      this.refocusNext = false;
+      this.input?.blur();
+    }
   }
 
   /** Ends the read on the prompt without answering it: the command answered or was stopped. */
@@ -1238,6 +1252,14 @@ export class PromptController {
     if (read === null) return;
     this.endRead();
     read.answer(text);
+  }
+
+  /**
+   * The tap, or Enter or Space, on a tap read's prompt: answers it with nothing, inside the
+   * gesture, so a track the read unlocks may play (shell/reader.ts).
+   */
+  answerTap(): void {
+    if (this.read?.tap === true) this.finishRead('');
   }
 
   /**
@@ -1270,7 +1292,7 @@ export class PromptController {
     }
     const read = this.read;
     if (read !== null) {
-      if (!read.oneKey) this.finishRead(read.secret ? this.secret : this.text);
+      if (!read.oneKey) this.finishRead(read.secret ? this.secret : read.tap ? '' : this.text);
       return;
     }
     if (this.search !== null) {
