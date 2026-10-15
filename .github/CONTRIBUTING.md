@@ -1,6 +1,6 @@
 # Contributing to vesen
 
-Thanks for helping. vesen is a small portfolio project, so the bar is simple: every change keeps the gates green, works on a phone inside Instagram as well as on a desktop, and fits the architecture in [ADR 0001](docs/adr/0001-architecture.md). Please read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) first, and report security problems privately as [SECURITY.md](SECURITY.md) describes, never in a public issue.
+Thanks for helping. vesen is a small portfolio project, so the bar is simple: every change keeps the gates green, works on a phone inside Instagram as well as on a desktop, and fits the architecture in [ADR 0001](../docs/adr/0001-architecture.md). Please read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) first, and report security problems privately as [SECURITY.md](SECURITY.md) describes, never in a public issue.
 
 ## Setup
 
@@ -17,9 +17,9 @@ The build reads two optional variables, `VITE_STOCK_API` and `VITE_FETCH_PROXY`:
 
 ## Where things go
 
-- A new command: [docs/ADDING_COMMANDS.md](docs/ADDING_COMMANDS.md). New commands go in the catalogue (`src/commands/more/<category>/`), with the body and long help in a `.run.ts`.
-- The shell's grammar and its known gaps: [docs/SHELL.md](docs/SHELL.md).
-- A change to a shared contract (`src/shell/types.ts`, `src/output/model.ts`, `src/services/types.ts` and the others in the ADR's table) is also an amendment to [ADR 0001](docs/adr/0001-architecture.md), in the same pull request.
+- A new command: [docs/ADDING_COMMANDS.md](../docs/ADDING_COMMANDS.md). New commands go in the catalogue (`src/commands/more/<category>/`), with the body and long help in a `.run.ts`.
+- The shell's grammar and its known gaps: [docs/SHELL.md](../docs/SHELL.md).
+- A change to a shared contract (`src/shell/types.ts`, `src/output/model.ts`, `src/services/types.ts` and the others in the ADR's table) is also an amendment to [ADR 0001](../docs/adr/0001-architecture.md), in the same pull request.
 
 House rules, which the gates enforce where they can:
 
@@ -79,4 +79,4 @@ On iOS Safari, iOS Instagram, Android Chrome and Android Instagram, as far as yo
 
 ## Releases
 
-The owner releases from `main`: bump the version with `npm version X.Y.Z --no-git-tag-version` (the banner and `/etc/os-release` read it), move the `Unreleased` notes in [CHANGELOG.md](CHANGELOG.md) under the new version, merge, then push a `vX.Y.Z` tag. `.github/workflows/release.yml` creates the GitHub release from the tag.
+The owner releases from `main`: bump the version with `npm version X.Y.Z --no-git-tag-version` (the banner and `/etc/os-release` read it), move the `Unreleased` notes in [CHANGELOG.md](../docs/CHANGELOG.md) under the new version, merge, then push a `vX.Y.Z` tag. `.github/workflows/release.yml` creates the GitHub release from the tag.

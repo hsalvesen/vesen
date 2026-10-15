@@ -59,7 +59,7 @@ Changes on top of 2.0, mostly to how vesen looks and behaves on a phone: `sudo`'
 
 ## [2.0.0] - 2026-10-08
 
-A rewrite of the whole app, built from the audit and plan in [docs/plan](docs/plan). [docs/plan/STATUS.md](docs/plan/STATUS.md) records what was built in each phase and where it differs from the plan; [ADR 0001](docs/adr/0001-architecture.md) records the shared contracts.
+A rewrite of the whole app, built from the audit and plan in [docs/plan](plan). [docs/plan/STATUS.md](plan/STATUS.md) records what was built in each phase and where it differs from the plan; [ADR 0001](adr/0001-architecture.md) records the shared contracts.
 
 ### Safety
 
@@ -76,7 +76,7 @@ A rewrite of the whole app, built from the audit and plan in [docs/plan](docs/pl
 
 ### Shell
 
-- A real shell kernel: one lexer, a parser, quoting, `$'…'`, variables, `${X:-word}` and friends, brace, tilde and pathname expansion, `$( )`, `$(( ))`, field splitting, history expansion, aliases, `&&`, `||`, `!`, pipelines that stream, redirections (`<`, `>`, `>>`, `>|`, `2>`, `&>`, `2>&1`, `<<<`), exit statuses and bash's error wording. See [docs/SHELL.md](docs/SHELL.md).
+- A real shell kernel: one lexer, a parser, quoting, `$'…'`, variables, `${X:-word}` and friends, brace, tilde and pathname expansion, `$( )`, `$(( ))`, field splitting, history expansion, aliases, `&&`, `||`, `!`, pipelines that stream, redirections (`<`, `>`, `>>`, `>|`, `2>`, `&>`, `2>&1`, `<<<`), exit statuses and bash's error wording. See [docs/SHELL.md](SHELL.md).
 - A virtual file system with permissions, symlinks, `/proc`, `/dev`, a 512 KB quota, a prompt that follows `cd`, and your changes under `~` and your history kept across visits.
 - `/etc/profile` and `~/.bashrc` are read at login; scripts with a shell `#!` line run from `$PATH`.
 
@@ -142,7 +142,7 @@ A rewrite of the whole app, built from the audit and plan in [docs/plan](docs/pl
 - Svelte 5, Vite 8, TypeScript 6, Node 22.12 or later.
 - Vitest unit tests (node and happy-dom), command transcripts, an XSS corpus and recorded network fixtures; Playwright on desktop Chrome, iPhone in Instagram (WebKit) and Pixel 7.
 - CI gates every pull request and push to `main` on svelte-check, strict types, module boundaries, unit tests, the build, bundle budgets, contrast and the smoke tests, then deploys the tested build to a Firebase preview channel or to live.
-- Contributor docs: [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), [docs/ADDING_COMMANDS.md](docs/ADDING_COMMANDS.md), issue forms and a pull request template.
+- Contributor docs: [CONTRIBUTING.md](../.github/CONTRIBUTING.md), [SECURITY.md](../.github/SECURITY.md), [docs/ADDING_COMMANDS.md](ADDING_COMMANDS.md), issue forms and a pull request template.
 
 ### Also since 1.2.0, before the rewrite
 

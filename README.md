@@ -14,7 +14,7 @@ vesen is Has Salvesen's portfolio, in the shape of a Linux terminal. It runs ent
 - **Cards.** `weather`, `stock` and `qr` draw live cards; `whoami`, `about` and `contact` give link cards with Copy.
 - **Fifteen themes** named for Australian animals, every one checked for contrast, with an optional CRT effect.
 
-Version 2.0.0 is a rewrite of the whole app; [CHANGELOG.md](CHANGELOG.md) says what changed.
+Version 2.0.0 is a rewrite of the whole app; [CHANGELOG.md](docs/CHANGELOG.md) says what changed.
 
 ## A short tour
 
@@ -173,7 +173,7 @@ Quotes come through vesen-stock, a small Cloudflare Worker in [`worker/stock`](w
 
 ## Contributing
 
-[CONTRIBUTING.md](CONTRIBUTING.md) covers setup, the gates and the pull request flow, and [docs/ADDING_COMMANDS.md](docs/ADDING_COMMANDS.md) how to add a command. Please report security problems privately, as [SECURITY.md](SECURITY.md) describes.
+[CONTRIBUTING.md](.github/CONTRIBUTING.md) covers setup, the gates and the pull request flow, and [docs/ADDING_COMMANDS.md](docs/ADDING_COMMANDS.md) how to add a command. Please report security problems privately, as [SECURITY.md](.github/SECURITY.md) describes.
 
 ## Credits
 

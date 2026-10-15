@@ -11,7 +11,7 @@
 - [ ] `npm run build`, then `npm run check:bundle`
 - [ ] `npm run check:contrast -- --strict`
 - [ ] `npm run test:smoke` (and `npm run test:e2e` if the prompt, dock, viewport, links or a full-screen app changed)
-- [ ] Docs updated where behaviour changed: `docs/SHELL.md`, `docs/ADDING_COMMANDS.md`, ADR 0001 for a contract, `CHANGELOG.md` under Unreleased
+- [ ] Docs updated where behaviour changed: `docs/SHELL.md`, `docs/ADDING_COMMANDS.md`, ADR 0001 for a contract, `docs/CHANGELOG.md` under Unreleased
 
 ## Phone checklist
 
