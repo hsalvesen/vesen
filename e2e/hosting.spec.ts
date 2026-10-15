@@ -102,6 +102,8 @@ test.describe('production headers', { tag: '@smoke' }, () => {
     await prompt.press('Enter');
     const show = page.getByRole('dialog', { name: 'You have been rickrolled' });
     await expect(show).toBeVisible();
+    // A phone starts the show, and makes its audio element, at the tap that elevates privileges.
+    if (['iphone-instagram', 'pixel-7'].includes(test.info().project.name)) await show.tap();
 
     // default-src 'self' covers media: the element made for the show loads from this origin. A
     // policy that refused it would say so in the console, and the element would report an error.

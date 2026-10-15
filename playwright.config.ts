@@ -40,11 +40,11 @@ export default defineConfig({
       use: { ...devices['Pixel 7'] },
     },
     {
-      // Chromium starting sound only inside a gesture, as Android's WebView does for Instagram's
-      // and Facebook's in-app browsers, and as Safari does: for sudo's sound alone.
+      // Chromium starting sound only inside a gesture, as Safari does on a Mac (a phone starts the
+      // show with a tap of its own): for sudo's sound alone.
       name: 'gesture-required',
       testMatch: /sudo-sound\.spec\.ts$/,
-      use: { ...devices['Pixel 7'], launchOptions: { args: ['--autoplay-policy=user-gesture-required'] } },
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 }, launchOptions: { args: ['--autoplay-policy=user-gesture-required'] } },
     },
   ],
   // Tests run against the production build, served the way Firebase serves it.

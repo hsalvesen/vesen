@@ -78,13 +78,29 @@ async function sudoLs(page: Page): Promise<void> {
   await prompt(page).pressSequentially(SECRET);
   await prompt(page).press('Enter');
   await expect(show(page)).toBeVisible();
+  if (isPhone()) await elevate(page);
 }
 
 /**
- * On a phone, upright or on its side, the window is the whole screen, with the terminal's green
- * frame drawn over it 4px in from the edges, and no line under the picture; the picture covers it,
- * as large as it must be, and is cut evenly about its centre: as much from the left as from the
- * right, and from the top as from the bottom.
+ * On a phone the show asks for a tap first, and nothing plays or shows until it comes: the tap
+ * starts the sound and the picture together, inside a gesture every browser lets start sound.
+ */
+async function elevate(page: Page): Promise<void> {
+  await expect(show(page).locator('.elevate')).toHaveText('Tap to elevate privileges');
+  await expect(show(page)).toHaveAttribute('data-sound', 'off');
+  await expect(show(page)).toHaveAttribute('data-motion', 'waiting');
+  await expect(show(page).locator('audio')).toHaveCount(0);
+  await show(page).tap();
+  await expect(show(page).locator('.elevate')).toHaveCount(0);
+  await expect.poll(() => show(page).getAttribute('data-sound'), { timeout: 10_000 }).not.toBe('off');
+}
+
+/**
+ * On a phone, upright or on its side, the window is all of the screen the page may draw on, with
+ * the terminal's green frame on its own edge and nothing of the picture outside it, and no line
+ * under the picture; the picture covers the window inside the frame, as large as it must be, and is
+ * cut evenly about its centre: as much from the left as from the right, and from the top as from
+ * the bottom.
  */
 async function coversTheStage(page: Page): Promise<void> {
   const box = await show(page).evaluate((dialog) => {
@@ -119,7 +135,7 @@ async function coversTheStage(page: Page): Promise<void> {
   expect(Math.abs(picture.top + picture.bottom - stage.top - stage.bottom)).toBeLessThanOrEqual(2);
 }
 
-/** On a phone a tap leaves the show; where the browser held the sound back, the first tap starts it and the next leaves. */
+/** On a phone, once elevated, a tap leaves the show; where the browser held the sound back, the first tap starts it and the next leaves. */
 async function tapToLeave(page: Page): Promise<void> {
   if ((await show(page).getAttribute('data-sound')) === 'waiting') await show(page).tap();
   await show(page).tap();

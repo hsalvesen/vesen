@@ -1,19 +1,19 @@
 import { expect, test, type Page } from '@playwright/test';
 import { isBenignConsoleMessage } from './console';
 
-// sudo's sound where the browser starts sound only inside a gesture: Safari and every browser on
-// iOS, and the in-app browsers (Instagram's, Facebook's). The 'gesture-required' project is
-// Chromium told to ask the same, as Android's WebView does. The show opens after the key press
-// that answers the password has passed, so sudo readies its track inside that key press
-// (services/warm-show.ts unlockAudio), and the show plays it without a tap. Here on mobile data,
-// where nothing was warmed at idle, and with the show's chunk late enough for the key press's own
-// activation (five seconds in Chromium) to have run out before the show plays.
+// sudo's sound on a keyboard where the browser starts sound only inside a gesture, as Safari does
+// on a Mac. The 'gesture-required' project is Chromium told to ask the same. The show opens after
+// the key press that answers the password has passed, so sudo readies its track inside that key
+// press (services/warm-show.ts unlockAudio), and the show plays it with no key more. Here with
+// nothing warmed at idle (mobile data), and with the show's chunk late enough for the key press's
+// own activation (five seconds in Chromium) to have run out before the show plays. A phone starts
+// the show with a tap instead (e2e/sudo.spec.ts).
 
 const SECRET = 'hunter2-correct-horse';
 const prompt = (page: Page) => page.locator('input.command-input');
 const show = (page: Page) => page.getByRole('dialog', { name: 'You have been rickrolled' });
 
-test("sudo's track plays without a tap where sound needs a gesture", { tag: '@smoke' }, async ({ page }) => {
+test("sudo's track plays with no key more where sound needs a gesture", { tag: '@smoke' }, async ({ page }) => {
   test.skip(test.info().project.name !== 'gesture-required', 'Chromium holding sound back until a gesture');
   const errors: string[] = [];
   page.on('console', (message) => {
@@ -31,7 +31,7 @@ test("sudo's track plays without a tap where sound needs a gesture", { tag: '@sm
   });
   await page.goto('/');
   await expect(page.locator('[data-completion="ready"]')).toHaveCount(1);
-  await prompt(page).tap();
+  await prompt(page).click();
   await prompt(page).fill('sudo ls');
   await prompt(page).press('Enter');
   await expect(page.locator('.edit-row .read-prompt')).toHaveText('Password: ');
@@ -46,7 +46,7 @@ test("sudo's track plays without a tap where sound needs a gesture", { tag: '@sm
     paused: false,
     muted: false,
   });
-  await show(page).tap();
+  await page.keyboard.press('Escape');
   await expect(show(page)).toBeHidden();
   expect(errors).toEqual([]);
 });

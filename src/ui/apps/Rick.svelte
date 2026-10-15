@@ -5,10 +5,12 @@
   (services/warm-show.ts) or one made here when the show opens (services/track.ts); where the
   track cannot load or play, vesen's own 8-bit tune takes over (services/chiptune.ts, through the
   page's one AudioContext). Nothing else is on the screen: on a touch screen the picture alone,
-  over the whole screen with the terminal's frame drawn on it (AppHost), where a tap leaves (a
-  screen reader hears so); on a keyboard the picture and,
+  inside the green frame round all of the screen the page may draw on (AppHost), where a tap
+  leaves (a screen reader hears so); on a keyboard the picture and,
   once the show has played a few seconds, one line saying how to leave. Esc, ^C, q and Back
-  close it, with a short fade; m still mutes whichever plays, unannounced. sudo readies the
+  close it, with a short fade; m still mutes whichever plays, unannounced. On a touch screen the
+  show first asks for a tap, 'Tap to elevate privileges', and starts inside it, sound and picture
+  together, since a tap is a gesture every browser lets start sound. sudo also readies the
   track inside the key press that answers its password (services/warm-show.ts unlockAudio), so a
   browser that starts sound only from a gesture lets it play here; one that holds it back anyway
   gets a gesture from the first key or tap, which starts the sound (and the frames from the top
@@ -30,7 +32,7 @@
 -->
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { RICK_ALT, RICK_CLOSED, RICK_HINT_AFTER_MS, RICK_KEYS_HINT, RICK_TAP_HINT, RICK_TITLE, type RickView } from '../../commands/lib/rick';
+  import { RICK_ALT, RICK_CLOSED, RICK_ELEVATE, RICK_HINT_AFTER_MS, RICK_KEYS_HINT, RICK_TAP_HINT, RICK_TITLE, type RickView } from '../../commands/lib/rick';
   import type { Song } from '../../lib/chiptune';
   import { stillFrameIndex, type AsciiFrame, type FramesFile } from '../../lib/frames';
   import { PORTRAIT_QUERY } from '../../lib/show-files';
@@ -113,7 +115,14 @@
   const still = $derived(!canAnimate || (shown !== null && shown.frames.length < 2));
 
   let frame = $state(0);
-  let motion: 'running' | 'paused' | 'still' = $state('still');
+  /** running, paused while the page is hidden, still where it cannot animate, or waiting for the tap that elevates. */
+  let motion: 'running' | 'paused' | 'still' | 'waiting' = $state(view.touch ? 'waiting' : 'still');
+  /**
+   * On a touch screen the show waits for a tap ('Tap to elevate privileges') and starts inside it,
+   * sound and picture together: a tap is a gesture every browser lets start sound. On a keyboard it
+   * starts at once.
+   */
+  let elevated = $state(!view.touch);
   /** off: nothing plays (no track, no Web Audio); waiting: the browser wants a gesture first; on; muted. */
   let sound: 'off' | 'waiting' | 'on' | 'muted' = $state('off');
   /** What the sound comes from: the owner's track, the synth, or nothing. */
@@ -247,7 +256,7 @@
   }
 
   function startFrames(): void {
-    if (done || still || raf !== 0 || shown === null) return;
+    if (done || still || raf !== 0 || shown === null || !elevated) return;
     motion = 'running';
     raf = requestAnimationFrame(step);
   }
@@ -268,9 +277,31 @@
     if (still) {
       stopFrames();
       motion = 'still';
-    } else if (typeof document === 'undefined' || document.visibilityState !== 'hidden') startFrames();
+    } else if (!elevated) motion = 'waiting';
+    else if (typeof document === 'undefined' || document.visibilityState !== 'hidden') startFrames();
     else motion = 'paused';
     begin();
+  }
+
+  /** The sound: the owner's track, or the synth where there is none. */
+  function startSound(): void {
+    if (!playTrack()) playSynth();
+  }
+
+  /** The tap (or key) that elevates privileges on a touch screen: the show starts inside it, from the top. */
+  function elevate(): void {
+    if (done || elevated) return;
+    elevated = true;
+    startSound();
+    if (shown === null) {
+      // No frames yet, or none to come: the stage stands empty, and the file starts them if it comes.
+      motion = 'still';
+      return;
+    }
+    restartFrames(0);
+    if (still) motion = 'still';
+    else if (typeof document === 'undefined' || document.visibilityState !== 'hidden') startFrames();
+    else motion = 'paused';
   }
 
   /** Fetches the frames of `which` and puts them on the stage when they come, unless the screen turned again first. */
@@ -356,19 +387,21 @@
       toggleMute();
       return;
     }
-    // Any other key is the gesture a waiting browser asked for.
-    if (sound === 'waiting') tryPlay();
+    // Any other key elevates a show that waits for it, or is the gesture a waiting browser asked for.
+    if (!elevated) elevate();
+    else if (sound === 'waiting') tryPlay();
   }
 
-  /** A tap on the stage starts the sound where the browser was waiting for one. */
+  /** A tap elevates a show that waits for it; then it starts sound a browser held back, or leaves. */
   function onTap(): void {
-    if (sound === 'waiting') tryPlay();
+    if (!elevated) elevate();
+    else if (sound === 'waiting') tryPlay();
     // On a touch screen a tap leaves (the first one starts the sound, where the browser held it back).
     else if (view.touch) finish();
   }
 
   onMount(() => {
-    if (!playTrack()) playSynth();
+    if (elevated) startSound();
     document.addEventListener('visibilitychange', onVisibility);
     upright?.addEventListener?.('change', onTurn);
     // The frames: the stage stays empty until they come, and where they never do.
@@ -404,10 +437,11 @@
   onclick={onTap}
   bind:this={root}
 >
-  <div class="stage">
+  <div class="stage" class:waiting={!elevated}>
     <pre class="frame" aria-hidden="true" style:--cols={shown?.cols ?? 1} style:--rows={shown?.rows ?? 1}>{#each current.rows as row, r (r)}{#if r > 0}{'\n'}{/if}{#each row as span, s (s)}<span style:color={cssColour(span.role)}>{span.text}</span>{/each}{/each}</pre>
     <p class="sr-only">{view.alt}</p>
-    {#if view.touch}<p class="sr-only">{RICK_TAP_HINT}</p>{/if}
+    {#if view.touch && elevated}<p class="sr-only">{RICK_TAP_HINT}</p>{/if}
+    {#if !elevated}<p class="elevate">{RICK_ELEVATE}</p>{/if}
   </div>
   <!-- On a keyboard: empty until the show has played a few seconds, so the line is there to be announced. -->
   {#if !view.touch}<p class="status" class:shown={hinted} role="status">{hinted ? RICK_KEYS_HINT : ''}</p>{/if}
@@ -433,6 +467,7 @@
   }
 
   .stage {
+    position: relative;
     display: flex;
     justify-content: center;
     max-width: 100%;
@@ -511,6 +546,24 @@
     .rick.touch .frame {
       font-size: max(calc(100cqw / (var(--cols) * 0.585)), calc(100cqh / (var(--rows) * 1.15)));
     }
+  }
+
+  /* Waiting to be elevated: the picture hidden, and the one line that asks for the tap. */
+  .stage.waiting .frame {
+    visibility: hidden;
+  }
+
+  .elevate {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 16px;
+    color: var(--role-fg-strong, var(--theme-foreground));
+    font-size: 1.15em;
+    text-align: center;
   }
 
   .sr-only {
