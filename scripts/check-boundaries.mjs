@@ -414,7 +414,9 @@ export function findForbiddenApis(source) {
 }
 
 /**
- * Lists every source file under a folder; a missing folder yields nothing.
+ * Lists every source file under a folder; a missing folder yields nothing. Installed packages and
+ * tools' own state (node_modules, and dot-folders such as the stock Worker's .wrangler) are not
+ * the project's source, and walking them made the check crawl once the Worker's tools were in.
  * @param {string} dir absolute path
  * @returns {string[]}
  */
@@ -428,7 +430,7 @@ function walk(dir) {
   }
   return entries.flatMap((name) => {
     const path = join(dir, name);
-    if (statSync(path).isDirectory()) return walk(path);
+    if (statSync(path).isDirectory()) return name === 'node_modules' || name.startsWith('.') ? [] : walk(path);
     return SOURCE_EXTENSIONS.some((ext) => name.endsWith(ext)) ? [path] : [];
   });
 }
