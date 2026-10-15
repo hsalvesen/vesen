@@ -192,21 +192,26 @@ describe('bootstrap', () => {
     expect(document.documentElement.classList.contains('crt-paused')).toBe(false);
   });
 
-  it('announces a reload for a stale chunk in the transcript', async () => {
+  it('announces a reload in the transcript once the server says the build is gone', async () => {
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 0);
+    // A deploy has replaced this build: its entry chunk is a 404 now.
+    const fetch = vi.spyOn(window, 'fetch').mockResolvedValue(new Response(null, { status: 404 }));
     const { boot, screen } = await load();
     boot();
 
     const event = new Event('vite:preloadError', { cancelable: true });
     window.dispatchEvent(event);
 
-    expect(event.defaultPrevented).toBe(true);
-    const entries = screen.entries();
-    const last = entries[entries.length - 1];
-    expect(last?.line).toBe('');
+    // The error still reaches its importer; the notice waits for the server's answer.
+    expect(event.defaultPrevented).toBe(false);
+    expect(fetch).toHaveBeenCalledWith('/assets/index-test.js', expect.objectContaining({ method: 'HEAD' }));
     // A lines block, which the first paint's chunk draws itself: never a layout block, whose
     // renderer is in a chunk of its own, which may be one of those that failed to load.
-    expect(last?.blocks).toMatchObject([{ type: 'lines', lines: [[{ text: 'vesen was updated, reloading...', style: { fg: 'warn', bold: true } }]] }]);
+    await vi.waitFor(() => {
+      const last = screen.entries().at(-1);
+      expect(last?.line).toBe('');
+      expect(last?.blocks).toMatchObject([{ type: 'lines', lines: [[{ text: 'vesen was updated, reloading...', style: { fg: 'warn', bold: true } }]] }]);
+    });
   });
 
   // `lss` is not a command, so the line waits for the whole catalogue, which a cold test run

@@ -21,10 +21,11 @@ const wasBefore = async (page: Page): Promise<void> => {
 
 /**
  * One Back out of vesen, which must reach the page before it: a stray entry of vesen's would keep
- * the page where it is. The page goes back itself, and the URL decides. Under load, WebKit now and
- * then reports a page.goBack() from a page that has shown the pager as "Navigation canceled by
- * policy check" while the page goes back anyway a moment later (as it did before vesen had any
- * history entry of its own), so Playwright's view of that navigation plays no part here.
+ * the page where it is. The page goes back itself, and the URL decides. WebKit cancels the page's
+ * loads as soon as Back starts, and vesen once took a cancelled chunk for a deploy and reloaded,
+ * which overtook Back now and then; Playwright reported that as "Navigation canceled by policy
+ * check" (e2e/chunk-reload.spec.ts covers it now). So Playwright's view of that navigation plays
+ * no part here, only where the page ends up.
  */
 async function leave(page: Page): Promise<void> {
   await page.evaluate(() => void setTimeout(() => history.back(), 0));

@@ -51,7 +51,7 @@
       {#await loadRichBlock() then RichBlock}
         <RichBlock {block} {onaction} />
       {:catch}
-        <!-- A chunk from an older deploy: platform/chunkReload reloads the page. -->
+        <!-- The chunk did not load: after a deploy, platform/chunkReload reloads the page. -->
       {/await}
     {/if}
   {/each}
