@@ -1,9 +1,10 @@
 // How much of the CRT effect this device gets (docs/plan/09-visual-and-accessibility.md,
 // deliverable 3). The mode (scanlines, phosphor, vintage) is the visitor's taste; the tier is what
 // the device and its settings call for:
-//   off   reduced motion, increased contrast, forced colours or reduced transparency
-//   lite  touch screens, in-app browsers, Save-Data and low memory: a static vignette and fine
-//         scanlines, no filter, sweep or flicker, and the phosphor glow (vintage's is smaller)
+//   off   increased contrast, forced colours or reduced transparency
+//   lite  reduced motion, touch screens, in-app browsers, Save-Data and low memory: a static
+//         vignette and fine scanlines, no filter, sweep or flicker, and the phosphor glow
+//         (vintage's is smaller); nothing in it moves
 //   full  everything else, a desktop with a fine pointer
 // `cathode quality` overrides the choice. decideTier is pure; startPerf watches the settings.
 import type { CrtQuality, CrtTier, TierDecision } from '../stores/cathode';
@@ -48,10 +49,12 @@ export function decideTier(signals: PerfSignals, quality: CrtQuality = 'auto'): 
   if (quality !== 'auto') return { tier: quality, reason: `set with cathode quality ${quality}`, quality };
   const decide = (tier: CrtTier, reason: string): TierDecision => ({ tier, reason, quality });
 
-  if (signals.reducedMotion) return decide('off', 'the system asks for reduced motion');
   if (signals.moreContrast) return decide('off', 'the system asks for more contrast');
   if (signals.forcedColors) return decide('off', 'forced colours are on');
   if (signals.reducedTransparency) return decide('off', 'the system asks for reduced transparency');
+  // Reduced motion stops what moves (the sweep and the flicker); the glow, the fine scanlines and
+  // the vignette stand still, so they stay.
+  if (signals.reducedMotion) return decide('lite', 'the system asks for reduced motion');
 
   if (signals.inApp !== null) return decide('lite', `in ${signals.inApp}'s in-app browser`);
   if (signals.saveData) return decide('lite', 'Data Saver is on');

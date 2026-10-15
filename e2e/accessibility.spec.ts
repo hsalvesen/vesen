@@ -189,8 +189,23 @@ test.describe('CRT tiers', { tag: '@smoke' }, () => {
     await expect(page.locator('[role="log"]')).toContainText(`Quality: ${tier} (auto: ${reason}`);
   });
 
+  test('reduced motion keeps the still effect: the glow, the scanlines and the vignette, nothing that moves', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    const html = page.locator('html');
+    await expect(html).toHaveClass(/\bcrt-tier-lite\b/);
+    await expect(html).toHaveClass(/\bcrt-on\b/);
+    await expect(page.locator('.crt-overlay')).toBeVisible();
+    for (const layer of ['.crt-layer-sweep', '.crt-layer-flicker']) {
+      expect(await page.locator(layer).evaluate((el) => getComputedStyle(el).display), layer).toBe('none');
+    }
+    const glow = await page.locator('.scrollback').evaluate((el) => getComputedStyle(el).textShadow);
+    expect(glow).toContain('6px');
+    await run(page, 'cathode ls');
+    await expect(page.locator('[role="log"]')).toContainText('Quality: lite (auto: the system asks for reduced motion');
+  });
+
   for (const [setting, emulate] of [
-    ['reduced motion', { reducedMotion: 'reduce' }],
     ['increased contrast', { contrast: 'more' }],
     ['forced colours', { forcedColors: 'active' }],
   ] as const) {
@@ -207,9 +222,6 @@ test.describe('CRT tiers', { tag: '@smoke' }, () => {
       await expect(html).toHaveClass(/\bcrt-tier-full\b/);
       if (setting === 'forced colours') await expect(page.locator('.crt-overlay')).toBeHidden();
       else await expect(page.locator('.crt-overlay')).toBeVisible();
-      if (setting === 'reduced motion') {
-        expect(await page.locator('.crt-layer-sweep').evaluate((el) => getComputedStyle(el).display)).toBe('none');
-      }
     });
   }
 
@@ -218,8 +230,10 @@ test.describe('CRT tiers', { tag: '@smoke' }, () => {
     await page.goto('/');
     await expect(page.locator('html')).toHaveClass(/\bcrt-tier-full\b/);
     await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(page.locator('html')).toHaveClass(/\bcrt-tier-lite\b/);
+    await page.emulateMedia({ contrast: 'more' });
     await expect(page.locator('html')).toHaveClass(/\bcrt-tier-off\b/);
-    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.emulateMedia({ reducedMotion: 'no-preference', contrast: 'no-preference' });
     await expect(page.locator('html')).toHaveClass(/\bcrt-tier-full\b/);
   });
 });

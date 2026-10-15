@@ -165,12 +165,13 @@ describe('bootstrap', () => {
     expect(classes()).toEqual(['crt-on', 'crt-phosphor', 'crt-tier-lite']);
     expect(get(crtTier)).toEqual({ tier: 'lite', reason: 'a touch screen', quality: 'auto' });
 
-    // Reduced motion switched on while the page is open.
+    // Reduced motion switched on while the page is open: the still effect stays, nothing moves.
     const motion = queries.get('(prefers-reduced-motion: reduce)');
     if (!motion) throw new Error('reduced motion is not watched');
     motion.matches = true;
     for (const listener of motion.listeners) listener();
-    expect(classes()).toEqual(['crt-tier-off']);
+    expect(classes()).toEqual(['crt-on', 'crt-phosphor', 'crt-tier-lite']);
+    expect(get(crtTier)).toEqual({ tier: 'lite', reason: 'the system asks for reduced motion', quality: 'auto' });
 
     cathodeQuality.set('full');
     expect(classes()).toEqual(['crt-on', 'crt-phosphor', 'crt-tier-full']);

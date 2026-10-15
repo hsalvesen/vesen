@@ -32,8 +32,14 @@ describe('decideTier', () => {
     expect(decideTier(signals({ deviceMemory: 4 })).tier).toBe('full');
   });
 
+  it('keeps the still lite effect under reduced motion, on a desktop too: nothing in it moves', () => {
+    expect(decideTier(signals({ reducedMotion: true }))).toEqual({ tier: 'lite', reason: 'the system asks for reduced motion', quality: 'auto' });
+    expect(decideTier(signals({ reducedMotion: true, coarsePointer: true })).tier).toBe('lite');
+    // More contrast still turns it off, whatever else is asked.
+    expect(decideTier(signals({ reducedMotion: true, moreContrast: true })).tier).toBe('off');
+  });
+
   it.each([
-    ['the system asks for reduced motion', { reducedMotion: true }],
     ['the system asks for more contrast', { moreContrast: true }],
     ['forced colours are on', { forcedColors: true }],
     ['the system asks for reduced transparency', { reducedTransparency: true }],
@@ -134,7 +140,7 @@ describe('readSignals and startPerf', () => {
 
     media.set('(prefers-reduced-motion: reduce)', true);
     expect(seen.at(-1)?.reducedMotion).toBe(true);
-    expect(decideTier(seen.at(-1) ?? NO_SIGNALS).tier).toBe('off');
+    expect(decideTier(seen.at(-1) ?? NO_SIGNALS).tier).toBe('lite');
 
     stop();
     expect(media.count()).toBe(0);
