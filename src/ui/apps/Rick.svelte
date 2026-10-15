@@ -9,8 +9,8 @@
   a keyboard the picture and, once the show has played a few seconds, one line saying how to
   leave. Esc, ^C, q and Back close it, with a short fade; m still mutes whichever plays,
   unannounced. On a touch screen the show first asks for the visitor's thumb: a fingerprint drawn
-  in text (RICK_FINGERPRINT) over 'Scan your right thumb to elevate privileges', with no box round
-  either, and a touch anywhere starts it, sound and picture together, since a tap is a gesture
+  in text (RICK_FINGERPRINT, Omarchy's) over 'Scan your right thumb to elevate privileges', with no
+  box round either, and a touch anywhere starts it, sound and picture together, since a tap is a gesture
   every browser lets start sound. On a keyboard sudo readies the track inside the key press that
   answers its password (services/warm-show.ts unlockAudio), so a browser that starts sound only
   from a gesture lets it play here; one that holds it back anyway gets a gesture from the first
@@ -561,8 +561,8 @@
   /*
     Waiting for the thumb: the picture hidden, and the fingerprint over the two lines that ask for
     it, in the middle of the window, with no box round either. The print is drawn in the frame's
-    green, as wide as 60% of the stage or as tall as 45% of it, whichever is less, in cells 0.585 em
-    wide and 1.15 em tall (Vesen Mono's), and never larger than a 28 px font draws it; where
+    green, as wide as 70% of the stage or as tall as 50% of it, whichever is less, in cells 0.585 em
+    wide and 1.15 em tall (Vesen Mono's), and never larger than a 16 px font draws it; where
     container units are missing (iOS 15), the viewport stands in for the stage.
   */
   .stage.waiting .frame {
@@ -584,14 +584,14 @@
     margin: 0;
     color: var(--theme-green);
     font: inherit;
-    font-size: min(calc(60vw / (var(--print-cols) * 0.585)), calc(45vh / (var(--print-rows) * 1.15)), 28px);
+    font-size: min(calc(70vw / (var(--print-cols) * 0.585)), calc(50vh / (var(--print-rows) * 1.15)), 16px);
     line-height: 1.15;
     white-space: pre;
   }
 
   @supports (width: 1cqw) {
     .print {
-      font-size: min(calc(60cqw / (var(--print-cols) * 0.585)), calc(45cqh / (var(--print-rows) * 1.15)), 28px);
+      font-size: min(calc(70cqw / (var(--print-cols) * 0.585)), calc(50cqh / (var(--print-rows) * 1.15)), 16px);
     }
   }
 

@@ -25,6 +25,7 @@
 
 import { loopSeconds, type Song } from '../../lib/chiptune';
 import { SHOW_FRAMES, SHOW_FRAMES_PORTRAIT, SHOW_TRACK } from '../../lib/show-files';
+import { FINGERPRINT } from './fingerprint';
 
 /** The Rick app's result when it was closed, by whatever means. */
 export const RICK_CLOSED = 'rickrolled';
@@ -51,25 +52,10 @@ export const RICK_TAP_HINT = 'Tap to exit.';
 export const RICK_ELEVATE = 'Scan your right thumb\nto elevate privileges';
 
 /**
- * The print above it: a thumb's ridges in text, arches nested over a loop at the core and ending
- * lower towards the middle, as a phone's fingerprint reader draws one.
+ * The print above it: Omarchy's fingerprint artwork, as fingerprint-tui traces it to text, a loop
+ * of ridges drawn in @ (commands/lib/fingerprint.ts, which carries its MIT licence).
  */
-export const RICK_FINGERPRINT = [
-  '        _.-----._',
-  "     .-'  _.-._  '-.",
-  "   .'  .-'     '-.  '.",
-  "  /  .'  _.---._  '.  \\",
-  " /  /  .'  .-.  '.  \\  \\",
-  "|  |  /  .'   '.  \\  |  |",
-  '|  | |  /  .-.  \\  | |  |',
-  "|  | |  | /   \\ |  | |  '",
-  "'  | |  | |   | |  | |",
-  '   | |  | |   | |  | |',
-  "   '  \\ | |   | | /  '",
-  "       '| |   | |'",
-  "        ' |   | '",
-  "          '   '",
-].join('\n');
+export const RICK_FINGERPRINT = FINGERPRINT.join('\n');
 
 /**
  * The owner's track (public/audio/incident-report.mp3, served from this origin; lib/show-files.ts),

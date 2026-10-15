@@ -90,7 +90,7 @@ async function sudoLs(page: Page): Promise<void> {
 async function elevate(page: Page): Promise<void> {
   const print = show(page).locator('.elevate .print');
   await expect(print).toBeVisible();
-  await expect(print).toContainText("_.-----._");
+  await expect(print).toContainText('@@@@@@@@@@@@@');
   await expect(show(page).locator('.elevate .scan')).toHaveText('Scan your right thumb to elevate privileges');
   // The two lines as two, and nothing drawn round the print or the words.
   const lines = await show(page).locator('.elevate .scan').evaluate((element) => element.getBoundingClientRect().height / Number.parseFloat(getComputedStyle(element).lineHeight));

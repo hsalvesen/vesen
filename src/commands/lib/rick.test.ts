@@ -1,6 +1,8 @@
 // sudo's show: the tune a well-formed song of the promised length and tempo, written for vesen,
 // the view naming the owner's track and frames, the title and the way it reads, and the
 // fingerprint a touch screen asks the visitor's thumb on.
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parseSong, schedule } from '../../lib/chiptune';
 import { RICK_ALT, RICK_ELEVATE, RICK_FINGERPRINT, RICK_FRAMES, RICK_FRAMES_PORTRAIT, RICK_SONG, RICK_TITLE, RICK_TRACK, rickLoopSeconds, rickView } from './rick';
@@ -49,21 +51,24 @@ describe('the view', () => {
 });
 
 describe('the fingerprint', () => {
-  it('is ASCII art of 14 rows, ridges in every one, symmetric enough to read as a print and ending lower towards the middle', () => {
+  it("is Omarchy's print as fingerprint-tui traces it: 36 rows of ridges in @, with no trailing spaces", () => {
     const rows = RICK_FINGERPRINT.split('\n');
-    expect(rows).toHaveLength(14);
-    // Printable ASCII alone, as the show's own frames are, with no trailing spaces.
-    expect(RICK_FINGERPRINT).toMatch(/^[\x20-\x7e\n]+$/);
+    expect(rows).toHaveLength(36);
+    expect(RICK_FINGERPRINT).toMatch(/^[@ \n]+$/);
     expect(rows.every((row) => row.trim() !== '' && row === row.trimEnd())).toBe(true);
-    expect(Math.max(...rows.map((row) => row.length))).toBe(25);
-    // Arches nested round the core: the top row is the outer ridge's cap, the last the core's legs.
-    expect(rows[0]?.trim()).toBe('_.-----._');
-    expect(rows[rows.length - 1]?.trim()).toBe("'   '");
-    // Its ridges reach down further in the middle than at the sides: each row narrower below the widest.
-    const width = (row: string) => row.trimEnd().length - (row.length - row.trimStart().length);
-    const widths = rows.map(width);
-    const widest = widths.indexOf(Math.max(...widths));
-    for (let r = widest + 1; r < rows.length; r += 1) expect(widths[r]).toBeLessThanOrEqual(widths[r - 1] ?? 0);
+    expect(Math.max(...rows.map((row) => row.length))).toBe(52);
+    // Its common indent is off, so it centres: some row starts at the left edge.
+    expect(Math.min(...rows.map((row) => row.length - row.trimStart().length))).toBe(0);
+  });
+
+  it('ships with its MIT licence: in the file that holds it, and served beside the site, since the build drops comments', () => {
+    const source = readFileSync(fileURLToPath(new URL('./fingerprint.ts', import.meta.url)), 'utf8');
+    const served = readFileSync(fileURLToPath(new URL('../../../public/licences/fingerprint.txt', import.meta.url)), 'utf8');
+    for (const text of [source, served]) {
+      expect(text).toContain('Copyright (c) David Heinemeier Hansson');
+      expect(text).toContain('The above copyright notice and this permission notice shall be');
+      expect(text).toContain('github.com/omacom/omarchy');
+    }
   });
 
   it('is asked for in two lines: scan your right thumb, to elevate privileges', () => {
