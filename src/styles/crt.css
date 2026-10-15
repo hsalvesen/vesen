@@ -37,9 +37,12 @@ html.crt-vintage :is(.scrollback, .app-host) {
   filter: saturate(1.15) contrast(1.05);
 }
 
-/* The glow is inherited, and the browsers' own stylesheets turn it off on buttons (`text-shadow:
-   none`), so every tappable name (a button) and link in the output takes its parent's again. */
-:is(html.crt-phosphor, html.crt-vintage) :is(.scrollback, .app-host) :is(button, a) {
+/* The glow is inherited, and the browsers' own stylesheets turn it off on buttons and inputs
+   (`text-shadow: none`), so every tappable name (a button) and link in the output takes its
+   parent's again, and so does the prompt's input, which draws the line being typed on a touch
+   screen. With a mouse the input is transparent over its mirror, which glows instead, and keeps
+   no glow of its own (LineEditor). */
+:is(html.crt-phosphor, html.crt-vintage) :is(.scrollback, .app-host) :is(button, a, input, textarea) {
   text-shadow: inherit;
 }
 

@@ -180,9 +180,16 @@ test.describe('CRT tiers', { tag: '@smoke' }, () => {
       const sweep = await page.locator('.crt-layer-sweep').evaluate((el) => getComputedStyle(el).display);
       expect(sweep).toBe('none');
     }
-    // The phosphor glow is the same on every device.
-    const glow = await page.locator('.scrollback').evaluate((el) => getComputedStyle(el).textShadow);
-    expect(glow).toContain('6px');
+    // The phosphor glow is the same on every device, on the line being typed too: a touch screen
+    // shows the input's own text, which takes the glow; a mouse the mirror over a transparent input.
+    const shadow = (selector: string) => page.locator(selector).evaluate((el) => getComputedStyle(el).textShadow);
+    expect(await shadow('.scrollback')).toContain('6px');
+    if (tier === 'lite') {
+      expect(await shadow('input.command-input')).toContain('6px');
+    } else {
+      expect(await shadow('.input-box .mirror')).toContain('6px');
+      expect(await shadow('input.command-input')).toBe('none');
+    }
 
     await run(page, 'cathode ls');
     const reason = test.info().project.name === 'iphone-instagram' ? "in Instagram's in-app browser" : tier === 'lite' ? 'a touch screen' : 'a desktop';
