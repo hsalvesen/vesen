@@ -43,7 +43,7 @@ Quotes, pipes that stream, redirection, variables, `$( )` and `$(( ))`, globs, h
 <td width="50%" valign="top">
 
 **About 150 commands**<br>
-Text tools (`grep`, `sed`, `sort`, `diff`, `bc`), file tools (`find`, `tree`, `chmod`), system tools (`ps`, `top`, `uname`), network tools that say what a browser can and cannot do (`dig`, `ping`, `whois`), a pager and an editor (`less`, `man`, `nano`), and some fun (`cowsay`, `fortune`, `cmatrix`).
+Text tools (`grep`, `sed`, `sort`, `diff`, `bc`), file tools (`find`, `tree`, `chmod`), system tools (`ps`, `top`, `uname`), network tools that say what a browser can and cannot do (`dig`, `ping`, `whois`), a pager and an editor (`less`, `man`, `nano`), and some fun (`cowsay`, `fortune`, `cmatrix`, `nyancat`).
 
 </td>
 <td width="50%" valign="top">
@@ -82,6 +82,7 @@ qr https://www.vesen.app  # a scannable QR card; tap it to present it full scree
 dig vesen.app +short      # DNS over HTTPS, and it says so
 man ls | less             # the pager; nano notes.txt is the editor
 fortune | cowsay          # the fun ones are under Fun: help fun
+nyancat                   # Nyan Cat flies across the screen to its chiptune; q ends it
 theme ls                  # every theme with its colours; theme wombat switches
 privacy                   # every service a command talks to, and what it is sent
 ```
@@ -224,8 +225,8 @@ src/
     ├── components/                # Cards, each loaded on first use: link, weather, quote, QR
     ├── apps/                      # Full-screen apps: Pager, Editor, QrPresenter, Matrix, Rick, Shutdown
     └── actions/                   # The one scroll owner, and the focus policy
-public/                            # 404.html, fonts/ (Vesen Mono and OFL.txt), icons/, og.png,
-                                   # audio/, manifest.webmanifest, probe/ (the device probe, not linked)
+public/                            # 404.html, fonts/ (Vesen Mono and OFL.txt), icons/, og.png, audio/,
+                                   # licences/, manifest.webmanifest, probe/ (the device probe, not linked)
 assets-src/fonts/                  # The source Vesen Mono is built from (not served)
 worker/stock/                      # vesen-stock, the Cloudflare Worker for quotes (its own README)
 tests/                             # The command harness, transcripts, XSS tests, hosting checks,
@@ -294,6 +295,7 @@ Vite reads two variables at build time. Copy [.env.example](.env.example) to `.e
 - Weather data by [Open-Meteo.com](https://open-meteo.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - Place names © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, under the [ODbL](https://opendatacommons.org/licenses/odbl/).
 - The terminal font, Vesen Mono (`public/fonts/VesenMono.woff2`), is a modified subset of Cascadia Code, distributed under the SIL Open Font License 1.1 under its own name: see [public/fonts/OFL.txt](public/fonts/OFL.txt).
+- The Nyan Cat that `nyancat` draws is the animation of K. Lange's [nyancat](https://github.com/klange/nyancat), after prguitarman's Nyan Cat, under the University of Illinois/NCSA Open Source Licence: see [public/licences/nyancat.txt](public/licences/nyancat.txt).
 
 `privacy` in the terminal lists every service a command talks to and what it sends.
 

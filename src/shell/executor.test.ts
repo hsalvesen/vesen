@@ -577,6 +577,20 @@ describe('preflight', () => {
     expect(opener.opened).toEqual([]);
   });
 
+  it("readies the track a command plays, inside the gesture, for a single simple command only", () => {
+    const tracks: string[] = [];
+    const nyan = defineCommand({ name: 'nyan', category: 'fun', summary: 'plays a track', plays: () => '/audio/nyan.mp3', run: () => 0 });
+    const { shell } = harness({ specs: [nyan], unlockAudio: (track) => tracks.push(track) });
+    expect(shell.preflight('nyan')?.argv).toEqual(['nyan']);
+    expect(tracks).toEqual(['/audio/nyan.mp3']);
+    // Not in a pipeline, a list or into a file, where no show will play it.
+    for (const line of ['nyan | cat', 'nyan && nyan', 'nyan > out.txt']) shell.preflight(line);
+    expect(tracks).toEqual(['/audio/nyan.mp3']);
+    // A command that plays nothing readies nothing.
+    shell.preflight('echo hi');
+    expect(tracks).toHaveLength(1);
+  });
+
   it('reads the words of a single simple command, and nothing more', () => {
     const { shell } = harness();
     expect(shell.preflight('  sudo   ls -la')?.argv).toEqual(['sudo', 'ls', '-la']);

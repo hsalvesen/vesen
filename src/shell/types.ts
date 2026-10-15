@@ -232,6 +232,13 @@ export interface CommandSpec {
   /** A URL to open synchronously inside the Enter or tap gesture, before the job starts. */
   opens?(argv: readonly string[]): string | null;
   /**
+   * A track the command will play (a path on this origin), readied synchronously inside the Enter
+   * or tap gesture that runs the line, before the job starts, so a browser that lets sound start
+   * only from a gesture (Safari, every browser on iOS, in-app browsers) lets it play when the
+   * command's show opens (nyancat). Null for none.
+   */
+  plays?(argv: readonly string[]): string | null;
+  /**
    * Follow-up chip lines after a run, each a line to run in one tap. Every word placed in a line
    * from data (a file or theme name) must match a plain pattern, so no tap can carry a quote,
    * a `$` or a `;` (02, section 6). Must not throw.
@@ -459,7 +466,7 @@ export const OWNER_HOME: string = OWNER.home;
 
 export type InAppBrowser = 'instagram' | 'facebook' | 'tiktok';
 
-export type FullscreenView = 'pager' | 'editor' | 'matrix' | 'rick' | 'shutdown' | 'qr-present';
+export type FullscreenView = 'pager' | 'editor' | 'matrix' | 'rick' | 'nyan' | 'shutdown' | 'qr-present';
 
 /** What the terminal can do for a running command. */
 export interface Tty {

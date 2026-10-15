@@ -132,7 +132,8 @@ export interface ShellPort {
   /**
    * Call synchronously inside the Enter or tap gesture, before start(). For a single simple
    * command whose spec has opens(), opens the URL through the opener service now, while the
-   * browser still allows it. Never throws.
+   * browser still allows it; one whose spec has plays() has its track readied now, so it may play
+   * later. Never throws.
    */
   preflight(line: string): PreflightResult | null;
   /** Runs a line as the job, interrupting any job still running. */
@@ -212,7 +213,8 @@ export interface ShellDeps {
   readonly bell?: Bell;
   /**
    * Readies the audio element a track will play through; called synchronously inside the key
-   * press that answers a read naming it (ReadOptions.unlocks).
+   * press that answers a read naming it (ReadOptions.unlocks), and inside the gesture that runs a
+   * line whose command plays one (CommandSpec.plays).
    */
   readonly unlockAudio?: (track: string) => void;
   readonly digest?: Digest;
@@ -504,6 +506,9 @@ export function createShell(deps: ShellDeps): Shell {
       const name = argv[0];
       if (name === undefined) return null;
       const spec = deps.registry.get(name);
+      // A track the command will play is readied now, inside the gesture, for its show to play.
+      const track = spec?.plays !== undefined && cmd.redirects.length === 0 ? spec.plays(argv) : null;
+      if (track !== null && track !== undefined && track !== '') deps.unlockAudio?.(track);
       const url = spec?.opens !== undefined && cmd.redirects.length === 0 && cmd.assigns.length === 0 ? spec.opens(argv) : null;
       if (url === null || url === undefined) return { argv, spec };
       const result = deps.opener?.preflight(url) ?? 'skipped';

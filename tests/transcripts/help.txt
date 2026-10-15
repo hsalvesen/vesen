@@ -62,7 +62,7 @@ wget         whois
 Fun
 cmatrix      cowsay       cowthink
 factor       figlet       fortune
-lolcat
+lolcat       nyancat
 Editor
 less         more         nano
 
@@ -105,7 +105,7 @@ ip           nslookup     ping         speedtest    stock        weather
 wget         whois
 Fun
 cmatrix      cowsay       cowthink     factor       figlet       fortune
-lolcat
+lolcat       nyancat
 Editor
 less         more         nano
 
@@ -138,7 +138,7 @@ Network
 curl         dig          fetch        git          host         ifconfig     ip           nslookup     ping
 speedtest    stock        weather      wget         whois
 Fun
-cmatrix      cowsay       cowthink     factor       figlet       fortune      lolcat
+cmatrix      cowsay       cowthink     factor       figlet       fortune      lolcat       nyancat
 Editor
 less         more         nano
 
@@ -152,7 +152,7 @@ Text: base64 bc column cut diff echo expr fold grep head md5sum nl printf rev se
 Shell: alias apropos bg clear command env exit export fail false fg hang help history jobs kill late man nohup printenv read reset set sleep source sudo test time timeout true type unalias unset wait watch whatis which
 System: arch cal date debug dmesg fastfetch finger free groups hostname id keys locale lsb_release lscpu nproc open pgrep pkill poweroff privacy ps reboot shutdown top tty uname uptime w who
 Network: curl dig fetch git host ifconfig ip nslookup ping speedtest stock weather wget whois
-Fun: cmatrix cowsay cowthink factor figlet fortune lolcat
+Fun: cmatrix cowsay cowthink factor figlet fortune lolcat nyancat
 Editor: less more nano
 
 Type '<command> --help' (or -h) for its options, 'man <command>' for its manual, and 'help keys' for the keys.

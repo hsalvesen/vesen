@@ -9,8 +9,11 @@ import { keepsQuiet } from '../../../shell/complete/sources';
 import type { CompletionEnv } from '../../../shell/complete/types';
 import { at, completionHarness, type CompletionHarness } from '../../../testing/completion-env';
 import { stepFor, type MatrixView } from '../../lib/matrix';
+import { NYAN_TRACK, type NyanView } from '../../lib/nyancat';
+import { stillNyan } from '../../../lib/nyancat';
+import nyancat from './nyancat';
 
-const FUN = ['cmatrix', 'cowsay', 'cowthink', 'factor', 'figlet', 'fortune', 'lolcat'];
+const FUN = ['cmatrix', 'cowsay', 'cowthink', 'factor', 'figlet', 'fortune', 'lolcat', 'nyancat'];
 
 /** A full-screen stand-in that records what it was asked to show, and closes with `result`. */
 function screen(result: unknown = 'stopped') {
@@ -43,6 +46,46 @@ describe('cmatrix', () => {
 
   it('refuses a delay outside 0 to 10', async () => {
     expect(await runLine('cmatrix -u 11', { tty: false })).toMatchObject({ status: 1, stderrPlain: "cmatrix: invalid delay '11': 0 to 10\nTry 'cmatrix --help' for more information." });
+  });
+});
+
+describe('nyancat', () => {
+  it('hands the show to the Nyan app at the prompt, and says how long it ran when it ends', async () => {
+    const { shown, fullscreen } = screen({ seconds: 12 });
+    const result = await runLine('nyancat', { fullscreen });
+    expect(result).toMatchObject({ status: 0, stdoutPlain: 'You have nyaned for 12 seconds!' });
+    expect(shown.map((s) => s.view)).toEqual(['nyan']);
+    expect(shown[0]?.props).toMatchObject({ track: NYAN_TRACK, touch: false, counter: true, frames: null } satisfies Partial<NyanView>);
+    // One second is one second.
+    expect((await runLine('nyancat', { fullscreen: screen({ seconds: 1 }).fullscreen })).stdoutPlain).toBe('You have nyaned for 1 second!');
+  });
+
+  it('leaves the count out with -n, and stops after -f FRAMES', async () => {
+    const { shown, fullscreen } = screen({ seconds: 3 });
+    expect(await runLine('nyancat -n', { fullscreen, touch: true })).toMatchObject({ status: 0, stdoutPlain: '' });
+    expect(await runLine('nyancat -f 28', { fullscreen })).toMatchObject({ status: 0 });
+    expect(shown[0]?.props).toMatchObject({ counter: false, touch: true });
+    expect(shown[1]?.props).toMatchObject({ counter: true, frames: 28 });
+    expect(await runLine('nyancat -f 0', { tty: false })).toMatchObject({ status: 1, stderrPlain: "nyancat: invalid number of frames '0'\nTry 'nyancat --help' for more information." });
+    expect(await runLine('nyancat now', { tty: false })).toMatchObject({ status: 1, stderrPlain: "nyancat: extra operand 'now'\nTry 'nyancat --help' for more information." });
+  });
+
+  it('prints the cat standing still into a pipe', async () => {
+    const result = await runLine('nyancat | cat', { cols: 80 });
+    expect(result.status).toBe(0);
+    expect(result.stdoutPlain).toBe(stillNyan());
+  });
+
+  it("names its track, so the Enter that runs it readies the sound", () => {
+    expect(nyancat.plays?.(['nyancat'])).toBe(NYAN_TRACK);
+    expect(NYAN_TRACK).toBe('/audio/nyancat.mp3');
+  });
+
+  it("credits nyancat's animation, and says how to end it, in its manual", async () => {
+    const man = (await runLine('man nyancat', { tty: false })).stdoutPlain;
+    expect(man).toContain("K. Lange's nyancat");
+    expect(man).toContain('/licences/nyancat.txt');
+    expect(man).toMatch(/until q, Esc or \^C/);
   });
 });
 

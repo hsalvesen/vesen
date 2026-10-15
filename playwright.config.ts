@@ -41,15 +41,15 @@ export default defineConfig({
     },
     {
       // Chromium starting sound only inside a gesture, as Safari does on a Mac and on a phone: for
-      // sudo's sound alone, readied by the key that answers its password on a desktop, and started
-      // by the touch on the show's fingerprint on a phone.
+      // the shows' sound alone, readied by the key that answers sudo's password or the Enter that
+      // runs nyancat on a desktop, and started by a touch on the show on a phone.
       name: 'gesture-required',
-      testMatch: /sudo-sound\.spec\.ts$/,
+      testMatch: /(sudo|nyancat)-sound\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 }, launchOptions: { args: ['--autoplay-policy=user-gesture-required'] } },
     },
     {
       name: 'gesture-required-phone',
-      testMatch: /sudo-sound\.spec\.ts$/,
+      testMatch: /(sudo|nyancat)-sound\.spec\.ts$/,
       use: { ...devices['Pixel 7'], launchOptions: { args: ['--autoplay-policy=user-gesture-required'] } },
     },
   ],

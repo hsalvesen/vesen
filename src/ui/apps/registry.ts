@@ -30,6 +30,7 @@ const APPS: Partial<Record<FullscreenView, Loader>> = {
   'qr-present': () => import('./QrPresenter.svelte'),
   matrix: () => import('./Matrix.svelte'),
   rick: () => import('./Rick.svelte'),
+  nyan: () => import('./Nyan.svelte'),
   pager: () => import('./Pager.svelte'),
   editor: () => import('./Editor.svelte'),
 };
