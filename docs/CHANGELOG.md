@@ -7,18 +7,32 @@ All notable changes to vesen are recorded here. The format follows [Keep a Chang
 ### Changed
 
 - On a phone `sudo`'s show sits where the terminal's own frame does, inside the screen's safe areas, so all four sides of the green border are in view, and the picture fills the frame to its edges with none of it past the border. In 2.1 the frame went 4px in from the screen's edges, under the status bar.
-- On a phone `sudo`'s show opens on a fingerprint drawn in text (Omarchy's, under the MIT licence), over "Scan your right thumb to elevate privileges", with no box round either. A touch anywhere starts the show, sound and picture together, since every browser lets a touch start sound, where a key on a phone's own keyboard may not count. On a keyboard the show starts at once, and the key that answers the password readies its sound.
+- On a phone `sudo`'s show opens on a fingerprint of vesen's own, drawn in the banner's Roman letters, over "Scan your right thumb to elevate privileges", with no box round either. A touch anywhere starts the show, sound and picture together, since every browser lets a touch start sound, where a key on a phone's own keyboard may not count. On a keyboard the show starts at once, and the key that answers the password readies its sound.
 - On a phone the line being typed glows in the phosphor and vintage CRT modes, as the output does. It had glowed only once run.
-- Bold text glows less in the phosphor and vintage CRT modes, a tight halo and a faint bloom. Vesen Mono has one weight, so the browser draws bold by printing each glyph twice over, and the full glow doubled into a blur (fastfetch's labels, the prompt's user and host).
+- Bold text glows less in the phosphor and vintage CRT modes, a tight halo and a faint bloom. Vesen Mono has one weight, so the browser draws bold by printing each glyph twice over, and the full glow doubled into a blur (fastfetch's labels, the prompt's user and host, the cards' titles and prices).
 - `sudo` runs with no status line: nothing comes between the line, the password prompt and the show, as nothing does in a terminal. Ctrl+C, Esc and the dock's cancel chip still stop it.
 - The status line's spinner is vesen 1's again, the braille dots `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏` turning a tenth of a second a frame beside `Processing...` (or what the command is doing), in place of the turning `| / - \`. Under Reduce Motion it stands on its first frame.
 - `fastfetch` shows its logo first on a phone, on the line under the one typed, then a blank line and its details, which no longer start with `guest@vesen` and a rule of dashes: the prompt just above says as much. Wider screens keep the logo beside the details, and a pipe gets the `Label: value` rows alone.
 - `sudo`'s track ends at 2:53.96, in the half second of silence after the song fades out, so the snippet of another song that followed it is gone. It is cut at an MP3 frame boundary without re-encoding, and the picture keeps to it: the same 3,189 frames, in order, now play at 18.33 a second, so the two start and end together and loop as one.
 - The CRT effect shows under Reduce Motion, as the still lite effect (the glow, the fine scanlines and the vignette; nothing that moves). It had been off altogether there. More contrast, reduced transparency and forced colours still turn it off, and `cathode`'s help now says so.
+- Until vesen's own stock service is set up, `stock` says so when the public proxy it reads Yahoo through is what failed, under the line saying it got no response or that market data is unavailable.
+- The stock Worker is quicker to set up: it needs no KV namespace (the snapshot store is optional), and the deploy run's summary gives the URL to set as `VITE_STOCK_API`. `worker/stock/README.md` has the five steps.
+- The README is new: the banner, a desktop screenshot and three from a phone, what vesen has, a short tour, diagrams of how it is built and of the path a quote takes, and the project's layout.
+- The theme screenshots show the banner and `fastfetch` (its logo, its details and all sixteen colours) in place of `help` and `ls -a`, and `docs/themes/themes.gif` is rebuilt from them, the fifteen themes in turn. Where ffmpeg is missing, `scripts/theme-screenshots.mjs` builds the GIF with `scripts/gif.py`, which needs Pillow and numpy and keeps each theme's swatches their own colours.
+- The repository's root keeps only what its tools look for there: the contributor files are in `.github/`, this changelog is in `docs/`, the strict TypeScript configs are in `config/` and `themes.json` is in `src/`.
+
+### Added
+
+- `tests/docs` checks that every relative link and image in the repository's Markdown points at a file that is there, and that the README's banner is the terminal's.
+
+### Fixed
+
+- `npm run check:boundaries` no longer walks into `node_modules` or tools' dot-folders. With the stock Worker's packages installed it had taken minutes.
 
 ### Removed
 
 - `sl`, the steam train.
+- `docs/themes/banner.gif`, version 1's banner, which the README no longer shows.
 
 ## [2.1.0] - 2026-10-14
 
