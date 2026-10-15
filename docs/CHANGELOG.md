@@ -19,10 +19,13 @@ All notable changes to vesen are recorded here. The format follows [Keep a Chang
 - The stock Worker is quicker to set up: it needs no KV namespace (the snapshot store is optional), and the deploy run's summary gives the URL to set as `VITE_STOCK_API`. `worker/stock/README.md` has the five steps.
 - The README is new: the banner, a desktop screenshot and three from a phone, what vesen has, a short tour, diagrams of how it is built and of the path a quote takes, and the project's layout.
 - The theme screenshots show the banner and `fastfetch` (its logo, its details and all sixteen colours) in place of `help` and `ls -a`, and `docs/themes/themes.gif` is rebuilt from them, the fifteen themes in turn. Where ffmpeg is missing, `scripts/theme-screenshots.mjs` builds the GIF with `scripts/gif.py`, which needs Pillow and numpy and keeps each theme's swatches their own colours.
+- `help` lists every command, by name, category by category: each category's heading over a grid of all of its names, as many to a row as fit. It no longer says what each command does, which is for `COMMAND --help` (or -h) and `man COMMAND`, as the note under it says; `help -v` and `help --all` are gone. `help CATEGORY` lists one category, and `help COMMAND` still shows a command's --help.
+- `man`'s pager says how to leave, in man's own words, at the end of its status line: "(press h for help or q to quit)", or "(press q or tap Close to quit)" on a touch screen, on a second line where the screen is narrow.
 - The repository's root keeps only what its tools look for there: the contributor files are in `.github/`, this changelog is in `docs/`, the strict TypeScript configs are in `config/` and `themes.json` is in `src/`.
 
 ### Added
 
+- `nyancat`: Nyan Cat flies across the screen with its rainbow behind it, filling the screen, drawn in ASCII in its own colours (the frames of K. Lange's nyancat), to a chiptune of its song played on Sega Genesis instruments, bobbing to the beat. Like nyancat, it counts how long you have nyaned at the foot of the screen, and says so when it ends. q, Esc, ^C or Back end it; on a phone a tap starts it, sound and all, and the next tap ends it. m mutes it, -n leaves the count out, and -f FRAMES stops it after that many frames. In a pipe it prints the cat standing still. Its sound plays in Safari and in-app browsers too: the Enter that runs it readies the track.
 - `tests/docs` checks that every relative link and image in the repository's Markdown points at a file that is there, and that the README's banner is the terminal's.
 
 ### Fixed
