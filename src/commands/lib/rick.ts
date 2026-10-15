@@ -12,7 +12,7 @@
 // The frames file is a header line, then the frames, each `rows` lines of `cols` characters,
 // with a line of `===` between frames:
 //
-//   vesen-frames fps=19.4874 cols=120 rows=45
+//   vesen-frames fps=18.3315 cols=120 rows=45
 //   ...45 rows of 120 characters...
 //   ===
 //   ...the next frame...

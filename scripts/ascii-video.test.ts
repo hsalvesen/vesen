@@ -30,7 +30,7 @@ function trackSeconds(): number {
   return (frames * 1152 - delay - padding) / 44100;
 }
 
-/** The track ends at 2:43.644, the song's own end, in the quiet before the next beat. */
+/** The track ends at 2:53.962, in the silence after the song fades out, before the snippet of another song that followed it. */
 const TRACK_SECONDS = trackSeconds();
 
 function read(name: string) {
@@ -44,9 +44,9 @@ function read(name: string) {
 
 describe('the shipped frames files', () => {
   it('read whole, at the rate that fits the track: the whole picture at 120 by 45', () => {
-    expect(TRACK_SECONDS).toBeCloseTo(163.644, 3);
+    expect(TRACK_SECONDS).toBeCloseTo(173.962, 3);
     const file = read('incident-report.frames');
-    expect({ fps: file.fps, cols: file.cols, rows: file.rows }).toEqual({ fps: 19.4874, cols: 120, rows: 45 });
+    expect({ fps: file.fps, cols: file.cols, rows: file.rows }).toEqual({ fps: 18.3315, cols: 120, rows: 45 });
     // Every frame, the black last one too: one loop of them is one loop of the track.
     expect(file.frames).toHaveLength(FRAMES);
     expect(FRAMES).toBeLessThanOrEqual(FRAMES_MAX_FRAMES);
@@ -57,7 +57,7 @@ describe('the shipped frames files', () => {
 
   it('and the portrait cut, the middle of it at 72 by 56, frame for frame with it', () => {
     const file = read('incident-report.portrait.frames');
-    expect({ fps: file.fps, cols: file.cols, rows: file.rows }).toEqual({ fps: 19.4874, cols: 72, rows: 56 });
+    expect({ fps: file.fps, cols: file.cols, rows: file.rows }).toEqual({ fps: 18.3315, cols: 72, rows: 56 });
     expect(file.frames).toHaveLength(FRAMES);
     expect(file.frames.length / file.fps).toBeCloseTo(TRACK_SECONDS, 2);
     for (const frame of file.frames) expect(frame.rows.length).toBe(56);

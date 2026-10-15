@@ -10,8 +10,8 @@ black and white points, eased over about half a second so cuts land cleanly and 
 not flicker, then a gamma lifts the midtones. Rows have their trailing spaces cut (the app pads them
 back), which is most of a dark frame.
 
-  python3 scripts/ascii-video.py video.mp4 --width 120 --fit 163.644
-  python3 scripts/ascii-video.py video.mp4 --width 72 --aspect 0.64 --fit 163.644 --out public/audio/incident-report.portrait.frames
+  python3 scripts/ascii-video.py video.mp4 --width 120 --fit 173.962
+  python3 scripts/ascii-video.py video.mp4 --width 72 --aspect 0.64 --fit 173.962 --out public/audio/incident-report.portrait.frames
 
   --width N   columns of characters a frame is (120); the rows follow from the video's shape
   --fps N     frames a second to keep (15): source frames are picked nearest to each instant
